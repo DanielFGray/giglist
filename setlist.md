@@ -1,6 +1,6 @@
 # Hello
-* Song 1
-* Song 2
+* Dream Theater - Pull Me Under
+* Pink Floyd - Money
 * Song 3
 * Song 4
 * Song 5
