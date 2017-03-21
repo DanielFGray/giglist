@@ -7,8 +7,7 @@ const handlebars = require('express-handlebars');
 const app = express();
 // app.use(express.static('public'));
 const urlencodedParser = bodyParser.urlencoded({ extended: false });
-const layout = handlebars.create({ defaultLayout: 'main' });
-app.engine('handlebars', layout.engine);
+app.engine('handlebars', handlebars.create({ defaultLayout: 'main' }).engine);
 app.set('view engine', 'handlebars');
 
 app.get('/', (req, res) => {
