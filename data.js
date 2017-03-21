@@ -5,21 +5,9 @@ const knex = require('knex')({
   useNullAsDefault: true,
 });
 
-const schema = () =>
-  knex.schema.createTableIfNotExists('lists', table => {
-    table.increments('id').primary();
-    table.string('list');
-  }).then(() =>
-    knex('lists').select('*')
-      .then(data => {
-        if (data.length < 1) {
-          console.log('adding dummy data');
-          knex('lists').insert({ list: '# first list' })
-            .then(() => knex('lists').insert({ list: '# second list' }))
-            .then();
-        }
-      })
-  );
+const newList = list =>
+  knex('lists')
+    .insert({ list });
 
 const getAllLists = () =>
   knex('lists')
@@ -35,6 +23,22 @@ const saveList = (id, list) =>
   knex('lists')
     .where({ id })
     .update({ list });
+
+const schema = () =>
+  knex.schema.createTableIfNotExists('lists', table => {
+    table.increments('id').primary();
+    table.string('list');
+  }).then(() =>
+    knex('lists').select('*')
+      .then(data => {
+        if (data.length < 1) {
+          console.log('adding dummy data');
+          newList('# first list')
+            .then(() => newList('# second list'))
+            .then();
+        }
+      })
+  );
 
 module.exports = {
   schema,
