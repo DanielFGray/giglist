@@ -44,4 +44,4 @@ textarea#markdown-editor {
 div.markdown ul { padding-left: 15px; }
 div#message       { color: #f33; }
 input#submit      { display: none; }
-a:link, a:visited { color: #0390c4; }
+/* a:link, a:visited { color: #0390c4; } */
