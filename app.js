@@ -1,8 +1,15 @@
 const express = require('express');
-const marked = require('marked');
-const fs = require('fs');
 const bodyParser = require('body-parser');
 const handlebars = require('express-handlebars');
+
+const {
+  getAllLists,
+  getList,
+  saveList,
+  schema,
+} = require('./data.js');
+
+schema();
 
 const app = express();
 // app.use(express.static('public'));
@@ -11,25 +18,26 @@ app.engine('handlebars', handlebars.create({ defaultLayout: 'main' }).engine);
 app.set('view engine', 'handlebars');
 
 app.get('/', (req, res) => {
-  fs.readFile('setlist.md', (err, data) => {
-    if (err) throw new Error(err);
-    const markdown = marked(data.toString());
-    res.render('main', { markdown });
-  });
+  getAllLists()
+    .catch(console.log)
+    .then(data => {
+      res.render('main', { data });
+    });
 });
 
-app.get('/edit', (req, res) => {
-  fs.readFile('setlist.md', (err, data) => {
-    if (err) throw new Error(err);
-    res.render('edit', { markdown: data.toString() });
-  });
+app.get('/edit/:id', (req, res) => {
+  getList(req.params.id)
+    .tap(console.log)
+    .then(data => {
+      res.render('edit', { data: data[0] });
+    });
 });
 
-app.post('/save', urlencodedParser, (req, res) => {
-  fs.writeFile('setlist.md', req.body.markdown, err => {
-    if (err) throw new Error(err);
-    res.redirect(303, '/');
-  });
+app.post('/save/:id', urlencodedParser, (req, res) => {
+  saveList(1, req.body.markdown)
+    .then(() => {
+      res.redirect(303, '/');
+    });
 });
 
 // custom 404 page
