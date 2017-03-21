@@ -1,0 +1,19 @@
+* basic user auth
+* users can create/save lists
+
+* format
+  We need a format to save the setlist in, and maybe one for the auth
+  too. We could use json, xml, org, etc., or just plain text. I think
+  i could see reasons for picking any of those except xml. Org would
+  be nice imo because it offers the ability to be data while being
+  just plain text at the same time. (we could also just store it in a
+  clojure file since lisp is data....). Json would be nice because
+  it's kind of standard. Plain text would be good because it's easy.
+
+  I put some examples in the formats/ directory for testing.
+
+* more advanced things
+** optinally add support for saving amp settings
+** maybe realtime editing
+
+* port this to clojurescript
