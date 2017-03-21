@@ -1,0 +1,18 @@
+{
+  "name": "setlist",
+  "version": "0.0.1",
+  "description": "a simple setlist in node.js.",
+  "main": "app.js",
+  "repository": {
+    "type": "git",
+    "url": "ssh://git@git-with-dan-and-alexander:/home/git/setlist-1"
+  },
+  "author": "Alexander and Daniel",
+  "license": "GPL-2.0",
+  "dependencies": {
+    "body-parser": "^1.17.1",
+    "express": "^4.15.2",
+    "express-handlebars": "^3.0.0",
+    "marked": "^0.3.6"
+  }
+}
