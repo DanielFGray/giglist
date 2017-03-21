@@ -1,0 +1,47 @@
+body {
+    margin: 40px auto;
+    max-width: 650px;
+    line-height: 1.6;
+    font-size: 18px;
+    color: #333;
+    background-color: #eee;
+    padding: 0 10px;
+}
+
+h1, h2, h3 {
+    line-height: 1.2;
+}
+
+h1:after {
+    content: ' ';
+    display: block;
+    border: 2px solid #d0d0d0;
+}
+
+body, div#wrapper, div#scratchpad {
+    font-family:      sans;
+    font-size:        11pt;
+}
+
+textarea#scratchedit {
+    background-color: #eee;
+    border:           0;
+    color:            #444;
+    display:          none;
+    font-family:      sans;
+    font-size:        11pt;
+    height:           35em;
+    overflow:         hidden;
+    padding:          0;
+    width:            100%;
+}
+
+#scratchinfo {
+    font-style:       italic;
+    font-size:        9pt;
+}
+
+div#scratchpad ul { padding-left: 15px; }
+div#message       { color: #f33; }
+input#submit      { display: none; }
+a:link, a:visited { color: #0390c4; }
