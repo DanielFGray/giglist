@@ -24,7 +24,9 @@ marked.setOptions({
 
 
 const app = express();
-// app.use(express.static('public'));
+app.use(express.static('public'));
+app.use('/bootstrap', express.static(__dirname + '/node_modules/bootstrap/dist')); // redirect CSS bootstrap
+
 const urlencodedParser = bodyParser.urlencoded({ extended: false });
 app.engine('handlebars', handlebars.create({ defaultLayout: 'main' }).engine);
 app.set('view engine', 'handlebars');
