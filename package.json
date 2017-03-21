@@ -3,6 +3,9 @@
   "version": "0.0.1",
   "description": "a simple setlist in node.js.",
   "main": "app.js",
+  "scripts": {
+    "start": "nodemon -w app.js -x 'node index.js'"
+  },
   "repository": {
     "type": "git",
     "url": "ssh://git@git-with-dan-and-alexander:/home/git/setlist-1"
@@ -16,6 +19,7 @@
     "express-handlebars": "^3.0.0",
     "knex": "^0.12.8",
     "marked": "^0.3.6",
+    "nodemon": "^1.11.0",
     "sqlite": "^2.3.0"
   },
   "devDependencies": {
