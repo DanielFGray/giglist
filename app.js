@@ -1,4 +1,5 @@
 const express = require('express');
+const marked = require('marked');
 const bodyParser = require('body-parser');
 const handlebars = require('express-handlebars');
 
@@ -7,9 +8,20 @@ const {
   getList,
   saveList,
   schema,
-} = require('./data.js');
+} = require('./data');
 
 schema();
+
+marked.setOptions({
+  gfm: true,
+  tables: true,
+  breaks: true,
+  pedantic: false,
+  sanitize: true,
+  smartLists: true,
+  smartypants: false,
+});
+
 
 const app = express();
 // app.use(express.static('public'));
@@ -21,20 +33,22 @@ app.get('/', (req, res) => {
   getAllLists()
     .catch(console.log)
     .then(data => {
-      res.render('main', { data });
+      const markdown = data.map(e => ({ ...e, list: marked(e.list) }));
+      res.render('main', { data: markdown });
     });
 });
 
 app.get('/edit/:id', (req, res) => {
   getList(req.params.id)
-    .tap(console.log)
+    .catch(console.log)
     .then(data => {
       res.render('edit', { data: data[0] });
     });
 });
 
 app.post('/save/:id', urlencodedParser, (req, res) => {
-  saveList(1, req.body.markdown)
+  saveList(req.params.id, req.body.markdown)
+    .catch(console.log)
     .then(() => {
       res.redirect(303, '/');
     });
