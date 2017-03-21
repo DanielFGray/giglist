@@ -1,6 +1,6 @@
 <h2>Edit Markdown/setlist</h2>
 
-<form class="edit-form" role="form" action="/save" method="POST">
-  <textarea id="markdown-editor" name="markdown" style="width: 80vw; height: 65vh">{{markdown}}</textarea>
+<form class="edit-form" role="form" action="/save/{{data.id}}" method="POST">
+  <textarea id="markdown-editor" name="markdown" style="width: 80vw; height: 65vh">{{data.list}}</textarea>
   <button type="submit">Save</button>
 </form>

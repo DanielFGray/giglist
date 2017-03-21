@@ -1,3 +1,9 @@
 <h1>Setlists</h1>
-{{{markdown}}}
-<a href="/edit">Edit</a>
+{{#each data}}
+  <div id="list_{{id}}">
+    <div class="list_content">
+      {{list}}
+    </div>
+    <a href="/edit/{{id}}">Edit</a>
+</div>
+{{/each}}
