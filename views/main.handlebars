@@ -8,4 +8,10 @@
   </div>
 {{/each}}
 <br>
-<a href="/new" class="btn btn-warning">New</a>
+<div id="new">
+  <form class="save-form" role="form" action="/new" method="POST">
+    <!-- Heading: -->
+    <button type="submit" class="btn btn-warning">New</button>
+    <input type="text" id="markdown-heading" name="title"/>
+  </form>
+</div>

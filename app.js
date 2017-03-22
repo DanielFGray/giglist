@@ -6,7 +6,6 @@ const handlebars = require('express-handlebars');
 const {
   getAllLists,
   getList,
-  newList,
   insertList,
   saveList,
   schema,
@@ -50,8 +49,8 @@ app.get('/edit/:id', (req, res) => {
     });
 });
 
-app.get('/new', (req, res) => {
-  insertList();
+app.post('/new', urlencodedParser, (req, res) => {
+  insertList(`# ${req.body.title}`);
   res.redirect(303, '/');
 });
 

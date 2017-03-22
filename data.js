@@ -24,6 +24,9 @@ const saveList = (id, list) =>
     .where({ id })
     .update({ list });
 
+const insertList = contents =>
+  newList(contents).then();
+
 const schema = () =>
   knex.schema.createTableIfNotExists('lists', table => {
     table.increments('id').primary();
@@ -40,14 +43,10 @@ const schema = () =>
       })
   );
 
-const insertList = () =>
-  newList('# new item').then();
-
 module.exports = {
   getAllLists,
   getList,
   insertList,
-  newList,
   saveList,
   schema,
 };
