@@ -41,8 +41,9 @@ const schema = () =>
   );
 
 module.exports = {
-  schema,
   getAllLists,
   getList,
+  newList,
   saveList,
+  schema,
 };

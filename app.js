@@ -6,6 +6,7 @@ const handlebars = require('express-handlebars');
 const {
   getAllLists,
   getList,
+  newList,
   saveList,
   schema,
 } = require('./data');
