@@ -1,14 +1,16 @@
 const express = require('express');
+const path = require('path');
 const marked = require('marked');
 const fs = require('fs');
 const bodyParser = require('body-parser');
 const handlebars = require('express-handlebars');
 
 const app = express();
-app.use(express.static('public'));
-app.use('/bootstrap', express.static(__dirname + '/node_modules/bootstrap/dist')); // redirect CSS bootstrap
-
 const urlencodedParser = bodyParser.urlencoded({ extended: false });
+
+app.use(express.static('public'));
+app.use('/bootstrap', express.static(path.join(__dirname, 'node_modules', 'bootstrap', 'dist')));
+
 app.engine('handlebars', handlebars.create({ defaultLayout: 'main' }).engine);
 app.set('view engine', 'handlebars');
 

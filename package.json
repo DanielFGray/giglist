@@ -11,7 +11,7 @@
   "license": "GPL-2.0",
   "dependencies": {
     "body-parser": "^1.17.1",
-    "bootstrap": "^3.3.7",
+    "bootstrap": "4.0.0-alpha.6",
     "express": "^4.15.2",
     "express-handlebars": "^3.0.0",
     "marked": "^0.3.6"
