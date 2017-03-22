@@ -15,7 +15,9 @@ const babelOpts = {
 
 const cssOpts = {
   test: /\.css$/,
-  use: [ 'style-loader', 'css-loader' ],
+  use: ExtractTextPlugin.extract({
+    use: 'css-loader'
+  }),
 };
 
 const pluginList = [
