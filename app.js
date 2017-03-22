@@ -15,17 +15,6 @@ const {
 
 schema();
 
-marked.setOptions({
-  gfm: true,
-  tables: true,
-  breaks: true,
-  pedantic: false,
-  sanitize: true,
-  smartLists: true,
-  smartypants: false,
-});
-
-
 const app = express();
 const urlencodedParser = bodyParser.urlencoded({ extended: false });
 
@@ -34,14 +23,16 @@ app.use('/assets', express.static(path.join(__dirname, 'node_modules')));
 
 app.engine('handlebars', handlebars.create({ defaultLayout: 'main' }).engine);
 app.set('view engine', 'handlebars');
+app.use(express.static(path.join(__dirname, 'dist')));
 
 app.get('/', (req, res) => {
+  res.render('index.html');
+})
+
+app.get('/api/v1/all', (req, res) => {
   getAllLists()
     .catch(console.log)
-    .then(data => {
-      const markdown = data.map(e => ({ ...e, list: marked(e.list) }));
-      res.render('main', { data: markdown });
-    });
+    .then(data => res.json(data));
 });
 
 app.get('/edit/:id', (req, res) => {
