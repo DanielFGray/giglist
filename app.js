@@ -7,6 +7,7 @@ const {
   getAllLists,
   getList,
   newList,
+  insertList,
   saveList,
   schema,
 } = require('./data');
@@ -47,6 +48,11 @@ app.get('/edit/:id', (req, res) => {
     .then(data => {
       res.render('edit', { data: data[0] });
     });
+});
+
+app.get('/new', (req, res) => {
+  insertList();
+  res.redirect(303, '/');
 });
 
 app.post('/save/:id', urlencodedParser, (req, res) => {

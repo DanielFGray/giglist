@@ -40,9 +40,13 @@ const schema = () =>
       })
   );
 
+const insertList = () =>
+  newList('# new item').then();
+
 module.exports = {
   getAllLists,
   getList,
+  insertList,
   newList,
   saveList,
   schema,
