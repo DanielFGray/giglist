@@ -6,7 +6,8 @@
     "browser": true
   },
   "rules": {
-    "no-console": 0,
+    "semi": [ 2, "never" ],
+    "no-console": 1,
     "array-bracket-spacing": [ 1, "always", { "objectsInArrays": true } ],
     "arrow-parens": [ "error", "as-needed" ],
     "space-unary-ops": [ 2, { "words": true, "nonwords": false, "overrides": { "!": true } } ],

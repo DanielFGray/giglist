@@ -2,9 +2,10 @@
   "name": "setlist",
   "version": "0.0.1",
   "description": "a simple setlist in node.js.",
-  "main": "app.js",
+  "main": "index.js",
   "scripts": {
-    "start": "nodemon -w app.js -x 'node index.js'"
+    "start": "nodemon -w app.js -x 'node index.js'",
+    "build": "NODE_ENV='production' webpack --optimize-minimize -p --progress"
   },
   "repository": {
     "type": "git",
@@ -15,14 +16,18 @@
   "dependencies": {
     "babel-register": "^6.24.0",
     "body-parser": "^1.17.1",
-    "bootstrap": "4.0.0-alpha.6",
     "express": "^4.15.2",
-    "express-handlebars": "^3.0.0",
     "knex": "^0.12.8",
+    "lodash": "^4.17.4",
     "marked": "^0.3.6",
     "nodemon": "^1.11.0",
     "react": "^15.4.2",
     "react-dom": "^15.4.2",
+    "react-redux": "^5.0.3",
+    "react-router-dom": "^4.0.0",
+    "redux": "^3.6.0",
+    "semantic-ui": "^2.2.9",
+    "semantic-ui-react": "^0.67.2",
     "sqlite": "^2.3.0",
     "sqlite3": "^3.1.8"
   },
@@ -48,6 +53,8 @@
     "style-loader": "^0.16.0",
     "stylelint": "^7.9.0",
     "stylelint-config-standard": "^16.0.0",
-    "webpack": "^2.3.1"
+    "sugarss": "^0.2.0",
+    "webpack": "^2.3.1",
+    "webpack-dev-middleware": "^1.10.1"
   }
 }
