@@ -15,17 +15,15 @@ const ListItem = props =>
     </Card.Content>
     <Card.Content extra>
       {[
-        { label: 'View', url: 'view', color: 'blue', icon: 'unhide' },
-        { label: 'Edit', url: 'edit', color: 'green', icon: 'edit' },
-        { label: 'Share', url: 'share', color: 'yellow', icon: 'send' },
+        { content: 'View', url: 'view', color: 'blue', icon: 'unhide' },
+        { content: 'Edit', url: 'edit', color: 'green', icon: 'edit' },
+        { content: 'Share', url: 'share', color: 'yellow', icon: 'send' },
       ].map(e =>
         <Button
           key={e.label}
-          color={e.color}
-          icon={e.icon}
-          content={e.label}
-          size="tiny"
+          {...e}
           href={`/#/${e.url}/${props.id}`}
+          size="tiny"
         />
       )}
     </Card.Content>
@@ -45,7 +43,7 @@ export default class MainList extends Component {
   }
 
   componentDidMount() {
-    fetch('/api/v1/all')
+    fetch('/api/v1/list')
       .then(response => response.json())
       .then(data => data.body)
       .then(data => this.setState({ data }))

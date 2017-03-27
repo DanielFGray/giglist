@@ -10,6 +10,7 @@ import './style.css'
 import MainList from './components/MainList'
 import Nav from './components/Nav'
 import Edit from './components/Edit'
+import View from './components/View'
 
 const Init = () => (
   <Router>
@@ -17,6 +18,7 @@ const Init = () => (
       <Nav />
       <Route exact path="/" component={MainList} />
       <Route path="/edit/:id" component={Edit} />
+      <Route path="/view/:id" component={View} />
     </div>
   </Router>
 )

@@ -6,7 +6,7 @@ const Nav = () =>
     <Menu>
       <Menu.Item href="/#/">Home</Menu.Item>
       <Menu.Menu position="right">
-        <Menu.Item onClick>Sign In</Menu.Item>
+        <Menu.Item href="/#/">Sign In</Menu.Item>
       </Menu.Menu>
     </Menu>
   </nav>
