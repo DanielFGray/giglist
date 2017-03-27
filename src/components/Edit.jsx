@@ -41,7 +41,7 @@ class Editor extends Component {
   render() {
     console.log(this.state.data)
     return (
-      <Form action={`/api/v1/save/${this.props.match.params.id}`} method="POST" onSubmit={this.submit}>
+      <Form action={`/api/v1/list/${this.props.match.params.id}`} method="POST" onSubmit={this.submit}>
         <div style={{ padding: '10px' }}>
           <Card fluid>
             <Card.Header>
