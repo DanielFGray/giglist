@@ -40,8 +40,6 @@ function renderLogErrors(e, res) {
   res.json({ message: 'fail', body: e })
 }
 
-const getFrom = (obj, ...args) => args.map(key => obj[key])
-
 app.use(express.static(path.join(__dirname, 'dist')))
 app.use(bodyParser.urlencoded({ extended: true }))
 
@@ -49,10 +47,18 @@ app.get('/', (req, res) => {
   res.render('index.html')
 })
 
-app.get('/api/v1/all', (req, res) => {
+app.get('/api/v1/list', (req, res) => {
   getAllLists()
     .catch(e => renderLogErrors(e, res))
     .then(data => res.json({ message: 'success', body: data }))
+})
+
+app.post('/api/v1/list', (req, res) => {
+  // FIXME: should return an id
+  const { list } = req.body
+  newList({ list })
+    .catch(e => renderLogErrors(e, res))
+    .then(() => res.json({ message: 'success' }))
 })
 
 app.get('/api/v1/list/:id', (req, res) => {
@@ -61,20 +67,16 @@ app.get('/api/v1/list/:id', (req, res) => {
     .then(data => res.json({ message: 'success', body: data[0] }))
 })
 
-app.post('/api/v1/new', (req, res) => {
-  newList({ list: req.body.markdown })
-    .catch(e => renderLogErrors(e, res))
-    .then(() => res.json({ message: 'success' }))
-})
-
-app.del('/api/v1/del/:id', (req, res) => {
+app.delete('/api/v1/list/:id', (req, res) => {
   delList(req.params.id)
     .catch(e => renderLogErrors(e, res))
     .then(() => res.json({ message: 'success' }))
 })
 
-app.put('/api/v1/edit/:id', (req, res) => {
-  updateList(getFrom(req.params, 'id', 'markdown'))
+app.put('/api/v1/list/:id', (req, res) => {
+  const { id } = req.params
+  const { list } = req.body
+  updateList({ id, list })
     .catch(e => renderLogErrors(e, res))
     .then(() => res.json({ message: 'success' }))
 })

@@ -28,10 +28,10 @@ const getList = id =>
     .select('*')
     .limit(1)
 
-const updateList = (id, list) =>
+const updateList = ({ id, list }) =>
   knex('lists')
-    .where({ id })
     .update({ list })
+    .where({ id })
 
 const schema = () =>
   knex.schema.createTableIfNotExists('lists', table => {
