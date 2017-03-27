@@ -13,7 +13,7 @@ const getAllLists = () =>
   knex('lists')
     .select('*')
     .then(data => data.map(e => {
-      const list = e.list.split('\n').slice(0, 10).join('\n')
+      const list = e.list.split('\n').slice(0, 10).join('\n') || []
       return { ...e, list }
     }))
 

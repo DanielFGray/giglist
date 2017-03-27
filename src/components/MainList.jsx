@@ -65,10 +65,10 @@ export default class MainList extends Component {
     return (
       <div style={{ padding: '10px' }}>
         <div style={{ paddingBottom: '10px' }}>
-          <Button color="green" onClick icon="write" content="New" />
+          <Button color="green" href="/#/new" icon="write" content="New" />
         </div>
 
-        <Card.Group>
+        <Card.Group doubling>
           {data.length > 0
           ? data.map(e => <ListItem key={e.id} {...e} />)
           : <Loader inverted inline="centered" indeterminate>Loading</Loader>}

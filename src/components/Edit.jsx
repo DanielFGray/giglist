@@ -5,6 +5,7 @@ import {
   Form,
   TextArea,
 } from 'semantic-ui-react'
+import request from 'superagent'
 
 class Editor extends Component {
   static propTypes = {
@@ -33,27 +34,36 @@ class Editor extends Component {
       })
   }
 
-  submit = e => {
+  save = e => {
     e.preventDefault()
-    console.log(e)
+    const list = document.getElementById('markdown_textarea').value
+    request.put(`/api/v1/list/${this.props.match.params.id}`) // FIXME: use fetch()
+      .send(`list=${list}`)
+      .then(() => window.location.href = `/#/view/${this.props.match.params.id}`) // eslint-disable-line
+  }
+
+  delete = e => {
+    e.preventDefault()
+    fetch(`/api/v1/list/${this.props.match.params.id}`, { method: 'DELETE' })
+      .then(() => window.location.href = '/#/') // eslint-disable-line no-return-assign
   }
 
   render() {
     return (
-      <Form action={`/api/v1/list/${this.props.match.params.id}`} method="POST" onSubmit={this.submit}>
+      <Form action={`/api/v1/list/${this.props.match.params.id}`} method="PUT" onSubmit={this.save}>
         <div style={{ padding: '10px' }}>
           <Card fluid>
             <Card.Header>
               <h1 style={{ padding: '3px 15px' }}>Edit</h1>
             </Card.Header>
             <Card.Content>
-              {this.state.data.list && <TextThing input={this.state.data.list} /> }
+              {(this.props.match.params.id === 'new' || this.state.data.list) && <TextThing input={this.state.data.list} /> }
             </Card.Content>
             <Card.Content extra>
               {[
-                { content: 'Save', type: 'submit', color: 'blue', icon: 'write' },
-                { content: 'Reset', type: 'reset', color: 'yellow', icon: 'repeat' },
-                { content: 'Delete', type: 'submit', color: 'red', icon: 'remove' },
+                { content: 'Save', color: 'green', icon: 'write', type: 'submit' },
+                { content: 'Reset', color: 'yellow', icon: 'repeat', type: 'reset' },
+                { content: 'Delete', color: 'red', icon: 'remove', onClick: this.delete },
               ].map(e =>
                 <Button key={e.content} size="tiny" {...e} />
               )}
@@ -84,7 +94,7 @@ class TextThing extends Component { // eslint-disable-line react/no-multi-comp
   render() {
     return (
       <TextArea
-        name="markdown"
+        id="markdown_textarea"
         autoHeight
         autoFocus
         placeholder="Loading..."

@@ -55,7 +55,8 @@ app.get('/api/v1/list', (req, res) => {
 
 app.post('/api/v1/list', (req, res) => {
   const { list } = req.body
-  newList({ list })
+  if (! list) renderLogErrors('missing list property trying to create', res)
+  else newList({ list })
     .catch(e => renderLogErrors(e, res))
     .then(id => res.json({ message: 'success', body: { id: id[0] } }))
 })
@@ -75,7 +76,8 @@ app.delete('/api/v1/list/:id', (req, res) => {
 app.put('/api/v1/list/:id', (req, res) => {
   const { id } = req.params
   const { list } = req.body
-  updateList({ id, list })
+  if (! list) renderLogErrors(`missing list property trying to update ${id}`, res)
+  else updateList({ id, list })
     .catch(e => renderLogErrors(e, res))
     .then(() => res.json({ message: 'success' }))
 })
