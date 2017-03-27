@@ -39,7 +39,6 @@ class Editor extends Component {
   }
 
   render() {
-    console.log(this.state.data)
     return (
       <Form action={`/api/v1/list/${this.props.match.params.id}`} method="POST" onSubmit={this.submit}>
         <div style={{ padding: '10px' }}>
@@ -83,7 +82,6 @@ class TextThing extends Component { // eslint-disable-line react/no-multi-comp
   }
 
   render() {
-    console.log(this.state)
     return (
       <TextArea
         name="markdown"
