@@ -1,97 +1,106 @@
-const express = require('express');
-const path = require('path');
-const marked = require('marked');
-const bodyParser = require('body-parser');
-const handlebars = require('express-handlebars');
+/* eslint-disable no-console */
+
+const express = require('express')
+const path = require('path')
+const bodyParser = require('body-parser')
 
 const {
   delList,
-  getAllLists,
   getList,
-  insertList,
-  saveList,
+  getAllLists,
+  newList,
+  updateList,
   schema,
-} = require('./data');
+} = require('./data')
 
-schema();
+schema()
 
-marked.setOptions({
-  gfm: true,
-  tables: true,
-  breaks: true,
-  pedantic: false,
-  sanitize: true,
-  smartLists: true,
-  smartypants: false,
-});
+const app = express()
 
+if (process.env.NODE_ENV !== 'production') {
+  const webpack = require('webpack'); // eslint-disable-line
+  const webpackDevMiddleware = require('webpack-dev-middleware'); // eslint-disable-line
+  const webpackConfig = require('./webpack.config'); // eslint-disable-line
+  const compiler = webpack(webpackConfig)
 
-const app = express();
-const urlencodedParser = bodyParser.urlencoded({ extended: false });
+  app.use(webpackDevMiddleware(compiler, {
+    compress: true,
+    overlay: {
+      warnings: true,
+      errors: true,
+    },
+    publicPath: '/',
+    progress: true,
+    stats: 'minimal',
+  }))
+}
 
-app.use(express.static('public'));
-app.use('/assets', express.static(path.join(__dirname, 'node_modules')));
+function renderLogErrors(e, res) {
+  console.log(e)
+  res.json({ message: 'fail', body: e })
+}
 
-app.engine('handlebars', handlebars.create({ defaultLayout: 'main' }).engine);
-app.set('view engine', 'handlebars');
+app.use(express.static(path.join(__dirname, 'dist')))
+app.use(bodyParser.urlencoded({ extended: true }))
 
 app.get('/', (req, res) => {
+  res.render('index.html')
+})
+
+app.get('/api/v1/list', (req, res) => {
   getAllLists()
-    .catch(console.log)
-    .then(data => {
-      const markdown = data.map(e => ({ ...e, list: marked(e.list) }));
-      res.render('main', { data: markdown });
-    });
-});
+    .catch(e => renderLogErrors(e, res))
+    .then(data => res.json({ message: 'success', body: data }))
+})
 
-app.get('/edit/:id', (req, res) => {
+app.post('/api/v1/list', (req, res) => {
+  const { list } = req.body
+  if (! list) renderLogErrors('missing list property trying to create', res)
+  else newList({ list })
+    .catch(e => renderLogErrors(e, res))
+    .then(id => res.json({ message: 'success', body: { id: id[0] } }))
+})
+
+app.get('/api/v1/list/:id', (req, res) => {
   getList(req.params.id)
-    .catch(console.log)
-    .then(data => {
-      res.render('edit', { data: data[0] });
-    });
-});
+    .catch(e => renderLogErrors(e, res))
+    .then(data => res.json({ message: 'success', body: data[0] }))
+})
 
-app.post('/save', urlencodedParser, (req, res) => {
-  insertList(req.body.markdown);
-  res.redirect(303, '/');
-});
-
-app.get('/del/:id', (req, res) => {
+app.delete('/api/v1/list/:id', (req, res) => {
   delList(req.params.id)
-    .catch(console.log)
-    .then(() => {
-      res.redirect(303, '/');
-    });
-});
+    .catch(e => renderLogErrors(e, res))
+    .then(() => res.json({ message: 'success' }))
+})
 
-app.post('/save/:id', urlencodedParser, (req, res) => {
-  saveList(req.params.id, req.body.markdown)
-    .catch(console.log)
-    .then(() => {
-      res.redirect(303, '/');
-    });
-});
+app.put('/api/v1/list/:id', (req, res) => {
+  const { id } = req.params
+  const { list } = req.body
+  if (! list) renderLogErrors(`missing list property trying to update ${id}`, res)
+  else updateList({ id, list })
+    .catch(e => renderLogErrors(e, res))
+    .then(() => res.json({ message: 'success' }))
+})
 
 // custom 404 page
 app.use((req, res) => {
-  res.type('text/plain');
-  res.status(404);
-  res.send('404 - Not Found');
-});
+  res.type('text/plain')
+  res.status(404)
+  res.send('404 - Not Found')
+})
 
 // custom 500 page
 app.use((err, req, res) => {
-  console.error(err.stack);
-  res.type('text/plain');
-  res.status(500);
-  res.send('500 - Server Error');
-});
+  console.error(err.stack)
+  res.type('text/plain')
+  res.status(500)
+  res.send('500 - Server Error')
+})
 
-app.set('port', process.env.PORT || 3000);
+const port = process.env.PORT || 3000
 
-app.listen(app.get('port'), () => {
-  console.log(`Express started on http://localhost:${app.get('port')}\npress Ctrl+C to terminate.`);
-});
+app.listen(port, () => {
+  console.log(`Express started on http://localhost:${port}\npress Ctrl+C to terminate.`)
+})
 
-process.on('uncaughtException', console.log);
+process.on('uncaughtException', console.log)
