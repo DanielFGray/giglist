@@ -54,11 +54,10 @@ app.get('/api/v1/list', (req, res) => {
 })
 
 app.post('/api/v1/list', (req, res) => {
-  // FIXME: should return an id
   const { list } = req.body
   newList({ list })
     .catch(e => renderLogErrors(e, res))
-    .then(() => res.json({ message: 'success' }))
+    .then(id => res.json({ message: 'success', body: { id: id[0] } }))
 })
 
 app.get('/api/v1/list/:id', (req, res) => {

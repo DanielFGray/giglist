@@ -50,6 +50,7 @@ const schema = () =>
 
 module.exports = {
   delList,
+  newList,
   getAllLists,
   getList,
   updateList,
