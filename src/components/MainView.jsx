@@ -6,7 +6,7 @@ import {
   Card,
 } from 'semantic-ui-react'
 
-import './MainList.css'
+import './MainView.css'
 
 const ListItem = props =>
   <Card id={`list_${props.id}`}>
@@ -34,7 +34,7 @@ ListItem.propTypes = {
   list: PropTypes.string.isRequired,
 }
 
-export default class MainList extends Component {
+export default class MainView extends Component {
   constructor(props) {
     super(props)
     this.state = {
