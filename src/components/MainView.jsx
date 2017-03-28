@@ -8,7 +8,7 @@ import {
   Card,
 } from 'semantic-ui-react'
 
-import './MainList.css'
+import './MainView.css'
 
 const ListItem = props =>
   <Card id={`list_${props.id}`}>
@@ -80,7 +80,7 @@ export default class MainList extends Component {
         <Card.Group doubling>
           {data.length > 0
           ? data.map(e => <ListItem key={e.id} {...e} />)
-              : <Loading />}
+          : <Loading />}
         </Card.Group>
       </div>
     )

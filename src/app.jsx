@@ -7,20 +7,20 @@ import {
 
 import './style.css'
 
-import MainList from './components/MainList'
+import MainView from './components/MainView'
 import Nav from './components/Nav'
-import Edit from './components/Edit'
+import EditList from './components/EditList'
 import NewList from './components/NewList'
-import View from './components/View'
+import ViewList from './components/ViewList'
 import SignIn from './components/SignIn'
 
 const Init = () => (
   <Router>
     <div>
       <Nav />
-      <Route exact path="/" component={MainList} />
-      <Route path="/edit/:id" component={Edit} />
-      <Route path="/view/:id" component={View} />
+      <Route exact path="/" component={MainView} />
+      <Route path="/edit/:id" component={EditList} />
+      <Route path="/view/:id" component={ViewList} />
       <Route path="/new" component={NewList} />
       <Route path="/signin" component={SignIn} />
     </div>
