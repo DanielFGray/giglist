@@ -12,6 +12,7 @@ import Nav from './components/Nav'
 import Edit from './components/Edit'
 import NewList from './components/NewList'
 import View from './components/View'
+import SignIn from './components/SignIn'
 
 const Init = () => (
   <Router>
@@ -21,6 +22,7 @@ const Init = () => (
       <Route path="/edit/:id" component={Edit} />
       <Route path="/view/:id" component={View} />
       <Route path="/new" component={NewList} />
+      <Route path="/signin" component={SignIn} />
     </div>
   </Router>
 )
