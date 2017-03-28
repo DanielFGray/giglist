@@ -1,7 +1,9 @@
 import React, { Component, PropTypes } from 'react'
 import marked from 'marked'
+import { Link } from 'react-router-dom'
 import {
   Loader,
+  Dimmer,
   Button,
   Card,
 } from 'semantic-ui-react'
@@ -13,7 +15,7 @@ const ListItem = props =>
     <Card.Content>
       <div dangerouslySetInnerHTML={{ __html: marked(props.list) }} />
     </Card.Content>
-    <Card.Content extra>
+    <Card.Content extra style={{ textAlign: 'center' }}>
       {[
         { content: 'View', url: 'view', color: 'blue', icon: 'unhide' },
         { content: 'Edit', url: 'edit', color: 'green', icon: 'edit' },
@@ -34,7 +36,14 @@ ListItem.propTypes = {
   list: PropTypes.string.isRequired,
 }
 
-export default class MainView extends Component {
+const Loading = () =>
+  <Dimmer inverted active>
+    <Loader inline="centered" indeterminate>
+      Loading
+    </Loader>
+  </Dimmer>
+
+export default class MainList extends Component {
   constructor(props) {
     super(props)
     this.state = {
@@ -65,13 +74,13 @@ export default class MainView extends Component {
     return (
       <div style={{ padding: '10px' }}>
         <div style={{ paddingBottom: '10px' }}>
-          <Button color="green" href="/#/new" icon="write" content="New" />
+          <Button color="green" as={Link} to="/new" icon="write" content="New" />
         </div>
 
         <Card.Group doubling>
           {data.length > 0
           ? data.map(e => <ListItem key={e.id} {...e} />)
-          : <Loader inverted inline="centered" indeterminate>Loading</Loader>}
+          : <Loading />}
         </Card.Group>
       </div>
     )
