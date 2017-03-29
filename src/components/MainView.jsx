@@ -24,7 +24,8 @@ const ListItem = props =>
         <Button
           key={e.label}
           {...e}
-          href={`/#/${e.url}/${props.id}`}
+          as={Link}
+          to={`/${e.url}/${props.id}`}
           size="tiny"
         />
       )}
