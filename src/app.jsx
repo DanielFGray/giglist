@@ -12,6 +12,8 @@ import Nav from './components/Nav'
 import EditList from './components/EditList'
 import NewList from './components/NewList'
 import ViewList from './components/ViewList'
+import SignIn from './components/SignIn'
+import SignUp from './components/SignUp'
 
 const Init = () => (
   <Router>
@@ -21,6 +23,8 @@ const Init = () => (
       <Route path="/edit/:id" component={EditList} />
       <Route path="/view/:id" component={ViewList} />
       <Route path="/new" component={NewList} />
+      <Route path="/signin" component={SignIn} />
+      <Route path="/signup" component={SignUp} />
     </div>
   </Router>
 )
