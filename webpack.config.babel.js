@@ -1,4 +1,6 @@
+// @flow
 /* eslint-disable import/no-extraneous-dependencies */
+
 const path = require('path')
 const webpack = require('webpack')
 const ExtractTextPlugin = require('extract-text-webpack-plugin')
@@ -13,64 +15,70 @@ const babelOpts = {
   ],
 }
 
-const cssOpts = {
-  test: /\.css$/,
-  use: ExtractTextPlugin.extract({
-    use: [
-      'css-loader',
-      // 'postcss-loader',
-    ]
-  }),
-}
+const cssOpts = [
+  {
+    test: /\.[sc]ss$/,
+    exclude: /node_modules/,
+    use: ExtractTextPlugin.extract({
+      use: [
+        'css-loader?modules',
+      ],
+    }),
+  },
+  {
+    test: /css$/,
+    use: ExtractTextPlugin.extract({
+      use: [
+        'css-loader',
+      ],
+    }),
+  },
+]
 
-const pluginList = [
+const plugins = [
   new webpack.optimize.CommonsChunkPlugin({
     name: 'vendor',
     minChunks: module =>
       module.context && module.context.indexOf('node_modules') !== -1,
   }),
-  new ExtractTextPlugin('styles.bundle.css'),
+  new ExtractTextPlugin({
+    filename: '[name].bundle.css',
+    allChunks: true,
+  }),
   new HtmlWebpackPlugin({
     template: 'src/index.ejs',
     inject: false,
-    title: 'setlist',
+    title: 'SetLists',
     appMountId: 'main',
-    devServer: '',
   }),
 ]
 
-if (process.env.NODE_ENV === 'production') {
-  pluginList.push(
-    new webpack.optimize.UglifyJsPlugin({
-      comments: false,
-      sourceMap: false,
-    })
-    // new webpack.SourceMapDevToolPlugin({
-    //   filename: '[name].bundle.map',
-    // })
-  )
+const stats = {
+  chunks: false,
+  modules: false,
+  children: false,
 }
 
 module.exports = {
-  entry: './src/app',
+  entry: './src/Init',
   resolve: {
-    extensions: [ '.js', '.jsx' ],
+    extensions: ['.js', '.jsx'],
   },
   output: {
     filename: '[name].bundle.js',
-    path: path.resolve(__dirname, 'dist'),
-    // sourceMapFilename: '[name].bundle.map'
+    path: path.resolve(__dirname, 'public'),
   },
   module: {
     rules: [
       babelOpts,
-      cssOpts,
+      ...cssOpts,
     ],
   },
-  plugins: pluginList,
-  // devtool: 'inline-source-map',
+  plugins,
   devServer: {
-    contentBase: path.resolve(__dirname, 'dist'),
+    contentBase: path.resolve(__dirname, 'public'),
     publicPath: '/',
+    stats,
   },
+  stats,
 }

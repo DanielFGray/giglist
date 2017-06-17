@@ -1,4 +1,5 @@
-import React, { Component, PropTypes } from 'react'
+// @flow
+import React, { Component } from 'react'
 import {
   Button,
   Card,
@@ -8,24 +9,21 @@ import {
 import request from 'superagent'
 
 class NewList extends Component {
-  static propTypes = {
-    match: PropTypes.shape({
-      params: PropTypes.shape({
-        id: PropTypes.string.isRequired,
-      }).isRequired,
-    }).isRequired,
-  }
-
-  constructor(props) {
-    super(props)
-    this.state = {
-      data: {
-        list: '',
+  props: {
+    match: {
+      params: {
+        id: string,
       },
-    }
+    },
   }
 
-  save = e => {
+  state = {
+    data: {
+      list: '',
+    },
+  }
+
+  save = (e: SyntheticEvent) => {
     e.preventDefault()
     const list = document.getElementById('markdown_textarea').value
     request.post('/api/v1/list') // FIXME: use fetch()
@@ -48,9 +46,7 @@ class NewList extends Component {
               {[
                 { content: 'Save', color: 'green', icon: 'write', type: 'submit' },
                 { content: 'Reset', color: 'yellow', icon: 'repeat', type: 'reset' },
-              ].map(e =>
-                <Button key={e.content} size="tiny" {...e} />
-              )}
+              ].map(e => <Button key={e.content} size="tiny" {...e} />)}
             </Card.Content>
           </Card>
         </div>
@@ -60,20 +56,15 @@ class NewList extends Component {
 }
 
 class TextThing extends Component { // eslint-disable-line react/no-multi-comp
-  static propTypes = {
-    input: PropTypes.string.isRequired,
+  props: {
+    input: string,
   }
 
-  constructor(props) {
-    super(props)
-    this.state = {
-      input: this.props.input,
-    }
+  state = {
+    input: this.props.input,
   }
 
-  update = e => {
-    this.setState({ input: e.target.value })
-  }
+  update = (e: SyntheticInputEvent) => this.setState({ input: e.target.value })
 
   render() {
     return (

@@ -1,4 +1,5 @@
-import React, { Component, PropTypes } from 'react'
+// @flow
+import React, { Component } from 'react'
 import {
   Button,
   Card,
@@ -8,33 +9,28 @@ import {
 import request from 'superagent'
 
 class Editor extends Component {
-  static propTypes = {
-    match: PropTypes.shape({
-      params: PropTypes.shape({
-        id: PropTypes.string.isRequired,
-      }).isRequired,
-    }).isRequired,
+  props: {
+    match: {
+      params: {
+        id: string,
+      },
+    },
   }
 
-  constructor(props) {
-    super(props)
-    this.state = {
-      data: {
-        list: '',
-      },
-    }
+  state = {
+    data: {
+      list: '',
+    },
   }
 
   componentDidMount() {
     fetch(`/api/v1/list/${this.props.match.params.id}`)
       .then(response => response.json())
       .then(data => data.body)
-      .then(data => {
-        this.setState({ data })
-      })
+      .then(data => this.setState({ data }))
   }
 
-  save = e => {
+  save = (e: SyntheticEvent) => {
     e.preventDefault()
     const list = document.getElementById('markdown_textarea').value
     request.put(`/api/v1/list/${this.props.match.params.id}`) // FIXME: use fetch()
@@ -42,7 +38,7 @@ class Editor extends Component {
       .then(() => window.location.href = `/#/view/${this.props.match.params.id}`) // eslint-disable-line
   }
 
-  delete = e => {
+  delete = (e: SyntheticEvent) => {
     e.preventDefault()
     fetch(`/api/v1/list/${this.props.match.params.id}`, { method: 'DELETE' })
       .then(() => window.location.href = '/#/') // eslint-disable-line no-return-assign
@@ -64,9 +60,7 @@ class Editor extends Component {
                 { content: 'Save', color: 'green', icon: 'write', type: 'submit' },
                 { content: 'Reset', color: 'yellow', icon: 'repeat', type: 'reset' },
                 { content: 'Delete', color: 'red', icon: 'remove', onClick: this.delete },
-              ].map(e =>
-                <Button key={e.content} size="tiny" {...e} />
-              )}
+              ].map(e => <Button key={e.content} size="tiny" {...e} />)}
             </Card.Content>
           </Card>
         </div>
@@ -76,20 +70,15 @@ class Editor extends Component {
 }
 
 class TextThing extends Component { // eslint-disable-line react/no-multi-comp
-  static propTypes = {
-    input: PropTypes.string.isRequired,
+  props: {
+    input: string,
   }
 
-  constructor(props) {
-    super(props)
-    this.state = {
-      input: this.props.input,
-    }
+  state = {
+    input: this.props.input,
   }
 
-  update = e => {
-    this.setState({ input: e.target.value })
-  }
+  update = (e: SyntheticInputEvent) => this.setState({ input: e.target.value })
 
   render() {
     return (

@@ -1,4 +1,5 @@
-import React, { Component, PropTypes } from 'react'
+// @flow
+import React, { Component } from 'react'
 import marked from 'marked'
 import { Link } from 'react-router-dom'
 import {
@@ -10,7 +11,10 @@ import {
 
 import './MainView.css'
 
-const ListItem = props =>
+const ListItem = (props: {
+  id: number,
+  list: string,
+}) =>
   <Card id={`list_${props.id}`}>
     <Card.Content>
       <div dangerouslySetInnerHTML={{ __html: marked(props.list) }} />
@@ -22,20 +26,14 @@ const ListItem = props =>
         { content: 'Share', url: 'share', color: 'yellow', icon: 'send' },
       ].map(e =>
         <Button
-          key={e.label}
+          key={e.content}
           {...e}
           as={Link}
           to={`/${e.url}/${props.id}`}
           size="tiny"
-        />
-      )}
+        />)}
     </Card.Content>
   </Card>
-
-ListItem.propTypes = {
-  id: PropTypes.number.isRequired,
-  list: PropTypes.string.isRequired,
-}
 
 const Loading = () =>
   <Dimmer inverted active>
@@ -45,11 +43,8 @@ const Loading = () =>
   </Dimmer>
 
 export default class MainList extends Component {
-  constructor(props) {
-    super(props)
-    this.state = {
-      data: {},
-    }
+  state = {
+    data: {},
   }
 
   componentDidMount() {

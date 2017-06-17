@@ -1,3 +1,4 @@
+// @flow
 import React, { Component } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -11,16 +12,13 @@ import {
 const padded = { margin: '3px 0' }
 
 class SignIn extends Component {
-  constructor(props) {
-    super(props)
-    this.state = {
-      loading: false,
-      error: false,
-      errorMessage: false,
-    }
+  state = {
+    loading: false,
+    error: false,
+    errorMessage: '',
   }
 
-  submit = e => {
+  submit = (e: SyntheticEvent) => {
     e.preventDefault()
     this.setState({ loading: true }, () =>
       setTimeout(() =>
@@ -55,8 +53,7 @@ class SignIn extends Component {
               ].map(e =>
                 <div key={e.icon} style={padded}>
                   <Button {...e} />
-                </div>
-              )}
+                </div>)}
             </Card.Content>
             <Card.Content extra>
               <div style={padded}>

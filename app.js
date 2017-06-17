@@ -20,8 +20,8 @@ const app = express()
 if (process.env.NODE_ENV !== 'production') {
   const webpack = require('webpack'); // eslint-disable-line
   const webpackDevMiddleware = require('webpack-dev-middleware'); // eslint-disable-line
-  const webpackConfig = require('./webpack.config'); // eslint-disable-line
-  const compiler = webpack(webpackConfig)
+  const webpackConfig = require('./webpack.config.babel'); // eslint-disable-line
+  var compiler = webpack(webpackConfig)
 
   app.use(webpackDevMiddleware(compiler, {
     compress: true,
@@ -43,10 +43,6 @@ function renderLogErrors(e, res) {
 app.use(express.static(path.join(__dirname, 'dist')))
 app.use(bodyParser.urlencoded({ extended: true }))
 
-app.get('/', (req, res) => {
-  res.render('index.html')
-})
-
 app.get('/api/v1/list', (req, res) => {
   getAllLists()
     .catch(e => renderLogErrors(e, res))
@@ -55,10 +51,13 @@ app.get('/api/v1/list', (req, res) => {
 
 app.post('/api/v1/list', (req, res) => {
   const { list } = req.body
-  if (! list) renderLogErrors('missing list property trying to create', res)
-  else newList({ list })
-    .catch(e => renderLogErrors(e, res))
-    .then(id => res.json({ message: 'success', body: { id: id[0] } }))
+  if (! list) {
+    renderLogErrors('missing list property trying to create', res)
+  } else {
+    newList({ list })
+      .catch(e => renderLogErrors(e, res))
+      .then(id => res.json({ message: 'success', body: { id: id[0] } }))
+  }
 })
 
 app.get('/api/v1/list/:id', (req, res) => {
@@ -76,11 +75,31 @@ app.delete('/api/v1/list/:id', (req, res) => {
 app.put('/api/v1/list/:id', (req, res) => {
   const { id } = req.params
   const { list } = req.body
-  if (! list) renderLogErrors(`missing list property trying to update ${id}`, res)
-  else updateList({ id, list })
-    .catch(e => renderLogErrors(e, res))
-    .then(() => res.json({ message: 'success' }))
+  if (! list) {
+    renderLogErrors(`missing list property trying to update ${id}`, res)
+  } else {
+    updateList({ id, list })
+      .catch(e => renderLogErrors(e, res))
+      .then(() => res.json({ message: 'success' }))
+  }
 })
+
+if (process.env.NODE_ENV !== 'production') {
+  app.use('/*', (req, res, next) => {
+    const filename = path.join(compiler.outputPath,'index.html')
+    compiler.outputFileSystem.readFile(filename, (err, result) => {
+      if (err) return next(err)
+      res.set('content-type', 'text/html')
+      res.send(result)
+      res.end()
+    })
+  })
+} else {
+  app.get('/*', (req, res) => {
+    res.sendFile('index.html')
+  })
+}
+
 
 // custom 404 page
 app.use((req, res) => {

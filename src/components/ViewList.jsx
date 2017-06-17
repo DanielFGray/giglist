@@ -1,4 +1,5 @@
-import React, { Component, PropTypes } from 'react'
+// @flow
+import React, { Component } from 'react'
 import {
   Button,
   Card,
@@ -6,21 +7,18 @@ import {
 import marked from 'marked'
 
 class View extends Component {
-  static propTypes = {
-    match: PropTypes.shape({
-      params: PropTypes.shape({
-        id: PropTypes.string.isRequired,
-      }).isRequired,
-    }).isRequired,
+  props: {
+    match: {
+      params: {
+        id: string,
+      },
+    },
   }
 
-  constructor(props) {
-    super(props)
-    this.state = {
-      data: {
-        list: 'Loading...',
-      },
-    }
+  state = {
+    data: {
+      list: 'Loading...',
+    },
   }
 
   componentDidMount() {
@@ -56,8 +54,7 @@ class View extends Component {
                 {...e}
                 size="tiny"
                 href={`/#/${e.url}/${this.props.match.params.id}`}
-              />
-            )}
+              />)}
           </Card.Content>
         </Card>
       </div>
