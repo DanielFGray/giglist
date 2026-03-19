@@ -17,6 +17,11 @@ export default defineConfig({
         path: "./src/server/db.ts",
       },
     }),
-    effect({ repoModel: false }),
+    effect({
+      repoModel: false,
+      http: {
+        basePath: "/api",
+      },
+    }),
   ],
 })
