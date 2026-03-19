@@ -12,3 +12,7 @@ tags*
 # Generated
 src/routeTree.gen.ts
 generated/
+
+# Test
+test-results/
+playwright-report/

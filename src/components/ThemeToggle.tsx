@@ -1,23 +1,25 @@
 import { useCallback, useEffect, useState } from "react"
 
-function getInitialTheme(): "dark" | "light" {
-  if (typeof window === "undefined") return "dark"
-  // Read what the blocking script already decided (avoids flash)
-  const current = document.documentElement.classList.contains("light")
-    ? "light"
-    : "dark"
-  return current
-}
-
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<"dark" | "light">(getInitialTheme)
+  // Always start "dark" for SSR match — useEffect corrects on mount
+  const [theme, setTheme] = useState<"dark" | "light">("dark")
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
+    const current = document.documentElement.classList.contains("light")
+      ? "light"
+      : "dark"
+    setTheme(current)
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!mounted) return
     const root = document.documentElement
     root.classList.remove("dark", "light")
     root.classList.add(theme)
     localStorage.setItem("setlist-theme", theme)
-  }, [theme])
+  }, [theme, mounted])
 
   const toggle = useCallback(
     () => setTheme((t) => (t === "dark" ? "light" : "dark")),
@@ -29,6 +31,7 @@ export function ThemeToggle() {
       onClick={toggle}
       className="relative size-8 rounded-md flex items-center justify-center text-zinc-400 hover:text-zinc-200 hover:bg-[var(--color-surface-hover)] transition-colors cursor-pointer"
       aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+      suppressHydrationWarning
     >
       {theme === "dark" ? (
         <svg
