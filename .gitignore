@@ -1,9 +1,14 @@
-*~
 node_modules
-*.sqlite3
-dist/*
-yarn.lock
+.output
+.vinxi
+dist
+*.local
+.env
+*~
 \#*
 .\#*
 tags*
-public
+
+# Generated
+src/routeTree.gen.ts
+generated/
