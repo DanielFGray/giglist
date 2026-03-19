@@ -19,7 +19,6 @@
     "db:latest": "bun -b graphile-migrate watch --once",
     "db:watch": "bun -b graphile-migrate watch",
     "db:reset": "bun -b graphile-migrate reset --erase",
-    "db:types": "kysely-codegen",
     "sourcerer": "bun -b pgsourcerer",
     "db:setup": "run-s db:up db:init db:reset db:latest",
     "worker": "cd worker && bun --env-file=../.env graphile-worker",
@@ -57,7 +56,6 @@
     "@types/pg": "^8.16.0",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
-    "kysely-codegen": "^0.18.1",
     "tailwindcss": "^4.1.7",
     "typescript": "~5.8.3"
   }
