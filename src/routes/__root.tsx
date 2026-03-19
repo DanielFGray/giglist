@@ -7,6 +7,8 @@ import {
   Scripts,
 } from "@tanstack/react-router"
 import { Nav } from "~/components/Nav"
+import { AuthProvider } from "~/components/AuthContext"
+import { getMeFn } from "~/server/auth.fn"
 
 export const Route = createRootRoute({
   head: () => ({
@@ -28,16 +30,21 @@ export const Route = createRootRoute({
       },
     ],
   }),
+  loader: () => getMeFn(),
   component: RootComponent,
 })
 
 function RootComponent() {
+  const user = Route.useLoaderData()
+
   return (
     <RootDocument>
-      <Nav />
-      <main className="mx-auto max-w-6xl px-4 py-6">
-        <Outlet />
-      </main>
+      <AuthProvider user={user}>
+        <Nav />
+        <main className="mx-auto max-w-6xl px-4 py-6">
+          <Outlet />
+        </main>
+      </AuthProvider>
     </RootDocument>
   )
 }

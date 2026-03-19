@@ -9,6 +9,8 @@
     "build": "vite build",
     "start": "node .output/server/index.mjs",
     "typecheck": "tsc --noEmit",
+    "test": "bunx playwright test",
+    "test:ui": "bunx playwright test --ui",
     "env:init": "bun scripts/generateEnvFile.ts",
     "gm": "bun -b graphile-migrate",
     "db:up": "docker compose up -d db",
@@ -20,20 +22,20 @@
     "db:watch": "bun -b graphile-migrate watch",
     "db:reset": "bun -b graphile-migrate reset --erase",
     "sourcerer": "bun -b pgsourcerer",
-    "db:setup": "run-s db:up db:init db:reset db:latest",
+    "db:setup": "run-s db:up db:init worker:schema db:reset db:latest",
     "worker": "cd worker && bun --env-file=../.env graphile-worker",
     "worker:schema": "cd worker && bun --env-file=../.env graphile-worker --schema-only",
-    "init": "NOCONFIRM=1 run-s env:init db:setup worker:schema"
+    "init": "NOCONFIRM=1 run-s env:init db:setup"
   },
   "dependencies": {
     "@danielfgray/pg-sourcerer": "link:@danielfgray/pg-sourcerer",
-    "@effect/platform": "^0.94.5",
-    "@effect/platform-node": "^0.104.1",
-    "@effect/sql": "^0.49.0",
-    "@effect/sql-kysely": "^0.45.0",
-    "@effect/sql-pg": "^0.50.3",
-    "@tanstack/query-db-collection": "^0.0.3",
-    "@tanstack/react-db": "^0.0.3",
+    "@effect/platform": "^0.95.0",
+    "@effect/platform-node": "^0.105.0",
+    "@effect/sql": "^0.50.0",
+    "@effect/sql-kysely": "^0.46.0",
+    "@effect/sql-pg": "^0.51.0",
+    "@tanstack/query-db-collection": "^1.0.30",
+    "@tanstack/react-db": "^0.1.77",
     "@tanstack/react-query": "^5.80.0",
     "@tanstack/react-router": "^1.121.0",
     "@tanstack/react-start": "^1.121.0",
@@ -51,12 +53,13 @@
     "react-dom": "^19.1.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@tailwindcss/vite": "^4.1.7",
-    "@types/node": "^24.0.0",
+    "@types/node": "^25.5.0",
     "@types/pg": "^8.16.0",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
     "tailwindcss": "^4.1.7",
-    "typescript": "~5.8.3"
+    "typescript": "~5.9.3"
   }
 }
