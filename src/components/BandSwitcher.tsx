@@ -1,13 +1,10 @@
 import { useState, useRef, useEffect } from "react"
-
-// Placeholder — will be wired to real band data from auth context
-const PLACEHOLDER_BANDS = [
-  { id: "1", name: "The Placeholders" },
-]
+import { Link } from "@tanstack/react-router"
+import { useAuth } from "./AuthContext"
 
 export function BandSwitcher() {
+  const { bands, currentBand, setCurrentBandId } = useAuth()
   const [open, setOpen] = useState(false)
-  const [current] = useState(PLACEHOLDER_BANDS[0])
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -20,16 +17,29 @@ export function BandSwitcher() {
     return () => document.removeEventListener("mousedown", handleClick)
   }, [])
 
+  if (!currentBand) {
+    return (
+      <Link
+        to="/band/new"
+        data-pwid="band-create-link"
+        className="px-2.5 py-1.5 rounded-md text-sm font-medium text-[var(--color-amber-accent)] hover:bg-[var(--color-surface-hover)] transition-colors"
+      >
+        Create a band
+      </Link>
+    )
+  }
+
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative" data-pwid="band-switcher">
       <button
         onClick={() => setOpen(!open)}
+        data-pwid="band-switcher-toggle"
         className="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm font-medium text-zinc-300 hover:text-zinc-100 hover:bg-[var(--color-surface-hover)] transition-colors cursor-pointer"
       >
         <span className="size-5 rounded bg-[var(--color-amber-accent)] flex items-center justify-center text-xs font-bold text-zinc-950">
-          {current.name[0]}
+          {currentBand.name[0]}
         </span>
-        <span className="max-w-[120px] truncate">{current.name}</span>
+        <span className="max-w-[120px] truncate">{currentBand.name}</span>
         <svg
           width="12"
           height="12"
@@ -45,17 +55,20 @@ export function BandSwitcher() {
 
       {open && (
         <div className="absolute left-0 top-full mt-1 w-56 rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] shadow-xl shadow-black/30 py-1 z-50">
-          {PLACEHOLDER_BANDS.map((band) => (
+          {bands.map((band) => (
             <button
               key={band.id}
               className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-left text-zinc-300 hover:bg-[var(--color-surface-hover)] hover:text-zinc-100 transition-colors cursor-pointer"
-              onClick={() => setOpen(false)}
+              onClick={() => {
+                setCurrentBandId(band.id)
+                setOpen(false)
+              }}
             >
               <span className="size-5 rounded bg-[var(--color-amber-accent)] flex items-center justify-center text-xs font-bold text-zinc-950 shrink-0">
                 {band.name[0]}
               </span>
               <span className="truncate">{band.name}</span>
-              {band.id === current.id && (
+              {band.id === currentBand.id && (
                 <svg
                   width="14"
                   height="14"
@@ -71,12 +84,16 @@ export function BandSwitcher() {
             </button>
           ))}
           <div className="border-t border-[var(--color-border-subtle)] mt-1 pt-1">
-            <button className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-zinc-500 hover:text-zinc-300 hover:bg-[var(--color-surface-hover)] transition-colors cursor-pointer">
+            <Link
+              to="/band/new"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-zinc-500 hover:text-zinc-300 hover:bg-[var(--color-surface-hover)] transition-colors cursor-pointer"
+            >
               <span className="size-5 rounded border border-dashed border-zinc-600 flex items-center justify-center text-xs text-zinc-500">
                 +
               </span>
               Create band
-            </button>
+            </Link>
           </div>
         </div>
       )}

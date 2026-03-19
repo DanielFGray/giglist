@@ -16,3 +16,4 @@ generated/
 # Test
 test-results/
 playwright-report/
+.playwright-mcp/
