@@ -14,6 +14,13 @@ export const Route = createFileRoute("/api/testing/clear")({
         await runtime.runPromise(
           Effect.gen(function* () {
             const db = yield* Db
+            // Bands with test names (users cascade via FK)
+            yield* db
+              .deleteFrom("app_public.bands")
+              .where("name", "like", "Test:%")
+            yield* db
+              .deleteFrom("app_public.bands")
+              .where("slug", "like", "test-%")
             yield* db
               .deleteFrom("app_public.users")
               .where("username", "like", "test_%")

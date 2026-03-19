@@ -9,6 +9,7 @@ import {
 import { Nav } from "~/components/Nav"
 import { AuthProvider } from "~/components/AuthContext"
 import { getMeFn } from "~/server/auth.fn"
+import { getUserBandsFn } from "~/server/band.fn"
 
 export const Route = createRootRoute({
   head: () => ({
@@ -30,16 +31,19 @@ export const Route = createRootRoute({
       },
     ],
   }),
-  loader: () => getMeFn(),
+  loader: async () => {
+    const [user, bands] = await Promise.all([getMeFn(), getUserBandsFn()])
+    return { user, bands }
+  },
   component: RootComponent,
 })
 
 function RootComponent() {
-  const user = Route.useLoaderData()
+  const { user, bands } = Route.useLoaderData()
 
   return (
     <RootDocument>
-      <AuthProvider user={user}>
+      <AuthProvider user={user} bands={bands}>
         <Nav />
         <main className="mx-auto max-w-6xl px-4 py-6">
           <Outlet />
