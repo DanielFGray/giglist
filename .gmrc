@@ -1,0 +1,26 @@
+{
+  "pgSettings": {
+    "search_path": "app_public,app_private,app_hidden,public"
+  },
+
+  "placeholders": {
+    ":DATABASE_AUTHENTICATOR": "!ENV",
+    ":DATABASE_VISITOR": "!ENV"
+  },
+
+  "afterReset": [
+    "!afterReset.sql"
+  ],
+
+  "afterAllMigrations": [],
+
+  "afterCurrent": [
+    {
+      "_": "command",
+      "shadow": false,
+      "command": "DATABASE_URL=$GM_DBURL run-s db:types sourcerer"
+    }
+  ],
+
+  "//generatedWith": "0.1.0"
+}
