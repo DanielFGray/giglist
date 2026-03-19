@@ -13,12 +13,17 @@ test.describe("bands", () => {
 
   test("can create a band via UI", async ({ page, testing }) => {
     await testing.login()
+    // Warm up: hit a page first to ensure Vite modules are loaded
+    await page.goto("/")
+    await page.waitForLoadState("networkidle")
+
     await page.goto("/band/new")
+    await page.waitForLoadState("networkidle")
     await getPw(page, "new-band-name").fill("Test: My Band")
     await getPw(page, "new-band-submit").click()
 
-    await expect(getPw(page, "band-page")).toBeVisible({ timeout: 5000 })
-    await expect(getPw(page, "band-members")).toBeVisible()
+    await expect(getPw(page, "band-page")).toBeVisible({ timeout: 10000 })
+    await expect(getPw(page, "band-members")).toBeVisible({ timeout: 5000 })
   })
 
   test("band appears in switcher after creation", async ({

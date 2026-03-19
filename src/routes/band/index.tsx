@@ -45,8 +45,8 @@ function MembersList({ bandId }: { bandId: string }) {
   const [loaded, setLoaded] = useState(false)
 
   if (!loaded) {
-    getBandMembersFn({ data: { bandId } }).then((m) => {
-      setMembers(m)
+    getBandMembersFn({ data: { bandId } }).then((r) => {
+      setMembers(r.members)
       setLoaded(true)
     })
     return <div className="text-sm text-zinc-500">Loading members...</div>
