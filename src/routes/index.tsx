@@ -27,23 +27,31 @@ function Home() {
   const health = Route.useLoaderData()
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-center space-y-4">
-        <h1 className="text-4xl font-bold tracking-tight">SetList</h1>
-        <p className="text-zinc-400">
-          Collaborative setlist manager for bands
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Setlists</h1>
+        <p className="text-sm text-zinc-500 mt-1">
+          Your band's setlists will appear here.
         </p>
-        <div className="text-sm text-zinc-500">
-          API:{" "}
-          <span
-            className={
-              health.status === "ok" ? "text-green-400" : "text-red-400"
-            }
-          >
-            {health.status}
-          </span>
-          <span className="ml-2 text-zinc-600">{health.dbTime}</span>
-        </div>
+      </div>
+
+      <div className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] p-8 text-center">
+        <p className="text-zinc-500 text-sm">No setlists yet.</p>
+        <button className="mt-4 px-4 py-2 rounded-md bg-[var(--color-amber-accent)] text-zinc-950 text-sm font-semibold hover:brightness-110 transition cursor-pointer">
+          Create your first setlist
+        </button>
+      </div>
+
+      <div className="text-xs text-zinc-600 font-mono">
+        db:{" "}
+        <span
+          className={
+            health.status === "ok" ? "text-green-500" : "text-red-500"
+          }
+        >
+          {health.status}
+        </span>
+        <span className="ml-2">{health.dbTime}</span>
       </div>
     </div>
   )

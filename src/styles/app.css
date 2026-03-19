@@ -1,1 +1,52 @@
 @import "tailwindcss" source("../");
+
+@font-face {
+  font-family: "DM Sans";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap");
+}
+
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap");
+
+@theme {
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --color-amber-accent: #e69a28;
+  --color-amber-accent-dim: #b37a1a;
+  --color-surface: #0c0c0e;
+  --color-surface-raised: #161619;
+  --color-surface-hover: #1e1e22;
+  --color-border-subtle: #27272a;
+  --color-border-active: #3f3f46;
+}
+
+@layer base {
+  ::selection {
+    background-color: color-mix(in oklch, var(--color-amber-accent) 30%, transparent);
+  }
+
+  :root {
+    color-scheme: dark;
+  }
+
+  :root.light {
+    color-scheme: light;
+    --color-surface: #fafaf9;
+    --color-surface-raised: #f0f0ee;
+    --color-surface-hover: #e7e5e4;
+    --color-border-subtle: #d6d3d1;
+    --color-border-active: #a8a29e;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--color-surface);
+  }
+
+  :root.light body {
+    color: #1c1917;
+  }
+}
