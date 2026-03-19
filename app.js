@@ -1,8 +1,9 @@
-/* eslint-disable no-console */
+/* eslint-disable no-console,vars-on-top,block-scoped-var,no-var */
 
 const express = require('express')
 const path = require('path')
 const bodyParser = require('body-parser')
+const morgan = require('morgan')
 
 const {
   delList,
@@ -16,11 +17,12 @@ const {
 schema()
 
 const app = express()
+app.use(morgan('dev'))
 
 if (process.env.NODE_ENV !== 'production') {
-  const webpack = require('webpack'); // eslint-disable-line
-  const webpackDevMiddleware = require('webpack-dev-middleware'); // eslint-disable-line
-  const webpackConfig = require('./webpack.config.babel'); // eslint-disable-line
+  const webpack = require('webpack') // eslint-disable-line import/no-extraneous-dependencies,global-require
+  const webpackDevMiddleware = require('webpack-dev-middleware') // eslint-disable-line import/no-extraneous-dependencies,global-require
+  const webpackConfig = require('./webpack.config.babel') // eslint-disable-line import/no-extraneous-dependencies,global-require
   var compiler = webpack(webpackConfig)
 
   app.use(webpackDevMiddleware(compiler, {
@@ -30,7 +32,6 @@ if (process.env.NODE_ENV !== 'production') {
       errors: true,
     },
     publicPath: '/',
-    progress: true,
     stats: 'minimal',
   }))
 }
@@ -86,9 +87,12 @@ app.put('/api/v1/list/:id', (req, res) => {
 
 if (process.env.NODE_ENV !== 'production') {
   app.use('/*', (req, res, next) => {
-    const filename = path.join(compiler.outputPath,'index.html')
+    const filename = path.join(compiler.outputPath, 'index.html')
     compiler.outputFileSystem.readFile(filename, (err, result) => {
-      if (err) return next(err)
+      if (err) {
+        next(err)
+        return
+      }
       res.set('content-type', 'text/html')
       res.send(result)
       res.end()
@@ -99,7 +103,6 @@ if (process.env.NODE_ENV !== 'production') {
     res.sendFile('index.html')
   })
 }
-
 
 // custom 404 page
 app.use((req, res) => {

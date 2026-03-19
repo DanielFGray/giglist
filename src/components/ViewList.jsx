@@ -17,14 +17,14 @@ class View extends Component {
 
   state = {
     data: {
-      list: 'Loading...',
+      list: '',
     },
   }
 
   componentDidMount() {
     fetch(`/api/v1/list/${this.props.match.params.id}`)
-      .then(response => response.json())
-      .then(data => data.body)
+      .then(x => x.json())
+      .then(x => x.body)
       .then(data => this.setState({ data }))
   }
 
@@ -43,7 +43,9 @@ class View extends Component {
       <div style={{ padding: '10px' }}>
         <Card id={`list_${this.props.match.params.id}`} fluid>
           <Card.Content>
-            <div dangerouslySetInnerHTML={{ __html: marked(this.state.data.list) }} />
+            {this.state.data.list
+              ? <div dangerouslySetInnerHTML={{ __html: marked(this.state.data.list) }} />
+              : 'Loading...'}
           </Card.Content>
           <Card.Content extra>
             {[

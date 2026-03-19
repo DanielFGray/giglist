@@ -9,15 +9,28 @@ import {
   Card,
 } from 'semantic-ui-react'
 
-import './MainView.css'
+import style from './MainView.css'
+
+marked.setOptions({
+  gfm: true,
+  tables: true,
+  breaks: true,
+  pedantic: false,
+  sanitize: true,
+  smartLists: true,
+  smartypants: false,
+})
 
 const ListItem = (props: {
   id: number,
   list: string,
-}) =>
+}) => (
   <Card id={`list_${props.id}`}>
     <Card.Content>
-      <div dangerouslySetInnerHTML={{ __html: marked(props.list) }} />
+      <div
+        className={style.list_preview}
+        dangerouslySetInnerHTML={{ __html: marked(props.list) }}
+      />
     </Card.Content>
     <Card.Content extra style={{ textAlign: 'center' }}>
       {[
@@ -34,38 +47,30 @@ const ListItem = (props: {
         />)}
     </Card.Content>
   </Card>
+)
 
-const Loading = () =>
+const Loading = () => (
   <Dimmer inverted active>
     <Loader inline="centered" indeterminate>
       Loading
     </Loader>
   </Dimmer>
+)
 
 export default class MainList extends Component {
   state = {
-    data: {},
+    data: [],
   }
 
   componentDidMount() {
     fetch('/api/v1/list')
-      .then(response => response.json())
-      .then(data => data.body)
+      .then(x => x.json())
+      .then(x => x.body)
       .then(data => this.setState({ data }))
   }
 
   render() {
     const { data } = this.state
-
-    marked.setOptions({
-      gfm: true,
-      tables: true,
-      breaks: true,
-      pedantic: false,
-      sanitize: true,
-      smartLists: true,
-      smartypants: false,
-    })
 
     return (
       <div style={{ padding: '10px' }}>
@@ -75,8 +80,8 @@ export default class MainList extends Component {
 
         <Card.Group doubling>
           {data.length > 0
-          ? data.map(e => <ListItem key={e.id} {...e} />)
-          : <Loading />}
+            ? data.map(e => <ListItem key={e.id} {...e} />)
+            : <Loading />}
         </Card.Group>
       </div>
     )

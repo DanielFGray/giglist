@@ -6,7 +6,6 @@ import {
   Form,
   TextArea,
 } from 'semantic-ui-react'
-import request from 'superagent'
 
 class NewList extends Component {
   props: {
@@ -18,16 +17,17 @@ class NewList extends Component {
   }
 
   state = {
-    data: {
-      list: '',
-    },
+    input: '',
   }
+
+  changeInput = (e: SyntheticInputEvent) =>
+    this.setState({ input: e.target.value })
 
   save = (e: SyntheticEvent) => {
     e.preventDefault()
-    const list = document.getElementById('markdown_textarea').value
-    request.post('/api/v1/list') // FIXME: use fetch()
-      .send(`list=${list}`)
+    const { input } = this.state
+    fetch('/api/v1/list', { method: 'POST', body: (new FormData()).append('list', input) })
+      .then(res => res.json())
       .then(res => window.location.href = `/#/view/${res.body.body.id}`) // eslint-disable-line no-return-assign
   }
 
@@ -40,7 +40,13 @@ class NewList extends Component {
               <h1 style={{ padding: '3px 15px' }}>New</h1>
             </Card.Header>
             <Card.Content>
-              <TextThing input={this.state.data.list} />
+              <TextArea
+                id="markdown_textarea"
+                autoHeight
+                autoFocus
+                value={this.state.input}
+                onChange={this.changeInput}
+              />
             </Card.Content>
             <Card.Content extra>
               {[
@@ -51,30 +57,6 @@ class NewList extends Component {
           </Card>
         </div>
       </Form>
-    )
-  }
-}
-
-class TextThing extends Component { // eslint-disable-line react/no-multi-comp
-  props: {
-    input: string,
-  }
-
-  state = {
-    input: this.props.input,
-  }
-
-  update = (e: SyntheticInputEvent) => this.setState({ input: e.target.value })
-
-  render() {
-    return (
-      <TextArea
-        id="markdown_textarea"
-        autoHeight
-        autoFocus
-        value={this.state.input}
-        onChange={this.update}
-      />
     )
   }
 }
