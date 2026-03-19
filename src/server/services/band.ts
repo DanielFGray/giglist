@@ -10,11 +10,17 @@ export class BandError extends Schema.TaggedError<BandError>()(
 export const getUserBands = (sessionId: string) =>
   Effect.gen(function* () {
     const db = yield* Db
-    return yield* withSession(db, sessionId,
-      db
-        .selectFrom("app_public.bands")
-        .select(["id", "slug", "name", "description", "created_at"])
-        .orderBy("name", "asc"),
+    return yield* db.withTransaction(
+      Effect.gen(function* () {
+        yield* db.selectNoFrom([
+          sql<string>`set_config('jwt.claims.session_id', ${sessionId}, true)`.as("_"),
+        ])
+        const rows = yield* db
+          .selectFrom("app_public.bands")
+          .select(["id", "slug", "name", "description", "created_at"])
+          .orderBy("name", "asc")
+        return rows
+      }),
     )
   })
 

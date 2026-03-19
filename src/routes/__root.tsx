@@ -32,8 +32,8 @@ export const Route = createRootRoute({
     ],
   }),
   loader: async () => {
-    const [user, bands] = await Promise.all([getMeFn(), getUserBandsFn()])
-    return { user, bands }
+    const [user, bandsResult] = await Promise.all([getMeFn(), getUserBandsFn()])
+    return { user, bands: bandsResult.bands }
   },
   component: RootComponent,
 })

@@ -3,7 +3,6 @@ import { Effect } from "effect"
 import { sql } from "kysely"
 import { runtime } from "~/server/runtime"
 import { Db } from "~/server/db"
-import { setCookie } from "@tanstack/react-start/server"
 
 if (process.env.NODE_ENV === "production") {
   throw new Error("Testing API must not be loaded in production")
@@ -67,20 +66,20 @@ export const Route = createFileRoute("/api/testing/login")({
           }),
         )
 
-        setCookie("session", result.sessionId, {
-          httpOnly: true,
-          sameSite: "lax",
-          secure: false,
-          path: "/",
-          maxAge: 30 * 24 * 60 * 60,
-        })
-
-        return Response.json({
-          id: result.id,
-          username: result.username,
-          email: result.email,
-          name: result.name,
-        })
+        return new Response(
+          JSON.stringify({
+            id: result.id,
+            username: result.username,
+            email: result.email,
+            name: result.name,
+          }),
+          {
+            headers: {
+              "Content-Type": "application/json",
+              "Set-Cookie": `session=${result.sessionId}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${30 * 24 * 60 * 60}`,
+            },
+          },
+        )
       },
     },
   },

@@ -1,6 +1,7 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useState,
   type ReactNode,
 } from "react"
@@ -30,12 +31,18 @@ export function AuthProvider({
   bands: BandInfo[]
   children: ReactNode
 }) {
-  const [currentBandId, setCurrentBandId] = useState<string | null>(() => {
-    if (typeof window === "undefined") return bands[0]?.id ?? null
+  // Always initialize with first band for SSR consistency — useEffect corrects from localStorage
+  const [currentBandId, setCurrentBandId] = useState<string | null>(bands[0]?.id ?? null)
+
+  useEffect(() => {
     const stored = localStorage.getItem("setlist-current-band")
-    if (stored && bands.some((b) => b.id === stored)) return stored
-    return bands[0]?.id ?? null
-  })
+    if (stored && bands.some((b) => b.id === stored)) {
+      setCurrentBandId(stored)
+    } else if (bands.length > 0 && !bands.some((b) => b.id === currentBandId)) {
+      // If current band is no longer valid (or was null), select first band
+      setCurrentBandId(bands[0].id)
+    }
+  }, [bands])
 
   const currentBand = bands.find((b) => b.id === currentBandId) ?? null
 

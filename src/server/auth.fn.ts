@@ -67,7 +67,6 @@ export const getMeFn = createServerFn({ method: "GET" }).handler(
 
     if (!user) return null
 
-    // Return a plain object — Kysely results may have non-serializable prototypes
     return {
       id: user.id,
       username: user.username,
