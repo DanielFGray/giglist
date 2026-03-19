@@ -18,7 +18,7 @@
     {
       "_": "command",
       "shadow": false,
-      "command": "DATABASE_URL=$GM_DBURL run-s db:types sourcerer"
+      "command": "DATABASE_URL=$GM_DBURL bun sourcerer"
     }
   ],
 
