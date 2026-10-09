@@ -1,21 +1,24 @@
 import { defineConfig } from "@playwright/test"
 
+// Browser-facing URL (the Vite dev server). Playwright loads .env for us.
+const BASE_URL = process.env.VITE_ROOT_URL ?? "http://localhost:3001"
+
 export default defineConfig({
   testDir: "./tests",
   fullyParallel: false,
   retries: 1,
   timeout: 15000,
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL: BASE_URL,
     trace: "on-first-retry",
   },
   projects: [
     { name: "chromium", use: { browserName: "chromium" } },
   ],
   webServer: {
-    command: "bun dev",
-    url: "http://localhost:3000",
+    command: "bun run dev",
+    url: BASE_URL,
     reuseExistingServer: true,
-    timeout: 30000,
+    timeout: 60000,
   },
 })

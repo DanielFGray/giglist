@@ -8,7 +8,7 @@ export type KyselyDB = PgKysely.EffectKysely<DB>
 
 /**
  * Run a query with RLS context set for the given session.
- * Sets `jwt.claims.session_id` so PG functions like
+ * Sets `my.session_id` so PG functions like
  * `current_session_id()` and `current_user_id()` work.
  */
 export const withSession = <A, E>(
@@ -19,7 +19,7 @@ export const withSession = <A, E>(
   db.withTransaction(
     Effect.gen(function* () {
       yield* db.selectNoFrom([
-        sql<string>`set_config('jwt.claims.session_id', ${sessionId ?? ""}, true)`.as("_"),
+        sql<string>`set_config('my.session_id', ${sessionId ?? ""}, true)`.as("_"),
       ])
       return yield* effect
     }),

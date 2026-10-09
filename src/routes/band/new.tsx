@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { createFileRoute, useRouter } from "@tanstack/react-router"
-import { createBandFn } from "~/server/band.fn"
+import { bands } from "~/api/client"
 
 export const Route = createFileRoute("/band/new")({
   component: NewBand,
@@ -23,7 +23,7 @@ function NewBand() {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "")
 
-    const result = await createBandFn({ data: { slug, name } })
+    const result = await bands.create({ slug, name })
     if (result.ok) {
       await router.invalidate()
       await router.navigate({ to: "/band" })

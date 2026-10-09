@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
-import { registerFn } from "~/server/auth.fn"
+import { auth } from "~/api/client"
 
 export const Route = createFileRoute("/signup")({
   component: Signup,
@@ -21,7 +21,7 @@ function Signup() {
     const email = form.get("email") as string
     const password = form.get("password") as string
 
-    const result = await registerFn({ data: { username, email, password } })
+    const result = await auth.register({ username, email, password })
     if (result.ok) {
       await router.invalidate()
       await router.navigate({ to: "/" })

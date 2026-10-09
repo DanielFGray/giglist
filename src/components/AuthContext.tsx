@@ -5,12 +5,11 @@ import {
   useState,
   type ReactNode,
 } from "react"
-import type { AuthUser } from "~/server/auth.fn"
-import type { BandInfo } from "~/server/band.fn"
+import type { AuthUser, BandInfo } from "~/api/client"
 
 type AuthContextValue = {
   user: AuthUser | null
-  bands: BandInfo[]
+  bands: readonly BandInfo[]
   currentBand: BandInfo | null
   setCurrentBandId: (id: string) => void
 }
@@ -28,10 +27,9 @@ export function AuthProvider({
   children,
 }: {
   user: AuthUser | null
-  bands: BandInfo[]
+  bands: readonly BandInfo[]
   children: ReactNode
 }) {
-  // Always initialize with first band for SSR consistency — useEffect corrects from localStorage
   const [currentBandId, setCurrentBandId] = useState<string | null>(bands[0]?.id ?? null)
 
   useEffect(() => {
@@ -39,7 +37,6 @@ export function AuthProvider({
     if (stored && bands.some((b) => b.id === stored)) {
       setCurrentBandId(stored)
     } else if (bands.length > 0 && !bands.some((b) => b.id === currentBandId)) {
-      // If current band is no longer valid (or was null), select first band
       setCurrentBandId(bands[0].id)
     }
   }, [bands])
@@ -48,9 +45,7 @@ export function AuthProvider({
 
   const setBandId = (id: string) => {
     setCurrentBandId(id)
-    if (typeof window !== "undefined") {
-      localStorage.setItem("setlist-current-band", id)
-    }
+    localStorage.setItem("setlist-current-band", id)
   }
 
   return (
