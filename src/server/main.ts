@@ -9,18 +9,23 @@ import { SetListApi } from "../api/contracts"
 import { authHandlers } from "./httpapi/auth"
 import { bandsHandlers } from "./httpapi/bands"
 import { testingHandlers } from "./httpapi/testing"
+import { songsHandlers } from "./httpapi/songs"
 import { SessionMiddlewareLive } from "./httpapi/session"
+import { SongRepo } from "../../generated/song.js"
 
 const PORT = Number(process.env.PORT ?? 3001)
 
 const ApiLive = HttpApiBuilder.api(SetListApi).pipe(
-  Layer.provide(Layer.mergeAll(authHandlers, bandsHandlers, testingHandlers)),
+  Layer.provide(
+    Layer.mergeAll(authHandlers, bandsHandlers, testingHandlers, songsHandlers),
+  ),
 )
 
 // HTTP server layer
 const ServerLive = HttpApiBuilder.serve().pipe(
   Layer.provide(ApiLive),
   Layer.provide(SessionMiddlewareLive),
+  Layer.provide(SongRepo.Default),
   Layer.provide(Db.Live),
   Layer.provide(
     BunHttpServer.layer({ port: PORT, hostname: "0.0.0.0" }),
