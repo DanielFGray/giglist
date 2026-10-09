@@ -5,6 +5,7 @@ const BASE_URL = process.env.VITE_ROOT_URL ?? "http://localhost:3001"
 
 export default defineConfig({
   testDir: "./tests",
+  globalSetup: "./tests/global-setup.ts",
   fullyParallel: false,
   retries: 1,
   timeout: 15000,

@@ -36,14 +36,13 @@ const runSafe = <A>(
     ),
   )
 
-/** Run a query effect, provide HttpClient, return value or fallback */
+/**
+ * Run a query effect. A failure rejects rather than folding into a value, so a
+ * failed request can never be mistaken for a successful empty one.
+ */
 const run = <A>(
   effect: Effect.Effect<A, unknown, HttpClient.HttpClient>,
-  fallback: A,
-): Promise<A> =>
-  runtime.runPromise(
-    effect.pipe(Effect.catchAll(() => Effect.succeed(fallback))),
-  )
+): Promise<A> => runtime.runPromise(effect)
 
 // --- Typed API client (one client for the unified API) ---
 
@@ -55,7 +54,6 @@ export const auth = {
   me: () =>
     run(
       api.pipe(Effect.flatMap((c) => c.auth.me({}))),
-      null,
     ),
 
   login: (data: { id: string; password: string }) =>
@@ -73,7 +71,6 @@ export const auth = {
   logout: () =>
     run(
       api.pipe(Effect.flatMap((c) => c.auth.logout({}))),
-      { ok: true as const },
     ),
 }
 
@@ -83,13 +80,11 @@ export const bands = {
   list: () =>
     run(
       api.pipe(Effect.flatMap((c) => c.myBands.listBands({}))),
-      [] as readonly BandInfo[],
     ),
 
   members: (bandId: string) =>
     run(
       api.pipe(Effect.flatMap((c) => c.myBands.getBandMembers({ path: { bandId } }))),
-      [] as readonly BandMember[],
     ),
 
   create: (data: { slug: string; name: string }) =>

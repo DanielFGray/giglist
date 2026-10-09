@@ -69,6 +69,7 @@ export const createBand = (sessionId: string, args: { slug: string; name: string
       return { id: band.id, slug: band.slug, name: band.name }
     }))
   }).pipe(
+    Effect.tapError((e) => Effect.logError("createBand failed", e)),
     Effect.catchAll((e) => {
       if (e._tag === "BandError") return Effect.fail(e)
       const msg = String(e)
