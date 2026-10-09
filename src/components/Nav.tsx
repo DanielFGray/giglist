@@ -3,7 +3,7 @@ import { Link, useRouter, useRouterState } from "@tanstack/react-router"
 import { BandSwitcher } from "./BandSwitcher"
 import { ThemeToggle } from "./ThemeToggle"
 import { useAuth } from "./AuthContext"
-import { logoutFn } from "~/server/auth.fn"
+import { auth } from "~/api/client"
 
 const NAV_ITEMS = [
   { to: "/", label: "Setlists", pwid: "nav-setlists" },
@@ -50,7 +50,7 @@ function UserMenu() {
   return (
     <button
       data-pwid="nav-user-avatar"
-      onClick={() => logoutFn().then(() => router.invalidate())}
+      onClick={() => auth.logout().then(() => router.invalidate())}
       className="size-8 rounded-full bg-[var(--color-amber-accent)] flex items-center justify-center text-xs font-bold text-zinc-950 hover:brightness-110 transition cursor-pointer ml-1"
       title={user.username}
     >

@@ -13,7 +13,7 @@ export const getUserBands = (sessionId: string) =>
     return yield* db.withTransaction(
       Effect.gen(function* () {
         yield* db.selectNoFrom([
-          sql<string>`set_config('jwt.claims.session_id', ${sessionId}, true)`.as("_"),
+          sql<string>`set_config('my.session_id', ${sessionId}, true)`.as("_"),
         ])
         const rows = yield* db
           .selectFrom("app_public.bands")

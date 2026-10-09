@@ -1,4 +1,5 @@
-import { test, expect, getPw, loginViaUi } from "./helpers"
+import { test, expect, getPw, loginViaUi, TEST_PASSWORD } from "./helpers"
+import { BASE_URL } from "./baseUrl"
 
 test.describe("auth", () => {
   test("shows sign in link when not logged in", async ({ page }) => {
@@ -32,7 +33,7 @@ test.describe("auth", () => {
     await testing.login({ username: "test_loginui" })
     await page.context().clearCookies()
 
-    await loginViaUi(page, "test_loginui", "testpassword123")
+    await loginViaUi(page, "test_loginui", TEST_PASSWORD)
   })
 
   test("can log out", async ({ page, testing }) => {
@@ -47,7 +48,7 @@ test.describe("auth", () => {
 
   test("shows error for wrong password", async ({ page, testing }) => {
     // Create user without keeping the session cookie in the browser
-    await fetch("http://localhost:3000/api/testing/login", {
+    await fetch(`${BASE_URL}/api/testing/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username: "test_wrongpw" }),

@@ -1,7 +1,7 @@
 import { useState } from "react"
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
+import { createFileRoute, Link } from "@tanstack/react-router"
 import { useAuth } from "~/components/AuthContext"
-import { getBandMembersFn, inviteToBandFn, type BandMember } from "~/server/band.fn"
+import { bands, type BandMember } from "~/api/client"
 
 export const Route = createFileRoute("/band/")({
   component: BandPage,
@@ -45,8 +45,8 @@ function MembersList({ bandId }: { bandId: string }) {
   const [loaded, setLoaded] = useState(false)
 
   if (!loaded) {
-    getBandMembersFn({ data: { bandId } }).then((r) => {
-      setMembers(r.members)
+    void bands.members(bandId).then((r) => {
+      setMembers([...r])
       setLoaded(true)
     })
     return <div className="text-sm text-zinc-500">Loading members...</div>
@@ -92,12 +92,10 @@ function InviteForm({ bandId }: { bandId: string }) {
     const value = (form.get("invitee") as string).trim()
 
     const isEmail = value.includes("@")
-    const result = await inviteToBandFn({
-      data: {
-        bandId,
-        ...(isEmail ? { email: value } : { username: value }),
-      },
-    })
+    const result = await bands.invite(
+      bandId,
+      isEmail ? { email: value } : { username: value },
+    )
 
     if (result.ok) {
       setSuccess(true)

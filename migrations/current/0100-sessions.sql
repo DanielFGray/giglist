@@ -51,7 +51,7 @@ alter table app_private.sessions enable row level security;
 create index on app_private.sessions (user_id);
 
 /*
- * This function is responsible for reading the `jwt.claims.session_id`
+ * This function is responsible for reading the `my.session_id`
  * transaction setting (set from the `pgSettings` function within
  * `installPostGraphile.ts`). Defining this inside a function means we can
  * modify it in future to allow additional ways of defining the session.
@@ -62,7 +62,7 @@ create index on app_private.sessions (user_id);
 -- have put it in app_hidden to get the same effect more easily, but it's often
 -- useful to un-omit it to ease debugging auth issues.
 create function app_public.current_session_id() returns uuid as $$
-  select nullif(pg_catalog.current_setting('jwt.claims.session_id', true), '')::uuid;
+  select nullif(pg_catalog.current_setting('my.session_id', true), '')::uuid;
 $$ language sql stable;
 comment on function app_public.current_session_id() is
   E'Handy method to get the current session ID.';
@@ -83,7 +83,7 @@ comment on function app_public.current_session_id() is
  *
  * The below implementation is more secure than simply indicating the user_id
  * directly: even if an SQL injection vulnerability were to allow a user to set
- * their `jwt.claims.session_id` to another value, it would take them many
+ * their `my.session_id` to another value, it would take them many
  * millenia to be able to correctly guess someone else's session id (since it's
  * a cryptographically secure random value that is kept secret). This makes
  * impersonating another user virtually impossible.

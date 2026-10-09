@@ -170,7 +170,7 @@ begin
   -- Delete the session
   delete from app_private.sessions where uuid = app_public.current_session_id();
   -- Clear the identifier from the transaction
-  perform set_config('jwt.claims.session_id', '', true);
+  perform set_config('my.session_id', '', true);
 end;
 $$ language plpgsql security definer volatile set search_path to pg_catalog, public, pg_temp;
 /*

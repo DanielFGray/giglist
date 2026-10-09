@@ -1,6 +1,7 @@
 import { test as base, expect, type Page } from "@playwright/test"
 
-const BASE_URL = "http://localhost:3000"
+/** Password every seeded test user is registered with. Specs must not retype it. */
+export const TEST_PASSWORD = "test_password_123!"
 
 type TestUser = {
   id: string
@@ -40,10 +41,9 @@ export const test = base.extend<{ testing: TestingApi }>({
   testing: async ({ page }, use) => {
     const testing: TestingApi = {
       async login(opts = {}) {
-        const res = await page.request.post(
-          `${BASE_URL}/api/testing/login`,
-          { data: { username: "test_admin", ...opts } },
-        )
+        const res = await page.request.post("/api/testing/login", {
+          data: { username: "test_admin", password: TEST_PASSWORD, ...opts },
+        })
         expect(res.ok(), `testing/login failed: ${await res.text()}`).toBe(
           true,
         )
@@ -51,9 +51,7 @@ export const test = base.extend<{ testing: TestingApi }>({
       },
 
       async clear() {
-        const res = await page.request.post(
-          `${BASE_URL}/api/testing/clear`,
-        )
+        const res = await page.request.post("/api/testing/clear")
         expect(res.ok(), `testing/clear failed: ${await res.text()}`).toBe(
           true,
         )

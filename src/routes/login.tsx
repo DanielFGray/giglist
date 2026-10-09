@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
-import { loginFn } from "~/server/auth.fn"
+import { auth } from "~/api/client"
 
 export const Route = createFileRoute("/login")({
   component: Login,
@@ -20,7 +20,7 @@ function Login() {
     const id = form.get("id") as string
     const password = form.get("password") as string
 
-    const result = await loginFn({ data: { id, password } })
+    const result = await auth.login({ id, password })
     if (result.ok) {
       await router.invalidate()
       await router.navigate({ to: "/" })
