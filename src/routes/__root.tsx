@@ -5,12 +5,25 @@ import { auth, bands, type BandInfo } from "~/api/client"
 
 export const Route = createRootRoute({
   loader: async () => {
-    const [user, bandList] = await Promise.all([
-      auth.me().catch(() => null),
-      bands.list().catch(() => [] as BandInfo[]),
-    ])
+    // Errors deliberately reach the router: a failed load must not look like
+    // "no bands", which is what the band page renders forever.
+    const [user, bandList] = await Promise.all([auth.me(), bands.list()])
     return { user, bands: bandList }
   },
+  errorComponent: ({ error, reset }) => (
+    <div data-pwid="root-error" className="min-h-[60vh] flex flex-col items-center justify-center gap-4 text-center">
+      <h1 className="text-2xl font-bold tracking-tight">Could not load SetList</h1>
+      <p className="text-sm text-zinc-500 max-w-md">
+        {error instanceof Error ? error.message : String(error)}
+      </p>
+      <button
+        onClick={reset}
+        className="px-4 py-2 rounded-md bg-[var(--color-amber-accent)] text-zinc-950 text-sm font-semibold hover:brightness-110 transition cursor-pointer"
+      >
+        Try again
+      </button>
+    </div>
+  ),
   component: RootComponent,
 })
 
