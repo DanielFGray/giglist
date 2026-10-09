@@ -47,6 +47,10 @@ export const test = base.extend<{ testing: TestingApi }>({
         expect(res.ok(), `testing/login failed: ${await res.text()}`).toBe(
           true,
         )
+        // The endpoint answers 200 even when it could not create the session,
+        // so the HTTP status alone is not evidence of a logged-in browser.
+        const body = (await res.json()) as { success?: boolean }
+        expect(body.success, "testing/login reported failure").toBe(true)
         return res.json()
       },
 
