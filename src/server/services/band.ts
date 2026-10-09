@@ -7,20 +7,31 @@ export class BandError extends Schema.TaggedError<BandError>()(
   { message: Schema.String },
 ) {}
 
-export const getUserBands = (sessionId: string) =>
+/**
+ * Bands the session's user belongs to. The join on band_memberships is the
+ * filter: the app connects as the table owner, so PostgreSQL's app_public RLS
+ * policies are not applied and would not narrow this result on their own.
+ */
+export const getUserBands = (sessionId: string, userId: string) =>
   Effect.gen(function* () {
     const db = yield* Db
-    return yield* db.withTransaction(
-      Effect.gen(function* () {
-        yield* db.selectNoFrom([
-          sql<string>`set_config('my.session_id', ${sessionId}, true)`.as("_"),
+    return yield* withSession(db, sessionId,
+      db
+        .selectFrom("app_public.band_memberships")
+        .innerJoin(
+          "app_public.bands",
+          "app_public.bands.id",
+          "app_public.band_memberships.band_id",
+        )
+        .select([
+          "app_public.bands.id",
+          "app_public.bands.slug",
+          "app_public.bands.name",
+          "app_public.bands.description",
+          "app_public.bands.created_at",
         ])
-        const rows = yield* db
-          .selectFrom("app_public.bands")
-          .select(["id", "slug", "name", "description", "created_at"])
-          .orderBy("name", "asc")
-        return rows
-      }),
+        .where("app_public.band_memberships.user_id", "=", userId)
+        .orderBy("app_public.bands.name", "asc"),
     )
   })
 

@@ -12,8 +12,8 @@ export const bandsHandlers = HttpApiBuilder.group(SetListApi, "myBands", (handle
     .handle("listBands", () =>
       Effect.gen(function* () {
         const session = yield* CurrentSession
-        if (!session.sessionId) return []
-        const rows = yield* BandService.getUserBands(session.sessionId)
+        if (!session.sessionId || !session.userId) return []
+        const rows = yield* BandService.getUserBands(session.sessionId, session.userId)
         return rows.map((b) => ({
           id: b.id,
           slug: b.slug,

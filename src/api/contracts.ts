@@ -7,9 +7,7 @@ import {
   HttpApiSchema,
   HttpApiSecurity,
 } from "@effect/platform"
-import { Context } from "effect"
-
-// --- Security ---
+import { Context } from "effect"// --- Security ---
 
 export const sessionCookie = HttpApiSecurity.apiKey({
   key: "session",
@@ -190,9 +188,102 @@ export const TestingApiGroup = HttpApiGroup.make("testing")
   )
   .prefix("/api/testing")
 
+// --- Songs schemas ---
+
+/**
+ * Wire schemas for the song catalog, declared here rather than taken from
+ * generated/song.ts: that module imports src/server/db.ts, so bringing its
+ * schemas into the contract would pull @effect/sql-pg into the browser bundle.
+ * The server decodes database rows into these before responding.
+ */
+export const Song = S.Struct({
+  id: S.UUID,
+  band_id: S.UUID,
+  title: S.String,
+  artist: S.NullOr(S.String),
+  key: S.NullOr(S.String),
+  tempo_bpm: S.NullOr(S.Number),
+  duration_seconds: S.NullOr(S.Number),
+  capo: S.NullOr(S.Number),
+  notes: S.NullOr(S.String),
+  created_by: S.NullOr(S.UUID),
+  created_at: S.String,
+  updated_at: S.String,
+})
+
+export const SongInsert = S.Struct({
+  band_id: S.UUID,
+  title: S.String.pipe(S.minLength(1), S.maxLength(500)),
+  artist: S.NullOr(S.String),
+  key: S.NullOr(S.String),
+  tempo_bpm: S.NullOr(S.Number.pipe(S.greaterThanOrEqualTo(0), S.lessThanOrEqualTo(999))),
+  duration_seconds: S.NullOr(
+    S.Number.pipe(S.greaterThanOrEqualTo(0), S.lessThanOrEqualTo(86400)),
+  ),
+  capo: S.NullOr(S.Number.pipe(S.greaterThanOrEqualTo(0), S.lessThanOrEqualTo(12))),
+  notes: S.NullOr(S.String.pipe(S.maxLength(10000))),
+})
+
+export const SongUpdate = S.Struct({
+  title: S.String.pipe(S.minLength(1), S.maxLength(500)),
+  artist: S.NullOr(S.String),
+  key: S.NullOr(S.String),
+  tempo_bpm: S.NullOr(S.Number.pipe(S.greaterThanOrEqualTo(0), S.lessThanOrEqualTo(999))),
+  duration_seconds: S.NullOr(
+    S.Number.pipe(S.greaterThanOrEqualTo(0), S.lessThanOrEqualTo(86400)),
+  ),
+  capo: S.NullOr(S.Number.pipe(S.greaterThanOrEqualTo(0), S.lessThanOrEqualTo(12))),
+  notes: S.NullOr(S.String.pipe(S.maxLength(10000))),
+})
+
+export class SongNotFound extends S.TaggedError<SongNotFound>()("SongNotFound", {
+  id: S.UUID,
+}) {}
+
+/**
+ * Declared here instead of importing the generated group, which maps both
+ * songFindById and songFindByBandId onto `GET /:param`; the Effect router
+ * rejects that as a duplicate route and the server fails to start. Only the
+ * URLs are re-declared — the handler's queries come from generated/queries.ts,
+ * and the lookup by id happens inside the handler, which needs the song row to
+ * authorise its band anyway.
+ */
+export class SongForbidden extends S.TaggedError<SongForbidden>()(
+  "SongForbidden",
+  { message: S.String },
+) {}
+
+export const SongsApiGroup = HttpApiGroup.make("songs")
+  .middleware(SessionMiddleware)
+  .add(
+    HttpApiEndpoint.get("songFindByBandId")`/band/${HttpApiSchema.param("bandId", S.UUID)}`
+      .addSuccess(S.Array(Song))
+      .addError(SongForbidden, { status: 403 }),
+  )
+  .add(
+    HttpApiEndpoint.post("songCreate", "/")
+      .setPayload(SongInsert)
+      .addSuccess(Song, { status: 201 })
+      .addError(SongForbidden, { status: 403 }),
+  )
+  .add(
+    HttpApiEndpoint.put("songUpdate")`/${HttpApiSchema.param("id", S.UUID)}`
+      .setPayload(SongUpdate)
+      .addSuccess(Song)
+      .addError(SongNotFound, { status: 404 })
+      .addError(SongForbidden, { status: 403 }),
+  )
+  .add(
+    HttpApiEndpoint.del("songDelete")`/${HttpApiSchema.param("id", S.UUID)}`
+      .addError(SongNotFound, { status: 404 })
+      .addError(SongForbidden, { status: 403 }),
+  )
+  .prefix("/api/songs")
+
 // --- Unified API ---
 
 export const SetListApi = HttpApi.make("SetListApi")
   .add(AuthApiGroup)
   .add(BandsApiGroup)
   .add(TestingApiGroup)
+  .add(SongsApiGroup)

@@ -1,6 +1,16 @@
 import { Effect, ManagedRuntime, Schema as S } from "effect"
 import { FetchHttpClient, HttpApiClient, HttpClient } from "@effect/platform"
-import { SetListApi } from "./contracts"
+import { SetListApi, AuthUser, Song } from "./contracts"
+
+// --- Types derived from contract schemas ---
+
+export type SongInfo = S.Schema.Type<typeof Song>
+
+/** The payload each endpoint declares, taken from the contract so the client
+ *  never restates the shape the server validates. */
+type SongsClient = Effect.Effect.Success<SetListApiClient>["songs"]
+export type SongCreateData = Parameters<SongsClient["songCreate"]>[0]["payload"]
+export type SongUpdateData = Parameters<SongsClient["songUpdate"]>[0]["payload"]
 
 // --- Types derived from contract schemas ---
 
@@ -47,6 +57,7 @@ const run = <A>(
 // --- Typed API client (one client for the unified API) ---
 
 const api = HttpApiClient.make(SetListApi, { baseUrl: window.location.origin })
+type SetListApiClient = typeof api
 
 // --- Auth ---
 
@@ -103,5 +114,32 @@ export const bands = {
     runSafe(
       api.pipe(Effect.flatMap((c) => c.myBands.inviteToBand({ path: { bandId }, payload: data }))),
       "Failed to invite",
+    ),
+}
+
+// --- Songs ---
+
+export const songs = {
+  byBand: (bandId: string) =>
+    run(
+      api.pipe(Effect.flatMap((c) => c.songs.songFindByBandId({ path: { bandId } }))),
+    ),
+
+  create: (data: SongCreateData) =>
+    runSafe(
+      api.pipe(Effect.flatMap((c) => c.songs.songCreate({ payload: data }))),
+      "Failed to save song",
+    ),
+
+  update: (id: string, data: SongUpdateData) =>
+    runSafe(
+      api.pipe(Effect.flatMap((c) => c.songs.songUpdate({ path: { id }, payload: data }))),
+      "Failed to save song",
+    ),
+
+  remove: (id: string) =>
+    runSafe(
+      api.pipe(Effect.flatMap((c) => c.songs.songDelete({ path: { id } }))),
+      "Failed to delete song",
     ),
 }
