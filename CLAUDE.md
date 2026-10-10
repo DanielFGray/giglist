@@ -17,11 +17,20 @@ Collaborative musical setlist manager for bands.
 - graphile-worker handles background jobs (email, audit) triggered by PG triggers
 - graphile-migrate manages migrations: `migrations/committed/` (applied) and `migrations/current/` (in-progress)
 
+## Two Database Connections
+
+The app opens two pools, and which one a query uses decides whether RLS applies:
+
+- `Db` — `DATABASE_URL`, the table **owner**. PostgreSQL skips RLS policies for the owner, so this pool is only for `app_private` (sessions, user creation) and tooling that must ignore policies.
+- `AuthDb` — `AUTH_DATABASE_URL`, the **authenticator**. Requests run here, wrapped in `withAuthContext`, which sets the visitor role and `my.session_id` in a transaction. The role is transaction-local, so the connection returns to the authenticator when the request ends.
+
+A service that reads or writes user data must `yield* Kysely` (the tag `withAuthContext` provides). Yielding `Db` directly bypasses every policy.
+
 ## Effect Patterns
 
 - Use @effect/sql-kysely for all queries — stay in Effect, no promise conversion
 - Services follow `Effect.Service` pattern (see postgres.garden for reference)
-- Database access via `Db` tag providing `EffectKysely<DB>` instance
+- Database access via `Kysely` tag, backed by `Db` by default and swapped by `withAuthContext`
 - Use `withAuthContext` pattern to set RLS session context before queries
 
 ## Domain Model

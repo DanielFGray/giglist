@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { useAuth } from "~/components/AuthContext"
 import { songs, type SongInfo } from "~/api/client"
+import { MusicalKeys, type MusicalKeyType } from "~/api/contracts"
 
 export const Route = createFileRoute("/songs")({
   component: Songs,
@@ -111,7 +112,7 @@ type SongFormProps = {
 function SongForm({ bandId, song, onSaved, onCancel }: SongFormProps) {
   const [title, setTitle] = useState(song?.title ?? "")
   const [artist, setArtist] = useState(song?.artist ?? "")
-  const [key, setKey] = useState(song?.key ?? "")
+  const [key, setKey] = useState<MusicalKeyType | "">(song?.key ?? "")
   const [tempo, setTempo] = useState(song?.tempo_bpm?.toString() ?? "")
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
@@ -171,13 +172,17 @@ function SongForm({ bandId, song, onSaved, onCancel }: SongFormProps) {
         </label>
         <label className="block text-sm">
           <span className="block text-zinc-300 mb-1">Key</span>
-          <input
+          <select
             data-pwid="song-key"
             value={key}
-            onChange={(e) => setKey(e.target.value)}
-            placeholder="C, Am, F#"
+            onChange={(e) => setKey(e.target.value as MusicalKeyType | "")}
             className="w-full rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-3 py-2 text-sm"
-          />
+          >
+            <option value="">No key</option>
+            {MusicalKeys.map((k) => (
+              <option key={k} value={k}>{k}</option>
+            ))}
+          </select>
         </label>
         <label className="block text-sm">
           <span className="block text-zinc-300 mb-1">Tempo (BPM)</span>
