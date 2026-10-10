@@ -7,25 +7,14 @@ import type { DB } from "../../generated/DB.js"
 export type KyselyDB = PgKysely.EffectKysely<DB>
 
 /**
- * Run a query with RLS context set for the given session.
- * Sets `my.session_id` so PG functions like
- * `current_session_id()` and `current_user_id()` work.
+ * Connection as the table owner.
+ *
+ * PostgreSQL does not apply the app_public row-level security policies to the
+ * table owner, so this pool is for the app_private schema (sessions, user
+ * creation) and for tooling that must ignore policies. No request that carries
+ * a user identity may run on it: RLS is the only thing keeping one band's songs
+ * out of another band's result set.
  */
-export const withSession = <A, E>(
-  db: KyselyDB,
-  sessionId: string | undefined,
-  effect: Effect.Effect<A, E>,
-) =>
-  db.withTransaction(
-    Effect.gen(function* () {
-      yield* db.selectNoFrom([
-        sql<string>`set_config('my.session_id', ${sessionId ?? ""}, true)`.as("_"),
-      ])
-      return yield* effect
-    }),
-  )
-
-/** Kysely query builder wired through Effect SQL — no promise conversion needed */
 export class Db extends Context.Tag("Db")<Db, KyselyDB>() {
   static Conn = Layer.unwrapEffect(
     Config.redacted("DATABASE_URL").pipe(
@@ -39,3 +28,79 @@ export class Db extends Context.Tag("Db")<Db, KyselyDB>() {
 
   static Live = this.Kysely.pipe(Layer.provide(this.Conn))
 }
+
+/**
+ * Connection the app makes on a user's behalf. The role has NO INHERITANCE, so
+ * it holds none of the grants until a request says `SET ROLE` to the visitor
+ * role — see `withAuthContext`.
+ */
+export class AuthDb extends Context.Tag("AuthDb")<AuthDb, KyselyDB>() {
+  static Conn = Layer.unwrapEffect(
+    Config.redacted("AUTH_DATABASE_URL").pipe(
+      Effect.map((url) =>
+        PgClient.layer({ url }),
+      ),
+    ),
+  )
+
+  static Kysely = Layer.effect(this, PgKysely.make<DB>())
+
+  static Live = this.Kysely.pipe(Layer.provide(this.Conn))
+}
+
+/** The visitor role that the authenticator must set. */
+export class AuthVisitor extends Context.Tag("AuthVisitor")<AuthVisitor, string>() {
+  static Live = Layer.effect(
+    this,
+    Config.string("DATABASE_VISITOR"),
+  )
+}
+
+/**
+ * The connection a service queries. It defaults to the owner pool so the
+ * app_private code (auth, testing) keeps working unchanged, and
+ * `withAuthContext` swaps it for the authenticated connection for the duration
+ * of one request.
+ */
+export class Kysely extends Context.Tag("Kysely")<Kysely, KyselyDB>() {
+  static Live = Layer.effect(this, Db)
+}
+
+/**
+ * Make `effect` run as the current user.
+ *
+ * It runs on the authenticator connection and sets two settings inside a
+ * transaction: the role becomes the visitor role (transaction-scoped, so the
+ * connection returns to the authenticator afterwards), and `my.session_id` is
+ * set so `current_user_id()` can resolve the user for the RLS policies.
+ *
+ * The transaction is the mechanism, not an implementation detail: `SET LOCAL`
+ * is undone at commit, so nothing leaks into the next request that borrows the
+ * connection.
+ *
+ * Database failures become defects rather than errors. A caller cannot do
+ * anything with a SqlError, and letting it into an endpoint's error channel
+ * would turn it into a 400 the client is expected to read.
+ */
+export const withAuthContext =
+  (sessionId: string | undefined) =>
+  <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+    Effect.gen(function* () {
+      const db = yield* AuthDb
+      const visitor = yield* AuthVisitor
+
+      return yield* db.withTransaction(
+        Effect.gen(function* () {
+          yield* db.selectNoFrom([
+            // Transaction-local, so the pooled connection returns to the
+            // authenticator when the request ends. The role is a trusted name
+            // from the environment, so it is inlined as a literal rather than
+            // bound. The session id is user input and stays a bound parameter.
+            sql<string>`set_config('role', ${sql.lit(visitor)}, true)`.as("_"),
+            sql<string>`set_config('my.session_id', ${sessionId ?? ""}, true)`.as("_"),
+          ])
+
+          return yield* effect.pipe(Effect.provide(Layer.succeed(Kysely, db)))
+        }),
+      ).pipe(Effect.catchTag("SqlError", Effect.die))
+    })

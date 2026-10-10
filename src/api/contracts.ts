@@ -191,6 +191,25 @@ export const TestingApiGroup = HttpApiGroup.make("testing")
 // --- Songs schemas ---
 
 /**
+ * The keys the `app_public.musical_key` domain accepts, spelled out because the
+ * schema uses a text domain with a check constraint rather than an enum. A value
+ * outside this list fails here as a 400, instead of reaching the database and
+ * coming back as a domain violation.
+ */
+const keys = [
+  "C", "C#", "Db", "D", "D#", "Eb", "E", "F", "F#", "Gb",
+  "G", "G#", "Ab", "A", "A#", "Bb", "B",
+  "Cm", "C#m", "Dbm", "Dm", "D#m", "Ebm", "Em", "Fm", "F#m", "Gbm",
+  "Gm", "G#m", "Abm", "Am", "A#m", "Bbm", "Bm",
+] as const
+
+export const MusicalKeys = keys
+
+export type MusicalKeyType = S.Schema.Type<typeof musicalKey>
+
+const musicalKey = S.Literal(...keys)
+
+/*
  * Wire schemas for the song catalog, declared here rather than taken from
  * generated/song.ts: that module imports src/server/db.ts, so bringing its
  * schemas into the contract would pull @effect/sql-pg into the browser bundle.
@@ -201,7 +220,7 @@ export const Song = S.Struct({
   band_id: S.UUID,
   title: S.String,
   artist: S.NullOr(S.String),
-  key: S.NullOr(S.String),
+  key: S.NullOr(musicalKey),
   tempo_bpm: S.NullOr(S.Number),
   duration_seconds: S.NullOr(S.Number),
   capo: S.NullOr(S.Number),
@@ -215,7 +234,7 @@ export const SongInsert = S.Struct({
   band_id: S.UUID,
   title: S.String.pipe(S.minLength(1), S.maxLength(500)),
   artist: S.NullOr(S.String),
-  key: S.NullOr(S.String),
+  key: S.NullOr(musicalKey),
   tempo_bpm: S.NullOr(S.Number.pipe(S.greaterThanOrEqualTo(0), S.lessThanOrEqualTo(999))),
   duration_seconds: S.NullOr(
     S.Number.pipe(S.greaterThanOrEqualTo(0), S.lessThanOrEqualTo(86400)),
@@ -227,7 +246,7 @@ export const SongInsert = S.Struct({
 export const SongUpdate = S.Struct({
   title: S.String.pipe(S.minLength(1), S.maxLength(500)),
   artist: S.NullOr(S.String),
-  key: S.NullOr(S.String),
+  key: S.NullOr(musicalKey),
   tempo_bpm: S.NullOr(S.Number.pipe(S.greaterThanOrEqualTo(0), S.lessThanOrEqualTo(999))),
   duration_seconds: S.NullOr(
     S.Number.pipe(S.greaterThanOrEqualTo(0), S.lessThanOrEqualTo(86400)),

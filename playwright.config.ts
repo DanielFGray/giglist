@@ -7,6 +7,10 @@ export default defineConfig({
   testDir: "./tests",
   globalSetup: "./tests/global-setup.ts",
   fullyParallel: false,
+  // One worker only: every spec shares a single database, and
+  // `/api/testing/clear` deletes bands by name pattern, so a worker running
+  // another spec would wipe a band the active spec just created.
+  workers: 1,
   retries: 1,
   timeout: 15000,
   use: {

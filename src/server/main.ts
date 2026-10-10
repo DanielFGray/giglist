@@ -2,7 +2,7 @@ import { Effect, Layer } from "effect"
 import { BunRuntime } from "@effect/platform-bun"
 import * as BunHttpServer from "@effect/platform-bun/BunHttpServer"
 import { HttpApiBuilder } from "@effect/platform"
-import { Db } from "./db"
+import { AuthDb, AuthVisitor, Db } from "./db"
 import { SetListApi } from "../api/contracts"
 
 // Group handlers
@@ -11,7 +11,6 @@ import { bandsHandlers } from "./httpapi/bands"
 import { testingHandlers } from "./httpapi/testing"
 import { songsHandlers } from "./httpapi/songs"
 import { SessionMiddlewareLive } from "./httpapi/session"
-import { SongRepo } from "../../generated/song.js"
 
 const PORT = Number(process.env.PORT ?? 3001)
 
@@ -25,7 +24,11 @@ const ApiLive = HttpApiBuilder.api(SetListApi).pipe(
 const ServerLive = HttpApiBuilder.serve().pipe(
   Layer.provide(ApiLive),
   Layer.provide(SessionMiddlewareLive),
-  Layer.provide(SongRepo.Default),
+  // User traffic runs on the authenticator connection as the visitor role,
+  // which is what makes the RLS policies apply at all. The owner pool is
+  // reachable only through the services that need app_private.
+  Layer.provide(AuthDb.Live),
+  Layer.provide(AuthVisitor.Live),
   Layer.provide(Db.Live),
   Layer.provide(
     BunHttpServer.layer({ port: PORT, hostname: "0.0.0.0" }),

@@ -1,5 +1,4 @@
 import { Effect, Layer, Redacted } from "effect"
-import { sql } from "kysely"
 import { Db } from "../db"
 import {
   SessionMiddleware,
@@ -34,15 +33,3 @@ export const SessionMiddlewareLive = Layer.effect(
     })
   }),
 )
-
-/**
- * Set RLS context for the current session.
- * Must be called inside a transaction for the set_config to stick.
- */
-export const setRlsContext = (sessionId: string) =>
-  Effect.gen(function* () {
-    const db = yield* Db
-    yield* db.selectNoFrom([
-      sql<string>`set_config('my.session_id', ${sessionId}, true)`.as("_"),
-    ])
-  })
