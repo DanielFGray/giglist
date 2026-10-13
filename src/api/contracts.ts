@@ -171,6 +171,60 @@ export const TestingLoginPayload = S.Struct({
 
 export const TestingSuccess = S.Struct({ success: S.Boolean })
 
+/**
+ * Creates a user through app_private.really_create_user, bypassing the
+ * registration safety checks the UI path goes through, and reports the
+ * verification token so tests can exercise the verify flow directly.
+ */
+export const CreateTestUserPayload = S.Struct({
+  username: S.optionalWith(S.String, { default: () => "testuser" }),
+  email: S.optionalWith(S.String, { default: () => "testuser@example.com" }),
+  verified: S.optionalWith(S.Boolean, { default: () => false }),
+  name: S.optional(S.String),
+  avatarUrl: S.optionalWith(S.NullOr(S.String), { default: () => null }),
+  password: S.optionalWith(S.String, { default: () => "TestUserPassword" }),
+})
+
+export const TestUser = S.Struct({
+  id: S.UUID,
+  username: S.String,
+  name: S.NullOr(S.String),
+  avatar_url: S.NullOr(S.String),
+  role: S.String,
+  is_verified: S.Boolean,
+  created_at: S.Date,
+  updated_at: S.Date,
+})
+
+export const CreateTestUserResult = S.Struct({
+  user: TestUser,
+  userEmailId: S.String,
+  verificationToken: S.NullOr(S.String),
+})
+
+/** app_private.user_secrets — never visible to the user, read only in tests. */
+export const TestUserSecrets = S.Struct({
+  user_id: S.UUID,
+  password_hash: S.NullOr(S.String),
+  last_login_at: S.Date,
+  failed_password_attempts: S.Number,
+  first_failed_password_attempt: S.NullOr(S.Date),
+  reset_password_token: S.NullOr(S.String),
+  reset_password_token_generated: S.NullOr(S.Date),
+  failed_reset_password_attempts: S.Number,
+  first_failed_reset_password_attempt: S.NullOr(S.Date),
+  delete_account_token: S.NullOr(S.String),
+  delete_account_token_generated: S.NullOr(S.Date),
+})
+
+/** app_private.user_email_secrets — never visible to the user, read only in tests. */
+export const TestEmailSecrets = S.Struct({
+  user_email_id: S.UUID,
+  verification_token: S.NullOr(S.String),
+  verification_email_sent_at: S.NullOr(S.Date),
+  password_reset_email_sent_at: S.NullOr(S.Date),
+})
+
 export const TestingApiGroup = HttpApiGroup.make("testing")
   .add(
     HttpApiEndpoint.post("clear")`/clear`
@@ -184,6 +238,34 @@ export const TestingApiGroup = HttpApiGroup.make("testing")
   .add(
     HttpApiEndpoint.post("testLogin")`/login`
       .setPayload(TestingLoginPayload)
+      .addSuccess(TestingSuccess),
+  )
+  .add(
+    HttpApiEndpoint.get("clearTestUsers")`/clear-test-users`
+      .addSuccess(TestingSuccess),
+  )
+  .add(
+    HttpApiEndpoint.get("clearTestOrganizations")`/clear-test-organizations`
+      .addSuccess(TestingSuccess),
+  )
+  .add(
+    HttpApiEndpoint.post("createUser")`/create-user`
+      .setPayload(CreateTestUserPayload)
+      .addSuccess(CreateTestUserResult),
+  )
+  .add(
+    HttpApiEndpoint.get("getUserSecrets")`/user-secrets`
+      .setPayload(S.Struct({ username: S.String }))
+      .addSuccess(TestUserSecrets),
+  )
+  .add(
+    HttpApiEndpoint.get("getEmailSecrets")`/email-secrets`
+      .setPayload(S.Struct({ email: S.String }))
+      .addSuccess(TestEmailSecrets),
+  )
+  .add(
+    HttpApiEndpoint.get("verifyUser")`/verify-user`
+      .setPayload(S.Struct({ username: S.String }))
       .addSuccess(TestingSuccess),
   )
   .prefix("/api/testing")

@@ -1,21 +1,18 @@
-import { Effect } from "effect"
-import { HttpApiBuilder } from "@effect/platform"
-import * as BandService from "../services/band"
-import { withAuthContext } from "../db"
-import {
-  SetListApi,
-  BandError,
-  CurrentSession,
-} from "../../api/contracts"
+import { Effect } from "effect";
+import { HttpApiBuilder } from "@effect/platform";
+import * as BandService from "../services/band";
+import { withAuthContext } from "../db";
+import { SetListApi, BandError, CurrentSession } from "../../api/contracts";
 
 export const bandsHandlers = HttpApiBuilder.group(SetListApi, "myBands", (handlers) =>
   handlers
-    .handle("listBands", () =>
-      Effect.gen(function* () {
-        const session = yield* CurrentSession
+    .handle(
+      "listBands",
+      Effect.fnUntraced(function* () {
+        const session = yield* CurrentSession;
         // No session means no bands, not every band: the visitor role's
         // policies cannot name a user without a session id.
-        if (!session.sessionId || !session.userId) return []
+        if (!session.sessionId || !session.userId) return [];
 
         return yield* BandService.getUserBands().pipe(
           Effect.map((rows) =>
@@ -28,12 +25,13 @@ export const bandsHandlers = HttpApiBuilder.group(SetListApi, "myBands", (handle
             })),
           ),
           withAuthContext(session.sessionId),
-        )
+        );
       }),
     )
-    .handle("getBandMembers", ({ path: { bandId } }) =>
-      Effect.gen(function* () {
-        const session = yield* CurrentSession
+    .handle(
+      "getBandMembers",
+      Effect.fnUntraced(function* ({ path: { bandId } }) {
+        const session = yield* CurrentSession;
         return yield* BandService.getBandMembers(bandId).pipe(
           Effect.map((rows) =>
             rows.map((m) => ({
@@ -47,12 +45,13 @@ export const bandsHandlers = HttpApiBuilder.group(SetListApi, "myBands", (handle
             })),
           ),
           withAuthContext(session.sessionId),
-        )
+        );
       }),
     )
-    .handle("createBand", ({ payload }) =>
-      Effect.gen(function* () {
-        const session = yield* CurrentSession
+    .handle(
+      "createBand",
+      Effect.fnUntraced(function* ({ payload }) {
+        const session = yield* CurrentSession;
         return yield* BandService.createBand(payload).pipe(
           Effect.map((band) => ({
             id: band.id,
@@ -69,23 +68,23 @@ export const bandsHandlers = HttpApiBuilder.group(SetListApi, "myBands", (handle
               }),
             ),
           ),
-        )
+        );
       }),
     )
-    .handle("deleteBand", ({ path: { bandId } }) =>
-      Effect.gen(function* () {
-        const session = yield* CurrentSession
+    .handle(
+      "deleteBand",
+      Effect.fnUntraced(function* ({ path: { bandId } }) {
+        const session = yield* CurrentSession;
         return yield* BandService.deleteBand(bandId).pipe(
           withAuthContext(session.sessionId),
-          Effect.catchAll((e) =>
-            Effect.fail(new BandError({ message: String(e) })),
-          ),
-        )
+          Effect.catchAll((e) => Effect.fail(new BandError({ message: String(e) }))),
+        );
       }),
     )
-    .handle("inviteToBand", ({ path: { bandId }, payload }) =>
-      Effect.gen(function* () {
-        const session = yield* CurrentSession
+    .handle(
+      "inviteToBand",
+      Effect.fnUntraced(function* ({ path: { bandId }, payload }) {
+        const session = yield* CurrentSession;
         return yield* BandService.inviteToBand({
           bandId,
           username: payload.username,
@@ -99,7 +98,7 @@ export const bandsHandlers = HttpApiBuilder.group(SetListApi, "myBands", (handle
               }),
             ),
           ),
-        )
+        );
       }),
     ),
-)
+);

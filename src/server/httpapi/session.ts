@@ -18,7 +18,7 @@ export const SessionMiddlewareLive = Layer.effect(
         if (!token) return Effect.succeed(noSession)
 
         return db
-          .selectFrom("app_private.sessions" as any)
+          .selectFrom("app_private.sessions")
           .select(["uuid", "user_id"])
           .where("uuid", "=", token)
           .pipe(

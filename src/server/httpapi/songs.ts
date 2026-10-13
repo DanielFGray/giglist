@@ -1,5 +1,6 @@
 import { Effect, Schema as S } from "effect"
 import { HttpApiBuilder } from "@effect/platform"
+import { sql } from "kysely"
 import { Kysely, withAuthContext } from "../db"
 import {
   Song,
@@ -9,7 +10,6 @@ import {
   type SessionData,
 } from "../../api/contracts"
 import {
-  currentUserMemberBandIds,
   songFindById,
   songCreate,
   songDelete,
@@ -27,14 +27,19 @@ const toWire = (row: Record<string, unknown>) => ({
 
 /** `current_user_member_band_ids()` is `setof uuid`, so each row carries the id
  *  under the function's own name rather than a `band_id` column. */
-const memberBandIds = () =>
-  Effect.gen(function* () {
+const memberBandIds = Effect.fnUntraced(function*() {
     const db = yield* Kysely
-    return yield* currentUserMemberBandIds(db)().pipe(
-      Effect.map((rows) => rows as unknown as readonly { current_user_member_band_ids: string }[]),
-      Effect.map((rows) => rows.map((r) => r.current_user_member_band_ids)),
-      Effect.orDie,
-    )
+    return yield* db
+      .selectFrom(
+        sql<{ current_user_member_band_ids: string }>`app_public.current_user_member_band_ids()`.as(
+          "ids",
+        ),
+      )
+      .selectAll()
+      .pipe(
+        Effect.map((rows) => rows.map((r) => r.current_user_member_band_ids)),
+        Effect.orDie,
+      )
   })
 
 /**
@@ -44,8 +49,7 @@ const memberBandIds = () =>
  * returned nothing" into a 403 the browser can show. Both run in the same
  * transaction, so they cannot disagree about who the user is.
  */
-const assertBandMember = (bandId: string) =>
-  Effect.gen(function* () {
+const assertBandMember = Effect.fnUntraced(function*(bandId: string) {
     const ids = yield* memberBandIds()
     if (!ids.includes(bandId)) {
       return yield* Effect.fail(
@@ -75,8 +79,7 @@ const asSession = <A, E>(
  * returns nothing, so a missing row and a foreign song look the same. Both are
  * answered 403 — a caller outside the band must not learn the song exists.
  */
-const songRow = (id: string) =>
-  Effect.gen(function* () {
+const songRow = Effect.fnUntraced(function*(id: string) {
     const db = yield* Kysely
     return yield* songFindById(db)({ id }).pipe(
       Effect.head,

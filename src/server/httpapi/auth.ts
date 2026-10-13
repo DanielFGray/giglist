@@ -12,8 +12,7 @@ const isSecure = process.env.NODE_ENV === "production"
 
 export const authHandlers = HttpApiBuilder.group(SetListApi, "auth", (handlers) =>
   handlers
-    .handle("login", ({ payload }) =>
-      Effect.gen(function* () {
+    .handle("login", Effect.fnUntraced(function*({ payload }) {
         const result = yield* Auth.login(payload)
         yield* HttpApiBuilder.securitySetCookie(sessionCookie, result.sessionId, {
           httpOnly: true,
@@ -23,14 +22,13 @@ export const authHandlers = HttpApiBuilder.group(SetListApi, "auth", (handlers) 
           maxAge: "30 days",
         })
         return { ok: true as const }
-      }).pipe(
+      },
         Effect.catchAll((e) =>
           Effect.fail(new AuthError({ message: "message" in e ? String(e.message) : "Login failed" })),
         ),
       ),
     )
-    .handle("register", ({ payload }) =>
-      Effect.gen(function* () {
+    .handle("register", Effect.fnUntraced(function*({ payload }) {
         const result = yield* Auth.register(payload)
         yield* HttpApiBuilder.securitySetCookie(sessionCookie, result.sessionId, {
           httpOnly: true,
@@ -40,14 +38,13 @@ export const authHandlers = HttpApiBuilder.group(SetListApi, "auth", (handlers) 
           maxAge: "30 days",
         })
         return { ok: true as const }
-      }).pipe(
+      },
         Effect.catchAll((e) =>
           Effect.fail(new AuthError({ message: "message" in e ? String(e.message) : "Registration failed" })),
         ),
       ),
     )
-    .handle("logout", () =>
-      Effect.gen(function* () {
+    .handle("logout", Effect.fnUntraced(function*() {
         const session = yield* CurrentSession
         if (session.sessionId) {
           yield* Auth.logout(session.sessionId).pipe(Effect.orDie)
@@ -62,8 +59,7 @@ export const authHandlers = HttpApiBuilder.group(SetListApi, "auth", (handlers) 
         return { ok: true as const }
       }),
     )
-    .handle("me", () =>
-      Effect.gen(function* () {
+    .handle("me", Effect.fnUntraced(function*() {
         const session = yield* CurrentSession
         if (!session.sessionId || !session.userId) return null
         return yield* Auth.getMe(session.sessionId).pipe(
