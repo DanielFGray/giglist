@@ -47,6 +47,7 @@
     "graphile-worker": "^0.17.3",
     "html-to-text": "^9.0.5",
     "kysely": "^0.29.5",
+    "kysely-codegen": "^0.20.0",
     "lodash.template": "^4.18.1",
     "mjml": "^4.18.0",
     "nodemailer": "^8.0.3",
