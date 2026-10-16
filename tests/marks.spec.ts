@@ -1,6 +1,6 @@
 import type { Locator, Page } from "@playwright/test"
 import { deleteLine, insertLineAfter, parseDoc, serializeDoc, type Edit } from "../src/charts/doc"
-import { test, expect, getPw } from "./helpers"
+import { test, expect, getPw, TEST_PASSWORD } from "./helpers"
 
 /** A band, a song and a bare-lyrics chart; marks start from a chart. */
 const createChart = async (page: Page) => {
@@ -161,6 +161,50 @@ test.describe("marks", () => {
     await page.mouse.click(target.x, target.y)
     await expect(getPw(page, "mark")).toHaveCount(2, { timeout: 10000 })
     await expect(getPw(page, "mark")).toHaveText(["1 e & a", "1 e & a"])
+  })
+
+  test("a bandmate sees a mark only while it is shared, and cannot change it", async ({ page, browser, testing }) => {
+    await testing.login()
+    const { bandId, url, chart } = await createChart(page)
+    const context = await browser.newContext()
+    const mate = await context.newPage()
+    await mate.request.post("/api/testing/login", { data: { username: "test_bandmate", password: TEST_PASSWORD } })
+    await page.request.post("/api/testing/band-member", { data: { band_id: bandId, username: "test_bandmate" } })
+
+    await page.goto(url)
+    await expect(getPw(page, "marked-chart")).toBeVisible({ timeout: 10000 })
+    await placeText(page, "watch the break", "grace")
+    await expect(getPw(page, "mark")).toHaveCount(1, { timeout: 10000 })
+
+    // Private marks are the player's own.
+    await mate.goto(url)
+    await expect(getPw(mate, "marked-chart")).toBeVisible({ timeout: 10000 })
+    await expect(getPw(mate, "mark")).toHaveCount(0)
+
+    // Shared, the mark shows for the bandmate as theirs to read, with no way to edit it.
+    await getPw(page, "tool-move").click()
+    const here = await center(getPw(page, "mark"))
+    await page.mouse.click(here.x, here.y)
+    await getPw(page, "mark-share").click()
+    await expect(getPw(page, "mark")).toHaveAttribute("data-shared", "mine", { timeout: 10000 })
+    await mate.reload()
+    await expect(getPw(mate, "mark")).toHaveText("watch the break", { timeout: 10000 })
+    await expect(getPw(mate, "mark")).toHaveAttribute("data-shared", "theirs")
+    await getPw(mate, "tool-move").click()
+    const there = await center(getPw(mate, "mark"))
+    await mate.mouse.click(there.x, there.y)
+    await expect(getPw(mate, "mark-share")).toHaveCount(0)
+    const listed = (await (await mate.request.get(`/api/marks/chart/${chart.id}`)).json()) as { marks: Array<{ id: string }> }
+    const markId = listed.marks[0]!.id
+    expect((await mate.request.delete(`/api/marks/${markId}`)).ok()).toBe(false)
+
+    // Taking it back removes it from their view.
+    await getPw(page, "mark-share").click()
+    await expect(getPw(page, "mark")).toHaveAttribute("data-shared", "private", { timeout: 10000 })
+    await mate.reload()
+    await expect(getPw(mate, "marked-chart")).toBeVisible({ timeout: 10000 })
+    await expect(getPw(mate, "mark")).toHaveCount(0)
+    await context.close()
   })
 
   test("another player cannot list or add marks on a chart outside their bands", async ({ page, testing }) => {
