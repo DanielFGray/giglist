@@ -21,6 +21,9 @@ describe("spell", () => {
     expect(spell("Cma")).toEqual({ root: 0, bass: 0, required: [0, 4], optional: [7] })
     // A delta is the whole name for a major 7th, so it needs no number after it.
     expect(spell("CΔ")).toEqual({ root: 0, bass: 0, required: [0, 4, 11], optional: [7] })
+    // Minor-major 7th, in the spellings charts use.
+    const minorMajor = { root: 0, bass: 0, required: [0, 3, 11], optional: [7] }
+    for (const name of ["Cm(maj7)", "CmMaj7", "CmM7", "Cmmaj7", "C-Δ"]) expect(spell(name), name).toEqual(minorMajor)
   })
 
   test("a `+` or `-` before a tone is an alteration of that tone", () => {

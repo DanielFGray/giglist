@@ -26,16 +26,16 @@ export function spell(name: string): Spelling | null {
   if (chord === null) return null
 
   const { tones, required, extensions } = chord
-  // A 13th is the 9th and the 11th an octave down, and an 11th is the 9th. The
-  // brief calls the tones below the named one optional, so they are only added.
+  // A 13 implies the 9th and 11th below it, and an 11 implies the 9th. A player
+  // commonly leaves those out, so they are added as optional, never required.
   if (extensions.has(13)) {
     if (!tones.has(9)) tones.set(9, DEGREE[9])
     if (!tones.has(11)) tones.set(11, DEGREE[11])
   } else if (extensions.has(11) && !tones.has(9)) {
     tones.set(9, DEGREE[9])
   }
-  // The natural 11th of a 13 is a major 3rd above the root an octave down, so it
-  // rings against the 3rd. A sus or a minor 13 has no major 3rd to ring against.
+  // The natural 11th sits a half step above the major 3rd, so a major 13 leaves it
+  // out. A sus or a minor 13 has no major 3rd for it to clash with.
   if (extensions.has(13) && !chord.sus && chord.third === 4) tones.delete(11)
 
   const must = new Set<PitchClass>([root.pitchClass, bass])
@@ -134,10 +134,10 @@ function readSuffix(suffix: string): Suffix | null {
       continue
     }
 
-    const marker = takeLongest(suffix, at, ["maj", "min", "mi", "ma", "M", "Δ", "j", "m", "-"])
+    const marker = takeLongest(suffix, at, ["maj", "Maj", "min", "mi", "ma", "M", "Δ", "j", "m", "-"])
     if (marker !== null) {
       // `Cmadd9` is Cm(add9), so an `m` in front of `add` is minor, not the head of `maj`.
-      const beforeAdd = (marker === "maj" || marker === "ma") && suffix.startsWith("add", at + 1)
+      const beforeAdd = marker === "ma" && suffix.startsWith("add", at + 1)
       if (beforeAdd) {
         minor = true
         third = 3
@@ -271,8 +271,8 @@ function readSuffix(suffix: string): Suffix | null {
   else if (susDegree === null) tones.set(3, third)
   if (seventh !== null) readTone(7, seventh, true)
 
-  // A dominant 11 may drop its 3rd: the 11th is the 3rd an octave up, and a shape
-  // holding both has no room for the 7th. A minor 11 has no clash to dodge.
+  // A dominant 11 may drop its 3rd: the 11th is a half step above it, an octave
+  // up, and players leave the 3rd out to avoid the clash. A minor 11 has no clash.
   const thirdRequired = third !== null && !thirdReleased && !(extensions.has(11) && !minor)
   return {
     tones,
