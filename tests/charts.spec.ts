@@ -4,7 +4,8 @@ import type { Change } from "../src/charts/changes"
 import { parseDoc, placeChord, serializeDoc } from "../src/charts/doc"
 import { test, expect, getPw } from "./helpers"
 
-const pasted = readFileSync(new URL("./fixtures/amazing-grace.txt", import.meta.url), "utf8")
+const fixturePath = (name: string) => new URL(`./fixtures/${name}`, import.meta.url).pathname
+const pasted = readFileSync(fixturePath("amazing-grace.txt"), "utf8")
 
 /** Create a band and a song in G through the API; chart specs start from a song. */
 const createSong = async (page: Page) => {
@@ -26,6 +27,10 @@ const createChart = async (request: APIRequestContext, songId: string) => {
   })
   expect(res.ok(), `create chart failed: ${await res.text()}`).toBe(true)
 }
+
+/** The chords of each chord row of chords-over-lyrics text. */
+const chordRows = (text: string) =>
+  text.split("\n").filter((row) => /^\s*[A-G]\S*(\s+[A-G]\S*)*\s*$/.test(row)).map((row) => row.trim().split(/\s+/).join(" "))
 
 /** The lyrics as drawn, with the chords above them left out. */
 const shownLyrics = async (page: Page) => (await getPw(page, "chart-lyric").allTextContents()).join("")
@@ -90,6 +95,55 @@ test.describe("lyrics charts", () => {
 
     await expect(getPw(page, "chart-shown-key")).toHaveValue("Bb", { timeout: 10000 })
     await expectChords(page, ["Bb", "Eb", "F", "Gm"])
+  })
+
+  test("reads a chart from a PDF, shows the file beside the text, and makes the chart", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, songId } = await createSong(page)
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    await getPw(page, "chart-add").click()
+
+    await getPw(page, "chart-form-file").setInputFiles(fixturePath("amazing-grace.pdf"))
+    await expect(getPw(page, "chart-form-pasted")).toHaveValue(/Amazing grace, how sweet the sound/, { timeout: 10000 })
+    await expect(getPw(page, "chart-form-original")).toBeVisible()
+    await getPw(page, "chart-form-submit").click()
+
+    await expect(getPw(page, "chart")).toHaveCount(1, { timeout: 10000 })
+    await expect(getPw(page, "chart-section")).toHaveText(["Verse 1", "Chorus", "Verse 2", "Chorus"])
+    expect(await shownLyrics(page)).toContain("That saved a wretch like me")
+    await expectChords(page, ["G", "C", "D", "Em"])
+  })
+
+  test("reads the chords and lyrics of a photo of a chart", async ({ page, testing }) => {
+    // Tesseract takes a few seconds on a page.
+    test.setTimeout(40000)
+    await testing.login()
+    const { bandId, songId } = await createSong(page)
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    await getPw(page, "chart-add").click()
+
+    await getPw(page, "chart-form-file").setInputFiles(fixturePath("amazing-grace.png"))
+    await expect(getPw(page, "chart-form-reading")).toBeVisible()
+    await expect(getPw(page, "chart-form-pasted")).toHaveValue(/Amazing grace, how sweet the sound/, { timeout: 30000 })
+    // Every chord row came through with the chords of the typed chart, in order.
+    const read = await getPw(page, "chart-form-pasted").inputValue()
+    expect(chordRows(read)).toEqual(chordRows(pasted))
+    await expect(getPw(page, "chart-form-original").locator("img")).toBeVisible()
+  })
+
+  test("refuses a file that is neither a PDF nor an image", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, songId } = await createSong(page)
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    await getPw(page, "chart-add").click()
+
+    await getPw(page, "chart-form-file").setInputFiles(fixturePath("amazing-grace.txt"))
+    await expect(getPw(page, "chart-form-file-error")).toHaveText("That is not a PDF or an image")
+    const res = await page.request.post("/api/charts/read", {
+      headers: { "content-type": "application/octet-stream" },
+      data: Buffer.from(pasted),
+    })
+    expect(res.status()).toBe(400)
   })
 
   test("deletes a chart", async ({ page, testing }) => {

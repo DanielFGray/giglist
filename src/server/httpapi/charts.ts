@@ -4,6 +4,7 @@ import { Kysely, withAuthContext } from "../db"
 import { explains } from "../../charts/changes"
 import { anchorText, parseDoc } from "../../charts/doc"
 import { importPasted } from "../../charts/lyrics"
+import { ChartReader } from "../services/chart-reader"
 import { Chart, ChartConflict, ChartForbidden, ChartInvalid, CurrentSession, SetListApi, type SessionData } from "../../api/contracts"
 
 export const decodeChart = S.decodeUnknownEffect(Chart)
@@ -21,12 +22,18 @@ export type ChartRow = {
 /** Run `query` as the session's user, or answer 403 if there is no session. */
 export const asSession = <A, E>(query: (session: SessionData) => Effect.Effect<A, E, Kysely>) =>
   Effect.gen(function* () {
-    const session = yield* CurrentSession
-    if (!session.sessionId) {
-      return yield* new ChartForbidden({ message: "You must be signed in" })
-    }
+    const session = yield* signedIn
     return yield* query(session).pipe(withAuthContext(session.sessionId))
   })
+
+/** The session, or 403 if the request has none. */
+const signedIn = Effect.gen(function* () {
+  const session = yield* CurrentSession
+  if (!session.sessionId) {
+    return yield* new ChartForbidden({ message: "You must be signed in" })
+  }
+  return session
+})
 
 /**
  * Require that the song is visible to the caller.
@@ -81,6 +88,15 @@ export const chartsHandlers = HttpApiBuilder.group(SetListApi, "charts", (handle
           return yield* withNewestRevision(charts).pipe(Effect.flatMap(decodeCharts), Effect.orDie)
         }),
       ),
+    )
+    .handle("readChartFile", ({ payload }) =>
+      Effect.gen(function* () {
+        // Signed in only, so strangers cannot spend the server's time on OCR. Reading
+        // touches no table, so it runs outside a database transaction.
+        yield* signedIn
+        const reader = yield* ChartReader
+        return { text: yield* reader.read(payload) }
+      }),
     )
     .handle("createLyricsChart", ({ payload }) =>
       asSession(() =>

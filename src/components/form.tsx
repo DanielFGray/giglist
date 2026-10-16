@@ -101,6 +101,7 @@ export function TextAreaField({
   error,
   placeholder,
   rows = 3,
+  monospace = false,
 }: {
   label: string
   pwid: string
@@ -109,6 +110,8 @@ export function TextAreaField({
   error?: string
   placeholder?: string
   rows?: number
+  /** For text laid out in columns, such as chords over lyrics. */
+  monospace?: boolean
 }) {
   return (
     <FieldShell label={label} pwid={pwid} error={error}>
@@ -118,7 +121,7 @@ export function TextAreaField({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={rows}
-        className={inputClass}
+        className={monospace ? `${inputClass} font-mono whitespace-pre` : inputClass}
       />
     </FieldShell>
   )
