@@ -131,7 +131,7 @@ export const testingHandlers = HttpApiBuilder.group(SetListApi, "testing", (hand
             password: Redacted.make(query.password),
           });
           return yield* HttpServerResponse.setCookie(
-            HttpServerResponse.redirect(process.env.VITE_ROOT_URL ?? "/"),
+            HttpServerResponse.redirect("/"),
             sessionCookie.key,
             result.sessionId,
             { httpOnly: true, sameSite: "lax", secure: isSecure, path: "/", maxAge: "30 days" },
