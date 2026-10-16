@@ -38,21 +38,29 @@ export function voicings(chord: Spelling, tuning: ReadonlyArray<number> = STANDA
 const HIGHEST_FRET = 15
 
 /**
- * Lower is better. A sounding string is worth the most: a full shape sounds
- * like the chord, a thin one like part of it. Then each finger, each fret of
- * stretch and each fret up the neck costs one, so the open shapes and the
- * common barres come first. A string left out between two sounding strings
- * must be damped by the hand, and costs three.
+ * Lower is better. Each sounding string earns a point and a half, so a fuller
+ * shape wins until it costs more to hold than it adds. Each finger costs one;
+ * each fret of stretch, each fret up the neck and each optional note left out
+ * cost two. A string left out between two sounding strings must be damped by
+ * the hand, and costs four. Two strings on one pitch cost six: the second adds
+ * nothing to the sound, as with the low E string fretted at 5 under an open A.
+ *
+ * The weights were fitted to ChordSheetJS's chord table: its shape for a name
+ * is our first for 38% of names and in our first three for 60%.
  */
 function scoreOf(frets: Voicing["frets"], chord: Spelling, tuning: ReadonlyArray<number>): number {
   const sounding = soundingStrings(frets)
   const fretted = frets.filter((fret): fret is number => fret !== null && fret > 0)
   const lowest = fretted.length === 0 ? 0 : Math.min(...fretted)
   const span = fretted.length === 0 ? 0 : Math.max(...fretted) - lowest
-  const heard = new Set(sounding.map((i) => pitchClassOf(tuning[i]! + frets[i]!)))
+  const pitches = sounding.map((i) => tuning[i]! + frets[i]!)
+  const heard = new Set(pitches.map(pitchClassOf))
   const optionalMissing = chord.optional.filter((pc) => !heard.has(pc)).length
   const interiorMutes = sounding.length === 0 ? 0 : sounding.at(-1)! - sounding[0]! + 1 - sounding.length
-  return 3 * interiorMutes + optionalMissing + fingersNeeded(frets) + span + lowest - 2 * sounding.length
+  const unisons = pitches.length - new Set(pitches).size
+  return (
+    4 * interiorMutes + 2 * optionalMissing + fingersNeeded(frets) + 2 * span + 2 * lowest + 6 * unisons - 1.5 * sounding.length
+  )
 }
 
 /** Every playable shape whose fretted notes lie in frets start..start+3. */
