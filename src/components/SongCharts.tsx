@@ -122,6 +122,7 @@ function ChartCard({
 }) {
   const [error, setError] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
+  const [annotating, setAnnotating] = useState(false)
   const [copied, setCopied] = useState(false)
   const copy = async (source: string) => {
     setError(null)
@@ -170,10 +171,34 @@ function ChartCard({
             <button
               data-pwid="chart-edit"
               type="button"
-              onClick={() => setEditing(true)}
+              onClick={() => {
+                setAnnotating(false)
+                setEditing(true)
+              }}
               className="px-3 py-1.5 rounded-md border border-[var(--color-border-subtle)] text-xs text-zinc-300 cursor-pointer"
             >
               Edit
+            </button>
+          )}
+          {chart.source !== null && !editing && (
+            <button
+              data-pwid="chart-annotate"
+              type="button"
+              aria-pressed={annotating}
+              onClick={() => setAnnotating(!annotating)}
+              className={`px-3 py-1.5 rounded-md border border-[var(--color-border-subtle)] text-xs cursor-pointer ${annotating ? "bg-[var(--color-amber-accent)] text-zinc-950" : "text-zinc-300"}`}
+            >
+              Annotate
+            </button>
+          )}
+          {chart.source !== null && editing && (
+            <button
+              data-pwid="chart-close"
+              type="button"
+              onClick={() => setEditing(false)}
+              className="px-3 py-1.5 rounded-md border border-[var(--color-border-subtle)] text-xs text-zinc-300 cursor-pointer"
+            >
+              Close
             </button>
           )}
           {/* A score has no Edit, so its Delete stays: it would have no other way out. */}
@@ -200,7 +225,7 @@ function ChartCard({
           }}
         />
       ) : chart.source !== null ? (
-        <MarkedChart chart={{ ...chart, source: chart.source }} shownKey={shownKey} tempo={tempo} />
+        <MarkedChart chart={{ ...chart, source: chart.source }} shownKey={shownKey} tempo={tempo} annotating={annotating} />
       ) : (
         <Suspense fallback={<p className="text-sm text-zinc-500">Loading the score…</p>}>
           <ScoreViewer key={chart.revision_id} revisionId={chart.revision_id} />

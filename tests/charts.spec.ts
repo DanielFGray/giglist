@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs"
 import type { APIRequestContext, Page } from "@playwright/test"
 import type { Change } from "../src/charts/changes"
 import { parseDoc, placeChord, serializeDoc } from "../src/charts/doc"
-import { test, expect, getPw } from "./helpers"
+import { test, expect, getPw, openTool } from "./helpers"
 
 const fixturePath = (name: string) => new URL(`./fixtures/${name}`, import.meta.url).pathname
 const pasted = readFileSync(fixturePath("amazing-grace.txt"), "utf8")
@@ -183,6 +183,21 @@ test.describe("lyrics charts", () => {
     await expect(getPw(page, "chart-tab").filter({ hasText: "3h5h7" })).toHaveText("B|--3h5h7--------------|", { useInnerText: true })
   })
 
+  test("edit mode has a Close that returns to the chart", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, songId } = await createSong(page)
+    await createChart(page.request, songId)
+
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    await expect(getPw(page, "chart")).toHaveCount(1, { timeout: 10000 })
+    await getPw(page, "chart-edit").click()
+    await expect(getPw(page, "chart-editor")).toBeVisible()
+    await getPw(page, "chart-close").click()
+    await expect(getPw(page, "chart-editor")).toHaveCount(0)
+    await expect(getPw(page, "marked-chart")).toBeVisible()
+    await expect(getPw(page, "chart-close")).toHaveCount(0)
+  })
+
   test("deletes a chart", async ({ page, testing }) => {
     await testing.login()
     const { bandId, songId } = await createSong(page)
@@ -268,7 +283,7 @@ test.describe("chord shapes", () => {
     await expect(panel).toHaveCount(0)
 
     // With a drawing tool up, a chord is text again and opens nothing.
-    await getPw(page, "tool-ink").click()
+    await openTool(page, "ink")
     await chord("C").click()
     await expect(panel).toHaveCount(0)
   })
