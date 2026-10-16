@@ -67,14 +67,19 @@ function shapesIn(chord: Spelling, tuning: ReadonlyArray<number>, start: number)
   })
   const isPower = chord.optional.length === 0 && chord.required.length === 2
   const shapes: Array<Voicing["frets"]> = []
-  const walk = (frets: Array<number | null>) => {
-    if (frets.length < tuning.length) {
-      for (const fret of choices[frets.length]!) walk([...frets, fret])
+  // One array, filled string by string; only a playable shape is copied out.
+  const frets: Array<number | null> = []
+  const walk = (string: number) => {
+    if (string === tuning.length) {
+      if (playable(frets, chord, tuning, isPower ? 2 : 3)) shapes.push([...frets])
       return
     }
-    if (playable(frets, chord, tuning, isPower ? 2 : 3)) shapes.push(frets)
+    for (const fret of choices[string]!) {
+      frets[string] = fret
+      walk(string + 1)
+    }
   }
-  walk([])
+  walk(0)
   return shapes
 }
 
