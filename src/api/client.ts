@@ -6,6 +6,7 @@ import {
   AuthUser as AuthUserSchema,
   BandInfo as BandInfoSchema,
   BandMember as BandMemberSchema,
+  BandInvitation as BandInvitationSchema,
   Setlist as SetlistSchema,
   SetlistEntry as SetlistEntrySchema,
   SetlistSection as SetlistSectionSchema,
@@ -26,6 +27,7 @@ export type StampInfo = S.Schema.Type<typeof StampSchema>
 export type AuthUser = S.Schema.Type<typeof AuthUserSchema>
 export type BandInfo = S.Schema.Type<typeof BandInfoSchema>
 export type BandMember = S.Schema.Type<typeof BandMemberSchema>
+export type BandInvitationInfo = S.Schema.Type<typeof BandInvitationSchema>
 export type SetlistInfo = S.Schema.Type<typeof SetlistSchema>
 export type SetlistEntryInfo = S.Schema.Type<typeof SetlistEntrySchema>
 export type SetlistSectionInfo = S.Schema.Type<typeof SetlistSectionSchema>
@@ -107,6 +109,14 @@ export const bands = {
 
   delete: (bandId: string) =>
     run(api.pipe(Effect.flatMap((c) => c.myBands.deleteBand({ params: { bandId } })))),
+
+  invitations: () => run(api.pipe(Effect.flatMap((c) => c.myBands.listInvitations({})))),
+
+  acceptInvitation: (invitationId: string) =>
+    run(api.pipe(Effect.flatMap((c) => c.myBands.acceptInvitation({ params: { invitationId } })))),
+
+  declineInvitation: (invitationId: string) =>
+    run(api.pipe(Effect.flatMap((c) => c.myBands.declineInvitation({ params: { invitationId } })))),
 
   invite: (bandId: string, data: { username?: string; email?: string }) =>
     run(

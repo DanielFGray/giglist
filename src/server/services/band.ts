@@ -105,6 +105,35 @@ export const inviteToBand = Effect.fnUntraced(
   }),
 );
 
+/** The invitations addressed to the current user. */
+export const listInvitations = Effect.fnUntraced(function* () {
+  const db = yield* Kysely;
+  return yield* db
+    .selectFrom(sql<{ id: string; band_id: string; band_name: string }>`app_public.my_band_invitations()`.as("i"))
+    .selectAll();
+});
+
+export const acceptInvitation = Effect.fnUntraced(
+  function* (invitationId: string) {
+    const db = yield* Kysely;
+    yield* db.selectNoFrom([sql`app_public.accept_invitation_to_band(${invitationId}::uuid)`.as("_")]);
+  },
+  Effect.catch((e) => {
+    const msg = String(e);
+    if (msg.includes("NTFND")) return Effect.fail(new BandError({ message: "That invitation no longer exists" }));
+    if (msg.includes("DNIED")) return Effect.fail(new BandError({ message: "That invitation is not for you" }));
+    return Effect.fail(new BandError({ message: "Could not accept the invitation" }));
+  }),
+);
+
+export const declineInvitation = Effect.fnUntraced(
+  function* (invitationId: string) {
+    const db = yield* Kysely;
+    yield* db.selectNoFrom([sql`app_public.decline_invitation_to_band(${invitationId}::uuid)`.as("_")]);
+  },
+  Effect.mapError(() => new BandError({ message: "Could not decline the invitation" })),
+);
+
 export const deleteBand = Effect.fnUntraced(function* (bandId: string) {
   const db = yield* Kysely;
   yield* db.selectNoFrom([sql`app_public.delete_band(${bandId}::uuid)`.as("_")]);

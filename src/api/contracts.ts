@@ -113,6 +113,13 @@ export const BandMember = S.Struct({
   avatar_url: S.NullOr(S.String),
 })
 
+/** An invitation to join a band, addressed to the signed-in user. */
+export const BandInvitation = S.Struct({
+  id: S.String.check(S.isUUID()),
+  band_id: S.String.check(S.isUUID()),
+  band_name: S.String,
+})
+
 export const CreateBandPayload = S.Struct({
   slug: S.String,
   name: S.String,
@@ -150,6 +157,23 @@ export const BandsApiGroup = HttpApiGroup.make("myBands")
   .add(
     HttpApiEndpoint.delete("deleteBand", "/:bandId", {
       params: { bandId: S.String.check(S.isUUID()) },
+      error: BandError.pipe(HttpApiSchema.status(400)),
+    }),
+  )
+  .add(
+    HttpApiEndpoint.get("listInvitations", "/invitations", {
+      success: S.Array(BandInvitation),
+    }),
+  )
+  .add(
+    HttpApiEndpoint.post("acceptInvitation", "/invitations/:invitationId/accept", {
+      params: { invitationId: S.String.check(S.isUUID()) },
+      error: BandError.pipe(HttpApiSchema.status(400)),
+    }),
+  )
+  .add(
+    HttpApiEndpoint.post("declineInvitation", "/invitations/:invitationId/decline", {
+      params: { invitationId: S.String.check(S.isUUID()) },
       error: BandError.pipe(HttpApiSchema.status(400)),
     }),
   )
