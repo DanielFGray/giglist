@@ -42,7 +42,7 @@ test.describe("auth", () => {
     await expect(getPw(page, "login-page")).toBeVisible()
   })
 
-  test("can register via UI", async ({ page, testing }) => {
+  test("can register via UI", async ({ page }) => {
     await page.goto("/signup")
     await getPw(page, "signup-username").fill("test_newuser")
     await getPw(page, "signup-email").fill("test_newuser@test.local")
@@ -71,7 +71,7 @@ test.describe("auth", () => {
     await expect(getPw(page, "nav-signin")).toBeVisible({ timeout: 5000 })
   })
 
-  test("shows error for wrong password", async ({ page, testing }) => {
+  test("shows error for wrong password", async ({ page }) => {
     // Create user without keeping the session cookie in the browser
     await fetch(`${BASE_URL}/api/testing/login`, {
       method: "POST",

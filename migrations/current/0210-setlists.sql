@@ -220,6 +220,10 @@ create view app_public.setlist_entries_resolved as
   from app_public.setlist_entries e
   join app_public.songs s on s.id = e.song_id;
 
+-- A view runs with its owner's rights, which skips RLS on the tables it reads.
+-- With security_invoker the caller's policies on setlist_entries and songs apply.
+alter view app_public.setlist_entries_resolved set (security_invoker = true);
+
 comment on view app_public.setlist_entries_resolved is
   E'Setlist entries with song defaults resolved — overrides take precedence, nulls fall through to the song''s values.';
 

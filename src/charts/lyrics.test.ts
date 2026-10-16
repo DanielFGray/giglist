@@ -8,6 +8,8 @@ const pasted = readFileSync(new URL("../../tests/fixtures/amazing-grace.txt", im
 const pairs = (key?: string) =>
   renderLyrics(importPasted(pasted, "G"), key).flatMap((line) => line.filter((i): i is Extract<ChartItem, { kind: "pair" }> => i.kind === "pair"))
 
+const CHORD = /^[A-G][#b]?(m|maj|min|dim|aug|sus)?\d*(\/[A-G][#b]?)?$/
+
 describe("importPasted", () => {
   test("keeps every lyric line exactly", () => {
     const lyrics = pasted.split("\n").filter((l) => l.trim() && !l.startsWith("[") && !/^[A-G][A-Za-z0-9#/ ]*$/.test(l.trim()))
@@ -23,6 +25,27 @@ describe("importPasted", () => {
     // "G" and "C" were typed at columns 0 and 18 of the first line in the fixture.
     expect(columnOf("G")).toBe(0)
     expect(columnOf("C")).toBe(18)
+  })
+
+  test("puts every chord of every line at the column it was typed", () => {
+    const rows = pasted.split("\n")
+    const shownLines = renderLyrics(importPasted(pasted, "G")).map((line) =>
+      line.filter((i): i is Extract<ChartItem, { kind: "pair" }> => i.kind === "pair"),
+    )
+    const byLyric = new Map(shownLines.map((l) => [l.map((p) => p.lyric).join("").trimEnd(), l]))
+    let checked = 0
+    rows.forEach((row, index) => {
+      const lyric = rows[index + 1]
+      const isChordLine = row.trim() !== "" && row.trim().split(/\s+/).every((t) => CHORD.test(t))
+      if (!isChordLine || lyric === undefined) return
+      const line = byLyric.get(lyric.trimEnd())!
+      expect(line).toBeDefined()
+      const typed = [...row.matchAll(/\S+/g)].map((m) => ({ chord: m[0], column: m.index! }))
+      const shown = line.flatMap((p, i) => (p.chord ? [{ chord: p.chord, column: line.slice(0, i).reduce((n, q) => n + q.lyric.length, 0) }] : []))
+      expect(shown).toEqual(typed)
+      checked += typed.length
+    })
+    expect(checked).toBeGreaterThan(10)
   })
 
   test("turns headers into sections", () => {
