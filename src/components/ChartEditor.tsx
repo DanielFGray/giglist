@@ -2,11 +2,13 @@ import { useMemo, useRef, useState, type DragEvent } from "react"
 import { charts, type ChartInfo } from "~/api/client"
 import { composeChanges } from "~/charts/changes"
 import {
-  addSection, deleteLine, directiveName, editLine, insertLineAfter, moveChord, moveSection, parseDoc, placeChord, removeChord, removeSection, renameSection,
-  segments, serializeDoc, type DocLine, type Edit,
+  addPhrase, addSection, deleteLine, directiveName, editLine, inPhrase, insertLineAfter, moveChord, moveSection, parseDoc, phraseAt, placeChord,
+  removeChord, removeSection, renameSection, segments, serializeDoc, setPhrase, type DocLine, type Edit,
 } from "~/charts/doc"
-import { isTabStart, suggestedChords } from "~/charts/lyrics"
+import { isPhraseStart, isTabStart, suggestedChords } from "~/charts/lyrics"
 import { errorMessage } from "./form"
+import { Phrase } from "./Phrase"
+import { PhraseForm } from "./PhraseForm"
 
 /** A chord in hand: dragged or armed from the palette (no `from`), or picked up off the chart. */
 type Held = { chord: string; from?: { line: number; chord: number } }
@@ -24,10 +26,13 @@ const button =
  */
 export function ChartEditor({
   chart,
+  tempo,
   onSaved,
   onCancel,
 }: {
   chart: ChartInfo & { source: string }
+  /** The song's tempo, which phrases play at. */
+  tempo: number | null
   onSaved: () => Promise<void>
   onCancel: () => void
 }) {
@@ -119,6 +124,9 @@ export function ChartEditor({
             key={index}
             line={line}
             index={index}
+            phrase={line.kind === "directive" && isPhraseStart(directiveName(line)) ? phraseAt(doc, index) : null}
+            hidden={line.kind === "literal" && inPhrase(doc, index)}
+            tempo={tempo}
             held={held}
             editing={editingLine === index}
             onDrop={dropOn}
@@ -138,6 +146,8 @@ export function ChartEditor({
             onAddSection={(label) => apply(addSection(doc, index, label))}
             onRemoveSection={() => apply(removeSection(doc, index))}
             onMoveSection={(delta) => apply(moveSection(doc, index, delta))}
+            onAddPhrase={(name, tex) => apply(addPhrase(doc, index, name, tex))}
+            onSetPhrase={(name, tex) => apply(setPhrase(doc, index, name, tex))}
           />
         ))}
       </div>
@@ -212,6 +222,11 @@ function RemoveZone({ held, onRemove }: { held: Held | null; onRemove: (from: { 
 function Line(props: {
   line: DocLine
   index: number
+  /** Set on a phrase's start line, which draws the whole phrase. */
+  phrase: { name: string; tex: string } | null
+  /** A line of a phrase's notation: the phrase's start line draws it. */
+  hidden: boolean
+  tempo: number | null
   held: Held | null
   editing: boolean
   onDrop: (line: number, at: number, dropped: Held) => void
@@ -224,9 +239,16 @@ function Line(props: {
   onAddSection: (label: string) => void
   onRemoveSection: () => void
   onMoveSection: (delta: -1 | 1) => void
+  onAddPhrase: (name: string, tex: string) => void
+  onSetPhrase: (name: string, tex: string) => void
 }) {
-  const { line, index } = props
+  const { line } = props
   const [naming, setNaming] = useState(false)
+  const [writingPhrase, setWritingPhrase] = useState(false)
+  if (props.hidden) return null
+  if (props.phrase) {
+    return <PhraseBlock {...props.phrase} tempo={props.tempo} onSet={props.onSetPhrase} onRemove={props.onRemoveSection} />
+  }
   if (line.kind === "directive") {
     const section = /^\{\s*start_of_\w+\s*(?::\s*(.*?))?\s*\}$/.exec(line.raw)
     return section ? (
@@ -240,7 +262,7 @@ function Line(props: {
     ) : null
   }
   if (props.editing) return <LyricInput text={line.text} onDone={props.onEditEnd} />
-  if (line.kind === "tab") {
+  if (line.kind === "literal") {
     // Tab is kept as written: no chords go on it, but its text can be corrected.
     return (
       <div data-pwid="editor-tab" className="group relative flex items-center">
@@ -269,6 +291,29 @@ function Line(props: {
       />
     )
   }
+  return (
+    <>
+      <LyricLine {...props} onWritePhrase={() => setWritingPhrase(true)} onName={() => setNaming(true)} />
+      {writingPhrase && (
+        <PhraseForm
+          name=""
+          tex=""
+          tempo={props.tempo}
+          onCancel={() => setWritingPhrase(false)}
+          onSave={(name, tex) => {
+            setWritingPhrase(false)
+            props.onAddPhrase(name, tex)
+          }}
+        />
+      )}
+    </>
+  )
+}
+
+/** A lyric line: words to drop chords on, and the line's own buttons. */
+function LyricLine(props: Parameters<typeof Line>[0] & { onWritePhrase: () => void; onName: () => void }) {
+  const { line, index } = props
+  if (line.kind !== "lyrics") return null
   return (
     <div data-pwid="editor-line" className="group flex flex-wrap items-end">
       {segments(line).map((segment) => (
@@ -317,13 +362,63 @@ function Line(props: {
         <button data-pwid="line-add" type="button" onClick={props.onInsertAfter} aria-label="Add a line below" className={button}>
           + Line
         </button>
-        <button data-pwid="line-section" type="button" onClick={() => setNaming(true)} aria-label="Start a section here" className={button}>
+        <button data-pwid="line-section" type="button" onClick={props.onName} aria-label="Start a section here" className={button}>
           + Section
+        </button>
+        <button data-pwid="line-phrase" type="button" onClick={props.onWritePhrase} aria-label="Add a phrase below" className={button}>
+          + Phrase
         </button>
         <button data-pwid="line-delete" type="button" onClick={props.onDelete} aria-label="Delete line" className={button}>
           Delete
         </button>
       </span>
+    </div>
+  )
+}
+
+/** A phrase drawn as it will show, with its name; Edit opens it in the phrase form. */
+function PhraseBlock({
+  name,
+  tex,
+  tempo,
+  onSet,
+  onRemove,
+}: {
+  name: string
+  tex: string
+  tempo: number | null
+  onSet: (name: string, tex: string) => void
+  onRemove: () => void
+}) {
+  const [editing, setEditing] = useState(false)
+  if (editing) {
+    return (
+      <PhraseForm
+        name={name}
+        tex={tex}
+        tempo={tempo}
+        onCancel={() => setEditing(false)}
+        onSave={(newName, newTex) => {
+          setEditing(false)
+          onSet(newName, newTex)
+        }}
+      />
+    )
+  }
+  return (
+    <div data-pwid="editor-phrase" className="group my-2">
+      <div className="mb-1 flex items-center gap-2">
+        <span className="text-xs font-semibold uppercase tracking-wide text-zinc-400">{name}</span>
+        <span className="flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
+          <button data-pwid="phrase-edit" type="button" onClick={() => setEditing(true)} aria-label="Edit phrase" className={button}>
+            Edit phrase
+          </button>
+          <button data-pwid="phrase-remove" type="button" onClick={onRemove} aria-label="Remove phrase" className={button}>
+            Remove phrase
+          </button>
+        </span>
+      </div>
+      <Phrase tex={tex} tempo={tempo} />
     </div>
   )
 }

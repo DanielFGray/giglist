@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import { AlphaTabApi, importer, synth, type model } from "@coderline/alphatab"
 import { scores } from "~/api/client"
 import { trackOptions } from "~/charts/score-tracks"
+import { alphaTabAssets } from "./alphatab"
 import { errorMessage } from "./form"
 
 type Status = "loading" | "ready" | "error"
@@ -39,19 +40,10 @@ export function ScoreViewer({ revisionId }: { revisionId: string }) {
       setError(message)
       setStatus("error")
     }
+    const { scriptFile, fontDirectory, soundFont } = alphaTabAssets()
     const view = new AlphaTabApi(element, {
-      core: {
-        engine: "svg",
-        // The render worker and audio worklet load these by URL, and the worker
-        // uses importScripts, so the script must be the UMD build at an absolute URL.
-        scriptFile: `${location.origin}/alphatab/alphaTab.js`,
-        fontDirectory: `${location.origin}/alphatab/font/`,
-      },
-      player: {
-        enablePlayer: true,
-        enableCursor: true,
-        soundFont: `${location.origin}/alphatab/soundfont/sonivox.sf2`,
-      },
+      core: { engine: "svg", scriptFile, fontDirectory },
+      player: { enablePlayer: true, enableCursor: true, soundFont },
     })
     api.current = view
     view.metronomeVolume = metronomeOn.current ? 1 : 0

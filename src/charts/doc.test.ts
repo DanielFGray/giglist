@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs"
 import { ChordLyricsPair, ChordProParser, Literal, Tag } from "chordsheetjs"
 import { composeChanges, explains, type Change } from "./changes"
 import {
-  addSection, moveSection, removeSection,
+  addPhrase, addSection, inPhrase, moveSection, phraseAt, removeSection, setPhrase,
   anchorText, deleteLine, editLine, insertLineAfter, moveChord, parseDoc, placeChord, removeChord,
   renameSection, segments, serializeDoc, type ChartDoc, type DocLine, type Edit,
 } from "./doc"
@@ -241,21 +241,21 @@ describe("segments", () => {
 describe("tab", () => {
   const riff = importPasted(readFileSync(new URL("../../tests/fixtures/riff-and-solo.txt", import.meta.url), "utf8"), "G")
   const tabDoc = parseDoc(riff)
-  const tabLine = (prefix: string) => tabDoc.findIndex((l) => l.kind === "tab" && l.text.startsWith(prefix))
+  const tabLine = (prefix: string) => tabDoc.findIndex((l) => l.kind === "literal" && l.text.startsWith(prefix))
 
   test("lines inside a tab section are tab, kept as written, and their anchor text matches ChordSheetJS", () => {
     expect(serializeDoc(tabDoc)).toBe(riff)
     expect(anchorText(tabDoc)).toBe(anchorFromSong(riff))
-    expect(tabDoc[tabLine("e|-----3--5/7")]).toEqual({ kind: "tab", text: "e|-----3--5/7--<12>--|" })
+    expect(tabDoc[tabLine("e|-----3--5/7")]).toEqual({ kind: "literal", text: "e|-----3--5/7--<12>--|" })
     // The chord row typed above the intro tab is part of the tab, not chords.
-    expect(tabDoc[2]).toEqual({ kind: "tab", text: "   G                 C" })
+    expect(tabDoc[2]).toEqual({ kind: "literal", text: "   G                 C" })
   })
 
   test("editing a tab line is exact, and a mark later on the line follows", () => {
     const index = tabLine("B|--3h5")
     const edit = editLine(tabDoc, index, "B|--3h5h7--------------|")
     expectExact(tabDoc, edit)
-    expect(edit.doc[index]).toEqual({ kind: "tab", text: "B|--3h5h7--------------|" })
+    expect(edit.doc[index]).toEqual({ kind: "literal", text: "B|--3h5h7--------------|" })
     const before = anchorText(tabDoc)
     const at = before.indexOf("e|--(5)")
     const step = { before, after: anchorText(edit.doc), recorded: edit.changes }
@@ -272,5 +272,58 @@ describe("tab", () => {
     expectExact(tabDoc, edit)
     expect(serializeDoc(edit.doc)).not.toContain("e|-------------------|")
     expect(serializeDoc(edit.doc).startsWith("{key: G}\n\n{start_of_verse: Verse 1}")).toBe(true)
+  })
+})
+
+describe("phrases", () => {
+  const verse = ["{key: G}", "{start_of_verse: Verse 1}", "[G]Amazing grace", "[C]How sweet", "{end_of_verse}"]
+  const phraseDoc = parseDoc([...verse, "{start_of_textblock: Riff}", ":8 0.6 3.6", "5.5 [3.5] {h}", "{end_of_textblock}"].join("\n"))
+  const start = 5
+
+  test("a phrase's lines are literal, its name and notation read back, and its anchor text matches ChordSheetJS", () => {
+    const text = serializeDoc(phraseDoc)
+    expect(anchorText(phraseDoc)).toBe(anchorFromSong(text))
+    expect(phraseAt(phraseDoc, start)).toEqual({ name: "Riff", tex: ":8 0.6 3.6\n5.5 [3.5] {h}" })
+    expect([6, 7].map((i) => inPhrase(phraseDoc, i))).toEqual([true, true])
+    expect(inPhrase(phraseDoc, 2)).toBe(false)
+  })
+
+  test("a phrase added inside a section splits it, exactly", () => {
+    const edit = addPhrase(phraseDoc, 2, "Fill", ":4 3.3")
+    expectExact(phraseDoc, edit)
+    expect(serializeDoc(edit.doc).split("\n").slice(2, 9)).toEqual([
+      "[G]Amazing grace",
+      "{end_of_verse}",
+      "{start_of_textblock: Fill}",
+      ":4 3.3",
+      "{end_of_textblock}",
+      "{start_of_verse}",
+      "[C]How sweet",
+    ])
+    expect(anchorText(edit.doc)).toBe(anchorFromSong(serializeDoc(edit.doc)))
+  })
+
+  test("a phrase added after a section's last line goes after the section", () => {
+    const edit = addPhrase(phraseDoc, 3, "Fill", ":4 3.3")
+    expectExact(phraseDoc, edit)
+    expect(serializeDoc(edit.doc).split("\n").slice(3, 8)).toEqual(["[C]How sweet", "{end_of_verse}", "{start_of_textblock: Fill}", ":4 3.3", "{end_of_textblock}"])
+  })
+
+  test("a notation line that looks like a directive is indented, so it cannot end the phrase", () => {
+    const edit = addPhrase(phraseDoc, 3, "Fill", ":4 3.3\n{end_of_textblock}")
+    expect(phraseAt(edit.doc, 5)).toEqual({ name: "Fill", tex: ":4 3.3\n {end_of_textblock}" })
+  })
+
+  test("changing a phrase's name and notation is exact", () => {
+    const edit = setPhrase(phraseDoc, start, "Main riff", ":8 0.6 3.6 5.6\n5.5\n3.5")
+    expectExact(phraseDoc, edit)
+    expect(phraseAt(edit.doc, start)).toEqual({ name: "Main riff", tex: ":8 0.6 3.6 5.6\n5.5\n3.5" })
+    expect(serializeDoc(edit.doc).endsWith("3.5\n{end_of_textblock}")).toBe(true)
+  })
+
+  test("removing a phrase removes its notation with it, exactly", () => {
+    const edit = removeSection(phraseDoc, start)
+    expectExact(phraseDoc, edit)
+    expect(serializeDoc(edit.doc)).toBe(verse.join("\n"))
   })
 })

@@ -8,14 +8,14 @@ const fixturePath = (name: string) => new URL(`./fixtures/${name}`, import.meta.
 const pasted = readFileSync(fixturePath("amazing-grace.txt"), "utf8")
 
 /** Create a band and a song in G through the API; chart specs start from a song. */
-const createSong = async (page: Page) => {
+const createSong = async (page: Page, tempo: number | null = null) => {
   const bandRes = await page.request.post("/api/my/bands", {
     data: { slug: `test-charts-${Date.now()}`, name: "Test: charts" },
   })
   expect(bandRes.ok(), `create band failed: ${await bandRes.text()}`).toBe(true)
   const bandId = (await bandRes.json()).id as string
   const songRes = await page.request.post("/api/songs", {
-    data: { band_id: bandId, title: "Amazing Grace", artist: null, key: "G", tempo_bpm: null, duration_seconds: null, capo: null, notes: null },
+    data: { band_id: bandId, title: "Amazing Grace", artist: null, key: "G", tempo_bpm: tempo, duration_seconds: null, capo: null, notes: null },
   })
   expect(songRes.ok(), `create song failed: ${await songRes.text()}`).toBe(true)
   return { bandId, songId: (await songRes.json()).id as string }
@@ -167,7 +167,7 @@ test.describe("lyrics charts", () => {
     await getPw(page, "chart-shown-key").selectOption("A")
     await expectChords(page, ["A", "D", "E"])
     await expect(getPw(page, "chart-tab")).toHaveText(["   G                 C", ...tabRows], { useInnerText: true })
-    await expect(getPw(page, "chart-tab-key").first()).toHaveText("tab as written, in G")
+    await expect(getPw(page, "chart-written-in").first()).toHaveText("tab as written, in G")
 
     await getPw(page, "chart-edit").click()
     // Tab lines offer no words to drop chords on.
@@ -368,5 +368,111 @@ test.describe("chart editor", () => {
     expect((await save(chart.revision_id, serializeDoc(edit.doc), edit.changes)).status()).toBe(201)
     // The same save again names a parent that is no longer the newest.
     expect((await save(chart.revision_id, serializeDoc(edit.doc), edit.changes)).status()).toBe(409)
+  })
+})
+
+test.describe("phrases", () => {
+  const riff = ":8 0.6 3.6 5.5 3.5 | 5.5 3.5 0.5 5.6"
+
+  test("writes a phrase under a line, draws it as it is typed, and keeps it in the chart", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, songId } = await createSong(page, 100)
+    await createBareChart(page, songId)
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    await getPw(page, "chart-edit").click()
+
+    const line = getPw(page, "editor-line").filter({ hasText: "Amazing grace" })
+    await line.hover()
+    await line.getByRole("button", { name: "Add a phrase below" }).click()
+    const form = getPw(page, "phrase-form")
+    await getPw(page, "phrase-name").fill("Intro riff")
+    // Notation alphaTab cannot read says where, and cannot be kept.
+    await getPw(page, "phrase-tex").fill(":8 0.6 zz.qq")
+    await expect(form.locator("[data-pwid=phrase-problems]")).toContainText("Line 1, column 11")
+    await expect(getPw(page, "phrase-save")).toBeDisabled()
+    await getPw(page, "phrase-tex").fill(riff)
+    await expect(form.locator("[data-pwid=phrase]")).toHaveAttribute("data-rendered", "true", { timeout: 15000 })
+    await expect(form.locator("[data-pwid=phrase-problems]")).toHaveCount(0)
+    await getPw(page, "phrase-save").click()
+
+    await expect(getPw(page, "editor-phrase")).toContainText("Intro riff")
+    await getPw(page, "editor-save").click()
+    await expect(getPw(page, "chart-editor")).toHaveCount(0, { timeout: 10000 })
+
+    const phrase = getPw(page, "chart-phrase")
+    await expect(phrase).toContainText("Intro riff")
+    await expect(phrase.locator("[data-pwid=phrase]")).toHaveAttribute("data-rendered", "true", { timeout: 15000 })
+    await expect(phrase.locator("svg").first()).toBeVisible()
+    // The phrase sits between the line it was written under and the rest of the verse.
+    await expect.poll(() => shownLyrics(page)).toBe("Amazing grace, how sweetThe sound")
+    // The speeds are worked out from the song's tempo.
+    await expect(phrase.locator("[data-pwid=phrase-speed] option").first()).toHaveText("50% (50 bpm)")
+
+    await getPw(page, "chart-shown-key").selectOption("A")
+    await expect(getPw(page, "chart-written-in")).toHaveText("notation as written, in G")
+
+    await page.reload()
+    await expect(getPw(page, "chart-phrase")).toContainText("Intro riff")
+  })
+
+  test("plays a phrase, starting the player on the first Play", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, songId } = await createSong(page, 100)
+    await createBareChart(page, songId)
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    await getPw(page, "chart-edit").click()
+    const line = getPw(page, "editor-line").filter({ hasText: "Amazing grace" })
+    await line.hover()
+    await line.getByRole("button", { name: "Add a phrase below" }).click()
+    await getPw(page, "phrase-name").fill("Lick")
+    await getPw(page, "phrase-tex").fill(riff)
+    await getPw(page, "phrase-save").click()
+    await getPw(page, "editor-save").click()
+    await expect(getPw(page, "chart-editor")).toHaveCount(0, { timeout: 10000 })
+
+    await getPw(page, "phrase-loop").check()
+    const play = getPw(page, "phrase-play")
+    await play.click()
+    // The first Play waits for the sound font, a download of about 1 MB.
+    await expect(play).toHaveText("Stop", { timeout: 30000 })
+    // alphaTab throws if it is stopped before its audio output has started.
+    await page.waitForTimeout(500)
+    await play.click()
+    await expect(play).toHaveText("Play")
+  })
+
+  test("changes a phrase's notation and removes it", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, songId } = await createSong(page)
+    await createBareChart(page, songId)
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    await getPw(page, "chart-edit").click()
+    const line = getPw(page, "editor-line").filter({ hasText: "Amazing grace" })
+    await line.hover()
+    await line.getByRole("button", { name: "Add a phrase below" }).click()
+    await getPw(page, "phrase-name").fill("Lick")
+    await getPw(page, "phrase-tex").fill(riff)
+    await getPw(page, "phrase-save").click()
+
+    const block = getPw(page, "editor-phrase")
+    await block.hover()
+    await block.getByRole("button", { name: "Edit phrase" }).click()
+    await expect(getPw(page, "phrase-tex")).toHaveValue(riff)
+    await getPw(page, "phrase-name").fill("Fill")
+    await getPw(page, "phrase-tex").fill(":4 C4 D4 E4 G4")
+    await getPw(page, "phrase-save").click()
+    await expect(getPw(page, "editor-phrase")).toContainText("Fill")
+    await getPw(page, "editor-save").click()
+    await expect(getPw(page, "chart-editor")).toHaveCount(0, { timeout: 10000 })
+    await expect(getPw(page, "chart-phrase")).toContainText("Fill")
+
+    await getPw(page, "chart-edit").click()
+    await getPw(page, "editor-phrase").hover()
+    await getPw(page, "editor-phrase").getByRole("button", { name: "Remove phrase" }).click()
+    await expect(getPw(page, "editor-phrase")).toHaveCount(0)
+    await getPw(page, "editor-save").click()
+    await expect(getPw(page, "chart-editor")).toHaveCount(0, { timeout: 10000 })
+    await expect(getPw(page, "chart-phrase")).toHaveCount(0)
+    expect(await shownLyrics(page)).toBe("Amazing grace, how sweetThe sound")
   })
 })

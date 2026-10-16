@@ -168,8 +168,8 @@ describe("tab", () => {
   test("a tab section shown in another key says its tab is as written", () => {
     const tabSections = (key?: string) =>
       renderLyrics(stored, key).flat().filter((i): i is Extract<ChartItem, { kind: "section" }> => i.kind === "section" && i.label !== "Verse 1")
-    expect(tabSections().map((s) => s.tabWrittenIn)).toEqual([undefined, undefined, undefined])
-    expect(tabSections("A").map((s) => s.tabWrittenIn)).toEqual(["G", "G", "G"])
+    expect(tabSections().map((s) => s.writtenIn)).toEqual([undefined, undefined, undefined])
+    expect(tabSections("A").map((s) => s.writtenIn)).toEqual(["G", "G", "G"])
   })
 
   test("each tab item's range holds its line in the anchor text", () => {
@@ -181,5 +181,40 @@ describe("tab", () => {
 
   test("pasting the export back gives the chart that was exported", () => {
     expect(importPasted(exportChords(stored), "G")).toBe(stored)
+  })
+})
+
+describe("phrases", () => {
+  const stored = [
+    "{key: G}",
+    "{start_of_verse: Verse 1}",
+    "[G]Amazing grace",
+    "{end_of_verse}",
+    "{start_of_textblock: Intro riff}",
+    ":8 0.6 3.6 5.5 3.5 |",
+    "5.5 [3.5] {h}",
+    "{end_of_textblock}",
+    "[C]How sweet",
+  ].join("\n")
+  const tex = ":8 0.6 3.6 5.5 3.5 |\n5.5 [3.5] {h}"
+
+  test("a phrase is one drawn line holding its name and notation, and nothing in it is a chord", () => {
+    const lines = renderLyrics(stored)
+    expect(lines.map((line) => line.map((item) => item.kind))).toEqual([["section"], ["pair", "pair"], ["phrase"], ["pair", "pair"]])
+    expect(lines[2]![0]).toMatchObject({ kind: "phrase", name: "Intro riff", tex })
+  })
+
+  test("a phrase's range covers its name and its notation in the anchor text", () => {
+    const phrase = renderLyrics(stored)[2]![0]!
+    expect(anchorText(parseDoc(stored)).slice(phrase.start, phrase.end)).toBe(`Intro riff\n${tex}`)
+  })
+
+  test("in another key the notation is unchanged and says it is as written", () => {
+    expect(renderLyrics(stored, "A")[2]![0]).toMatchObject({ kind: "phrase", tex, writtenIn: "G" })
+    expect(renderLyrics(stored)[2]![0]).not.toHaveProperty("writtenIn")
+  })
+
+  test("copying a chart out writes a phrase's name, since the text has no form for notation", () => {
+    expect(exportChords(stored)).toBe("[Verse 1]\nG\nAmazing grace\n[Intro riff]\nC\nHow sweet")
   })
 })

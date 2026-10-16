@@ -54,6 +54,7 @@ function SongDetail() {
       <SongCharts
         songId={songId}
         songKey={song.key}
+        tempo={song.tempo_bpm}
         shownKey={search.key ?? song.key}
         onShownKeyChange={(key) => navigate({ search: key ? { key } : {}, replace: true })}
         list={songCharts}
