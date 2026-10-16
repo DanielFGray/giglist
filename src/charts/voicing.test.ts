@@ -31,7 +31,9 @@ describe("voicings", () => {
   test("the open shapes every guitarist learns first come first", () => {
     const first = { C: "x 3 2 0 1 0", A: "x 0 2 2 2 0", D: "x x 0 2 3 2", E: "0 2 2 1 0 0", G: "3 2 0 0 0 3",
       Am: "x 0 2 2 1 0", Em: "0 2 2 0 0 0", Dm: "x x 0 2 3 1", F: "1 3 3 2 1 1", C7: "x 3 2 3 1 0",
-      E7: "0 2 0 1 0 0", G7: "3 2 0 0 0 1", Am7: "x 0 2 0 1 0", Cmaj7: "x 3 2 0 0 0" }
+      E7: "0 2 0 1 0 0", G7: "3 2 0 0 0 1", Am7: "x 0 2 0 1 0", Cmaj7: "x 3 2 0 0 0",
+      // A low E fretted at 5 only repeats the open A, so it must not win these.
+      A5: "x 0 2 2 x x", A6: "x 0 2 2 2 2" }
     for (const [name, frets] of Object.entries(first)) expect(shapesOf(name)[0], name).toBe(frets)
   })
 
