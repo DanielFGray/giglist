@@ -2,7 +2,7 @@ import { Effect, Schema } from "effect";
 import { sql } from "kysely";
 import { Kysely } from "../db";
 
-export class BandError extends Schema.TaggedError<BandError>()("BandError", {
+export class BandError extends Schema.TaggedError<BandError, { readonly brand: unique symbol }>()("BandError", {
   message: Schema.String,
 }) {}
 
@@ -62,16 +62,16 @@ export const createBand = Effect.fnUntraced(
       .selectAll()
       .pipe(
         Effect.head,
-        Effect.catchTag("NoSuchElementException", () =>
+        Effect.catchTag("NoSuchElementError", () =>
           Effect.fail(new BandError({ message: "Failed to create band" })),
         ),
       );
 
-    if (!band.id) return yield* Effect.fail(new BandError({ message: "Failed to create band" }));
+    if (!band.id) return yield* new BandError({ message: "Failed to create band" });
     return { id: band.id, slug: band.slug, name: band.name };
   },
   Effect.tapError((e) => Effect.logError("createBand failed", e)),
-  Effect.catchAll((e) => {
+  Effect.catch((e) => {
     if (e._tag === "BandError") return Effect.fail(e);
     const msg = String(e);
     if (msg.includes("23505"))
@@ -91,7 +91,7 @@ export const inviteToBand = Effect.fnUntraced(
       )`.as("_"),
     ]);
   },
-  Effect.catchAll((e) => {
+  Effect.catch((e) => {
     const msg = String(e);
     if (msg.includes("LOGIN"))
       return Effect.fail(new BandError({ message: "You must be logged in" }));

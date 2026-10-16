@@ -1,8 +1,22 @@
 import { Effect } from "effect";
-import { HttpApiBuilder } from "@effect/platform";
+import { HttpApiBuilder } from "effect/http-api";
 import * as BandService from "../services/band";
 import { withAuthContext } from "../db";
 import { SetListApi, BandError, CurrentSession } from "../../api/contracts";
+
+/**
+ * A band mutation needs a user. Without one the visitor role resolves no user,
+ * so `create_band` would try to insert an owner membership with a null user_id
+ * and the request would die as a 500 instead of answering a 4xx the browser can
+ * show. `listBands` is the exception: no session means no bands, not an error.
+ */
+const requireSession = Effect.fnUntraced(function* () {
+  const session = yield* CurrentSession;
+  if (!session.sessionId || !session.userId) {
+    return yield* new BandError({ message: "You must be signed in" });
+  }
+  return session;
+});
 
 export const bandsHandlers = HttpApiBuilder.group(SetListApi, "myBands", (handlers) =>
   handlers
@@ -30,8 +44,8 @@ export const bandsHandlers = HttpApiBuilder.group(SetListApi, "myBands", (handle
     )
     .handle(
       "getBandMembers",
-      Effect.fnUntraced(function* ({ path: { bandId } }) {
-        const session = yield* CurrentSession;
+      Effect.fnUntraced(function* ({ params: { bandId } }) {
+        const session = yield* requireSession();
         return yield* BandService.getBandMembers(bandId).pipe(
           Effect.map((rows) =>
             rows.map((m) => ({
@@ -51,7 +65,7 @@ export const bandsHandlers = HttpApiBuilder.group(SetListApi, "myBands", (handle
     .handle(
       "createBand",
       Effect.fnUntraced(function* ({ payload }) {
-        const session = yield* CurrentSession;
+        const session = yield* requireSession();
         return yield* BandService.createBand(payload).pipe(
           Effect.map((band) => ({
             id: band.id,
@@ -61,43 +75,30 @@ export const bandsHandlers = HttpApiBuilder.group(SetListApi, "myBands", (handle
             created_at: new Date().toISOString(),
           })),
           withAuthContext(session.sessionId),
-          Effect.catchAll((e) =>
-            Effect.fail(
-              new BandError({
-                message: "message" in e ? String(e.message) : "Failed to create band",
-              }),
-            ),
-          ),
+          Effect.mapError((e) => new BandError({ message: e.message })),
         );
       }),
     )
     .handle(
       "deleteBand",
-      Effect.fnUntraced(function* ({ path: { bandId } }) {
-        const session = yield* CurrentSession;
+      Effect.fnUntraced(function* ({ params: { bandId } }) {
+        const session = yield* requireSession();
         return yield* BandService.deleteBand(bandId).pipe(
           withAuthContext(session.sessionId),
-          Effect.catchAll((e) => Effect.fail(new BandError({ message: String(e) }))),
         );
       }),
     )
     .handle(
       "inviteToBand",
-      Effect.fnUntraced(function* ({ path: { bandId }, payload }) {
-        const session = yield* CurrentSession;
+      Effect.fnUntraced(function* ({ params: { bandId }, payload }) {
+        const session = yield* requireSession();
         return yield* BandService.inviteToBand({
           bandId,
           username: payload.username,
           email: payload.email,
         }).pipe(
           withAuthContext(session.sessionId),
-          Effect.catchAll((e) =>
-            Effect.fail(
-              new BandError({
-                message: "message" in e ? String(e.message) : "Failed to invite",
-              }),
-            ),
-          ),
+          Effect.mapError((e) => new BandError({ message: e.message })),
         );
       }),
     ),

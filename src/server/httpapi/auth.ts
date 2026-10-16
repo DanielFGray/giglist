@@ -1,5 +1,5 @@
 import { Effect } from "effect"
-import { HttpApiBuilder } from "@effect/platform"
+import { HttpApiBuilder } from "effect/http-api"
 import * as Auth from "../services/auth"
 import {
   SetListApi,
@@ -23,9 +23,7 @@ export const authHandlers = HttpApiBuilder.group(SetListApi, "auth", (handlers) 
         })
         return { ok: true as const }
       },
-        Effect.catchAll((e) =>
-          Effect.fail(new AuthError({ message: "message" in e ? String(e.message) : "Login failed" })),
-        ),
+        Effect.mapError((e) => new AuthError({ message: e.message })),
       ),
     )
     .handle("register", Effect.fnUntraced(function*({ payload }) {
@@ -39,9 +37,7 @@ export const authHandlers = HttpApiBuilder.group(SetListApi, "auth", (handlers) 
         })
         return { ok: true as const }
       },
-        Effect.catchAll((e) =>
-          Effect.fail(new AuthError({ message: "message" in e ? String(e.message) : "Registration failed" })),
-        ),
+        Effect.mapError((e) => new AuthError({ message: e.message })),
       ),
     )
     .handle("logout", Effect.fnUntraced(function*() {
@@ -63,7 +59,7 @@ export const authHandlers = HttpApiBuilder.group(SetListApi, "auth", (handlers) 
         const session = yield* CurrentSession
         if (!session.sessionId || !session.userId) return null
         return yield* Auth.getMe(session.sessionId).pipe(
-          Effect.catchAll(() => Effect.succeed(null)),
+          Effect.orElseSucceed(() => null),
         )
       }),
     ),

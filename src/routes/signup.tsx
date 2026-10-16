@@ -1,6 +1,10 @@
 import { useState } from "react"
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
+import { Link, createFileRoute, useRouter } from "@tanstack/react-router"
+import { useForm } from "@tanstack/react-form"
+import { Schema as S } from "effect"
 import { auth } from "~/api/client"
+import { RegisterPayload } from "~/api/contracts"
+import { SubmitButton, TextField, errorMessage, fieldError } from "~/components/form"
 
 export const Route = createFileRoute("/signup")({
   component: Signup,
@@ -8,28 +12,24 @@ export const Route = createFileRoute("/signup")({
 
 function Signup() {
   const router = useRouter()
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [serverError, setServerError] = useState<string | null>(null)
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    setError(null)
-    setLoading(true)
-
-    const form = new FormData(e.currentTarget)
-    const username = form.get("username") as string
-    const email = form.get("email") as string
-    const password = form.get("password") as string
-
-    const result = await auth.register({ username, email, password })
-    if (result.ok) {
-      await router.invalidate()
-      await router.navigate({ to: "/" })
-    } else {
-      setError(result.error)
-    }
-    setLoading(false)
-  }
+  const form = useForm({
+    defaultValues: { username: "", email: "", password: "" },
+    validators: { onChange: S.toStandardSchemaV1(RegisterPayload) },
+    onSubmit: async ({ value }) => {
+      setServerError(null)
+      try {
+        // The schema decodes the typed string into the Redacted password the
+        // API takes; the form value itself stays the string the user typed.
+        await auth.register(S.decodeSync(RegisterPayload)(value))
+        await router.invalidate()
+        await router.navigate({ to: "/" })
+      } catch (e) {
+        setServerError(errorMessage(e))
+      }
+    },
+  })
 
   return (
     <div data-pwid="signup-page" className="min-h-[60vh] flex items-center justify-center">
@@ -41,70 +41,78 @@ function Signup() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            void form.handleSubmit()
+          }}
+          className="space-y-4"
+        >
+          {serverError && (
             <div data-pwid="signup-error" className="rounded-md bg-red-500/10 border border-red-500/20 px-3 py-2 text-sm text-red-400">
-              {error}
+              {serverError}
             </div>
           )}
 
-          <div className="space-y-1.5">
-            <label htmlFor="username" className="block text-sm font-medium text-zinc-300">
-              Username
-            </label>
-            <input
-              data-pwid="signup-username"
-              id="username"
-              name="username"
-              type="text"
-              required
-              autoFocus
-              autoComplete="username"
-              className="w-full rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] px-3 py-2 text-sm placeholder:text-zinc-600 focus:outline-none focus:border-[var(--color-amber-accent)] transition-colors"
-              placeholder="hendrix42"
-            />
-          </div>
+          <form.Field name="username">
+            {(field) => (
+              <TextField
+                label="Username"
+                pwid="signup-username"
+                value={field.state.value}
+                onChange={field.handleChange}
+                error={fieldError(field)}
+                autoFocus
+                autoComplete="username"
+                placeholder="hendrix42"
+                required
+              />
+            )}
+          </form.Field>
 
-          <div className="space-y-1.5">
-            <label htmlFor="email" className="block text-sm font-medium text-zinc-300">
-              Email
-            </label>
-            <input
-              data-pwid="signup-email"
-              id="email"
-              name="email"
-              type="email"
-              required
-              autoComplete="email"
-              className="w-full rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] px-3 py-2 text-sm placeholder:text-zinc-600 focus:outline-none focus:border-[var(--color-amber-accent)] transition-colors"
-              placeholder="you@example.com"
-            />
-          </div>
+          <form.Field name="email">
+            {(field) => (
+              <TextField
+                label="Email"
+                pwid="signup-email"
+                type="email"
+                value={field.state.value}
+                onChange={field.handleChange}
+                error={fieldError(field)}
+                autoComplete="email"
+                placeholder="you@example.com"
+                required
+              />
+            )}
+          </form.Field>
 
-          <div className="space-y-1.5">
-            <label htmlFor="password" className="block text-sm font-medium text-zinc-300">
-              Password
-            </label>
-            <input
-              data-pwid="signup-password"
-              id="password"
-              name="password"
-              type="password"
-              required
-              minLength={8}
-              autoComplete="new-password"
-              className="w-full rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] px-3 py-2 text-sm placeholder:text-zinc-600 focus:outline-none focus:border-[var(--color-amber-accent)] transition-colors"
-            />
-          </div>
+          <form.Field name="password">
+            {(field) => (
+              <TextField
+                label="Password"
+                pwid="signup-password"
+                type="password"
+                value={field.state.value}
+                onChange={field.handleChange}
+                error={fieldError(field)}
+                autoComplete="new-password"
+                required
+              />
+            )}
+          </form.Field>
 
-          <button
-            data-pwid="signup-submit"
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-md bg-[var(--color-amber-accent)] text-zinc-950 py-2 text-sm font-semibold hover:brightness-110 transition disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
-          >
-            {loading ? "Creating account..." : "Create account"}
-          </button>
+          <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
+            {([canSubmit, isSubmitting]) => (
+              <SubmitButton
+                pwid="signup-submit"
+                disabled={!canSubmit || isSubmitting}
+                pending={isSubmitting}
+                label="Create account"
+                pendingLabel="Creating account..."
+                wide
+              />
+            )}
+          </form.Subscribe>
         </form>
 
         <p className="text-center text-sm text-zinc-500">

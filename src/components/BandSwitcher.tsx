@@ -1,21 +1,26 @@
 import { useState, useRef, useEffect } from "react"
-import { Link } from "@tanstack/react-router"
-import { useAuth } from "./AuthContext"
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router"
+import { useActiveBandId, useAuth } from "./AuthContext"
 
 export function BandSwitcher() {
-  const { bands, currentBand, setCurrentBandId } = useAuth()
+  const { bands } = useAuth()
+  const activeBandId = useActiveBandId()
+  const pathname = useRouterState({ select: (state) => state.location.pathname })
+  const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+      if (ref.current && e.target instanceof Node && !ref.current.contains(e.target)) {
         setOpen(false)
       }
     }
     document.addEventListener("mousedown", handleClick)
     return () => document.removeEventListener("mousedown", handleClick)
   }, [])
+
+  const currentBand = bands.find((band) => band.id === activeBandId) ?? null
 
   if (!currentBand) {
     return (
@@ -27,6 +32,19 @@ export function BandSwitcher() {
         Create a band
       </Link>
     )
+  }
+
+  // Switching keeps the section the user is in, so browsing songs and switching
+  // bands lands on the other band's songs rather than its settings.
+  const inSongs = pathname.startsWith(`/band/${currentBand.id}/songs`)
+
+  const switchTo = (bandId: string) => {
+    setOpen(false)
+    if (inSongs) {
+      void navigate({ to: "/band/$bandId/songs", params: { bandId } })
+    } else {
+      void navigate({ to: "/band/$bandId", params: { bandId } })
+    }
   }
 
   return (
@@ -59,10 +77,7 @@ export function BandSwitcher() {
             <button
               key={band.id}
               className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-left text-zinc-300 hover:bg-[var(--color-surface-hover)] hover:text-zinc-100 transition-colors cursor-pointer"
-              onClick={() => {
-                setCurrentBandId(band.id)
-                setOpen(false)
-              }}
+              onClick={() => switchTo(band.id)}
             >
               <span className="size-5 rounded bg-[var(--color-amber-accent)] flex items-center justify-center text-xs font-bold text-zinc-950 shrink-0">
                 {band.name[0]}

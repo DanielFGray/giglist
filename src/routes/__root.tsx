@@ -1,12 +1,18 @@
 import { Outlet, createRootRoute } from "@tanstack/react-router"
 import { Nav } from "~/components/Nav"
 import { AuthProvider } from "~/components/AuthContext"
-import { auth, bands, type BandInfo } from "~/api/client"
+import { auth, bands } from "~/api/client"
 
 export const Route = createRootRoute({
-  loader: async () => {
-    // Errors deliberately reach the router: a failed load must not look like
-    // "no bands", which is what the band page renders forever.
+  /**
+   * Load the session here and return it as route context, not as loader data:
+   * a child route can then guard on it before it loads. The band routes send a
+   * signed-out visitor to the login page.
+   *
+   * Errors deliberately reach the router: a failed load must not look like
+   * "no bands", which is what the band page renders forever.
+   */
+  beforeLoad: async () => {
     const [user, bandList] = await Promise.all([auth.me(), bands.list()])
     return { user, bands: bandList }
   },
@@ -28,7 +34,7 @@ export const Route = createRootRoute({
 })
 
 function RootComponent() {
-  const { user, bands } = Route.useLoaderData()
+  const { user, bands } = Route.useRouteContext()
 
   return (
     <div className="bg-[var(--color-surface)] text-zinc-100 antialiased min-h-screen [.light_&]:text-zinc-900">

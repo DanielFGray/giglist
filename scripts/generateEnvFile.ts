@@ -7,9 +7,10 @@
  */
 import crypto from "crypto";
 import path from "path";
+import { fileURLToPath } from "url";
 import { Effect, pipe, Record as R } from "effect";
-import { NodeContext, NodeRuntime } from "@effect/platform-node";
-import { FileSystem } from "@effect/platform";
+import { NodeRuntime, NodeServices } from "@effect/platform-node";
+import * as FileSystem from "effect/FileSystem";
 
 const genPassword = (len = 32) => crypto.randomBytes(len).toString("base64url");
 const genSecret = (len = 64) => crypto.randomBytes(len).toString("hex");
@@ -82,7 +83,13 @@ const fields: [string, FieldDef][] = [
   ["ADMIN_EMAIL", { default: "danielfgray@gmail.com" }],
 ];
 
-const DOTENV_PATH = path.resolve(import.meta.dir, "..", ".env");
+// `import.meta.dir` is a Bun extension; derive the directory from the module
+// URL so the file is typed by @types/node and portable to plain Node.
+const DOTENV_PATH = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+  ".env",
+);
 
 const parseDotenv = (content: string): Ctx =>
   content.split("\n").reduce<Ctx>((acc, line) => {
@@ -136,4 +143,4 @@ const program = Effect.gen(function* () {
   yield* Effect.log(`${action} .env`);
 });
 
-program.pipe(Effect.provide(NodeContext.layer), NodeRuntime.runMain);
+program.pipe(Effect.provide(NodeServices.layer), NodeRuntime.runMain);

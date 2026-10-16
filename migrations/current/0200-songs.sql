@@ -71,6 +71,6 @@ create policy delete_member on app_public.songs
   for delete using (band_id in (select app_public.current_user_member_band_ids()));
 
 grant select on app_public.songs to :DATABASE_VISITOR;
-grant insert (band_id, title, artist, key, tempo_bpm, duration_seconds, capo, notes) on app_public.songs to :DATABASE_VISITOR;
+grant insert (band_id, title, artist, key, tempo_bpm, duration_seconds, capo, notes, created_by) on app_public.songs to :DATABASE_VISITOR;
 grant update (title, artist, key, tempo_bpm, duration_seconds, capo, notes) on app_public.songs to :DATABASE_VISITOR;
 grant delete on app_public.songs to :DATABASE_VISITOR;

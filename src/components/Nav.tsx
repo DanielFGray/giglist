@@ -1,33 +1,84 @@
 import { useState } from "react"
-import { Link, useRouter, useRouterState } from "@tanstack/react-router"
+import {
+  Link,
+  useRouter,
+  useRouterState,
+  type LinkComponentProps,
+} from "@tanstack/react-router"
 import { BandSwitcher } from "./BandSwitcher"
 import { ThemeToggle } from "./ThemeToggle"
-import { useAuth } from "./AuthContext"
+import { useActiveBandId, useAuth } from "./AuthContext"
 import { auth } from "~/api/client"
 
-const NAV_ITEMS = [
-  { to: "/", label: "Setlists", pwid: "nav-setlists" },
-  { to: "/songs", label: "Songs", pwid: "nav-songs" },
-  { to: "/band", label: "Band", pwid: "nav-band" },
-] as const
+type NavItemProps = LinkComponentProps & {
+  label: string
+  pwid: string
+  active: boolean
+  onNavigate?: () => void
+}
 
-function NavLink({ to, label, pwid }: { to: string; label: string; pwid: string }) {
-  const router = useRouterState()
-  const isActive =
-    to === "/" ? router.location.pathname === "/" : router.location.pathname.startsWith(to)
-
+function NavItem({ label, pwid, active, onNavigate, ...link }: NavItemProps) {
   return (
     <Link
-      to={to}
+      {...link}
       data-pwid={pwid}
+      onClick={onNavigate}
       className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-        isActive
+        active
           ? "text-[var(--color-amber-accent)] bg-[var(--color-surface-hover)]"
           : "text-zinc-400 hover:text-zinc-200 hover:bg-[var(--color-surface-hover)]"
       }`}
     >
       {label}
     </Link>
+  )
+}
+
+/** The band-scoped links, or the create-band form when the user belongs to no
+ *  band yet — the paths carry the band id, so there is nothing to link to. */
+function NavLinks({
+  bandId,
+  onNavigate,
+}: {
+  bandId: string | null
+  onNavigate?: () => void
+}) {
+  const pathname = useRouterState({ select: (state) => state.location.pathname })
+
+  if (!bandId) {
+    return (
+      <NavItem to="/" label="Home" pwid="nav-home" active={pathname === "/"} onNavigate={onNavigate} />
+    )
+  }
+
+  return (
+    <>
+      <NavItem to="/" label="Home" pwid="nav-home" active={pathname === "/"} onNavigate={onNavigate} />
+      <NavItem
+        to="/band/$bandId/setlists"
+        params={{ bandId }}
+        label="Setlists"
+        pwid="nav-setlists"
+        active={pathname.startsWith(`/band/${bandId}/setlists`)}
+        onNavigate={onNavigate}
+      />
+      <NavItem
+        to="/band/$bandId/songs"
+        params={{ bandId }}
+        label="Songs"
+        pwid="nav-songs"
+        active={pathname.startsWith(`/band/${bandId}/songs`)}
+        onNavigate={onNavigate}
+      />
+      <NavItem
+        to="/band/$bandId"
+        params={{ bandId }}
+        label="Band"
+        pwid="nav-band"
+        active={pathname === `/band/${bandId}` || pathname === `/band/${bandId}/`}
+        onNavigate={onNavigate}
+      />
+    </>
   )
 }
 
@@ -61,6 +112,7 @@ function UserMenu() {
 
 export function Nav() {
   const { user } = useAuth()
+  const bandId = useActiveBandId()
   const [mobileOpen, setMobileOpen] = useState(false)
 
   return (
@@ -79,9 +131,7 @@ export function Nav() {
 
           {user && (
             <div data-pwid="nav-links" className="hidden md:flex items-center gap-0.5">
-              {NAV_ITEMS.map((item) => (
-                <NavLink key={item.to} {...item} />
-              ))}
+              <NavLinks bandId={bandId} />
             </div>
           )}
 
@@ -120,17 +170,9 @@ export function Nav() {
         {mobileOpen && (
           <div data-pwid="nav-mobile-menu" className="md:hidden border-t border-[var(--color-border-subtle)] bg-[var(--color-surface)]">
             <div className="px-4 py-3 space-y-1">
-              {NAV_ITEMS.map((item) => (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  data-pwid={`mobile-${item.pwid}`}
-                  onClick={() => setMobileOpen(false)}
-                  className="block px-3 py-2.5 rounded-md text-sm font-medium text-zinc-300 hover:text-zinc-100 hover:bg-[var(--color-surface-hover)] transition-colors"
-                >
-                  {item.label}
-                </Link>
-              ))}
+              <div className="space-y-1">
+                <NavLinks bandId={bandId} onNavigate={() => setMobileOpen(false)} />
+              </div>
               <div className="pt-2 border-t border-[var(--color-border-subtle)] mt-2">
                 <BandSwitcher />
               </div>

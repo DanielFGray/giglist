@@ -1,7 +1,7 @@
 import { test, expect, getPw, TEST_PASSWORD } from "./helpers"
 
-/** Create a band for the logged-in user and return its id. The song page needs
- *  a current band, and the root loader picks bands[0]. */
+/** Create a band for the logged-in user and return its id. Band-scoped routes
+ *  carry the id in the path, so a song spec needs one before it can deep-link. */
 const createBand = async (
   page: import("@playwright/test").Page,
   slug: string,
@@ -22,33 +22,117 @@ const cookieOf = (res: import("@playwright/test").APIResponse) =>
     .map((h) => h.value.split(";")[0])
     .join("; ")
 
-test.describe("songs", () => {
-  test("adds, edits and deletes a song", async ({ page, testing }) => {
-    await testing.login()
-    await createBand(page, `test-songs-crud-${Date.now()}`)
+/** Add a song straight through the API, for specs that only exercise the list. */
+const createSong = async (
+  page: import("@playwright/test").Page,
+  bandId: string,
+  song: { title: string; artist: string; tempo_bpm: number },
+) => {
+  const res = await page.request.post("/api/songs", {
+    data: {
+      band_id: bandId,
+      title: song.title,
+      artist: song.artist,
+      key: null,
+      tempo_bpm: song.tempo_bpm,
+      duration_seconds: null,
+      capo: null,
+      notes: null,
+    },
+  })
+  expect(res.ok(), `create song failed: ${await res.text()}`).toBe(true)
+}
 
-    await page.goto("/songs")
+test.describe("songs", () => {
+  test("adds a song with every metadata field", async ({ page, testing }) => {
+    await testing.login()
+    const bandId = await createBand(page, `test-songs-metadata-${Date.now()}`)
+
+    await page.goto(`/band/${bandId}/songs`)
     await expect(getPw(page, "songs-empty")).toBeVisible({ timeout: 10000 })
 
+    await getPw(page, "song-new").click()
+    await expect(getPw(page, "song-form")).toBeVisible({ timeout: 10000 })
     await getPw(page, "song-title").fill("Wonderwall")
     await getPw(page, "song-artist").fill("Oasis")
     // The key is a select of the keys the database's domain accepts, so the
     // form cannot send a value the schema will refuse.
     await getPw(page, "song-key").selectOption("Em")
     await getPw(page, "song-tempo").fill("87")
+    await getPw(page, "song-duration").fill("4:18")
+    await getPw(page, "song-capo").fill("2")
+    await getPw(page, "song-notes").fill("Capo 2, strummed")
     await getPw(page, "song-submit").click()
 
     await expect(getPw(page, "song-row")).toHaveCount(1, { timeout: 10000 })
     await expect(getPw(page, "song-row-title")).toHaveText("Wonderwall")
+    // The row carries the fields the form collected, duration as mm:ss.
+    await expect(getPw(page, "song-row-meta")).toContainText("Em")
+    await expect(getPw(page, "song-row-meta")).toContainText("87 BPM")
+    await expect(getPw(page, "song-row-meta")).toContainText("4:18")
+    await expect(getPw(page, "song-row-meta")).toContainText("capo 2")
+    await expect(getPw(page, "song-row-notes")).toHaveText("Capo 2, strummed")
+  })
+
+  test("edits and deletes a song", async ({ page, testing }) => {
+    await testing.login()
+    const bandId = await createBand(page, `test-songs-crud-${Date.now()}`)
+    await createSong(page, bandId, { title: "Everlong", artist: "Foo Fighters", tempo_bpm: 158 })
+
+    await page.goto(`/band/${bandId}/songs`)
+    await expect(getPw(page, "song-row")).toHaveCount(1, { timeout: 10000 })
 
     await getPw(page, "song-edit").click()
+    await expect(getPw(page, "song-edit-form")).toBeVisible({ timeout: 10000 })
     await getPw(page, "song-tempo").fill("92")
+    await getPw(page, "song-duration").fill("4:05")
     await getPw(page, "song-submit").click()
 
-    await expect(getPw(page, "song-row")).toContainText("92 BPM", { timeout: 10000 })
+    await expect(getPw(page, "song-row-meta")).toContainText("92 BPM", { timeout: 10000 })
+    await expect(getPw(page, "song-row-meta")).toContainText("4:05")
 
+    await getPw(page, "song-edit").click()
+    await expect(getPw(page, "song-edit-form")).toBeVisible({ timeout: 10000 })
     await getPw(page, "song-delete").click()
     await expect(getPw(page, "songs-empty")).toBeVisible({ timeout: 10000 })
+  })
+
+  test("rejects a duration that is not mm:ss", async ({ page, testing }) => {
+    await testing.login()
+    const bandId = await createBand(page, `test-songs-duration-${Date.now()}`)
+
+    await page.goto(`/band/${bandId}/songs/new`)
+    await getPw(page, "song-title").fill("Bad Duration")
+    await getPw(page, "song-duration").fill("nope")
+
+    await expect(getPw(page, "song-duration-error")).toBeVisible({ timeout: 5000 })
+    // The invalid value blocks submission, so it can never reach the API.
+    await expect(getPw(page, "song-submit")).toBeDisabled()
+    await expect(getPw(page, "song-form")).toBeVisible()
+  })
+
+  test("sorts and searches the catalog", async ({ page, testing }) => {
+    await testing.login()
+    const bandId = await createBand(page, `test-songs-filter-${Date.now()}`)
+    await createSong(page, bandId, { title: "Zebra", artist: "The Zeds", tempo_bpm: 90 })
+    await createSong(page, bandId, { title: "Apple", artist: "The As", tempo_bpm: 140 })
+    await createSong(page, bandId, { title: "Mango", artist: "The Ms", tempo_bpm: 120 })
+
+    await page.goto(`/band/${bandId}/songs`)
+    await expect(getPw(page, "song-row")).toHaveCount(3, { timeout: 10000 })
+
+    await getPw(page, "songs-sort").selectOption("title")
+    await expect(getPw(page, "song-row-title").first()).toHaveText("Apple")
+
+    await getPw(page, "songs-sort").selectOption("tempo")
+    await expect(getPw(page, "song-row-title").first()).toHaveText("Zebra")
+
+    await getPw(page, "songs-search").fill("mang")
+    await expect(getPw(page, "song-row")).toHaveCount(1, { timeout: 5000 })
+    await expect(getPw(page, "song-row-title")).toHaveText("Mango")
+
+    await getPw(page, "songs-search").fill("nothing matches this")
+    await expect(getPw(page, "songs-no-match")).toBeVisible({ timeout: 5000 })
   })
 
   test("refuses a user who is not a member of the band", async ({

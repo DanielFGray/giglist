@@ -1,24 +1,24 @@
-import { Effect, Schema as S } from "effect";
+import { Effect, Redacted, Schema as S } from "effect";
 import { sql } from "kysely";
 import { Db } from "../db";
 
-export class InvalidCredentials extends S.TaggedError<InvalidCredentials>()("InvalidCredentials", {
+export class InvalidCredentials extends S.TaggedError<InvalidCredentials, { readonly brand: unique symbol }>()("InvalidCredentials", {
   message: S.String,
 }) {}
 
-export class AccountLocked extends S.TaggedError<AccountLocked>()("AccountLocked", {
+export class AccountLocked extends S.TaggedError<AccountLocked, { readonly brand: unique symbol }>()("AccountLocked", {
   message: S.String,
 }) {}
 
-export class DuplicateAccount extends S.TaggedError<DuplicateAccount>()("DuplicateAccount", {
+export class DuplicateAccount extends S.TaggedError<DuplicateAccount, { readonly brand: unique symbol }>()("DuplicateAccount", {
   message: S.String,
 }) {}
 
-export class WeakPassword extends S.TaggedError<WeakPassword>()("WeakPassword", {
+export class WeakPassword extends S.TaggedError<WeakPassword, { readonly brand: unique symbol }>()("WeakPassword", {
   message: S.String,
 }) {}
 
-export class RegistrationFailed extends S.TaggedError<RegistrationFailed>()("RegistrationFailed", {
+export class RegistrationFailed extends S.TaggedError<RegistrationFailed, { readonly brand: unique symbol }>()("RegistrationFailed", {
   message: S.String,
 }) {}
 
@@ -30,7 +30,7 @@ export type AuthError =
   | RegistrationFailed;
 
 export const register = Effect.fnUntraced(
-  function* (args: { username: string; email: string; password: string }) {
+  function* (args: { username: string; email: string; password: Redacted.Redacted<string> }) {
     const db = yield* Db;
 
     const user = yield* db
@@ -41,13 +41,13 @@ export const register = Effect.fnUntraced(
           email_is_verified => false,
           name => ${null},
           avatar_url => ${null},
-          password => ${args.password}::text
+          password => ${Redacted.value(args.password)}::text
         )`.as("u"),
       )
       .selectAll()
       .pipe(
         Effect.head,
-        Effect.catchTag("NoSuchElementException", () =>
+        Effect.catchTag("NoSuchElementError", () =>
           Effect.fail(new RegistrationFailed({ message: "Registration failed" })),
         ),
       );
@@ -59,35 +59,25 @@ export const register = Effect.fnUntraced(
       .returning(["uuid", "user_id"])
       .pipe(
         Effect.head,
-        Effect.catchTag("NoSuchElementException", () =>
+        Effect.catchTag("NoSuchElementError", () =>
           Effect.fail(new RegistrationFailed({ message: "Failed to create session" })),
         ),
       );
 
     return { user, sessionId: session.uuid as string };
   },
-  Effect.catchAll((e): Effect.Effect<never, AuthError> => {
-    if (typeof e === "object" && e !== null && "_tag" in e) {
-      const tag = (e as { _tag: string })._tag;
-      if (
-        tag === "InvalidCredentials" ||
-        tag === "DuplicateAccount" ||
-        tag === "WeakPassword" ||
-        tag === "RegistrationFailed"
-      )
-        return Effect.fail(e as AuthError);
-    }
+  Effect.mapError((e): AuthError => {
+    if (e._tag === "RegistrationFailed") return e;
     const msg = String(e);
     if (msg.includes("23505"))
-      return Effect.fail(new DuplicateAccount({ message: "Username or email already taken" }));
-    if (msg.includes("WEAKP"))
-      return Effect.fail(new WeakPassword({ message: "Password is too weak" }));
-    return Effect.fail(new RegistrationFailed({ message: "Registration failed" }));
+      return new DuplicateAccount({ message: "Username or email already taken" });
+    if (msg.includes("WEAKP")) return new WeakPassword({ message: "Password is too weak" });
+    return new RegistrationFailed({ message: "Registration failed" });
   }),
 );
 
 export const login = Effect.fnUntraced(
-  function* (args: { id: string; password: string }) {
+  function* (args: { id: string; password: Redacted.Redacted<string> }) {
     const db = yield* Db;
 
     const rows = yield* db
@@ -95,28 +85,23 @@ export const login = Effect.fnUntraced(
         sql<{
           uuid: string;
           user_id: string;
-        }>`app_private.login(${args.id}::citext, ${args.password})`.as("s"),
+        }>`app_private.login(${args.id}::citext, ${Redacted.value(args.password)})`.as("s"),
       )
       .selectAll();
 
     const session = rows.find((r) => r.uuid != null);
     if (!session) {
-      return yield* Effect.fail(
-        new InvalidCredentials({ message: "Invalid username or password" }),
-      );
+      return yield* new InvalidCredentials({ message: "Invalid username or password" });
     }
 
     return { sessionId: session.uuid, userId: session.user_id };
   },
-  Effect.catchAll((e): Effect.Effect<never, InvalidCredentials | AccountLocked> => {
-    if (typeof e === "object" && e !== null && "_tag" in e) {
-      if ((e as { _tag: string })._tag === "InvalidCredentials")
-        return Effect.fail(e as InvalidCredentials);
-    }
+  Effect.mapError((e): InvalidCredentials | AccountLocked => {
+    if (e._tag === "InvalidCredentials") return e;
     const msg = String(e);
     if (msg.includes("LOCKD"))
-      return Effect.fail(new AccountLocked({ message: "Account locked — too many attempts" }));
-    return Effect.fail(new InvalidCredentials({ message: "Invalid username or password" }));
+      return new AccountLocked({ message: "Account locked — too many attempts" });
+    return new InvalidCredentials({ message: "Invalid username or password" });
   }),
 );
 
@@ -126,7 +111,7 @@ export const logout = Effect.fnUntraced(function* (sessionId: string) {
     .selectNoFrom([
       sql<string>`(DELETE FROM app_private.sessions WHERE uuid = ${sessionId}::uuid)`.as("_"),
     ])
-    .pipe(Effect.catchAll(() => Effect.void));
+    .pipe(Effect.ignore);
 });
 
 export const getMe = Effect.fnUntraced(function* (sessionId: string) {
@@ -141,6 +126,6 @@ export const getMe = Effect.fnUntraced(function* (sessionId: string) {
     )
     .pipe(
       Effect.head,
-      Effect.catchTag("NoSuchElementException", () => Effect.succeed(null)),
+      Effect.catchTag("NoSuchElementError", () => Effect.succeed(null)),
     );
 });

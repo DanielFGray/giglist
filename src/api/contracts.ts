@@ -1,4 +1,4 @@
-import { Schema as S } from "effect"
+import { Context, Effect, Schema as S } from "effect"
 import {
   HttpApi,
   HttpApiEndpoint,
@@ -6,8 +6,9 @@ import {
   HttpApiMiddleware,
   HttpApiSchema,
   HttpApiSecurity,
-} from "@effect/platform"
-import { Context } from "effect"// --- Security ---
+} from "effect/http-api"
+
+// --- Security ---
 
 export const sessionCookie = HttpApiSecurity.apiKey({
   key: "session",
@@ -21,34 +22,36 @@ export interface SessionData {
   readonly userId: string | null
 }
 
-export class CurrentSession extends Context.Tag("CurrentSession")<
-  CurrentSession,
-  SessionData
->() {}
+export class CurrentSession extends Context.Service<CurrentSession, SessionData>()("CurrentSession") {}
 
-export class SessionMiddleware extends HttpApiMiddleware.Tag<SessionMiddleware>()(
-  "SessionMiddleware",
-  {
-    provides: CurrentSession,
-    security: { session: sessionCookie },
-  },
-) {}
+export class SessionMiddleware extends HttpApiMiddleware.Service<
+  SessionMiddleware,
+  { provides: CurrentSession }
+>()("SessionMiddleware", {
+  security: { session: sessionCookie },
+}) {}
 
 // --- Auth schemas ---
 
+/*
+ * Passwords carry through the handler and service as `Redacted`, so a password
+ * cannot reach a log or a trace by accident. `RedactedFromValue` decodes the
+ * string the client sends and wraps it; the wire form stays a plain string, and
+ * the service unwraps it only where it hashes or verifies the value.
+ */
 export const LoginPayload = S.Struct({
   id: S.String,
-  password: S.String,
+  password: S.RedactedFromValue(S.String),
 })
 
 export const RegisterPayload = S.Struct({
   username: S.String,
   email: S.String,
-  password: S.String,
+  password: S.RedactedFromValue(S.String),
 })
 
 export const AuthUser = S.Struct({
-  id: S.UUID,
+  id: S.String.check(S.isUUID()),
   username: S.String,
   name: S.NullOr(S.String),
   avatar_url: S.NullOr(S.String),
@@ -56,45 +59,44 @@ export const AuthUser = S.Struct({
   is_verified: S.Boolean,
 })
 
-export const AuthSuccess = S.Struct({ ok: S.Literal(true) })
+export const AuthSuccess = S.Struct({ ok: S.Literals([true]) })
 
-export class AuthError extends S.TaggedError<AuthError>()(
-  "AuthError",
-  { message: S.String },
-) {}
+export class AuthError extends S.TaggedError<AuthError, { readonly brand: unique symbol }>()("AuthError", { message: S.String },) {}
 
 // --- Auth API group ---
 // NOTE: .prefix() must come AFTER .add() — prefix only applies to existing endpoints
 
 export const AuthApiGroup = HttpApiGroup.make("auth")
   .add(
-    HttpApiEndpoint.post("login")`/login`
-      .setPayload(LoginPayload)
-      .addSuccess(AuthSuccess)
-      .addError(AuthError, { status: 401 }),
+    HttpApiEndpoint.post("login", "/login", {
+      payload: LoginPayload,
+      success: AuthSuccess,
+      error: AuthError.pipe(HttpApiSchema.status(401)),
+    }),
   )
   .add(
-    HttpApiEndpoint.post("register")`/register`
-      .setPayload(RegisterPayload)
-      .addSuccess(AuthSuccess)
-      .addError(AuthError, { status: 400 }),
+    HttpApiEndpoint.post("register", "/register", {
+      payload: RegisterPayload,
+      success: AuthSuccess,
+      error: AuthError.pipe(HttpApiSchema.status(400)),
+    }),
   )
   .add(
-    HttpApiEndpoint.post("logout")`/logout`
-      .addSuccess(AuthSuccess)
-      .middleware(SessionMiddleware),
+    HttpApiEndpoint.post("logout", "/logout", { success: AuthSuccess }).middleware(
+      SessionMiddleware,
+    ),
   )
   .add(
-    HttpApiEndpoint.get("me")`/me`
-      .addSuccess(S.NullOr(AuthUser))
-      .middleware(SessionMiddleware),
+    HttpApiEndpoint.get("me", "/me", { success: S.NullOr(AuthUser) }).middleware(
+      SessionMiddleware,
+    ),
   )
   .prefix("/api/auth")
 
 // --- Bands schemas ---
 
 export const BandInfo = S.Struct({
-  id: S.UUID,
+  id: S.String.check(S.isUUID()),
   slug: S.String,
   name: S.String,
   description: S.NullOr(S.String),
@@ -102,8 +104,8 @@ export const BandInfo = S.Struct({
 })
 
 export const BandMember = S.Struct({
-  id: S.UUID,
-  user_id: S.UUID,
+  id: S.String.check(S.isUUID()),
+  user_id: S.String.check(S.isUUID()),
   is_owner: S.Boolean,
   created_at: S.String,
   username: S.String,
@@ -121,38 +123,44 @@ export const InvitePayload = S.Struct({
   email: S.optional(S.String),
 })
 
-export class BandError extends S.TaggedError<BandError>()(
-  "BandError",
-  { message: S.String },
-) {}
+export class BandError extends S.TaggedError<BandError, { readonly brand: unique symbol }>()("BandError", { message: S.String },) {}
 
 // --- Bands API group ---
 
 export const BandsApiGroup = HttpApiGroup.make("myBands")
+  .add(
+    HttpApiEndpoint.get("listBands", "/", {
+      success: S.Array(BandInfo),
+    }),
+  )
+  .add(
+    HttpApiEndpoint.get("getBandMembers", "/:bandId/members", {
+      params: { bandId: S.String.check(S.isUUID()) },
+      success: S.Array(BandMember),
+      error: BandError.pipe(HttpApiSchema.status(400)),
+    }),
+  )
+  .add(
+    HttpApiEndpoint.post("createBand", "/", {
+      payload: CreateBandPayload,
+      success: BandInfo,
+      error: BandError.pipe(HttpApiSchema.status(400)),
+    }),
+  )
+  .add(
+    HttpApiEndpoint.delete("deleteBand", "/:bandId", {
+      params: { bandId: S.String.check(S.isUUID()) },
+      error: BandError.pipe(HttpApiSchema.status(400)),
+    }),
+  )
+  .add(
+    HttpApiEndpoint.post("inviteToBand", "/:bandId/invite", {
+      params: { bandId: S.String.check(S.isUUID()) },
+      payload: InvitePayload,
+      error: BandError.pipe(HttpApiSchema.status(400)),
+    }),
+  )
   .middleware(SessionMiddleware)
-  .add(
-    HttpApiEndpoint.get("listBands")`/`
-      .addSuccess(S.Array(BandInfo)),
-  )
-  .add(
-    HttpApiEndpoint.get("getBandMembers")`/${HttpApiSchema.param("bandId", S.UUID)}/members`
-      .addSuccess(S.Array(BandMember)),
-  )
-  .add(
-    HttpApiEndpoint.post("createBand")`/`
-      .setPayload(CreateBandPayload)
-      .addSuccess(BandInfo)
-      .addError(BandError, { status: 400 }),
-  )
-  .add(
-    HttpApiEndpoint.del("deleteBand")`/${HttpApiSchema.param("bandId", S.UUID)}`
-      .addError(BandError, { status: 400 }),
-  )
-  .add(
-    HttpApiEndpoint.post("inviteToBand")`/${HttpApiSchema.param("bandId", S.UUID)}/invite`
-      .setPayload(InvitePayload)
-      .addError(BandError, { status: 400 }),
-  )
   .prefix("/api/my/bands")
 
 // --- Testing schemas ---
@@ -177,16 +185,16 @@ export const TestingSuccess = S.Struct({ success: S.Boolean })
  * verification token so tests can exercise the verify flow directly.
  */
 export const CreateTestUserPayload = S.Struct({
-  username: S.optionalWith(S.String, { default: () => "testuser" }),
-  email: S.optionalWith(S.String, { default: () => "testuser@example.com" }),
-  verified: S.optionalWith(S.Boolean, { default: () => false }),
+  username: S.String.pipe(S.withDecodingDefaultType(Effect.succeed("testuser"))),
+  email: S.String.pipe(S.withDecodingDefaultType(Effect.succeed("testuser@example.com"))),
+  verified: S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(false))),
   name: S.optional(S.String),
-  avatarUrl: S.optionalWith(S.NullOr(S.String), { default: () => null }),
-  password: S.optionalWith(S.String, { default: () => "TestUserPassword" }),
+  avatarUrl: S.NullOr(S.String).pipe(S.withDecodingDefaultType(Effect.succeed(null))),
+  password: S.String.pipe(S.withDecodingDefaultType(Effect.succeed("TestUserPassword"))),
 })
 
 export const TestUser = S.Struct({
-  id: S.UUID,
+  id: S.String.check(S.isUUID()),
   username: S.String,
   name: S.NullOr(S.String),
   avatar_url: S.NullOr(S.String),
@@ -204,14 +212,14 @@ export const CreateTestUserResult = S.Struct({
 
 /** app_private.user_secrets — never visible to the user, read only in tests. */
 export const TestUserSecrets = S.Struct({
-  user_id: S.UUID,
+  user_id: S.String.check(S.isUUID()),
   password_hash: S.NullOr(S.String),
   last_login_at: S.Date,
-  failed_password_attempts: S.Number,
+  failed_password_attempts: S.Finite,
   first_failed_password_attempt: S.NullOr(S.Date),
   reset_password_token: S.NullOr(S.String),
   reset_password_token_generated: S.NullOr(S.Date),
-  failed_reset_password_attempts: S.Number,
+  failed_reset_password_attempts: S.Finite,
   first_failed_reset_password_attempt: S.NullOr(S.Date),
   delete_account_token: S.NullOr(S.String),
   delete_account_token_generated: S.NullOr(S.Date),
@@ -219,7 +227,7 @@ export const TestUserSecrets = S.Struct({
 
 /** app_private.user_email_secrets — never visible to the user, read only in tests. */
 export const TestEmailSecrets = S.Struct({
-  user_email_id: S.UUID,
+  user_email_id: S.String.check(S.isUUID()),
   verification_token: S.NullOr(S.String),
   verification_email_sent_at: S.NullOr(S.Date),
   password_reset_email_sent_at: S.NullOr(S.Date),
@@ -227,46 +235,69 @@ export const TestEmailSecrets = S.Struct({
 
 export const TestingApiGroup = HttpApiGroup.make("testing")
   .add(
-    HttpApiEndpoint.post("clear")`/clear`
-      .addSuccess(TestingSuccess),
+    HttpApiEndpoint.post("clear", "/clear", {
+      success: TestingSuccess,
+    }),
   )
   .add(
-    HttpApiEndpoint.post("seedBand")`/seed-band`
-      .setPayload(SeedBandPayload)
-      .addSuccess(TestingSuccess),
+    HttpApiEndpoint.post("seedBand", "/seed-band", {
+      payload: SeedBandPayload,
+      success: TestingSuccess,
+    }),
   )
   .add(
-    HttpApiEndpoint.post("testLogin")`/login`
-      .setPayload(TestingLoginPayload)
-      .addSuccess(TestingSuccess),
+    HttpApiEndpoint.post("testLogin", "/login", {
+      payload: TestingLoginPayload,
+      success: TestingSuccess,
+    }),
   )
   .add(
-    HttpApiEndpoint.get("clearTestUsers")`/clear-test-users`
-      .addSuccess(TestingSuccess),
+    // The same path as the POST, as a GET, so a dev can log in from a browser
+    // address bar. It answers a redirect, so the response has no body of its
+    // own. See the handler for why a GET is acceptable here.
+    HttpApiEndpoint.get("testLoginRedirect", "/login", {
+      query: {
+        username: S.String,
+        password: S.String.pipe(
+          S.withDecodingDefaultType(Effect.succeed("TestUserPassword")),
+        ),
+      },
+      success: HttpApiSchema.Empty(302),
+    }),
   )
   .add(
-    HttpApiEndpoint.get("clearTestOrganizations")`/clear-test-organizations`
-      .addSuccess(TestingSuccess),
+    HttpApiEndpoint.get("clearTestUsers", "/clear-test-users", {
+      success: TestingSuccess,
+    }),
   )
   .add(
-    HttpApiEndpoint.post("createUser")`/create-user`
-      .setPayload(CreateTestUserPayload)
-      .addSuccess(CreateTestUserResult),
+    HttpApiEndpoint.get("clearTestOrganizations", "/clear-test-organizations", {
+      success: TestingSuccess,
+    }),
   )
   .add(
-    HttpApiEndpoint.get("getUserSecrets")`/user-secrets`
-      .setPayload(S.Struct({ username: S.String }))
-      .addSuccess(TestUserSecrets),
+    HttpApiEndpoint.post("createUser", "/create-user", {
+      payload: CreateTestUserPayload,
+      success: CreateTestUserResult,
+    }),
   )
   .add(
-    HttpApiEndpoint.get("getEmailSecrets")`/email-secrets`
-      .setPayload(S.Struct({ email: S.String }))
-      .addSuccess(TestEmailSecrets),
+    HttpApiEndpoint.get("getUserSecrets", "/user-secrets", {
+      query: { username: S.String },
+      success: TestUserSecrets,
+    }),
   )
   .add(
-    HttpApiEndpoint.get("verifyUser")`/verify-user`
-      .setPayload(S.Struct({ username: S.String }))
-      .addSuccess(TestingSuccess),
+    HttpApiEndpoint.get("getEmailSecrets", "/email-secrets", {
+      query: { email: S.String },
+      success: TestEmailSecrets,
+    }),
+  )
+  .add(
+    HttpApiEndpoint.get("verifyUser", "/verify-user", {
+      query: { username: S.String },
+      success: TestingSuccess,
+    }),
   )
   .prefix("/api/testing")
 
@@ -289,7 +320,7 @@ export const MusicalKeys = keys
 
 export type MusicalKeyType = S.Schema.Type<typeof musicalKey>
 
-const musicalKey = S.Literal(...keys)
+const musicalKey = S.Literals([...keys])
 
 /*
  * Wire schemas for the song catalog, declared here rather than taken from
@@ -298,88 +329,551 @@ const musicalKey = S.Literal(...keys)
  * The server decodes database rows into these before responding.
  */
 export const Song = S.Struct({
-  id: S.UUID,
-  band_id: S.UUID,
+  id: S.String.check(S.isUUID()),
+  band_id: S.String.check(S.isUUID()),
   title: S.String,
   artist: S.NullOr(S.String),
   key: S.NullOr(musicalKey),
-  tempo_bpm: S.NullOr(S.Number),
-  duration_seconds: S.NullOr(S.Number),
-  capo: S.NullOr(S.Number),
+  tempo_bpm: S.NullOr(S.Finite),
+  duration_seconds: S.NullOr(S.Finite),
+  capo: S.NullOr(S.Finite),
   notes: S.NullOr(S.String),
-  created_by: S.NullOr(S.UUID),
+  created_by: S.NullOr(S.String.check(S.isUUID())),
   created_at: S.String,
   updated_at: S.String,
 })
 
 export const SongInsert = S.Struct({
-  band_id: S.UUID,
-  title: S.String.pipe(S.minLength(1), S.maxLength(500)),
+  band_id: S.String.check(S.isUUID()),
+  title: S.String.pipe(S.check(S.isMinLength(1)), S.check(S.isMaxLength(500))),
   artist: S.NullOr(S.String),
   key: S.NullOr(musicalKey),
-  tempo_bpm: S.NullOr(S.Number.pipe(S.greaterThanOrEqualTo(0), S.lessThanOrEqualTo(999))),
+  tempo_bpm: S.NullOr(S.Finite.pipe(S.check(S.isGreaterThanOrEqualTo(0)), S.check(S.isLessThanOrEqualTo(999)))),
   duration_seconds: S.NullOr(
-    S.Number.pipe(S.greaterThanOrEqualTo(0), S.lessThanOrEqualTo(86400)),
+    S.Finite.pipe(S.check(S.isGreaterThanOrEqualTo(0)), S.check(S.isLessThanOrEqualTo(86400))),
   ),
-  capo: S.NullOr(S.Number.pipe(S.greaterThanOrEqualTo(0), S.lessThanOrEqualTo(12))),
-  notes: S.NullOr(S.String.pipe(S.maxLength(10000))),
+  capo: S.NullOr(S.Finite.pipe(S.check(S.isGreaterThanOrEqualTo(0)), S.check(S.isLessThanOrEqualTo(12)))),
+  notes: S.NullOr(S.String.pipe(S.check(S.isMaxLength(10000)))),
 })
 
 export const SongUpdate = S.Struct({
-  title: S.String.pipe(S.minLength(1), S.maxLength(500)),
+  title: S.String.pipe(S.check(S.isMinLength(1)), S.check(S.isMaxLength(500))),
   artist: S.NullOr(S.String),
   key: S.NullOr(musicalKey),
-  tempo_bpm: S.NullOr(S.Number.pipe(S.greaterThanOrEqualTo(0), S.lessThanOrEqualTo(999))),
+  tempo_bpm: S.NullOr(S.Finite.pipe(S.check(S.isGreaterThanOrEqualTo(0)), S.check(S.isLessThanOrEqualTo(999)))),
   duration_seconds: S.NullOr(
-    S.Number.pipe(S.greaterThanOrEqualTo(0), S.lessThanOrEqualTo(86400)),
+    S.Finite.pipe(S.check(S.isGreaterThanOrEqualTo(0)), S.check(S.isLessThanOrEqualTo(86400))),
   ),
-  capo: S.NullOr(S.Number.pipe(S.greaterThanOrEqualTo(0), S.lessThanOrEqualTo(12))),
-  notes: S.NullOr(S.String.pipe(S.maxLength(10000))),
+  capo: S.NullOr(S.Finite.pipe(S.check(S.isGreaterThanOrEqualTo(0)), S.check(S.isLessThanOrEqualTo(12)))),
+  notes: S.NullOr(S.String.pipe(S.check(S.isMaxLength(10000)))),
 })
 
-export class SongNotFound extends S.TaggedError<SongNotFound>()("SongNotFound", {
-  id: S.UUID,
+export class SongNotFound extends S.TaggedError<SongNotFound, { readonly brand: unique symbol }>()("SongNotFound", {
+  id: S.String.check(S.isUUID()),
 }) {}
 
 /**
- * Declared here instead of importing the generated group, which maps both
- * songFindById and songFindByBandId onto `GET /:param`; the Effect router
- * rejects that as a duplicate route and the server fails to start. Only the
- * URLs are re-declared — the handler's queries come from generated/queries.ts,
- * and the lookup by id happens inside the handler, which needs the song row to
- * authorise its band anyway.
+ * Declared here instead of importing the generated group, which maps its reads
+ * onto bare `GET /:param` paths; the Effect router rejects the resulting
+ * duplicate route and the server fails to start. Spelling the paths out also
+ * lets a band's catalog (`GET /band/:bandId`) and one song (`GET /:id`) coexist.
+ * Only the URLs are re-declared — the handler's queries come from
+ * generated/queries.ts, and the lookup by id happens inside the handler, which
+ * needs the song row to authorise its band anyway.
  */
-export class SongForbidden extends S.TaggedError<SongForbidden>()(
-  "SongForbidden",
-  { message: S.String },
-) {}
+export class SongForbidden extends S.TaggedError<SongForbidden, { readonly brand: unique symbol }>()("SongForbidden", { message: S.String },) {}
 
 export const SongsApiGroup = HttpApiGroup.make("songs")
+  .add(
+    HttpApiEndpoint.get("songFindById", "/:id", {
+      params: { id: S.String.check(S.isUUID()) },
+      success: Song,
+      error: SongForbidden.pipe(HttpApiSchema.status(403)),
+    }),
+  )
+  .add(
+    HttpApiEndpoint.get("songFindByBandId", "/band/:bandId", {
+      params: { bandId: S.String.check(S.isUUID()) },
+      success: S.Array(Song),
+      error: SongForbidden.pipe(HttpApiSchema.status(403)),
+    }),
+  )
+  .add(
+    HttpApiEndpoint.post("songCreate", "/", {
+      payload: SongInsert,
+      success: Song.pipe(HttpApiSchema.status(201)),
+      error: SongForbidden.pipe(HttpApiSchema.status(403)),
+    }),
+  )
+  .add(
+    HttpApiEndpoint.put("songUpdate", "/:id", {
+      params: { id: S.String.check(S.isUUID()) },
+      payload: SongUpdate,
+      success: Song,
+      error: [
+        SongNotFound.pipe(HttpApiSchema.status(404)),
+        SongForbidden.pipe(HttpApiSchema.status(403)),
+      ],
+    }),
+  )
+  .add(
+    HttpApiEndpoint.delete("songDelete", "/:id", {
+      params: { id: S.String.check(S.isUUID()) },
+      error: [
+        SongNotFound.pipe(HttpApiSchema.status(404)),
+        SongForbidden.pipe(HttpApiSchema.status(403)),
+      ],
+    }),
+  )
   .middleware(SessionMiddleware)
-  .add(
-    HttpApiEndpoint.get("songFindByBandId")`/band/${HttpApiSchema.param("bandId", S.UUID)}`
-      .addSuccess(S.Array(Song))
-      .addError(SongForbidden, { status: 403 }),
-  )
-  .add(
-    HttpApiEndpoint.post("songCreate", "/")
-      .setPayload(SongInsert)
-      .addSuccess(Song, { status: 201 })
-      .addError(SongForbidden, { status: 403 }),
-  )
-  .add(
-    HttpApiEndpoint.put("songUpdate")`/${HttpApiSchema.param("id", S.UUID)}`
-      .setPayload(SongUpdate)
-      .addSuccess(Song)
-      .addError(SongNotFound, { status: 404 })
-      .addError(SongForbidden, { status: 403 }),
-  )
-  .add(
-    HttpApiEndpoint.del("songDelete")`/${HttpApiSchema.param("id", S.UUID)}`
-      .addError(SongNotFound, { status: 404 })
-      .addError(SongForbidden, { status: 403 }),
-  )
   .prefix("/api/songs")
+
+// --- Setlists schemas ---
+
+export const SetlistStatus = S.Literals(["draft", "rehearsal", "final"])
+
+export type SetlistStatusType = S.Schema.Type<typeof SetlistStatus>
+
+export const Setlist = S.Struct({
+  id: S.String.check(S.isUUID()),
+  band_id: S.String.check(S.isUUID()),
+  name: S.String,
+  description: S.NullOr(S.String),
+  /** `YYYY-MM-DD`, or null when the setlist is not tied to a date. */
+  gig_date: S.NullOr(S.String),
+  status: SetlistStatus,
+  created_at: S.String,
+  updated_at: S.String,
+})
+
+export const SetlistInsert = S.Struct({
+  band_id: S.String.check(S.isUUID()),
+  name: S.String.pipe(S.check(S.isMinLength(1)), S.check(S.isMaxLength(500))),
+  description: S.NullOr(S.String.pipe(S.check(S.isMaxLength(5000)))),
+  gig_date: S.NullOr(S.String.pipe(S.check(S.isPattern(/^\d{4}-\d{2}-\d{2}$/)))),
+  status: SetlistStatus,
+})
+
+export const SetlistUpdate = S.Struct({
+  name: SetlistInsert.fields.name,
+  description: SetlistInsert.fields.description,
+  gig_date: SetlistInsert.fields.gig_date,
+  status: SetlistStatus,
+})
+
+/**
+ * One song in a setlist, as `app_public.setlist_entries_resolved` returns it:
+ * the entry's own fields with the song's defaults filled in, and a flag per
+ * field saying whether the entry overrides it.
+ */
+export const SetlistEntry = S.Struct({
+  id: S.String.check(S.isUUID()),
+  setlist_id: S.String.check(S.isUUID()),
+  section_id: S.NullOr(S.String.check(S.isUUID())),
+  song_id: S.String.check(S.isUUID()),
+  position: S.Finite,
+  title: S.String,
+  artist: S.NullOr(S.String),
+  key: S.NullOr(musicalKey),
+  tempo_bpm: S.NullOr(S.Finite),
+  notes: S.NullOr(S.String),
+  duration_seconds: S.NullOr(S.Finite),
+  capo: S.NullOr(S.Finite),
+  key_overridden: S.Boolean,
+  tempo_overridden: S.Boolean,
+  notes_overridden: S.Boolean,
+})
+
+export const SetlistEntryInsert = S.Struct({
+  song_id: S.String.check(S.isUUID()),
+  position: S.Finite,
+  section_id: S.optional(S.NullOr(S.String.check(S.isUUID()))),
+})
+
+/** The whole entry is sent on update: a null override means "inherit". */
+export const SetlistEntryUpdate = S.Struct({
+  position: S.Finite,
+  section_id: S.NullOr(S.String.check(S.isUUID())),
+  key_override: S.NullOr(musicalKey),
+  tempo_override: S.NullOr(
+    S.Finite.pipe(S.check(S.isGreaterThanOrEqualTo(1)), S.check(S.isLessThanOrEqualTo(999))),
+  ),
+  notes_override: S.NullOr(S.String.pipe(S.check(S.isMaxLength(10000)))),
+})
+
+export class SetlistForbidden extends S.TaggedError<
+  SetlistForbidden,
+  { readonly brand: unique symbol }
+>()("SetlistForbidden", { message: S.String }) {}
+
+export class SetlistNotFound extends S.TaggedError<
+  SetlistNotFound,
+  { readonly brand: unique symbol }
+>()("SetlistNotFound", { id: S.String.check(S.isUUID()) }) {}
+
+export const SetlistsApiGroup = HttpApiGroup.make("setlists")
+  .add(
+    HttpApiEndpoint.get("listSetlists", "/band/:bandId", {
+      params: { bandId: S.String.check(S.isUUID()) },
+      success: S.Array(Setlist),
+      error: SetlistForbidden.pipe(HttpApiSchema.status(403)),
+    }),
+  )
+  .add(
+    HttpApiEndpoint.post("createSetlist", "/", {
+      payload: SetlistInsert,
+      success: Setlist.pipe(HttpApiSchema.status(201)),
+      error: SetlistForbidden.pipe(HttpApiSchema.status(403)),
+    }),
+  )
+  .add(
+    HttpApiEndpoint.get("getSetlist", "/:id", {
+      params: { id: S.String.check(S.isUUID()) },
+      success: Setlist,
+      error: [
+        SetlistNotFound.pipe(HttpApiSchema.status(404)),
+        SetlistForbidden.pipe(HttpApiSchema.status(403)),
+      ],
+    }),
+  )
+  .add(
+    HttpApiEndpoint.put("updateSetlist", "/:id", {
+      params: { id: S.String.check(S.isUUID()) },
+      payload: SetlistUpdate,
+      success: Setlist,
+      error: [
+        SetlistNotFound.pipe(HttpApiSchema.status(404)),
+        SetlistForbidden.pipe(HttpApiSchema.status(403)),
+      ],
+    }),
+  )
+  .add(
+    HttpApiEndpoint.delete("deleteSetlist", "/:id", {
+      params: { id: S.String.check(S.isUUID()) },
+      error: [
+        SetlistNotFound.pipe(HttpApiSchema.status(404)),
+        SetlistForbidden.pipe(HttpApiSchema.status(403)),
+      ],
+    }),
+  )
+  .add(
+    HttpApiEndpoint.get("listEntries", "/:id/entries", {
+      params: { id: S.String.check(S.isUUID()) },
+      success: S.Array(SetlistEntry),
+      error: [
+        SetlistNotFound.pipe(HttpApiSchema.status(404)),
+        SetlistForbidden.pipe(HttpApiSchema.status(403)),
+      ],
+    }),
+  )
+  .add(
+    HttpApiEndpoint.post("addEntry", "/:id/entries", {
+      params: { id: S.String.check(S.isUUID()) },
+      payload: SetlistEntryInsert,
+      success: SetlistEntry.pipe(HttpApiSchema.status(201)),
+      error: [
+        SetlistNotFound.pipe(HttpApiSchema.status(404)),
+        SetlistForbidden.pipe(HttpApiSchema.status(403)),
+      ],
+    }),
+  )
+  .add(
+    HttpApiEndpoint.put("updateEntry", "/:id/entries/:entryId", {
+      params: {
+        id: S.String.check(S.isUUID()),
+        entryId: S.String.check(S.isUUID()),
+      },
+      payload: SetlistEntryUpdate,
+      success: SetlistEntry,
+      error: [
+        SetlistNotFound.pipe(HttpApiSchema.status(404)),
+        SetlistForbidden.pipe(HttpApiSchema.status(403)),
+      ],
+    }),
+  )
+  .add(
+    HttpApiEndpoint.delete("deleteEntry", "/:id/entries/:entryId", {
+      params: {
+        id: S.String.check(S.isUUID()),
+        entryId: S.String.check(S.isUUID()),
+      },
+      error: [
+        SetlistNotFound.pipe(HttpApiSchema.status(404)),
+        SetlistForbidden.pipe(HttpApiSchema.status(403)),
+      ],
+    }),
+  )
+  .middleware(SessionMiddleware)
+  .prefix("/api/setlists")
+
+// --- Charts schemas ---
+
+/**
+ * A chart with the text of its newest revision. `source` is the stored lyrics
+ * text, an internal format the browser feeds to `renderLyrics` and never shows;
+ * it is null for a score, whose bytes are fetched separately.
+ */
+export const Chart = S.Struct({
+  id: S.String.check(S.isUUID()),
+  song_id: S.String.check(S.isUUID()),
+  kind: S.Literals(["lyrics", "score"]),
+  name: S.String,
+  written_key: S.NullOr(musicalKey),
+  revision_id: S.String.check(S.isUUID()),
+  source: S.NullOr(S.String),
+  created_at: S.String,
+})
+
+/** A lyrics chart made from text pasted as chords over lyrics. */
+export const LyricsChartInsert = S.Struct({
+  song_id: S.String.check(S.isUUID()),
+  name: S.String.pipe(S.check(S.isMinLength(1)), S.check(S.isMaxLength(200))),
+  written_key: S.NullOr(musicalKey),
+  pasted: S.String.pipe(S.check(S.isMinLength(1)), S.check(S.isMaxLength(100000))),
+})
+
+export class ChartForbidden extends S.TaggedError<ChartForbidden, { readonly brand: unique symbol }>()("ChartForbidden", {
+  message: S.String,
+}) {}
+
+/** One replacement in a change set: `[from, to)` of the earlier anchor text became `insert` characters. */
+export const ChartChange = S.Struct({
+  from: S.Int.check(S.isGreaterThanOrEqualTo(0)),
+  to: S.Int.check(S.isGreaterThanOrEqualTo(0)),
+  insert: S.Int.check(S.isGreaterThanOrEqualTo(0)),
+})
+
+/**
+ * A new revision of a lyrics chart, saved by the editor. `parent_id` must be
+ * the chart's newest revision and `changes` must explain how the text became
+ * `source` (docs/adr/0001).
+ */
+export const ChartRevisionInsert = S.Struct({
+  parent_id: S.String.check(S.isUUID()),
+  source: S.String.pipe(S.check(S.isMinLength(1)), S.check(S.isMaxLength(200000))),
+  changes: S.Array(ChartChange).pipe(S.check(S.isMaxLength(10000))),
+})
+
+/** Someone saved a newer revision since the editor loaded the chart. */
+export class ChartConflict extends S.TaggedError<ChartConflict, { readonly brand: unique symbol }>()("ChartConflict", {
+  message: S.String,
+}) {}
+
+/** The revision is not one the editor could have made from its parent. */
+export class ChartInvalid extends S.TaggedError<ChartInvalid, { readonly brand: unique symbol }>()("ChartInvalid", {
+  message: S.String,
+}) {}
+
+export const ChartsApiGroup = HttpApiGroup.make("charts")
+  .add(
+    HttpApiEndpoint.get("listCharts", "/song/:songId", {
+      params: { songId: S.String.check(S.isUUID()) },
+      success: S.Array(Chart),
+      error: ChartForbidden.pipe(HttpApiSchema.status(403)),
+    }),
+  )
+  .add(
+    HttpApiEndpoint.post("createLyricsChart", "/", {
+      payload: LyricsChartInsert,
+      success: Chart.pipe(HttpApiSchema.status(201)),
+      error: ChartForbidden.pipe(HttpApiSchema.status(403)),
+    }),
+  )
+  .add(
+    HttpApiEndpoint.post("saveRevision", "/:id/revisions", {
+      params: { id: S.String.check(S.isUUID()) },
+      payload: ChartRevisionInsert,
+      success: Chart.pipe(HttpApiSchema.status(201)),
+      error: [
+        ChartForbidden.pipe(HttpApiSchema.status(403)),
+        ChartConflict.pipe(HttpApiSchema.status(409)),
+        ChartInvalid.pipe(HttpApiSchema.status(400)),
+      ],
+    }),
+  )
+  .add(
+    HttpApiEndpoint.delete("deleteChart", "/:id", {
+      params: { id: S.String.check(S.isUUID()) },
+      error: ChartForbidden.pipe(HttpApiSchema.status(403)),
+    }),
+  )
+  .middleware(SessionMiddleware)
+  .prefix("/api/charts")
+
+// --- Marks and stamps schemas ---
+
+/** Ink strokes in em units from the body's top-left. Each point is [x, y, pressure]. */
+export const InkBody = S.Struct({
+  kind: S.Literal("ink"),
+  strokes: S.Array(S.Array(S.Tuple([S.Finite, S.Finite, S.Finite])).pipe(S.check(S.isMaxLength(5000)))).pipe(
+    S.check(S.isMaxLength(200)),
+  ),
+  width: S.Finite,
+  height: S.Finite,
+})
+
+export const TextBody = S.Struct({
+  kind: S.Literal("text"),
+  text: S.String.pipe(S.check(S.isMinLength(1)), S.check(S.isMaxLength(2000))),
+})
+
+export const MarkBody = S.Union([InkBody, TextBody])
+
+/** What a mark's range counts: characters of a lyrics chart's anchor text. */
+export const MarkScope = S.Struct({ kind: S.Literal("chart") })
+
+const markPlacement = {
+  revision_id: S.String.check(S.isUUID()),
+  scope: MarkScope,
+  range_start: S.Int.check(S.isGreaterThanOrEqualTo(0)),
+  range_end: S.Int.check(S.isGreaterThanOrEqualTo(1)),
+  side: S.Literals(["inline", "margin"]),
+  dx: S.Finite,
+  dy: S.Finite,
+  scale: S.Finite.pipe(S.check(S.isGreaterThan(0))),
+  body: MarkBody,
+  visibility: S.Literals(["private", "band"]),
+}
+
+export const MarkInsert = S.Struct(markPlacement)
+
+/** The whole mark is sent on update: moving one anchors it again, to the revision it was dropped on. */
+export const MarkUpdate = S.Struct(markPlacement)
+
+export const Mark = S.Struct({
+  id: S.String.check(S.isUUID()),
+  user_id: S.String.check(S.isUUID()),
+  ...markPlacement,
+  created_at: S.String,
+  updated_at: S.String,
+})
+
+/** One revision of a chart, as the browser needs it to follow a mark: its text and the change set the editor recorded. */
+export const RevisionStep = S.Struct({
+  id: S.String.check(S.isUUID()),
+  source: S.NullOr(S.String),
+  changes: S.NullOr(S.Array(ChartChange)),
+})
+
+/**
+ * The marks a player can see on a chart (their own and the band's shared
+ * ones), with every revision from the oldest of those marks' revisions on, in
+ * order. Following a mark across them needs no further request.
+ */
+export const ChartMarks = S.Struct({
+  marks: S.Array(Mark),
+  revisions: S.Array(RevisionStep),
+})
+
+export const Stamp = S.Struct({
+  id: S.String.check(S.isUUID()),
+  name: S.String,
+  body: MarkBody,
+  created_at: S.String,
+})
+
+export const StampInsert = S.Struct({
+  name: S.String.pipe(S.check(S.isMinLength(1)), S.check(S.isMaxLength(200))),
+  body: MarkBody,
+})
+
+export class MarkForbidden extends S.TaggedError<MarkForbidden, { readonly brand: unique symbol }>()("MarkForbidden", {
+  message: S.String,
+}) {}
+
+export class MarkNotFound extends S.TaggedError<MarkNotFound, { readonly brand: unique symbol }>()("MarkNotFound", {
+  id: S.String.check(S.isUUID()),
+}) {}
+
+export const MarksApiGroup = HttpApiGroup.make("marks")
+  .add(
+    HttpApiEndpoint.get("listMarks", "/chart/:chartId", {
+      params: { chartId: S.String.check(S.isUUID()) },
+      success: ChartMarks,
+      error: MarkForbidden.pipe(HttpApiSchema.status(403)),
+    }),
+  )
+  .add(
+    HttpApiEndpoint.post("createMark", "/", {
+      payload: MarkInsert,
+      success: Mark.pipe(HttpApiSchema.status(201)),
+      error: MarkForbidden.pipe(HttpApiSchema.status(403)),
+    }),
+  )
+  .add(
+    HttpApiEndpoint.put("updateMark", "/:id", {
+      params: { id: S.String.check(S.isUUID()) },
+      payload: MarkUpdate,
+      success: Mark,
+      error: [MarkNotFound.pipe(HttpApiSchema.status(404)), MarkForbidden.pipe(HttpApiSchema.status(403))],
+    }),
+  )
+  .add(
+    HttpApiEndpoint.delete("deleteMark", "/:id", {
+      params: { id: S.String.check(S.isUUID()) },
+      error: [MarkNotFound.pipe(HttpApiSchema.status(404)), MarkForbidden.pipe(HttpApiSchema.status(403))],
+    }),
+  )
+  .middleware(SessionMiddleware)
+  .prefix("/api/marks")
+
+export const StampsApiGroup = HttpApiGroup.make("stamps")
+  .add(
+    HttpApiEndpoint.get("listStamps", "/", {
+      success: S.Array(Stamp),
+      error: MarkForbidden.pipe(HttpApiSchema.status(403)),
+    }),
+  )
+  .add(
+    HttpApiEndpoint.post("createStamp", "/", {
+      payload: StampInsert,
+      success: Stamp.pipe(HttpApiSchema.status(201)),
+      error: MarkForbidden.pipe(HttpApiSchema.status(403)),
+    }),
+  )
+  .add(
+    HttpApiEndpoint.delete("deleteStamp", "/:id", {
+      params: { id: S.String.check(S.isUUID()) },
+      error: [MarkNotFound.pipe(HttpApiSchema.status(404)), MarkForbidden.pipe(HttpApiSchema.status(403))],
+    }),
+  )
+  .middleware(SessionMiddleware)
+  .prefix("/api/stamps")
+
+// --- Scores ---
+
+/** Where a score upload goes and what it is called; the request body is the file itself. */
+export const ScoreUploadQuery = {
+  song_id: S.String.check(S.isUUID()),
+  name: S.String.pipe(S.check(S.isMinLength(1)), S.check(S.isMaxLength(200))),
+  file_name: S.String.pipe(S.check(S.isMinLength(1)), S.check(S.isMaxLength(255))),
+}
+
+const guitarProFile = S.Uint8Array.pipe(HttpApiSchema.asUint8Array({ contentType: "application/octet-stream" }))
+
+export const ScoresApiGroup = HttpApiGroup.make("scores")
+  .add(
+    // The body is the Guitar Pro file, stored byte for byte as the chart's first revision.
+    HttpApiEndpoint.post("uploadScore", "/", {
+      query: ScoreUploadQuery,
+      payload: guitarProFile,
+      success: Chart.pipe(HttpApiSchema.status(201)),
+      error: [
+        ChartForbidden.pipe(HttpApiSchema.status(403)),
+        ChartInvalid.pipe(HttpApiSchema.status(400)),
+      ],
+    }),
+  )
+  .add(
+    // A revision never changes, so the same URL always answers the same bytes.
+    HttpApiEndpoint.get("scoreFile", "/:revisionId/file", {
+      params: { revisionId: S.String.check(S.isUUID()) },
+      success: guitarProFile,
+      error: ChartForbidden.pipe(HttpApiSchema.status(403)),
+    }),
+  )
+  .middleware(SessionMiddleware)
+  .prefix("/api/scores")
 
 // --- Unified API ---
 
@@ -388,3 +882,8 @@ export const SetListApi = HttpApi.make("SetListApi")
   .add(BandsApiGroup)
   .add(TestingApiGroup)
   .add(SongsApiGroup)
+  .add(SetlistsApiGroup)
+  .add(ChartsApiGroup)
+  .add(ScoresApiGroup)
+  .add(MarksApiGroup)
+  .add(StampsApiGroup)

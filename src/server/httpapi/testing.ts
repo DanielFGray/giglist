@@ -1,5 +1,6 @@
-import { Effect, Schema } from "effect";
-import { HttpApiBuilder } from "@effect/platform";
+import { Effect, Redacted, Schema } from "effect";
+import { HttpApiBuilder } from "effect/http-api";
+import { HttpServerResponse } from "effect/http";
 import { sql } from "kysely";
 import { Db } from "../db";
 import * as Auth from "../services/auth";
@@ -7,8 +8,6 @@ import {
   SetListApi,
   sessionCookie,
   TestUser,
-  TestUserSecrets,
-  TestEmailSecrets,
 } from "../../api/contracts";
 
 type TestUserRow = Schema.Schema.Type<typeof TestUser>;
@@ -40,12 +39,12 @@ export const testingHandlers = HttpApiBuilder.group(SetListApi, "testing", (hand
           yield* Auth.register({
             username: payload.username,
             email: `${payload.username}@test.local`,
-            password: payload.password,
-          }).pipe(Effect.catchAll(() => Effect.void));
+            password: Redacted.make(payload.password),
+          }).pipe(Effect.ignore);
 
           const session = yield* Auth.login({
             id: payload.username,
-            password: payload.password,
+            password: Redacted.make(payload.password),
           });
 
           const db = yield* Db;
@@ -67,7 +66,7 @@ export const testingHandlers = HttpApiBuilder.group(SetListApi, "testing", (hand
 
           return { success: true };
         },
-        Effect.catchAll(() => Effect.succeed({ success: true })),
+        Effect.orElseSucceed(() => ({ success: true })),
       ),
     )
     .handle(
@@ -78,10 +77,10 @@ export const testingHandlers = HttpApiBuilder.group(SetListApi, "testing", (hand
           yield* Auth.register({
             username: payload.username,
             email: `${payload.username}@test.local`,
-            password: payload.password,
-          }).pipe(Effect.catchAll(() => Effect.void));
+            password: Redacted.make(payload.password),
+          }).pipe(Effect.ignore);
 
-          const result = yield* Auth.login({ id: payload.username, password: payload.password });
+          const result = yield* Auth.login({ id: payload.username, password: Redacted.make(payload.password) });
           yield* HttpApiBuilder.securitySetCookie(sessionCookie, result.sessionId, {
             httpOnly: true,
             sameSite: "lax",
@@ -91,7 +90,41 @@ export const testingHandlers = HttpApiBuilder.group(SetListApi, "testing", (hand
           });
           return { success: true };
         },
-        Effect.catchAll(() => Effect.succeed({ success: false })),
+        Effect.orElseSucceed(() => ({ success: false })),
+      ),
+    )
+    .handle(
+      // Dev convenience: log in by opening a URL, then land back in the app.
+      //
+      // A GET that changes state, and credentials in the query string, are both
+      // off-spec — acceptable only because this group is test-only (this module
+      // throws at import under NODE_ENV=production) and the user is a fake one.
+      "testLoginRedirect",
+      Effect.fnUntraced(
+        function* ({ query }) {
+          // Ensure the user exists, like the POST above (idempotent).
+          yield* Auth.register({
+            username: query.username,
+            email: `${query.username}@test.local`,
+            password: Redacted.make(query.password),
+          }).pipe(Effect.ignore);
+
+          const result = yield* Auth.login({
+            id: query.username,
+            password: Redacted.make(query.password),
+          });
+          return yield* HttpServerResponse.setCookie(
+            HttpServerResponse.redirect(process.env.VITE_ROOT_URL ?? "/"),
+            sessionCookie.key,
+            result.sessionId,
+            { httpOnly: true, sameSite: "lax", secure: isSecure, path: "/", maxAge: "30 days" },
+          ).pipe(Effect.orDie);
+        },
+        Effect.catch((e) =>
+          Effect.succeed(
+            HttpServerResponse.text(`test login failed: ${e.message}`, { status: 401 }),
+          ),
+        ),
       ),
     )
     .handle(
@@ -156,12 +189,12 @@ export const testingHandlers = HttpApiBuilder.group(SetListApi, "testing", (hand
     )
     .handle(
       "getUserSecrets",
-      Effect.fnUntraced(function* ({ payload }) {
+      Effect.fnUntraced(function* ({ query }) {
         const db = yield* Db;
         const user = yield* db
           .selectFrom("app_public.users")
           .select("id")
-          .where("username", "=", payload.username)
+          .where("username", "=", query.username)
           .pipe(Effect.head, Effect.orDie);
         const row = yield* db
           .selectFrom("app_private.user_secrets")
@@ -173,12 +206,12 @@ export const testingHandlers = HttpApiBuilder.group(SetListApi, "testing", (hand
     )
     .handle(
       "getEmailSecrets",
-      Effect.fnUntraced(function* ({ payload }) {
+      Effect.fnUntraced(function* ({ query }) {
         const db = yield* Db;
         const email = yield* db
           .selectFrom("app_public.user_emails")
           .select("id")
-          .where("email", "=", payload.email)
+          .where("email", "=", query.email)
           .orderBy("id", "desc")
           .limit(1)
           .pipe(Effect.head, Effect.orDie);
@@ -192,12 +225,12 @@ export const testingHandlers = HttpApiBuilder.group(SetListApi, "testing", (hand
     )
     .handle(
       "verifyUser",
-      Effect.fnUntraced(function* ({ payload }) {
+      Effect.fnUntraced(function* ({ query }) {
         const db = yield* Db;
         yield* db
           .updateTable("app_public.users")
           .set({ is_verified: true })
-          .where("username", "=", payload.username)
+          .where("username", "=", query.username)
           .pipe(Effect.orDie);
         return { success: true };
       }),
