@@ -8,6 +8,7 @@ import {
   BandMember as BandMemberSchema,
   Setlist as SetlistSchema,
   SetlistEntry as SetlistEntrySchema,
+  SetlistSection as SetlistSectionSchema,
   Song,
   Chart as ChartSchema,
   ChartMarks as ChartMarksSchema,
@@ -27,6 +28,7 @@ export type BandInfo = S.Schema.Type<typeof BandInfoSchema>
 export type BandMember = S.Schema.Type<typeof BandMemberSchema>
 export type SetlistInfo = S.Schema.Type<typeof SetlistSchema>
 export type SetlistEntryInfo = S.Schema.Type<typeof SetlistEntrySchema>
+export type SetlistSectionInfo = S.Schema.Type<typeof SetlistSectionSchema>
 
 /** The payloads each endpoint declares, taken from the contract so the client
  *  never restates the shape the server validates. */
@@ -48,6 +50,7 @@ export type SetlistCreateData = Parameters<SetlistsClient["createSetlist"]>[0]["
 export type SetlistUpdateData = Parameters<SetlistsClient["updateSetlist"]>[0]["payload"]
 export type SetlistEntryCreateData = Parameters<SetlistsClient["addEntry"]>[0]["payload"]
 export type SetlistEntryUpdateData = Parameters<SetlistsClient["updateEntry"]>[0]["payload"]
+export type SetlistArrangementData = Parameters<SetlistsClient["arrange"]>[0]["payload"]
 
 /** The auth payloads, likewise taken from the contract. The password is a
  *  `Redacted` here, so the browser form builds one before it calls the API. */
@@ -237,4 +240,24 @@ export const setlists = {
     run(
       api.pipe(Effect.flatMap((c) => c.setlists.deleteEntry({ params: { id, entryId } }))),
     ),
+
+  sections: (id: string) =>
+    run(api.pipe(Effect.flatMap((c) => c.setlists.listSections({ params: { id } })))),
+
+  addSection: (id: string, name: string) =>
+    run(api.pipe(Effect.flatMap((c) => c.setlists.addSection({ params: { id }, payload: { name } })))),
+
+  renameSection: (id: string, sectionId: string, name: string) =>
+    run(
+      api.pipe(
+        Effect.flatMap((c) => c.setlists.renameSection({ params: { id, sectionId }, payload: { name } })),
+      ),
+    ),
+
+  removeSection: (id: string, sectionId: string) =>
+    run(api.pipe(Effect.flatMap((c) => c.setlists.deleteSection({ params: { id, sectionId } })))),
+
+  /** Stores the whole play order; see `SetlistArrangement`. */
+  arrange: (id: string, arrangement: SetlistArrangementData) =>
+    run(api.pipe(Effect.flatMap((c) => c.setlists.arrange({ params: { id }, payload: arrangement })))),
 }

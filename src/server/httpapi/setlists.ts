@@ -10,6 +10,7 @@ import {
   SetlistEntry,
   SetlistForbidden,
   SetlistNotFound,
+  SetlistSection,
   type SessionData,
 } from "../../api/contracts"
 
@@ -17,6 +18,11 @@ const decodeSetlist = S.decodeUnknownEffect(Setlist)
 const decodeSetlistArray = S.decodeUnknownEffect(S.Array(Setlist))
 const decodeEntry = S.decodeUnknownEffect(SetlistEntry)
 const decodeEntryArray = S.decodeUnknownEffect(S.Array(SetlistEntry))
+const decodeSection = S.decodeUnknownEffect(SetlistSection)
+const decodeSectionArray = S.decodeUnknownEffect(S.Array(SetlistSection))
+
+/** Positions are renumbered in steps of this size whenever an arrangement is stored. */
+const POSITION_STEP = 1000
 
 /**
  * The setlist columns the wire shape needs. `gig_date` is cast to text so the
@@ -112,6 +118,23 @@ const entryOr404 = Effect.fnUntraced(function*(entryId: string, setlistId: strin
         Effect.fail(new SetlistNotFound({ id: setlistId })),
       ),
       Effect.flatMap((row) => decodeEntry(row).pipe(Effect.orDie)),
+    )
+})
+
+const SECTION_COLUMNS = ["id", "setlist_id", "name", "position"] as const
+
+/** One section, scoped to `setlistId` so the id alone cannot reach another band's setlist. */
+const sectionOr404 = Effect.fnUntraced(function*(sectionId: string, setlistId: string) {
+  const db = yield* Kysely
+  return yield* db
+    .selectFrom("app_public.setlist_sections")
+    .select(SECTION_COLUMNS)
+    .where("id", "=", sectionId)
+    .where("setlist_id", "=", setlistId)
+    .pipe(
+      Effect.head,
+      Effect.catchTag("NoSuchElementError", () => Effect.fail(new SetlistNotFound({ id: setlistId }))),
+      Effect.flatMap((row) => decodeSection(row).pipe(Effect.orDie)),
     )
 })
 
@@ -254,6 +277,120 @@ export const setlistsHandlers = HttpApiBuilder.group(SetListApi, "setlists", (ha
             .pipe(Effect.orDie)
 
           return yield* entryOr404(entryId, id)
+        }),
+      ),
+    )
+    .handle("listSections", ({ params: { id } }) =>
+      asSession((_session) =>
+        Effect.gen(function* () {
+          const db = yield* Kysely
+          yield* setlistOr404(id)
+          return yield* db
+            .selectFrom("app_public.setlist_sections")
+            .select(SECTION_COLUMNS)
+            .where("setlist_id", "=", id)
+            .orderBy("position", "asc")
+            .pipe(Effect.flatMap((rows) => decodeSectionArray(rows).pipe(Effect.orDie)))
+        }),
+      ),
+    )
+    .handle("addSection", ({ params: { id }, payload }) =>
+      asSession((_session) =>
+        Effect.gen(function* () {
+          const db = yield* Kysely
+          yield* setlistOr404(id)
+          // A new section plays last.
+          const last = yield* db
+            .selectFrom("app_public.setlist_sections")
+            .select(sql<number>`coalesce(max(position), 0)`.as("position"))
+            .where("setlist_id", "=", id)
+            .pipe(Effect.head, Effect.orDie)
+          const inserted = yield* db
+            .insertInto("app_public.setlist_sections")
+            .values({ setlist_id: id, name: payload.name, position: last.position + POSITION_STEP })
+            .returning("id")
+            .pipe(Effect.head, Effect.orDie)
+          return yield* sectionOr404(inserted.id, id)
+        }),
+      ),
+    )
+    .handle("renameSection", ({ params: { id, sectionId }, payload }) =>
+      asSession((_session) =>
+        Effect.gen(function* () {
+          const db = yield* Kysely
+          yield* setlistOr404(id)
+          yield* sectionOr404(sectionId, id)
+          yield* db
+            .updateTable("app_public.setlist_sections")
+            .set({ name: payload.name })
+            .where("id", "=", sectionId)
+            .where("setlist_id", "=", id)
+            .pipe(Effect.orDie)
+          return yield* sectionOr404(sectionId, id)
+        }),
+      ),
+    )
+    .handle("deleteSection", ({ params: { id, sectionId } }) =>
+      asSession((_session) =>
+        Effect.gen(function* () {
+          const db = yield* Kysely
+          yield* setlistOr404(id)
+          yield* sectionOr404(sectionId, id)
+          // The foreign key sets the section of its entries to null: they join the unsectioned group.
+          yield* db
+            .deleteFrom("app_public.setlist_sections")
+            .where("id", "=", sectionId)
+            .where("setlist_id", "=", id)
+            .pipe(Effect.orDie)
+        }),
+      ),
+    )
+    .handle("arrange", ({ params: { id }, payload }) =>
+      asSession((_session) =>
+        Effect.gen(function* () {
+          const db = yield* Kysely
+          yield* setlistOr404(id)
+
+          // Every id must belong to this setlist, or the write would reach another band's rows.
+          const sections = yield* db
+            .selectFrom("app_public.setlist_sections")
+            .select("id")
+            .where("setlist_id", "=", id)
+            .pipe(Effect.orDie)
+          const entries = yield* db
+            .selectFrom("app_public.setlist_entries")
+            .select("id")
+            .where("setlist_id", "=", id)
+            .pipe(Effect.orDie)
+          const sectionIds = new Set(sections.map((r) => r.id))
+          const entryIds = new Set(entries.map((r) => r.id))
+          const named = payload.groups.flatMap((g) => g.entries)
+          const sectionsNamed = payload.groups.flatMap((g) => (g.section_id === null ? [] : [g.section_id]))
+          const wellFormed =
+            named.every((e) => entryIds.has(e)) &&
+            new Set(named).size === named.length &&
+            sectionsNamed.every((s) => sectionIds.has(s)) &&
+            new Set(sectionsNamed).size === sectionsNamed.length
+          if (!wellFormed) {
+            return yield* new SetlistForbidden({ message: "That arrangement names a section or song that is not in this setlist" })
+          }
+
+          for (const [groupIndex, group] of payload.groups.entries()) {
+            if (group.section_id !== null) {
+              yield* db
+                .updateTable("app_public.setlist_sections")
+                .set({ position: (groupIndex + 1) * POSITION_STEP })
+                .where("id", "=", group.section_id)
+                .pipe(Effect.orDie)
+            }
+            for (const [entryIndex, entryId] of group.entries.entries()) {
+              yield* db
+                .updateTable("app_public.setlist_entries")
+                .set({ section_id: group.section_id, position: (entryIndex + 1) * POSITION_STEP })
+                .where("id", "=", entryId)
+                .pipe(Effect.orDie)
+            }
+          }
         }),
       ),
     )

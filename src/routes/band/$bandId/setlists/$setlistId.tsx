@@ -1,8 +1,8 @@
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { Link, createFileRoute, useRouter } from "@tanstack/react-router"
 import { useForm } from "@tanstack/react-form"
 import { Schema as S } from "effect"
-import { setlists, songs, type SetlistEntryInfo, type SongInfo } from "~/api/client"
+import { setlists, songs, type SetlistEntryInfo, type SetlistSectionInfo, type SongInfo } from "~/api/client"
 import {
   MusicalKeys,
   SetlistEntryUpdate,
@@ -11,15 +11,17 @@ import {
 } from "~/api/contracts"
 import { SelectField, SubmitButton, TextAreaField, TextField, NumberField, errorMessage, fieldError } from "~/components/form"
 import { formatDuration } from "~/components/duration"
+import { groupEntries, placeEntry, stepEntry, stepSection, toPayload, type Group } from "~/components/arrangement"
 
 export const Route = createFileRoute("/band/$bandId/setlists/$setlistId")({
   loader: async ({ params }) => {
-    const [setlist, entries, bandSongs] = await Promise.all([
+    const [setlist, entries, sections, bandSongs] = await Promise.all([
       setlists.get(params.setlistId),
       setlists.entries(params.setlistId),
+      setlists.sections(params.setlistId),
       songs.byBand(params.bandId),
     ])
-    return { setlist, entries, bandSongs }
+    return { setlist, entries, sections, bandSongs }
   },
   component: SetlistEditor,
 })
@@ -48,23 +50,39 @@ const updatePayload = (
   notes_override: entry.notes_overridden ? entry.notes : null,
 })
 
+type EntryGroup = Group<SetlistEntryInfo, SetlistSectionInfo>
+
 function SetlistEditor() {
   const { bandId, setlistId } = Route.useParams()
-  const { setlist, entries, bandSongs } = Route.useLoaderData()
+  const { setlist, entries, sections, bandSongs } = Route.useLoaderData()
   const router = useRouter()
+  const [error, setError] = useState<string | null>(null)
+  // The entry being dragged. Drag state is only read in drop handlers, so it does not need to trigger a render.
+  const dragging = useRef<string | null>(null)
 
+  const groups = groupEntries(sections, entries)
   const totalSeconds = entries.reduce((sum, entry) => sum + (entry.duration_seconds ?? 0), 0)
   const refresh = () => router.invalidate()
 
-  const move = async (index: number, delta: number) => {
-    const entry = entries[index]
-    const neighbour = entries[index + delta]
-    if (entry === undefined || neighbour === undefined) return
-    await setlists.updateEntry(setlistId, entry.id, updatePayload(entry, neighbour.position))
-    await setlists.updateEntry(setlistId, neighbour.id, updatePayload(neighbour, entry.position))
+  /** Runs a server write, then reloads; a failure is shown instead of leaving the list stale. */
+  const act = async (write: () => Promise<unknown>) => {
+    setError(null)
+    try {
+      await write()
+    } catch (e) {
+      setError(errorMessage(e))
+    }
     await refresh()
   }
+  const arrange = (next: ReadonlyArray<EntryGroup>) => act(() => setlists.arrange(setlistId, toPayload(next)))
 
+  const drop = (sectionId: string | null, beforeId: string | null) => {
+    const id = dragging.current
+    dragging.current = null
+    if (id !== null) void arrange(placeEntry(groups, id, sectionId, beforeId))
+  }
+
+  let number = 0
   return (
     <div className="space-y-6 max-w-3xl">
       <div className="flex items-start justify-between gap-4">
@@ -101,30 +119,174 @@ function SetlistEditor() {
       <SongPicker
         setlistId={setlistId}
         bandSongs={bandSongs}
-        nextPosition={(entries.at(-1)?.position ?? 0) + 1000}
+        sectionId={sections.at(-1)?.id ?? null}
+        nextPosition={(entries.reduce((max, e) => Math.max(max, e.position), 0)) + 1000}
         onAdded={refresh}
       />
 
-      {entries.length === 0 ? (
+      <SectionAdder setlistId={setlistId} onAdded={refresh} />
+
+      {error && <div data-pwid="setlist-error" className="text-sm text-red-400">{error}</div>}
+
+      {entries.length === 0 && sections.length === 0 ? (
         <div data-pwid="setlist-entries-empty" className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] p-8 text-center">
           <p className="text-zinc-500 text-sm">No songs in this setlist yet.</p>
         </div>
       ) : (
-        <ol data-pwid="setlist-entries" className="space-y-2">
-          {entries.map((entry, index) => (
-            <EntryRow
-              key={entry.id}
-              entry={entry}
-              position={index + 1}
-              isFirst={index === 0}
-              isLast={index === entries.length - 1}
-              onMoveUp={() => move(index, -1)}
-              onMoveDown={() => move(index, 1)}
-              onChanged={refresh}
-            />
-          ))}
-        </ol>
+        <div data-pwid="setlist-entries" className="space-y-5">
+          {groups.map((group) => {
+            const sectionId = group.section?.id ?? null
+            const seconds = group.entries.reduce((sum, e) => sum + (e.duration_seconds ?? 0), 0)
+            return (
+              <section key={sectionId ?? "none"} data-pwid="setlist-group" data-section={group.section?.name ?? ""} className="space-y-2">
+                {group.section ? (
+                  <SectionHeader
+                    section={group.section}
+                    setlistId={setlistId}
+                    seconds={seconds}
+                    onUp={() => arrange(stepSection(groups, group.section!.id, -1))}
+                    onDown={() => arrange(stepSection(groups, group.section!.id, 1))}
+                    act={act}
+                  />
+                ) : (
+                  sections.length > 0 && <h2 className="text-sm font-semibold text-zinc-500">No section</h2>
+                )}
+                <ol
+                  data-pwid="group-entries"
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    drop(sectionId, null)
+                  }}
+                  className="space-y-2 min-h-10 rounded-lg"
+                >
+                  {group.entries.map((entry) => {
+                    number += 1
+                    return (
+                      <EntryRow
+                        key={entry.id}
+                        entry={entry}
+                        position={number}
+                        onDragStart={() => {
+                          dragging.current = entry.id
+                        }}
+                        onDropBefore={() => drop(sectionId, entry.id)}
+                        onMoveUp={() => arrange(stepEntry(groups, entry.id, -1))}
+                        onMoveDown={() => arrange(stepEntry(groups, entry.id, 1))}
+                        onChanged={refresh}
+                      />
+                    )
+                  })}
+                  {/* The end of the group: the only place to drop a song last, and the only one in an empty group. */}
+                  <li
+                    data-pwid="group-end"
+                    className={`rounded-lg text-center text-xs text-zinc-500 ${
+                      group.entries.length === 0 ? "border border-dashed border-[var(--color-border-subtle)] p-3" : "h-4"
+                    }`}
+                  >
+                    {group.entries.length === 0 && "Drop a song here"}
+                  </li>
+                </ol>
+              </section>
+            )
+          })}
+        </div>
       )}
+    </div>
+  )
+}
+
+/** A section's name (edited in place), its duration and its controls. */
+function SectionHeader({
+  section,
+  setlistId,
+  seconds,
+  onUp,
+  onDown,
+  act,
+}: {
+  section: SetlistSectionInfo
+  setlistId: string
+  seconds: number
+  onUp: () => Promise<void>
+  onDown: () => Promise<void>
+  act: (write: () => Promise<unknown>) => Promise<void>
+}) {
+  const [name, setName] = useState(section.name)
+  const commit = () => {
+    const trimmed = name.trim()
+    if (trimmed === "") setName(section.name)
+    else if (trimmed !== section.name) void act(() => setlists.renameSection(setlistId, section.id, trimmed))
+  }
+  const button =
+    "px-2 py-1 rounded-md border border-[var(--color-border-subtle)] text-xs text-zinc-300 cursor-pointer"
+  return (
+    <header data-pwid="section-header" className="flex items-center gap-2">
+      <input
+        data-pwid="section-name"
+        aria-label="Section name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") e.currentTarget.blur()
+        }}
+        className="min-w-0 flex-1 bg-transparent text-lg font-semibold focus:outline-none focus:border-b focus:border-[var(--color-amber-accent)]"
+      />
+      <span data-pwid="section-duration" className="text-xs text-zinc-500 shrink-0">
+        {seconds > 0 ? formatDuration(seconds) : ""}
+      </span>
+      <button data-pwid="section-up" type="button" onClick={onUp} aria-label="Move section up" className={button}>↑</button>
+      <button data-pwid="section-down" type="button" onClick={onDown} aria-label="Move section down" className={button}>↓</button>
+      <button
+        data-pwid="section-delete"
+        type="button"
+        onClick={() => act(() => setlists.removeSection(setlistId, section.id))}
+        className={`${button} !border-red-500/20 !text-red-400`}
+      >
+        Delete section
+      </button>
+    </header>
+  )
+}
+
+function SectionAdder({ setlistId, onAdded }: { setlistId: string; onAdded: () => Promise<void> }) {
+  const [name, setName] = useState("")
+  const [error, setError] = useState<string | null>(null)
+  const add = async () => {
+    if (name.trim() === "") return
+    setError(null)
+    try {
+      await setlists.addSection(setlistId, name.trim())
+      setName("")
+      await onAdded()
+    } catch (e) {
+      setError(errorMessage(e))
+    }
+  }
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        data-pwid="section-add-name"
+        aria-label="New section name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") void add()
+        }}
+        placeholder="New section (Set 1, Encore…)"
+        className="flex-1 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-amber-accent)] transition-colors"
+      />
+      <button
+        data-pwid="section-add"
+        type="button"
+        onClick={add}
+        disabled={name.trim() === ""}
+        className="px-4 py-2 rounded-md border border-[var(--color-border-subtle)] text-sm text-zinc-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        Add section
+      </button>
+      {error && <span data-pwid="section-add-error" className="text-sm text-red-400">{error}</span>}
     </div>
   )
 }
@@ -253,11 +415,14 @@ function SetlistDetails({
 function SongPicker({
   setlistId,
   bandSongs,
+  sectionId,
   nextPosition,
   onAdded,
 }: {
   setlistId: string
   bandSongs: readonly SongInfo[]
+  /** A new song joins this section; null when the setlist has none. */
+  sectionId: string | null
   nextPosition: number
   onAdded: () => Promise<void>
 }) {
@@ -269,7 +434,7 @@ function SongPicker({
     const chosen = bandSongs.find((song) => song.id === songId)
     if (chosen === undefined) return
     try {
-      await setlists.addEntry(setlistId, { song_id: chosen.id, position: nextPosition })
+      await setlists.addEntry(setlistId, { song_id: chosen.id, position: nextPosition, section_id: sectionId })
       setSongId("")
       await onAdded()
     } catch (e) {
@@ -321,16 +486,16 @@ function SongPicker({
 function EntryRow({
   entry,
   position,
-  isFirst,
-  isLast,
+  onDragStart,
+  onDropBefore,
   onMoveUp,
   onMoveDown,
   onChanged,
 }: {
   entry: SetlistEntryInfo
   position: number
-  isFirst: boolean
-  isLast: boolean
+  onDragStart: () => void
+  onDropBefore: () => void
   onMoveUp: () => Promise<void>
   onMoveDown: () => Promise<void>
   onChanged: () => Promise<void>
@@ -356,7 +521,22 @@ function EntryRow({
   ].flatMap((part) => (part == null ? [] : [part]))
 
   return (
-    <li data-pwid="setlist-entry" className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] p-4">
+    <li
+      data-pwid="setlist-entry"
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = "move"
+        e.dataTransfer.setData("text/plain", entry.id)
+        onDragStart()
+      }}
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={(e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        onDropBefore()
+      }}
+      className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] p-4 cursor-grab"
+    >
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3 min-w-0">
           <span data-pwid="entry-position" className="text-xs text-zinc-500 w-5 pt-1 shrink-0">{position}</span>
@@ -373,9 +553,8 @@ function EntryRow({
             data-pwid="entry-up"
             type="button"
             onClick={onMoveUp}
-            disabled={isFirst}
             aria-label="Move up"
-            className="px-2 py-1.5 rounded-md border border-[var(--color-border-subtle)] text-xs text-zinc-300 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+            className="px-2 py-1.5 rounded-md border border-[var(--color-border-subtle)] text-xs text-zinc-300 cursor-pointer"
           >
             ↑
           </button>
@@ -383,9 +562,8 @@ function EntryRow({
             data-pwid="entry-down"
             type="button"
             onClick={onMoveDown}
-            disabled={isLast}
             aria-label="Move down"
-            className="px-2 py-1.5 rounded-md border border-[var(--color-border-subtle)] text-xs text-zinc-300 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+            className="px-2 py-1.5 rounded-md border border-[var(--color-border-subtle)] text-xs text-zinc-300 cursor-pointer"
           >
             ↓
           </button>
