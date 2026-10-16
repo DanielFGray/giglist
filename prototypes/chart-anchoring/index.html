@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PROTOTYPE: chart anchoring</title>
+    <link rel="stylesheet" href="./page.css" />
+  </head>
+  <body>
+    <header>
+      <p class="banner">PROTOTYPE, throwaway</p>
+      <h1>Do personal marks stay on the right chart content?</h1>
+      <p>
+        Draw ink, write text, or paste a saved stamp onto the chart. Then transpose it, resize the window, edit the
+        source as a bandmate would, or paste a new version over it. Each mark should stay on the lyric, chord or beat it
+        was put on. A mark whose content was deleted, or whose place a pasted-over version cannot prove, goes to the
+        tray. It must never land somewhere else.
+      </p>
+    </header>
+
+    <section class="toolbar" aria-label="Tools">
+      <fieldset>
+        <legend>Tool</legend>
+        <label><input type="radio" name="tool" value="move" checked /> Move / resize</label>
+        <label><input type="radio" name="tool" value="ink" /> Ink</label>
+        <label><input type="radio" name="tool" value="text" /> Text</label>
+        <label><input type="radio" name="tool" value="stamp" /> Stamp</label>
+      </fieldset>
+      <label>Text <input id="text-input" value="lay back" /></label>
+      <label>Stamp <select id="stamp-select"></select></label>
+      <button id="save-stamp" type="button">Save selected mark as stamp</button>
+      <input id="stamp-name" placeholder="stamp name" value="half-time feel" />
+      <button id="delete-mark" type="button">Delete selected</button>
+    </section>
+
+    <main>
+      <section class="chart-panel" aria-label="Chord chart">
+        <div class="chart-controls">
+          <label>Show in key <select id="key-select"></select></label>
+          <span id="revision-label"></span>
+        </div>
+        <div id="chart-frame">
+          <div id="chart"></div>
+          <div id="gutter" aria-label="Margin"></div>
+          <div id="marks"></div>
+          <svg id="ink-preview"></svg>
+        </div>
+      </section>
+
+      <aside>
+        <section aria-label="Chart source">
+          <h2>Source (chords over lyrics)</h2>
+          <label>Written in key <select id="written-key"></select></label>
+          <textarea id="source" spellcheck="false" rows="18"></textarea>
+          <div class="buttons">
+            <button id="import" type="button">Start new chart</button>
+            <button id="save-edit" type="button" title="The in-app editor records the change">Save edit</button>
+            <button id="paste-over" type="button" title="A new version from outside the app: the change is derived by diff">
+              Paste over
+            </button>
+          </div>
+        </section>
+        <section aria-label="Orphaned marks">
+          <h2>Tray</h2>
+          <ul id="tray"></ul>
+        </section>
+        <section aria-label="State">
+          <h2>State</h2>
+          <pre id="state"></pre>
+        </section>
+      </aside>
+    </main>
+
+    <section class="score-panel" aria-label="Guitar Pro score">
+      <h2>Guitar Pro tab</h2>
+      <div class="chart-controls">
+        <label>Open file <input id="gp-file" type="file" accept=".gp,.gp3,.gp4,.gp5,.gpx" /></label>
+        <label>Track <select id="track-select"></select></label>
+        <label>New version <input id="gp-revision" type="file" accept=".gp,.gp3,.gp4,.gp5,.gpx" /></label>
+        <button id="play" type="button" disabled>Play / pause</button>
+        <label><input id="metronome" type="checkbox" /> Click</label>
+        <span id="score-label"></span>
+      </div>
+      <p class="hint">With the Text or Stamp tool, click a beat to mark it. Marks on tab follow beats in the selected track's first voice.</p>
+      <div id="score-frame">
+        <div id="score"></div>
+        <div id="score-marks"></div>
+      </div>
+    </section>
+
+    <script type="module" src="./page.ts"></script>
+  </body>
+</html>

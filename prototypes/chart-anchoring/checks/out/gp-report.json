@@ -1,0 +1,964 @@
+{
+  "files": 225,
+  "importFailures": [
+    {
+      "file": "Diminished to Be.gp5",
+      "error": "TypeError: undefined is not an object (evaluating 'nextVoice.beats')"
+    },
+    {
+      "file": "Mine - Garrett trent.gp5",
+      "error": "Error: Unexpected end of data within reader"
+    }
+  ],
+  "tokenUnstable": [],
+  "roundTrips": {
+    "alphaTex": {
+      "lossless": 154,
+      "lossy": [
+        {
+          "file": "August Burns Red - Speech Impediment.gp5",
+          "firstDiff": "track 4 voice 0 beat 163 (bar 12): 8:p0 -> 8:p38"
+        },
+        {
+          "file": "Between The Buried And Me - Son Of Nothing.gp5",
+          "firstDiff": "track 4 voice 0 beat 2563 (bar 315): 8:p3,p49 -> 8:p38,p49"
+        },
+        {
+          "file": "Between the Buried and Me - Alaska (ver 4 by rcw110131).gp4",
+          "firstDiff": "track 0 voice 0 beat 1323 (bar 192): empty -> undefined"
+        },
+        {
+          "file": "Between the Buried and Me - Sun of Nothing.gp5",
+          "firstDiff": "track 4 voice 0 beat 2563 (bar 315): 8:p3,p49 -> 8:p38,p49"
+        },
+        {
+          "file": "BotS - expulsion.gpx",
+          "firstDiff": "track 1 voice 0 beat 858 (bar 147): empty -> undefined"
+        },
+        {
+          "file": "BotS - latest.gpx",
+          "firstDiff": "track 0 voice 0 beat 924 (bar 128): empty -> undefined"
+        },
+        {
+          "file": "Colton - Shouting is Worth A Try.gp5",
+          "firstDiff": "track 0 voice 0 beat 306 (bar 84): empty -> undefined"
+        },
+        {
+          "file": "Dale - Modes in F.gp5",
+          "firstDiff": "track 0 voice 0 beat 261 (bar 16): empty -> undefined"
+        },
+        {
+          "file": "Daniel - Modes in A.gp5",
+          "firstDiff": "track 0 voice 0 beat 888 (bar 42): empty -> undefined"
+        },
+        {
+          "file": "Daniel - blackmetal sounding gayness.gpx",
+          "firstDiff": "track 0 voice 0 beat 378 (bar 32): empty -> undefined"
+        },
+        {
+          "file": "Daniel - broken down beats.gp5",
+          "firstDiff": "track 0 voice 0 beat 35 (bar 5): 8:p59 -> 8:p5"
+        },
+        {
+          "file": "Daniel - chonriff.gpx",
+          "firstDiff": "track 0 voice 0 beat 87 (bar 25): empty -> undefined"
+        },
+        {
+          "file": "Daniel - shes so heavy.gp5",
+          "firstDiff": "track 0 voice 0 beat 62 (bar 13): empty -> undefined"
+        },
+        {
+          "file": "Dysmetria - Subjugation-to-an-Image.gpx",
+          "firstDiff": "track 0 voice 0 beat 1292 (bar 219): empty -> undefined"
+        },
+        {
+          "file": "Ely - song2.gp5",
+          "firstDiff": "track 0 voice 0 beat 359 (bar 30): empty -> undefined"
+        },
+        {
+          "file": "Garrett - Cool Point Picking & Breakdown.gp5",
+          "firstDiff": "track 0 voice 0 beat 1019 (bar 74): empty -> undefined"
+        },
+        {
+          "file": "Garrett - NewCore1.gpx",
+          "firstDiff": "track 0 voice 0 beat 1764 (bar 149): empty -> undefined"
+        },
+        {
+          "file": "Garrett - song2.gp5",
+          "firstDiff": "track 0 voice 0 beat 136 (bar 16): empty -> undefined"
+        },
+        {
+          "file": "LDAH - Star Spangled Manor.gp5",
+          "firstDiff": "track 0 voice 0 beat 36 (bar 12): empty -> undefined"
+        },
+        {
+          "file": "Necrophagist - Diminished To Be (transcription).gpx",
+          "firstDiff": "track 0 voice 0 beat 795 (bar 138): empty -> undefined"
+        },
+        {
+          "file": "Trent - i could do somethign with this.gp5",
+          "firstDiff": "track 0 voice 0 beat 795 (bar 82): empty -> undefined"
+        },
+        {
+          "file": "Virulent - Soul Collector.gpx",
+          "firstDiff": "track 0 voice 0 beat 1992 (bar 278): empty -> undefined"
+        },
+        {
+          "file": "aal - cafo.gp5",
+          "firstDiff": "track 0 voice 0 beat 3322 (bar 179): empty -> undefined"
+        },
+        {
+          "file": "bots - iouygfdgfhj.gpx",
+          "firstDiff": "track 0 voice 0 beat 1170 (bar 144): empty -> undefined"
+        },
+        {
+          "file": "foam_born_the_backtrack.gp5",
+          "firstDiff": "track 0 voice 0 beat 113 (bar 71): empty -> undefined"
+        },
+        {
+          "file": "fugue - humor.gpx",
+          "firstDiff": "track 0 voice 0 beat 125 (bar 13): empty -> undefined"
+        },
+        {
+          "file": "fugue - maff.gpx",
+          "firstDiff": "track 0 voice 0 beat 26 (bar 11): empty -> undefined"
+        },
+        {
+          "file": "new_millenium_cyanide_christ_ver2.gp4",
+          "firstDiff": "track 3 voice 0 beat 4 (bar 0): 16:p0,p57 -> 16:p38,p57"
+        },
+        {
+          "file": "stillborn one.gpx",
+          "firstDiff": "track 0 voice 0 beat 395 (bar 64): empty -> undefined"
+        },
+        {
+          "file": "tempting_time.gp5",
+          "firstDiff": "track 0 voice 0 beat 1329 (bar 134): empty -> undefined"
+        },
+        {
+          "file": "there_is_no_business_to_be_done_on_a_dead_planet.gp5",
+          "firstDiff": "track 4 voice 0 beat 626 (bar 30): 8:p0,p36 -> 8:p36,p38"
+        },
+        {
+          "file": "viridian_ver4.gp5",
+          "firstDiff": "track 6 voice 0 beat 235 (bar 90): 4:p0 -> 4:p38"
+        }
+      ],
+      "failed": [
+        {
+          "file": "A Life Once Lost - Cavil.gp5",
+          "error": "There are errors in the parsed alphaTex, check the diagnostics for details"
+        },
+        {
+          "file": "Amon Amarth - The Fate of Norns.gp5",
+          "error": "There are errors in the parsed alphaTex, check the diagnostics for details"
+        },
+        {
+          "file": "As Blood Runs Black - My Fears Have Become Phobias.gp5",
+          "error": "There are errors in the parsed alphaTex, check the diagnostics for details"
+        },
+        {
+          "file": "Between The Buried And Me - Foam Born B The Decade Of Statues.gp5",
+          "error": "Error: Error parsing alphaTex, check diagnostics on inner error for details"
+        },
+        {
+          "file": "Between The Buried And Me - Informal Gluttony (2).gp5",
+          "error": "There are errors in the parsed alphaTex, check the diagnostics for details"
+        },
+        {
+          "file": "Between the Buried and Me - Selkies.gp5",
+          "error": "There are errors in the parsed alphaTex, check the diagnostics for details"
+        },
+        {
+          "file": "Blake - F#m.gp5",
+          "error": "There are errors in the parsed alphaTex, check the diagnostics for details"
+        },
+        {
+          "file": "Blake - Sexual Modes.gp5",
+          "error": "Error: What kind of note"
+        },
+        {
+          "file": "Carnival Resonance.gp5",
+          "error": "There are errors in the parsed alphaTex, check the diagnostics for details"
+        },
+        {
+          "file": "Carry On My Wayward Son.gp5",
+          "error": "There are errors in the parsed alphaTex, check the diagnostics for details"
+        },
+        {
+          "file": "Colton - Whip.gp5",
+          "error": "Error: What kind of note"
+        },
+        {
+          "file": "Colton - Wip.gp5",
+          "error": "Error: What kind of note"
+        },
+        {
+          "file": "Daniel - Double Bass Polyrhythms.gp5",
+          "error": "There are errors in the parsed alphaTex, check the diagnostics for details"
+        },
+        {
+          "file": "Daniel - rudiments.gp5",
+          "error": "There are errors in the parsed alphaTex, check the diagnostics for details"
+        },
+        {
+          "file": "Daniel - someShit.gp5",
+          "error": "There are errors in the parsed alphaTex, check the diagnostics for details"
+        },
+        {
+          "file": "Daniel - trips.gp5",
+          "error": "There are errors in the parsed alphaTex, check the diagnostics for details"
+        },
+        {
+          "file": "Ely - song3.gp5",
+          "error": "There are errors in the parsed alphaTex, check the diagnostics for details"
+        },
+        {
+          "file": "Ely - song4.gp5",
+          "error": "There are errors in the parsed alphaTex, check the diagnostics for details"
+        },
+        {
+          "file": "Garrett - Crazy Shiz.gp5",
+          "error": "There are errors in the parsed alphaTex, check the diagnostics for details"
+        },
+        {
+          "file": "Garrett - Melodic W Trent.gp5",
+          "error": "Error: What kind of note"
+        },
+        {
+          "file": "Garrett - NewCore.gp5",
+          "error": "There are errors in the parsed alphaTex, check the diagnostics for details"
+        },
+        {
+          "file": "Garrett - song1.gp5",
+          "error": "There are errors in the parsed alphaTex, check the diagnostics for details"
+        },
+        {
+          "file": "I Drums.gp5",
+          "error": "There are errors in the parsed alphaTex, check the diagnostics for details"
+        },
+        {
+          "file": "Porcupine Tree - Arriving Somewhere But Not Here.gp4",
+          "error": "There are errors in the parsed alphaTex, check the diagnostics for details"
+        },
+        {
+          "file": "SDJ - John Johnston.gp5",
+          "error": "There are errors in the parsed alphaTex, check the diagnostics for details"
+        },
+        {
+          "file": "SDJ - Viking Song.gp5",
+          "error": "There are errors in the parsed alphaTex, check the diagnostics for details"
+        },
+        {
+          "file": "TRH - 2.gpx",
+          "error": "Error: Error parsing alphaTex, check diagnostics on inner error for details"
+        },
+        {
+          "file": "Track1&2.gp5",
+          "error": "There are errors in the parsed alphaTex, check the diagnostics for details"
+        },
+        {
+          "file": "Track3 jazzy.gp5",
+          "error": "There are errors in the parsed alphaTex, check the diagnostics for details"
+        },
+        {
+          "file": "brace_legs_ver2.gp5",
+          "error": "Error: Error parsing alphaTex, check diagnostics on inner error for details"
+        },
+        {
+          "file": "i.gp5",
+          "error": "There are errors in the parsed alphaTex, check the diagnostics for details"
+        },
+        {
+          "file": "necrophagist_diminished_to_b (2).gp5",
+          "error": "Error: Error parsing alphaTex, check diagnostics on inner error for details"
+        },
+        {
+          "file": "opeth - hex_omega.gp5",
+          "error": "There are errors in the parsed alphaTex, check the diagnostics for details"
+        },
+        {
+          "file": "opeth - the_lotus_eater_ver2.gp5",
+          "error": "There are errors in the parsed alphaTex, check the diagnostics for details"
+        },
+        {
+          "file": "seven.gp3",
+          "error": "There are errors in the parsed alphaTex, check the diagnostics for details"
+        },
+        {
+          "file": "strife_chug_chug.gp5",
+          "error": "Error: Error parsing alphaTex, check diagnostics on inner error for details"
+        },
+        {
+          "file": "the_eyes_of_medusa.gp3",
+          "error": "Error: Error parsing alphaTex, check diagnostics on inner error for details"
+        }
+      ]
+    },
+    "gp7": {
+      "lossless": 72,
+      "lossy": [
+        {
+          "file": "3-4poly.gpx",
+          "firstDiff": "track 0 voice 0 beat 0 (bar 0): 4:p35,p51 -> 4:p104,p71"
+        },
+        {
+          "file": "5 over 4.gp5",
+          "firstDiff": "track 0 voice 0 beat 0 (bar 0): 8:p36 -> 8:p105"
+        },
+        {
+          "file": "7-8 shuffles.gp5",
+          "firstDiff": "track 3 voice 0 beat 0 (bar 0): 16:p36,p44,p57 -> 16:p105,p111,p64"
+        },
+        {
+          "file": "A Life Once Lost - Cavil.gp5",
+          "firstDiff": "track 3 voice 0 beat 1 (bar 0): 16:p36 -> 16:p105"
+        },
+        {
+          "file": "Amon Amarth - The Fate of Norns.gp5",
+          "firstDiff": "track 2 voice 0 beat 6 (bar 3): 8:p43,p45 -> 8:p108,p67"
+        },
+        {
+          "file": "An Endless Sporadic - Impulse.gp5",
+          "firstDiff": "track 1 voice 0 beat 8 (bar 8): 8:p36,p49 -> 8:p105,p62"
+        },
+        {
+          "file": "As Blood Runs Black - Hester Prynne.gp5",
+          "firstDiff": "track 3 voice 0 beat 1 (bar 0): 32:p36 -> 32:p105"
+        },
+        {
+          "file": "As Blood Runs Black - In Dying Days.gp5",
+          "firstDiff": "track 3 voice 0 beat 0 (bar 0): 1.:p36,p49 -> 1.:p105,p62"
+        },
+        {
+          "file": "As Blood Runs Black - Intro.gp5",
+          "firstDiff": "track 3 voice 0 beat 0 (bar 0): 16:p36,p49 -> 16:p105,p62"
+        },
+        {
+          "file": "As Blood Runs Black - My Fears Have Become Phobias.gp5",
+          "firstDiff": "track 3 voice 0 beat 0 (bar 0): 16:p36 -> 16:p105"
+        },
+        {
+          "file": "August Burns Red - Speech Impediment.gp5",
+          "firstDiff": "track 4 voice 0 beat 0 (bar 0): 8:p36,p44 -> 8:p105,p64"
+        },
+        {
+          "file": "Between The Buried And Me - Informal Gluttony (2).gp5",
+          "firstDiff": "track 5 voice 0 beat 47 (bar 47): 32:p49 -> 32:p62"
+        },
+        {
+          "file": "Between The Buried And Me - Son Of Nothing.gp5",
+          "firstDiff": "track 4 voice 0 beat 0 (bar 0): 16:p45 -> 16:p108"
+        },
+        {
+          "file": "Between the Buried and Me - Aesthetic.gp5",
+          "firstDiff": "track 1 voice 0 beat 0 (bar 0): 16:p36,p49 -> 16:p105,p62"
+        },
+        {
+          "file": "Between the Buried and Me - Alaska (ver 4 by rcw110131).gp4",
+          "firstDiff": "track 5 voice 0 beat 0 (bar 0): 2:p35,p49 -> 2:p104,p62"
+        },
+        {
+          "file": "Between the Buried and Me - Informal Gluttony.gp5",
+          "firstDiff": "track 1 voice 0 beat 14 (bar 14): 16:p36,p49 -> 16:p105,p62"
+        },
+        {
+          "file": "Between the Buried and Me - Mordecai.gp5",
+          "firstDiff": "track 5 voice 0 beat 12 (bar 11): 32:p36 -> 32:p105"
+        },
+        {
+          "file": "Between the Buried and Me - Selkies.gp5",
+          "firstDiff": "track 2 voice 0 beat 385 (bar 186): empty -> 8r:"
+        },
+        {
+          "file": "Between the Buried and Me - Sun of Nothing.gp5",
+          "firstDiff": "track 4 voice 0 beat 0 (bar 0): 16:p45 -> 16:p108"
+        },
+        {
+          "file": "Blake - F#m.gp5",
+          "firstDiff": "track 4 voice 0 beat 0 (bar 0): 16:p40 -> 16:p66"
+        },
+        {
+          "file": "Blake - Sexual Modes.gp5",
+          "firstDiff": "track 5 voice 0 beat 0 (bar 0): 8:p36,p41,p43 -> 8:p105,p65,p67"
+        },
+        {
+          "file": "BotS - expulsion.gpx",
+          "firstDiff": "track 1 voice 0 beat 0 (bar 0): 4:p35,p38 -> 4:p104,p106"
+        },
+        {
+          "file": "BotS - new.gpx",
+          "firstDiff": "track 2 voice 0 beat 1 (bar 1): 16:p38 -> 16:p106"
+        },
+        {
+          "file": "BotS - newest.gpx",
+          "firstDiff": "track 3 voice 0 beat 0 (bar 0): 4:p37 -> 4:p61"
+        },
+        {
+          "file": "Carnival Resonance.gp5",
+          "firstDiff": "track 11 voice 0 beat 37 (bar 36): 4:p46 -> 4:p109"
+        },
+        {
+          "file": "Carry On My Wayward Son.gp5",
+          "firstDiff": "track 6 voice 0 beat 9 (bar 6): 16:p36 -> 16:p105"
+        },
+        {
+          "file": "Colton - Shouting is Worth A Try.gp5",
+          "firstDiff": "track 2 voice 0 beat 0 (bar 0): 16:p36,p42 -> 16:p105,p68"
+        },
+        {
+          "file": "Colton - Whip.gp5",
+          "firstDiff": "track 3 voice 0 beat 0 (bar 0): 16:p36,p49 -> 16:p105,p62"
+        },
+        {
+          "file": "Colton - Whip.gpx",
+          "firstDiff": "track 3 voice 0 beat 0 (bar 0): 16:p35,p57 -> 16:p104,p111"
+        },
+        {
+          "file": "Colton - Wip.gp5",
+          "firstDiff": "track 3 voice 0 beat 0 (bar 0): 16:p36,p49 -> 16:p105,p62"
+        },
+        {
+          "file": "Colton - bumbumbum.gp5",
+          "firstDiff": "track 2 voice 0 beat 18 (bar 18): 16:p36,p46 -> 16:p105,p109"
+        },
+        {
+          "file": "Colton - bumbumbum.gpx",
+          "firstDiff": "track 2 voice 0 beat 36 (bar 18): 16:p35,p46 -> 16:p104,p109"
+        },
+        {
+          "file": "Colton - dickbeater.gp5",
+          "firstDiff": "track 2 voice 0 beat 2 (bar 2): 16:p36,p49 -> 16:p105,p62"
+        },
+        {
+          "file": "Colton - dickbeater.gpx",
+          "firstDiff": "track 2 voice 0 beat 4 (bar 2): 16:p35,p57 -> 16:p104,p111"
+        },
+        {
+          "file": "Colton-bitch spent all my money on vegetables.gp5",
+          "firstDiff": "track 2 voice 0 beat 18 (bar 18): 16:p36,p46 -> 16:p105,p109"
+        },
+        {
+          "file": "Colton-bitch spent all my money on vegetables.gpx",
+          "firstDiff": "track 2 voice 0 beat 36 (bar 18): 16:p35,p46 -> 16:p104,p109"
+        },
+        {
+          "file": "Dale - Modes in F.gp5",
+          "firstDiff": "track 1 voice 0 beat 0 (bar 0): 16:p37 -> 16:p61"
+        },
+        {
+          "file": "Dan - arp harm.gpx",
+          "firstDiff": "track 2 voice 0 beat 0 (bar 0): 8:p35,p49 -> 8:p104,p62"
+        },
+        {
+          "file": "Dan - new riff.gpx",
+          "firstDiff": "track 1 voice 0 beat 0 (bar 0): 2:p49,p57 -> 2:p111,p62"
+        },
+        {
+          "file": "Dan-latinbeats.gpx",
+          "firstDiff": "track 0 voice 0 beat 1 (bar 0): 16:p38 -> 16:p106"
+        },
+        {
+          "file": "Daniel - 58 beat.gp5",
+          "firstDiff": "track 1 voice 0 beat 0 (bar 0): 16:p36,p57 -> 16:p105,p111"
+        },
+        {
+          "file": "Daniel - 58 beat.gpx",
+          "firstDiff": "track 0 voice 0 beat 0 (bar 0): 8:p51 -> 8:p71"
+        },
+        {
+          "file": "Daniel - 64ths.gpx",
+          "firstDiff": "track 0 voice 0 beat 0 (bar 0): 4:p46 -> 4:p109"
+        },
+        {
+          "file": "Daniel - 7-8 shuffles.gp4",
+          "firstDiff": "track 3 voice 0 beat 0 (bar 0): 16:p36,p44,p57 -> 16:p105,p111,p64"
+        },
+        {
+          "file": "Daniel - 7-8 shuffles.gp5",
+          "firstDiff": "track 3 voice 0 beat 0 (bar 0): 16:p36,p44,p57 -> 16:p105,p111,p64"
+        },
+        {
+          "file": "Daniel - 7-8 shuffles.gpx",
+          "firstDiff": "track 3 voice 0 beat 0 (bar 0): 16:p35,p44,p49 -> 16:p104,p62,p64"
+        },
+        {
+          "file": "Daniel - A Vulgar Picture brain dump.gp5",
+          "firstDiff": "track 2 voice 0 beat 0 (bar 0): 16:p36,p40,p49 -> 16:p105,p62,p66"
+        },
+        {
+          "file": "Daniel - BlastBeats.gp5",
+          "firstDiff": "track 0 voice 0 beat 0 (bar 0): 16:p36,p40,p49 -> 16:p105,p62,p66"
+        },
+        {
+          "file": "Daniel - Crazy.gp5",
+          "firstDiff": "track 3 voice 0 beat 0 (bar 0): 16:p36,p49 -> 16:p105,p62"
+        },
+        {
+          "file": "Daniel - Crazy.gpx",
+          "firstDiff": "track 3 voice 0 beat 0 (bar 0): 16:p35,p57 -> 16:p104,p111"
+        },
+        {
+          "file": "Daniel - Double Bass Polyrhythms.gp5",
+          "firstDiff": "track 1 voice 0 beat 0 (bar 0): 16:p36,p40,p49 -> 16:p105,p62,p66"
+        },
+        {
+          "file": "Daniel - Endurance.gp5",
+          "firstDiff": "track 0 voice 0 beat 0 (bar 0): 8:p33,p34 -> 8:p60,p76"
+        },
+        {
+          "file": "Daniel - Jam.gp5",
+          "firstDiff": "track 1 voice 0 beat 0 (bar 0): 8:p59 -> 8:p113"
+        },
+        {
+          "file": "Daniel - Modes in A.gp5",
+          "firstDiff": "track 1 voice 0 beat 0 (bar 0): 16:p37 -> 16:p61"
+        },
+        {
+          "file": "Daniel - Modes in A.gpx",
+          "firstDiff": "track 1 voice 0 beat 0 (bar 0): 16:p37 -> 16:p61"
+        },
+        {
+          "file": "Daniel - Stone Breaker.gp5",
+          "firstDiff": "track 0 voice 0 beat 0 (bar 0): 16:p36 -> 16:p105"
+        },
+        {
+          "file": "Daniel - addfsg.gp5",
+          "firstDiff": "track 0 voice 0 beat 0 (bar 0): 4:p36,p53 -> 4:p105,p74"
+        },
+        {
+          "file": "Daniel - blackmetal sounding gayness.gpx",
+          "firstDiff": "track 3 voice 0 beat 0 (bar 0): 16:p35,p49 -> 16:p104,p62"
+        },
+        {
+          "file": "Daniel - bleed stuff.gp5",
+          "firstDiff": "track 1 voice 0 beat 0 (bar 0): 32:p36,p49 -> 32:p105,p62"
+        },
+        {
+          "file": "Daniel - boomchick.gp5",
+          "firstDiff": "track 1 voice 0 beat 0 (bar 0): 16:p40 -> 16:p66"
+        },
+        {
+          "file": "Daniel - broken down beats.gp5",
+          "firstDiff": "track 0 voice 0 beat 0 (bar 0): 8:p59 -> 8:p113"
+        },
+        {
+          "file": "Daniel - chonriff.gpx",
+          "firstDiff": "track 2 voice 0 beat 4 (bar 4): 8:p35,p57 -> 8:p104,p111"
+        },
+        {
+          "file": "Daniel - derp.gp5",
+          "firstDiff": "track 1 voice 0 beat 0 (bar 0): 16:p36,p49 -> 16:p105,p62"
+        },
+        {
+          "file": "Daniel - doubles exercise.gpx",
+          "firstDiff": "track 0 voice 0 beat 0 (bar 0): 16:p38 -> 16:p106"
+        },
+        {
+          "file": "Daniel - newish.gp5",
+          "firstDiff": "track 3 voice 0 beat 0 (bar 0): 16:p36,p49 -> 16:p105,p62"
+        },
+        {
+          "file": "Daniel - polymeters.gp5",
+          "firstDiff": "track 0 voice 0 beat 0 (bar 0): 8:p36,p49,p53 -> 8:p105,p62,p74"
+        },
+        {
+          "file": "Daniel - quints.gpx",
+          "firstDiff": "track 3 voice 0 beat 0 (bar 0): 16:p35 -> 16:p104"
+        },
+        {
+          "file": "Daniel - rudiments.gp5",
+          "firstDiff": "track 0 voice 0 beat 0 (bar 0): 16:p36,p40 -> 16:p105,p66"
+        },
+        {
+          "file": "Daniel - shufflin round.gp5",
+          "firstDiff": "track 0 voice 0 beat 0 (bar 0): 16:p36,p49 -> 16:p105,p62"
+        },
+        {
+          "file": "Daniel - sita.gp5",
+          "firstDiff": "track 1 voice 0 beat 0 (bar 0): 16:p36,p40,p52 -> 16:p105,p66,p73"
+        },
+        {
+          "file": "Daniel - someShit.gp5",
+          "firstDiff": "track 3 voice 0 beat 0 (bar 0): 32:p36,p40,p49 -> 32:p105,p62,p66"
+        },
+        {
+          "file": "Daniel - someShit.gpx",
+          "firstDiff": "track 1 voice 0 beat 0 (bar 0): 32:p35,p38,p57 -> 32:p104,p106,p111"
+        },
+        {
+          "file": "Daniel - thing.gp5",
+          "firstDiff": "track 0 voice 0 beat 0 (bar 0): 8:p40,p52 -> 8:p66,p73"
+        },
+        {
+          "file": "Daniel - triplet paradiddle-diddles etc.gpx",
+          "firstDiff": "track 0 voice 0 beat 0 (bar 0): 8:p38 -> 8:p106"
+        },
+        {
+          "file": "Daniel - trips.gp5",
+          "firstDiff": "track 0 voice 0 beat 0 (bar 0): 16:p36,p44,p57 -> 16:p105,p111,p64"
+        },
+        {
+          "file": "Dillinger Escape Plan (The) - 43% Burnt.gp5",
+          "firstDiff": "track 3 voice 0 beat 1 (bar 0): 16:p36 -> 16:p105"
+        },
+        {
+          "file": "Drum Practice.gp5",
+          "firstDiff": "track 0 voice 0 beat 0 (bar 0): 16:p40 -> 16:p66"
+        },
+        {
+          "file": "Dysmetria - Subjugation-to-an-Image.gpx",
+          "firstDiff": "track 2 voice 0 beat 0 (bar 0): 16:p38 -> 16:p106"
+        },
+        {
+          "file": "Elastic.gp5",
+          "firstDiff": "track 1 voice 0 beat 0 (bar 0): 8:p36,p49 -> 8:p105,p62"
+        },
+        {
+          "file": "Ely - song1.gp5",
+          "firstDiff": "track 3 voice 0 beat 0 (bar 0): 16:p36,p40,p49 -> 16:p105,p62,p66"
+        },
+        {
+          "file": "Ely - song2.gp5",
+          "firstDiff": "track 1 voice 0 beat 2 (bar 1): 16:p36 -> 16:p105"
+        },
+        {
+          "file": "Ely - song3.gp5",
+          "firstDiff": "track 2 voice 0 beat 2 (bar 2): 16:p36,p40,p52 -> 16:p105,p66,p73"
+        },
+        {
+          "file": "Ely - song4.gp5",
+          "firstDiff": "track 1 voice 0 beat 0 (bar 0): 32:p36,p46 -> 32:p105,p109"
+        },
+        {
+          "file": "Fallujah - The Flame Surreal (Pro).gpx",
+          "firstDiff": "track 5 voice 0 beat 18 (bar 16): 16:p38 -> 16:p106"
+        },
+        {
+          "file": "Folk.gpx",
+          "firstDiff": "track 1 voice 0 beat 0 (bar 0): 8.:p35 -> 8.:p104"
+        },
+        {
+          "file": "Garrett - Cool Point Picking & Breakdown.gp5",
+          "firstDiff": "track 3 voice 0 beat 0 (bar 0): 32:p40 -> 32:p66"
+        },
+        {
+          "file": "Garrett - Crazy Shiz.gp5",
+          "firstDiff": "track 4 voice 0 beat 2 (bar 1): 16:p40 -> 16:p66"
+        },
+        {
+          "file": "Garrett - Deathcore.gp5",
+          "firstDiff": "track 3 voice 0 beat 0 (bar 0): 32:p40 -> 32:p66"
+        },
+        {
+          "file": "Garrett - MeloDeathcore.gp5",
+          "firstDiff": "track 4 voice 0 beat 0 (bar 0): 32:p40 -> 32:p66"
+        },
+        {
+          "file": "Garrett - MeloDeathcore3.gp5",
+          "firstDiff": "track 5 voice 0 beat 0 (bar 0): 32:p40 -> 32:p66"
+        },
+        {
+          "file": "Garrett - MeloDeathcore3.gpx",
+          "firstDiff": "track 6 voice 0 beat 0 (bar 0): 32:p38 -> 32:p106"
+        },
+        {
+          "file": "Garrett - Melodic W Trent.gp5",
+          "firstDiff": "track 4 voice 0 beat 0 (bar 0): 1:p36,p49 -> 1:p105,p62"
+        },
+        {
+          "file": "Garrett - NewCore.gp5",
+          "firstDiff": "track 6 voice 0 beat 0 (bar 0): 32:p36,p49 -> 32:p105,p62"
+        },
+        {
+          "file": "Garrett - NewCore1.gpx",
+          "firstDiff": "track 6 voice 0 beat 0 (bar 0): 32:p35,p57 -> 32:p104,p111"
+        },
+        {
+          "file": "Garrett - PenatonicMinorShredCore.gpx",
+          "firstDiff": "track 4 voice 0 beat 2 (bar 1): 16:p38 -> 16:p106"
+        },
+        {
+          "file": "Garrett - song1.gp5",
+          "firstDiff": "track 3 voice 0 beat 1 (bar 1): 8:p36,p49 -> 8:p105,p62"
+        },
+        {
+          "file": "Garrett - song4.gp5",
+          "firstDiff": "track 3 voice 0 beat 0 (bar 0): 32:p40 -> 32:p66"
+        },
+        {
+          "file": "I Drums.gp5",
+          "firstDiff": "track 0 voice 0 beat 0 (bar 0): 16:p40 -> 16:p66"
+        },
+        {
+          "file": "Killswitch Engage - My Curse (ver 5 by KSE21).gpx",
+          "firstDiff": "track 7 voice 0 beat 32 (bar 16): 8:p35,p49 -> 8:p104,p62"
+        },
+        {
+          "file": "Linear patterns.gpx",
+          "firstDiff": "track 0 voice 0 beat 0 (bar 0): 8:p57 -> 8:p111"
+        },
+        {
+          "file": "Porcupine Tree - Arriving Somewhere But Not Here.gp4",
+          "firstDiff": "track 7 voice 0 beat 16 (bar 16): 16:p82 -> 16:p124"
+        },
+        {
+          "file": "Rudimental Cookbook - Diddles-R-Us.gpx",
+          "firstDiff": "track 0 voice 0 beat 0 (bar 0): 4:p38 -> 4:p106"
+        },
+        {
+          "file": "Rudimental Cookbook - Hot Licks.gpx",
+          "firstDiff": "track 0 voice 0 beat 0 (bar 0): 8:p38 -> 8:p106"
+        },
+        {
+          "file": "Rudimental Cookbook - Single Strokin'.gpx",
+          "firstDiff": "track 0 voice 0 beat 0 (bar 0): 8:p38 -> 8:p106"
+        },
+        {
+          "file": "Rudimental Cookbook - Triple Crown.gpx",
+          "firstDiff": "track 0 voice 0 beat 0 (bar 0): 8:p38 -> 8:p106"
+        },
+        {
+          "file": "Rudimental Cookbook - What A Drag.gpx",
+          "firstDiff": "track 0 voice 0 beat 0 (bar 0): 16:p38 -> 16:p106"
+        },
+        {
+          "file": "Ruind - Led Pendant.gp5",
+          "firstDiff": "track 3 voice 0 beat 0 (bar 0): 16:p36,p49 -> 16:p105,p62"
+        },
+        {
+          "file": "SDJ - John Johnston.gp5",
+          "firstDiff": "track 1 voice 0 beat 0 (bar 0): 8:p36,p49 -> 8:p105,p62"
+        },
+        {
+          "file": "SDJ - Viking Song.gp5",
+          "firstDiff": "track 2 voice 0 beat 4 (bar 4): 16:p36,p49 -> 16:p105,p62"
+        },
+        {
+          "file": "She's Dead Jim - Kind of Like Deliverence, but With Significantly Less Man-on-Man Action.gpx",
+          "firstDiff": "track 3 voice 0 beat 0 (bar 0): 8:p35,p57 -> 8:p104,p111"
+        },
+        {
+          "file": "She's Dead Jim - Pun Jab.gpx",
+          "firstDiff": "track 3 voice 0 beat 0 (bar 0): 16:p35,p57 -> 16:p104,p111"
+        },
+        {
+          "file": "She's Dead Jim - Subtle Annhilation.gpx",
+          "firstDiff": "track 3 voice 0 beat 0 (bar 0): 8:p38,p46 -> 8:p106,p109"
+        },
+        {
+          "file": "TRH - 1.gpx",
+          "firstDiff": "track 4 voice 0 beat 0 (bar 0): 16:p49 -> 16:p62"
+        },
+        {
+          "file": "The Faceless - Pestilence (Pro).gp5",
+          "firstDiff": "track 5 voice 0 beat 0 (bar 0): 16.:p36,p49 -> 16.:p105,p62"
+        },
+        {
+          "file": "Track1&2.gp5",
+          "firstDiff": "track 6 voice 0 beat 9 (bar 9): 1:p36,p49,p57 -> 1:p105,p111,p62"
+        },
+        {
+          "file": "Track3 jazzy.gp5",
+          "firstDiff": "track 3 voice 0 beat 0 (bar 0): 4:p36,p44,p74 -> 4:p105,p119,p64"
+        },
+        {
+          "file": "Trent - i could do somethign with this.gp5",
+          "firstDiff": "track 5 voice 0 beat 9 (bar 7): 8:p37,p42 -> 8:p61,p68"
+        },
+        {
+          "file": "Virulent - Drones.gpx",
+          "firstDiff": "track 3 voice 0 beat 0 (bar 0): 4:p49 -> 4:p62"
+        },
+        {
+          "file": "Virulent - Sentenced to Death.gp5",
+          "firstDiff": "track 1 voice 0 beat 171 (bar 171): 8:p36 -> 8:p105"
+        },
+        {
+          "file": "Virulent - Sentenced to Death.gpx",
+          "firstDiff": "track 1 voice 0 beat 342 (bar 171): 8:p35 -> 8:p104"
+        },
+        {
+          "file": "Virulent - The Other 99.gpx",
+          "firstDiff": "track 2 voice 0 beat 9 (bar 9): 4:p35,p57 -> 4:p104,p111"
+        },
+        {
+          "file": "Virulent - They Live.gp5",
+          "firstDiff": "track 2 voice 0 beat 1 (bar 0): 16:p36 -> 16:p105"
+        },
+        {
+          "file": "Virulent - They Live.gpx",
+          "firstDiff": "track 1 voice 0 beat 1 (bar 0): 16:p35 -> 16:p104"
+        },
+        {
+          "file": "aal - Song of solomon-2.gp5",
+          "firstDiff": "track 5 voice 0 beat 45 (bar 45): 8:p36,p49,p57 -> 8:p105,p111,p62"
+        },
+        {
+          "file": "aal - cafo.gp5",
+          "firstDiff": "track 2 voice 0 beat 10 (bar 0): 16:p40 -> 16:p66"
+        },
+        {
+          "file": "brace_legs_ver2.gp5",
+          "firstDiff": "track 2 voice 0 beat 0 (bar 0): 16:p40 -> 16:p66"
+        },
+        {
+          "file": "daniel - black prog.gp5",
+          "firstDiff": "track 3 voice 0 beat 0 (bar 0): 32:p36,p49 -> 32:p105,p62"
+        },
+        {
+          "file": "faceless - hypocrisy.gp5",
+          "firstDiff": "track 1 voice 0 beat 0 (bar 0): 16:p36,p40 -> 16:p105,p66"
+        },
+        {
+          "file": "foam_born_the_backtrack.gp5",
+          "firstDiff": "track 9 voice 0 beat 26 (bar 26): 8:p38,p45 -> 8:p106,p108"
+        },
+        {
+          "file": "fruits warmup.gpx",
+          "firstDiff": "track 0 voice 0 beat 0 (bar 0): 16:p38 -> 16:p106"
+        },
+        {
+          "file": "fruits.gpx",
+          "firstDiff": "track 0 voice 0 beat 0 (bar 0): 1:p38 -> 1:p106"
+        },
+        {
+          "file": "fugue - humor.gpx",
+          "firstDiff": "track 0 voice 0 beat 2 (bar 2): 4:p35 -> 4:p104"
+        },
+        {
+          "file": "fugue - maff.gpx",
+          "firstDiff": "track 0 voice 0 beat 10 (bar 10): 16:p35 -> 16:p104"
+        },
+        {
+          "file": "hypocrisy.gp5",
+          "firstDiff": "track 1 voice 0 beat 0 (bar 0): 16:p36,p40 -> 16:p105,p66"
+        },
+        {
+          "file": "i.gp5",
+          "firstDiff": "track 6 voice 0 beat 0 (bar 0): 16:p45 -> 16:p108"
+        },
+        {
+          "file": "incremental 16ths.gpx",
+          "firstDiff": "track 0 voice 0 beat 0 (bar 0): 8:p38 -> 8:p106"
+        },
+        {
+          "file": "japanese 2-4.gpx",
+          "firstDiff": "track 0 voice 0 beat 2 (bar 0): 8:p38 -> 8:p106"
+        },
+        {
+          "file": "necrophagist_diminished_to_b (2).gp5",
+          "firstDiff": "track 4 voice 0 beat 0 (bar 0): 4:p40 -> 4:p66"
+        },
+        {
+          "file": "new_millenium_cyanide_christ_ver2.gp4",
+          "firstDiff": "track 3 voice 0 beat 0 (bar 0): 16:p36,p49,p57 -> 16:p105,p111,p62"
+        },
+        {
+          "file": "opeth - hex_omega.gp5",
+          "firstDiff": "track 7 voice 0 beat 0 (bar 0): 16:p36,p57 -> 16:p105,p111"
+        },
+        {
+          "file": "opeth - the_lotus_eater_ver2.gp5",
+          "firstDiff": "track 3 voice 0 beat 8 (bar 5): 16:p48 -> 16:p110"
+        },
+        {
+          "file": "pacmanthemovie - Hellzzz Kitchen.gpx",
+          "firstDiff": "track 0 voice 0 beat 0 (bar 0): 4:p44 -> 4:p64"
+        },
+        {
+          "file": "porno.gp5",
+          "firstDiff": "track 2 voice 0 beat 0 (bar 0): 8:p36,p46 -> 8:p105,p109"
+        },
+        {
+          "file": "prison_born.gp5",
+          "firstDiff": "track 3 voice 0 beat 0 (bar 0): 4:p42 -> 4:p68"
+        },
+        {
+          "file": "seven.gp3",
+          "firstDiff": "track 4 voice 0 beat 1 (bar 1): 16:p36,p52 -> 16:p105,p73"
+        },
+        {
+          "file": "strife_chug_chug.gp5",
+          "firstDiff": "track 4 voice 0 beat 0 (bar 0): 4:p35,p49 -> 4:p104,p62"
+        },
+        {
+          "file": "tempting_time.gp5",
+          "firstDiff": "track 3 voice 0 beat 0 (bar 0): 16:p31,p69,p85 -> 16:p103,p117,p40"
+        },
+        {
+          "file": "the_eyes_of_medusa.gp3",
+          "firstDiff": "track 5 voice 0 beat 0 (bar 0): 8:p42 -> 8:p68"
+        },
+        {
+          "file": "there_is_no_business_to_be_done_on_a_dead_planet.gp5",
+          "firstDiff": "track 4 voice 0 beat 0 (bar 0): 8:p36,p57 -> 8:p105,p111"
+        },
+        {
+          "file": "through_the_fire_and_flames_ver5.gp3",
+          "firstDiff": "track 5 voice 0 beat 0 (bar 0): 4:p36,p46 -> 4:p105,p109"
+        },
+        {
+          "file": "viridian_ver4.gp5",
+          "firstDiff": "track 6 voice 0 beat 0 (bar 0): 4:p49,p57 -> 4:p111,p62"
+        }
+      ],
+      "failed": []
+    }
+  },
+  "anchors": {
+    "recorded": {
+      "insert-bar-before": {
+        "correct": 2369,
+        "lost": 0,
+        "wrong": 0,
+        "indistinguishable": 0
+      },
+      "delete-bar-before": {
+        "correct": 2218,
+        "lost": 0,
+        "wrong": 0,
+        "indistinguishable": 0
+      },
+      "change-marked-beat": {
+        "correct": 2369,
+        "lost": 0,
+        "wrong": 0,
+        "indistinguishable": 0
+      },
+      "delete-marked-bar": {
+        "correct": 2369,
+        "lost": 0,
+        "wrong": 0,
+        "indistinguishable": 0
+      }
+    },
+    "diffed": {
+      "insert-bar-before": {
+        "correct": 2240,
+        "lost": 129,
+        "wrong": 0,
+        "indistinguishable": 0
+      },
+      "delete-bar-before": {
+        "correct": 2126,
+        "lost": 92,
+        "wrong": 0,
+        "indistinguishable": 0
+      },
+      "change-marked-beat": {
+        "correct": 2369,
+        "lost": 0,
+        "wrong": 0,
+        "indistinguishable": 0
+      },
+      "delete-marked-bar": {
+        "correct": 2369,
+        "lost": 0,
+        "wrong": 0,
+        "indistinguishable": 0
+      }
+    }
+  },
+  "wrongSamples": []
+}

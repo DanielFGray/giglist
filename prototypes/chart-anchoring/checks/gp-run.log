@@ -1,0 +1,632 @@
+[AlphaTab][AlphaTex] Error while parsing alphaTex: There are errors in the parsed alphaTex, check the diagnostics for details
+lexer diagnostics:
+
+parser diagnostics:
+
+semantic diagnostics:
+  Error AT218(946,7)->(946,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+[AlphaTab][AlphaTex] Error while parsing alphaTex: There are errors in the parsed alphaTex, check the diagnostics for details
+lexer diagnostics:
+
+parser diagnostics:
+
+semantic diagnostics:
+  Error AT218(748,7)->(748,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(752,7)->(752,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+[AlphaTab][AlphaTex] Error while parsing alphaTex: There are errors in the parsed alphaTex, check the diagnostics for details
+lexer diagnostics:
+
+parser diagnostics:
+
+semantic diagnostics:
+  Error AT218(5372,7)->(5372,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][AlphaTex] Error while parsing alphaTex: There are errors in the parsed alphaTex, check the diagnostics for details
+lexer diagnostics:
+
+parser diagnostics:
+  Error AT206(50,16)->(50,16): Unexpected end of file. Group not closed.
+  Error AT202(50,18)->(50,19): Unexpected 'RBrace' token. Expected one of following: Number,String,Ident
+semantic diagnostics:
+
+[AlphaTab][AlphaTex] Error while parsing alphaTex: There are errors in the parsed alphaTex, check the diagnostics for details
+lexer diagnostics:
+
+parser diagnostics:
+
+semantic diagnostics:
+  Error AT218(8663,9)->(8663,11): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(8671,9)->(8671,11): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(8674,9)->(8674,11): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(8693,9)->(8693,11): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(8728,9)->(8728,11): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(8854,9)->(8854,11): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(9221,9)->(9221,11): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(9307,9)->(9307,11): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(9423,9)->(9423,11): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(9474,9)->(9474,11): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(9477,9)->(9477,11): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(10137,9)->(10137,11): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(10140,9)->(10140,11): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(10157,9)->(10157,11): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(10160,9)->(10160,11): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(10394,9)->(10394,11): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(10398,9)->(10398,11): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(10402,9)->(10402,11): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(10447,9)->(10447,11): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(10450,9)->(10450,11): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(10489,9)->(10489,11): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(10496,9)->(10496,11): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(10517,9)->(10517,11): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(10520,9)->(10520,11): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(10541,9)->(10541,11): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][AlphaTex] Error while parsing alphaTex: There are errors in the parsed alphaTex, check the diagnostics for details
+lexer diagnostics:
+
+parser diagnostics:
+
+semantic diagnostics:
+  Error AT218(9296,7)->(9296,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(9331,7)->(9331,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(9443,7)->(9443,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+[AlphaTab][AlphaTex] Error while parsing alphaTex: There are errors in the parsed alphaTex, check the diagnostics for details
+lexer diagnostics:
+
+parser diagnostics:
+
+semantic diagnostics:
+  Error AT218(3403,7)->(3403,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(3411,7)->(3411,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(3420,7)->(3420,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(3455,7)->(3455,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][AlphaTex] Error while parsing alphaTex: There are errors in the parsed alphaTex, check the diagnostics for details
+lexer diagnostics:
+
+parser diagnostics:
+
+semantic diagnostics:
+  Error AT218(10547,7)->(10547,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(10587,7)->(10587,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(10726,7)->(10726,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(10828,7)->(10828,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(10847,7)->(10847,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(11157,7)->(11157,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(11213,7)->(11213,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(11455,7)->(11455,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][AlphaTex] Error while parsing alphaTex: There are errors in the parsed alphaTex, check the diagnostics for details
+lexer diagnostics:
+
+parser diagnostics:
+
+semantic diagnostics:
+  Error AT218(4348,7)->(4348,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][AlphaTex] Error while parsing alphaTex: There are errors in the parsed alphaTex, check the diagnostics for details
+lexer diagnostics:
+
+parser diagnostics:
+
+semantic diagnostics:
+  Error AT218(191,7)->(191,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(199,7)->(199,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(209,7)->(209,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(221,7)->(221,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+[AlphaTab][AlphaTex] Error while parsing alphaTex: There are errors in the parsed alphaTex, check the diagnostics for details
+lexer diagnostics:
+
+parser diagnostics:
+
+semantic diagnostics:
+  Error AT218(90,7)->(90,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(94,7)->(94,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(98,7)->(98,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(102,7)->(102,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(110,7)->(110,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(113,7)->(113,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(116,7)->(116,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(119,7)->(119,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(126,7)->(126,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(131,7)->(131,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(134,7)->(134,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(139,7)->(139,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(146,7)->(146,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(151,7)->(151,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(159,7)->(159,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(164,7)->(164,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(172,7)->(172,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(179,7)->(179,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(188,7)->(188,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(195,7)->(195,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(208,7)->(208,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(210,7)->(210,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(214,7)->(214,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(216,7)->(216,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(221,7)->(221,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(225,7)->(225,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(229,7)->(229,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(233,7)->(233,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+[AlphaTab][AlphaTex] Error while parsing alphaTex: There are errors in the parsed alphaTex, check the diagnostics for details
+lexer diagnostics:
+
+parser diagnostics:
+
+semantic diagnostics:
+  Error AT218(944,7)->(944,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(946,7)->(946,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(1016,7)->(1016,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(1018,7)->(1018,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+[AlphaTab][AlphaTex] Error while parsing alphaTex: There are errors in the parsed alphaTex, check the diagnostics for details
+lexer diagnostics:
+
+parser diagnostics:
+
+semantic diagnostics:
+  Error AT218(79,7)->(79,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+[AlphaTab][ScoreLoader] Score import failed due to unexpected error:  3067 | 		if (beat.index < this.beats.length - 1) {
+3068 | 			beat.nextBeat = this.beats[beat.index + 1];
+3069 | 			beat.nextBeat.previousBeat = beat;
+3070 | 		} else if (beat.isLastOfVoice && beat.voice.bar.nextBar) {
+3071 | 			const nextVoice = this.bar.nextBar.voices[this.index];
+3072 | 			if (nextVoice.beats.length > 0) {
+              ^
+TypeError: undefined is not an object (evaluating 'nextVoice.beats')
+      at _chain (/home/dan/build/setlist/prototypes/chart-anchoring/node_modules/@coderline/alphatab/dist/alphaTab.core.mjs:3072:8)
+      at finish (/home/dan/build/setlist/prototypes/chart-anchoring/node_modules/@coderline/alphatab/dist/alphaTab.core.mjs:3103:9)
+      at finish (/home/dan/build/setlist/prototypes/chart-anchoring/node_modules/@coderline/alphatab/dist/alphaTab.core.mjs:2272:10)
+      at finish (/home/dan/build/setlist/prototypes/chart-anchoring/node_modules/@coderline/alphatab/dist/alphaTab.core.mjs:12473:17)
+      at finish (/home/dan/build/setlist/prototypes/chart-anchoring/node_modules/@coderline/alphatab/dist/alphaTab.core.mjs:12682:6)
+      at finish (/home/dan/build/setlist/prototypes/chart-anchoring/node_modules/@coderline/alphatab/dist/alphaTab.core.mjs:3567:70)
+      at readScore (/home/dan/build/setlist/prototypes/chart-anchoring/node_modules/@coderline/alphatab/dist/alphaTab.core.mjs:17966:15)
+      at loadScoreFromBytes (/home/dan/build/setlist/prototypes/chart-anchoring/node_modules/@coderline/alphatab/dist/alphaTab.core.mjs:30220:22)
+      at /home/dan/build/setlist/prototypes/chart-anchoring/checks/gp-corpus.ts:52:34
+
+[AlphaTab][AlphaTex] Error while parsing alphaTex: There are errors in the parsed alphaTex, check the diagnostics for details
+lexer diagnostics:
+
+parser diagnostics:
+
+semantic diagnostics:
+  Error AT218(1963,7)->(1963,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(1966,7)->(1966,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(1968,7)->(1968,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(1971,7)->(1971,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][AlphaTex] Error while parsing alphaTex: There are errors in the parsed alphaTex, check the diagnostics for details
+lexer diagnostics:
+
+parser diagnostics:
+
+semantic diagnostics:
+  Error AT218(1582,7)->(1582,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+[AlphaTab][AlphaTex] Error while parsing alphaTex: There are errors in the parsed alphaTex, check the diagnostics for details
+lexer diagnostics:
+
+parser diagnostics:
+
+semantic diagnostics:
+  Error AT218(5635,7)->(5635,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(6257,7)->(6257,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+[AlphaTab][AlphaTex] Error while parsing alphaTex: There are errors in the parsed alphaTex, check the diagnostics for details
+lexer diagnostics:
+
+parser diagnostics:
+
+semantic diagnostics:
+  Error AT218(8173,7)->(8173,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(8176,7)->(8176,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(8522,7)->(8522,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(8525,7)->(8525,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(8776,7)->(8776,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(8778,7)->(8778,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(8782,7)->(8782,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(8785,7)->(8785,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(8825,7)->(8825,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(8965,7)->(8965,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+[AlphaTab][AlphaTex] Error while parsing alphaTex: There are errors in the parsed alphaTex, check the diagnostics for details
+lexer diagnostics:
+
+parser diagnostics:
+
+semantic diagnostics:
+  Error AT218(7159,9)->(7159,11): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(7223,9)->(7223,11): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(7269,9)->(7269,11): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(7302,9)->(7302,11): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(7392,9)->(7392,11): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(7395,9)->(7395,11): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(7398,9)->(7398,11): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(7549,9)->(7549,11): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(7552,9)->(7552,11): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+[AlphaTab][AlphaTex] Error while parsing alphaTex: There are errors in the parsed alphaTex, check the diagnostics for details
+lexer diagnostics:
+
+parser diagnostics:
+
+semantic diagnostics:
+  Error AT218(699,7)->(699,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+[AlphaTab][ScoreLoader] Score import failed due to unexpected error:  14918 | 	}
+14919 | 	skip(offset) {
+14920 | 		this._readable.skip(offset);
+14921 | 	}
+14922 | 	_requireBytes(bytes) {
+14923 | 		if (this.length - this.position < bytes) throw new EndOfReaderError();
+                                                         ^
+error: Unexpected end of data within reader
+ type: 1,
+
+      at _requireBytes (/home/dan/build/setlist/prototypes/chart-anchoring/node_modules/@coderline/alphatab/dist/alphaTab.core.mjs:14923:50)
+      at readByte (/home/dan/build/setlist/prototypes/chart-anchoring/node_modules/@coderline/alphatab/dist/alphaTab.core.mjs:14926:8)
+      at readBeat (/home/dan/build/setlist/prototypes/chart-anchoring/node_modules/@coderline/alphatab/dist/alphaTab.core.mjs:18226:27)
+      at readVoice (/home/dan/build/setlist/prototypes/chart-anchoring/node_modules/@coderline/alphatab/dist/alphaTab.core.mjs:18222:44)
+      at readBar (/home/dan/build/setlist/prototypes/chart-anchoring/node_modules/@coderline/alphatab/dist/alphaTab.core.mjs:18214:45)
+      at readBars (/home/dan/build/setlist/prototypes/chart-anchoring/node_modules/@coderline/alphatab/dist/alphaTab.core.mjs:18192:92)
+      at readScore (/home/dan/build/setlist/prototypes/chart-anchoring/node_modules/@coderline/alphatab/dist/alphaTab.core.mjs:17959:8)
+      at loadScoreFromBytes (/home/dan/build/setlist/prototypes/chart-anchoring/node_modules/@coderline/alphatab/dist/alphaTab.core.mjs:30220:22)
+      at /home/dan/build/setlist/prototypes/chart-anchoring/checks/gp-corpus.ts:52:34
+
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][AlphaTex] Error while parsing alphaTex: There are errors in the parsed alphaTex, check the diagnostics for details
+lexer diagnostics:
+
+parser diagnostics:
+
+semantic diagnostics:
+  Error AT218(12163,7)->(12163,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(12849,7)->(12849,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(12851,7)->(12851,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+[AlphaTab][AlphaTex] Error while parsing alphaTex: There are errors in the parsed alphaTex, check the diagnostics for details
+lexer diagnostics:
+
+parser diagnostics:
+
+semantic diagnostics:
+  Error AT218(1318,7)->(1318,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+[AlphaTab][AlphaTex] Error while parsing alphaTex: There are errors in the parsed alphaTex, check the diagnostics for details
+lexer diagnostics:
+
+parser diagnostics:
+
+semantic diagnostics:
+  Error AT218(2116,7)->(2116,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+[AlphaTab][AlphaTex] Error while parsing alphaTex: There are errors in the parsed alphaTex, check the diagnostics for details
+lexer diagnostics:
+
+parser diagnostics:
+  Error AT206(1001,18)->(1001,18): Unexpected end of file. Group not closed.
+  Error AT202(1001,18)->(1001,19): Unexpected 'Dot' token. Expected one of following: Number,String,Ident
+  Error AT206(1001,18)->(1001,18): Unexpected end of file. Group not closed.
+semantic diagnostics:
+
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][AlphaTex] Error while parsing alphaTex: There are errors in the parsed alphaTex, check the diagnostics for details
+lexer diagnostics:
+
+parser diagnostics:
+
+semantic diagnostics:
+  Error AT218(4499,7)->(4499,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(4500,7)->(4500,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(5472,7)->(5472,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(5473,7)->(5473,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+[AlphaTab][AlphaTex] Error while parsing alphaTex: There are errors in the parsed alphaTex, check the diagnostics for details
+lexer diagnostics:
+
+parser diagnostics:
+
+semantic diagnostics:
+  Error AT218(1366,7)->(1366,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(1368,7)->(1368,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(1370,7)->(1370,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(1797,7)->(1797,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(1907,7)->(1907,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(1950,7)->(1950,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(1952,7)->(1952,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(1954,7)->(1954,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+[AlphaTab][AlphaTex] Error while parsing alphaTex: There are errors in the parsed alphaTex, check the diagnostics for details
+lexer diagnostics:
+
+parser diagnostics:
+  Error AT206(892,35)->(892,35): Unexpected end of file. Group not closed.
+  Error AT202(892,37)->(892,38): Unexpected 'RBrace' token. Expected one of following: Number,String,Ident
+semantic diagnostics:
+
+[AlphaTab][AlphaTex] Error while parsing alphaTex: There are errors in the parsed alphaTex, check the diagnostics for details
+lexer diagnostics:
+
+parser diagnostics:
+
+semantic diagnostics:
+  Error AT218(32418,7)->(32418,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][AlphaTex] Error while parsing alphaTex: There are errors in the parsed alphaTex, check the diagnostics for details
+lexer diagnostics:
+
+parser diagnostics:
+  Error AT206(64,15)->(64,15): Unexpected end of file. Group not closed.
+  Error AT202(64,17)->(64,18): Unexpected 'RBrace' token. Expected one of following: Number,String,Ident
+semantic diagnostics:
+
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][AlphaTex] Error while parsing alphaTex: There are errors in the parsed alphaTex, check the diagnostics for details
+lexer diagnostics:
+
+parser diagnostics:
+
+semantic diagnostics:
+  Error AT218(4677,7)->(4677,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(4680,7)->(4680,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(4683,7)->(4683,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(4686,7)->(4686,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(4690,7)->(4690,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(4882,7)->(4882,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(4887,7)->(4887,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(5998,7)->(5998,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(6000,7)->(6000,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(6006,7)->(6006,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(6010,7)->(6010,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(6013,7)->(6013,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+[AlphaTab][AlphaTex] Error while parsing alphaTex: There are errors in the parsed alphaTex, check the diagnostics for details
+lexer diagnostics:
+
+parser diagnostics:
+
+semantic diagnostics:
+  Error AT218(5120,7)->(5120,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(5123,7)->(5123,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(5480,7)->(5480,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(5483,7)->(5483,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(6371,7)->(6371,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(6373,7)->(6373,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(6543,7)->(6543,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(6545,7)->(6545,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(6547,7)->(6547,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(6551,7)->(6551,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(6555,7)->(6555,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(6943,7)->(6943,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(6947,7)->(6947,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(7028,7)->(7028,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(7032,7)->(7032,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(7036,7)->(7036,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+[AlphaTab][AlphaTex] Error while parsing alphaTex: There are errors in the parsed alphaTex, check the diagnostics for details
+lexer diagnostics:
+
+parser diagnostics:
+
+semantic diagnostics:
+  Error AT218(4130,7)->(4130,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(4133,7)->(4133,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(4956,7)->(4956,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(4959,7)->(4959,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(5325,7)->(5325,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+  Error AT218(5328,7)->(5328,9): Wrong note kind 'Fretted' for staff with note kind ''Articulation'. Do not mix incompatible staves and notes.
+[AlphaTab][AlphaTex] Error while parsing alphaTex: There are errors in the parsed alphaTex, check the diagnostics for details
+lexer diagnostics:
+
+parser diagnostics:
+  Error AT206(1834,15)->(1834,15): Unexpected end of file. Group not closed.
+  Error AT202(1834,19)->(1834,20): Unexpected 'RBrace' token. Expected one of following: Number,String,Ident
+semantic diagnostics:
+
+[AlphaTab][AlphaTex] Error while parsing alphaTex: There are errors in the parsed alphaTex, check the diagnostics for details
+lexer diagnostics:
+
+parser diagnostics:
+  Error AT206(146,15)->(146,15): Unexpected end of file. Group not closed.
+  Error AT202(146,17)->(146,18): Unexpected 'RBrace' token. Expected one of following: Number,String,Ident
+semantic diagnostics:
+
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+[AlphaTab][Model] Unsupported bend type detected, fallback to custom null
+files: 225, imported: 223, import failures: 2
+  import FAIL Diminished to Be.gp5: TypeError: undefined is not an object (evaluating 'nextVoice.beats')
+  import FAIL Mine - Garrett trent.gp5: Error: Unexpected end of data within reader
+token stability across reloads: 223/223 stable
+alphaTex round trip: 154 lossless, 32 lossy, 37 failed to re-import
+  lossy August Burns Red - Speech Impediment.gp5: track 4 voice 0 beat 163 (bar 12): 8:p0 -> 8:p38
+  lossy Between The Buried And Me - Son Of Nothing.gp5: track 4 voice 0 beat 2563 (bar 315): 8:p3,p49 -> 8:p38,p49
+  lossy Between the Buried and Me - Alaska (ver 4 by rcw110131).gp4: track 0 voice 0 beat 1323 (bar 192): empty -> undefined
+  lossy Between the Buried and Me - Sun of Nothing.gp5: track 4 voice 0 beat 2563 (bar 315): 8:p3,p49 -> 8:p38,p49
+  lossy BotS - expulsion.gpx: track 1 voice 0 beat 858 (bar 147): empty -> undefined
+  failed A Life Once Lost - Cavil.gp5: There are errors in the parsed alphaTex, check the diagnostics for details
+  failed Amon Amarth - The Fate of Norns.gp5: There are errors in the parsed alphaTex, check the diagnostics for details
+  failed As Blood Runs Black - My Fears Have Become Phobias.gp5: There are errors in the parsed alphaTex, check the diagnostics for details
+  failed Between The Buried And Me - Foam Born B The Decade Of Statues.gp5: Error: Error parsing alphaTex, check diagnostics on inner error for details
+  failed Between The Buried And Me - Informal Gluttony (2).gp5: There are errors in the parsed alphaTex, check the diagnostics for details
+gp7 round trip: 72 lossless, 151 lossy, 0 failed to re-import
+  lossy 3-4poly.gpx: track 0 voice 0 beat 0 (bar 0): 4:p35,p51 -> 4:p104,p71
+  lossy 5 over 4.gp5: track 0 voice 0 beat 0 (bar 0): 8:p36 -> 8:p105
+  lossy 7-8 shuffles.gp5: track 3 voice 0 beat 0 (bar 0): 16:p36,p44,p57 -> 16:p105,p111,p64
+  lossy A Life Once Lost - Cavil.gp5: track 3 voice 0 beat 1 (bar 0): 16:p36 -> 16:p105
+  lossy Amon Amarth - The Fate of Norns.gp5: track 2 voice 0 beat 6 (bar 3): 8:p43,p45 -> 8:p108,p67
+anchor survival (marks on real voices):
+  recorded insert-bar-before    n= 2369  correct 2369  lost 0  wrong 0  indistinguishable 0
+  recorded delete-bar-before    n= 2218  correct 2218  lost 0  wrong 0  indistinguishable 0
+  recorded change-marked-beat   n= 2369  correct 2369  lost 0  wrong 0  indistinguishable 0
+  recorded delete-marked-bar    n= 2369  correct 2369  lost 0  wrong 0  indistinguishable 0
+  diffed insert-bar-before    n= 2369  correct 2240  lost 129  wrong 0  indistinguishable 0
+  diffed delete-bar-before    n= 2218  correct 2126  lost 92  wrong 0  indistinguishable 0
+  diffed change-marked-beat   n= 2369  correct 2369  lost 0  wrong 0  indistinguishable 0
+  diffed delete-marked-bar    n= 2369  correct 2369  lost 0  wrong 0  indistinguishable 0

@@ -1,0 +1,7 @@
+amazing-grace.txt: 16 lyric lines with chords
+  UltimateGuitarParser   lyrics intact 10/16, chords placed 10/10, sections 4, re-edit stable true
+    lyrics "Amazing grace, how sweet the sound" -> "Amazing grace, how sweet thesound"
+    lyrics "My God, my Savior has ransomed me" -> "My God, my Savior hasransomed me"
+    lyrics "Unending love, amazing grace" -> "Unending love, amazinggrace"
+  ChordsOverWordsParser  lyrics intact 16/16, chords placed 16/16, sections 0, re-edit stable true
+  PrototypeImporter      lyrics intact 16/16, chords placed 16/16, sections 4, re-edit stable true

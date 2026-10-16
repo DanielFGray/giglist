@@ -1,0 +1,12 @@
+
+Running 7 tests using 1 worker
+
+  ✓  1 e2e/anchoring.spec.ts:21:1 › a text mark stays on its lyric through transpose and resize (749ms)
+  ✓  2 e2e/anchoring.spec.ts:35:1 › a mark follows a recorded edit and a paste-over that insert a verse above it (601ms)
+  ✓  3 e2e/anchoring.spec.ts:47:1 › a mark goes to the tray when its line is deleted, by either path (764ms)
+  ✓  4 e2e/anchoring.spec.ts:57:1 › a mark on the second chorus never jumps to the first (728ms)
+  ✓  5 e2e/anchoring.spec.ts:74:1 › two identical choruses back to back: a paste-over that removes one leaves the mark uncertain (572ms)
+  ✓  6 e2e/anchoring.spec.ts:85:1 › ink is saved as a stamp, pasted twice, moved, resized, and survives transpose (1.3s)
+  ✓  7 e2e/anchoring.spec.ts:138:1 › a mark on a tab beat stays on that beat when a new version of the file is loaded (1.3s)
+
+  7 passed (6.6s)

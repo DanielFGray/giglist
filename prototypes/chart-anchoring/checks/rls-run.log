@@ -1,0 +1,136 @@
+NOTICE:  database "setlist_proto_wipeme" does not exist, skipping
+psql:/home/dan/build/setlist/migrations/afterReset.sql:8: NOTICE:  extension "plpgsql" already exists, skipping
+psql:/home/dan/build/setlist/migrations/current/0001-reset.sql:8: NOTICE:  schema "app_public" does not exist, skipping
+psql:/home/dan/build/setlist/migrations/current/0001-reset.sql:9: NOTICE:  schema "app_hidden" does not exist, skipping
+psql:/home/dan/build/setlist/migrations/current/0001-reset.sql:10: NOTICE:  schema "app_private" does not exist, skipping
+psql:/home/dan/build/setlist/migrations/current/0180-bands.sql:1: NOTICE:  function app_public.transfer_band_ownership(uuid,uuid) does not exist, skipping
+psql:/home/dan/build/setlist/migrations/current/0180-bands.sql:2: NOTICE:  function app_public.delete_band(uuid) does not exist, skipping
+psql:/home/dan/build/setlist/migrations/current/0180-bands.sql:3: NOTICE:  function app_public.remove_from_band(uuid,uuid) does not exist, skipping
+psql:/home/dan/build/setlist/migrations/current/0180-bands.sql:4: NOTICE:  type "app_public.bands" does not exist, skipping
+psql:/home/dan/build/setlist/migrations/current/0180-bands.sql:5: NOTICE:  function app_public.accept_invitation_to_band(uuid,text) does not exist, skipping
+psql:/home/dan/build/setlist/migrations/current/0180-bands.sql:6: NOTICE:  function app_public.get_band_for_invitation(uuid,text) does not exist, skipping
+psql:/home/dan/build/setlist/migrations/current/0180-bands.sql:7: NOTICE:  function app_public.band_for_invitation(uuid,text) does not exist, skipping
+psql:/home/dan/build/setlist/migrations/current/0180-bands.sql:8: NOTICE:  function app_public.invite_user_to_band(uuid,uuid) does not exist, skipping
+psql:/home/dan/build/setlist/migrations/current/0180-bands.sql:9: NOTICE:  function app_public.invite_to_band(uuid,citext,citext) does not exist, skipping
+psql:/home/dan/build/setlist/migrations/current/0180-bands.sql:10: NOTICE:  function app_public.current_user_invited_band_ids() does not exist, skipping
+psql:/home/dan/build/setlist/migrations/current/0180-bands.sql:11: NOTICE:  function app_public.current_user_member_band_ids() does not exist, skipping
+psql:/home/dan/build/setlist/migrations/current/0180-bands.sql:12: NOTICE:  table "band_invitations" does not exist, skipping
+psql:/home/dan/build/setlist/migrations/current/0180-bands.sql:13: NOTICE:  table "band_memberships" does not exist, skipping
+psql:/home/dan/build/setlist/migrations/current/0180-bands.sql:14: NOTICE:  table "bands" does not exist, skipping
+ as_user 
+---------
+ 
+(1 row)
+
+psql:/home/dan/build/setlist/prototypes/chart-anchoring/rls/test.sql:30: NOTICE:  pass: bandmate sees the band's chart
+ check 
+-------
+ 
+(1 row)
+
+psql:/home/dan/build/setlist/prototypes/chart-anchoring/rls/test.sql:31: NOTICE:  pass: bandmate sees its revision
+ check 
+-------
+ 
+(1 row)
+
+psql:/home/dan/build/setlist/prototypes/chart-anchoring/rls/test.sql:32: NOTICE:  pass: bandmate sees only the shared mark
+ check 
+-------
+ 
+(1 row)
+
+psql:/home/dan/build/setlist/prototypes/chart-anchoring/rls/test.sql:33: NOTICE:  pass: the visible mark is the shared one
+ check 
+-------
+ 
+(1 row)
+
+psql:/home/dan/build/setlist/prototypes/chart-anchoring/rls/test.sql:34: NOTICE:  pass: bandmate sees none of ana's stamps
+ check 
+-------
+ 
+(1 row)
+
+psql:/home/dan/build/setlist/prototypes/chart-anchoring/rls/test.sql:36: NOTICE:  pass: bandmate cannot move ana's shared mark
+ check 
+-------
+ 
+(1 row)
+
+psql:/home/dan/build/setlist/prototypes/chart-anchoring/rls/test.sql:38: NOTICE:  pass: bandmate cannot delete ana's marks
+ check 
+-------
+ 
+(1 row)
+
+ as_user 
+---------
+ 
+(1 row)
+
+psql:/home/dan/build/setlist/prototypes/chart-anchoring/rls/test.sql:49: NOTICE:  pass: a new mark is owned by its author
+ check 
+-------
+ 
+(1 row)
+
+ as_user 
+---------
+ 
+(1 row)
+
+psql:/home/dan/build/setlist/prototypes/chart-anchoring/rls/test.sql:62: NOTICE:  pass: mark owner cannot be changed
+ as_user 
+---------
+ 
+(1 row)
+
+psql:/home/dan/build/setlist/prototypes/chart-anchoring/rls/test.sql:76: NOTICE:  pass: revisions cannot be updated
+ as_user 
+---------
+ 
+(1 row)
+
+psql:/home/dan/build/setlist/prototypes/chart-anchoring/rls/test.sql:82: NOTICE:  pass: author sees her private and shared marks
+ check 
+-------
+ 
+(1 row)
+
+psql:/home/dan/build/setlist/prototypes/chart-anchoring/rls/test.sql:83: NOTICE:  pass: author sees her stamp
+ check 
+-------
+ 
+(1 row)
+
+psql:/home/dan/build/setlist/prototypes/chart-anchoring/rls/test.sql:85: NOTICE:  pass: author can move her mark
+ check 
+-------
+ 
+(1 row)
+
+ as_user 
+---------
+ 
+(1 row)
+
+psql:/home/dan/build/setlist/prototypes/chart-anchoring/rls/test.sql:91: NOTICE:  pass: outsider sees no charts
+ check 
+-------
+ 
+(1 row)
+
+psql:/home/dan/build/setlist/prototypes/chart-anchoring/rls/test.sql:92: NOTICE:  pass: outsider sees no revisions
+ check 
+-------
+ 
+(1 row)
+
+psql:/home/dan/build/setlist/prototypes/chart-anchoring/rls/test.sql:93: NOTICE:  pass: outsider sees no marks, shared or not
+ check 
+-------
+ 
+(1 row)
+
+psql:/home/dan/build/setlist/prototypes/chart-anchoring/rls/test.sql:103: NOTICE:  pass: outsider cannot mark the band's chart
