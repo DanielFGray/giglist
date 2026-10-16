@@ -3,9 +3,11 @@ import { readFileSync } from "node:fs"
 import { ChordLyricsPair, ChordProParser, Tag } from "chordsheetjs"
 import { composeChanges, explains, type Change } from "./changes"
 import {
+  addSection, moveSection, removeSection,
   anchorText, deleteLine, editLyrics, insertLineAfter, moveChord, parseDoc, placeChord, removeChord,
-  renameSection, segments, serializeDoc, type ChartDoc, type Edit,
+  renameSection, segments, serializeDoc, type ChartDoc, type DocLine, type Edit,
 } from "./doc"
+import { follow } from "./follow"
 import { importPasted } from "./lyrics"
 
 const fixture = readFileSync(new URL("../../tests/fixtures/amazing-grace.txt", import.meta.url), "utf8")
@@ -136,6 +138,89 @@ describe("edits", () => {
     expectExact(doc, { doc: current, changes })
   })
 })
+
+describe("sections", () => {
+  const labels = (d: ChartDoc) => d.flatMap((l) => (l.kind === "directive" && l.raw.startsWith('{start_of_') ? [anchorText([l])] : []))
+  /** A section edit keeps the stored text valid ChordPro with the anchor text the editor computed. */
+  const expectValid = (before: ChartDoc, edit: Edit) => {
+    expectExact(before, edit)
+    expect(anchorText(parseDoc(serializeDoc(edit.doc)))).toBe(anchorText(edit.doc))
+    expect(anchorText(edit.doc)).toBe(anchorFromSong(serializeDoc(edit.doc)))
+  }
+  const starts = doc.flatMap((l, i) => (l.kind === "directive" && l.raw.startsWith('{start_of_') ? [i] : []))
+
+  test("starting a section inside one splits it into two of the same kind", () => {
+    const edit = addSection(doc, lineOf("Was blind"), "Bridge")
+    expectValid(doc, edit)
+    expect(labels(edit.doc)).toEqual(["Verse 1", "Bridge", "Chorus", "Verse 2", "Chorus"])
+    const text = serializeDoc(edit.doc).split("\n")
+    const at = text.indexOf("{start_of_verse: Bridge}")
+    expect(text[at - 1]).toBe("{end_of_verse}")
+    // The original end line now closes the new half.
+    expect(text.slice(at, at + 3)).toEqual(["{start_of_verse: Bridge}", expect.stringContaining("Was blin"), ""])
+  })
+
+  test("starting a section outside any opens a verse and closes it before the next directive", () => {
+    const bare = parseDoc("{key: G}\nFirst line\nSecond line\n{start_of_chorus: Chorus}\nLa\n{end_of_chorus}")
+    const edit = addSection(bare, 1, "Intro")
+    expectValid(bare, edit)
+    expect(serializeDoc(edit.doc)).toBe(
+      "{key: G}\n{start_of_verse: Intro}\nFirst line\nSecond line\n{end_of_verse}\n{start_of_chorus: Chorus}\nLa\n{end_of_chorus}",
+    )
+    const tail = parseDoc("Only line")
+    const atEnd = addSection(tail, 0, "Solo")
+    expectValid(tail, atEnd)
+    expect(serializeDoc(atEnd.doc)).toBe("{start_of_verse: Solo}\nOnly line\n{end_of_verse}")
+  })
+
+  test("removing a section drops its start and end lines and keeps its words", () => {
+    const edit = removeSection(doc, starts[1]!)
+    expectValid(doc, edit)
+    expect(labels(edit.doc)).toEqual(["Verse 1", "Verse 2", "Chorus"])
+    expect(serializeDoc(edit.doc)).toContain("My chains")
+    expect(serializeDoc(edit.doc).match(/\{end_of_chorus\}/g)).toHaveLength(1)
+  })
+
+  test("moving a section down or up swaps it with its neighbour", () => {
+    const down = moveSection(doc, starts[0]!, 1)
+    expectValid(doc, down)
+    expect(labels(down.doc)).toEqual(["Chorus", "Verse 1", "Verse 2", "Chorus"])
+    const up = moveSection(doc, starts[2]!, -1)
+    expectValid(doc, up)
+    expect(labels(up.doc)).toEqual(["Verse 1", "Verse 2", "Chorus", "Chorus"])
+    // Moving down then up again restores the stored text.
+    const back = moveSection(down.doc, starts[0]! + sectionLength(doc, starts[1]!), -1)
+    expect(serializeDoc(back.doc)).toBe(serializeDoc(doc))
+  })
+
+  test("a section at the end of the list does not move further, and a run composes exactly", () => {
+    expect(moveSection(doc, starts[3]!, 1)).toEqual({ doc, changes: [] })
+    expect(moveSection(doc, starts[0]!, -1)).toEqual({ doc, changes: [] })
+    const a = addSection(doc, lineOf("Was blind"), "Bridge")
+    const b = moveSection(a.doc, a.doc.findIndex((l) => l.kind === "directive" && l.raw === "{start_of_verse: Bridge}"), 1)
+    expectExact(doc, { doc: b.doc, changes: composeChanges(a.changes, b.changes) })
+  })
+
+  test("a mark in the neighbouring section follows a move; a mark inside the moved one is orphaned", () => {
+    const before = anchorText(doc)
+    const edit = moveSection(doc, starts[0]!, 1)
+    const step = { before, after: anchorText(edit.doc), recorded: edit.changes }
+    const chorus = before.indexOf("My God, my Savior")
+    const kept = follow({ start: chorus, end: chorus + 17 }, [step])
+    expect(kept.state).toBe("kept")
+    if (kept.state !== "orphaned") expect(step.after.slice(kept.start, kept.end)).toBe("My God, my Savior")
+    const verse = before.indexOf("That saved a wretch")
+    expect(follow({ start: verse, end: verse + 19 }, [step])).toEqual({ state: "orphaned", reason: "deleted" })
+  })
+})
+
+/** Number of lines from a section's start to its end line, inclusive. */
+function sectionLength(d: ChartDoc, start: number): number {
+  let end = start
+  const isEnd = (line: DocLine) => line.kind === "directive" && line.raw.startsWith("{end_of_")
+  while (!isEnd(d[end]!)) end++
+  return end - start + 1
+}
 
 describe("segments", () => {
   test("splits a line into words, and further at a chord inside a word", () => {

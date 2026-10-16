@@ -202,6 +202,60 @@ export function renameSection(doc: ChartDoc, lineIndex: number, label: string): 
   }
 }
 
+/**
+ * Starts a section at `lineIndex`. Inside a section it splits it in two of the
+ * same kind, so the section's own end line closes the new half; elsewhere it
+ * opens a verse that ends before the next directive or at the end of the chart.
+ */
+export function addSection(doc: ChartDoc, lineIndex: number, label: string): Edit {
+  const clean = cleanLabel(label)
+  const open = enclosingSection(doc, lineIndex)
+  if (open) {
+    return chain(doc, [
+      (d) => insertLineAt(d, lineIndex, directive(`end_of_${open.kind}`)),
+      (d) => insertLineAt(d, lineIndex + 1, directive(`start_of_${open.kind}`, clean)),
+    ])
+  }
+  return chain(doc, [
+    (d) => insertLineAt(d, lineIndex, directive("start_of_verse", clean)),
+    (d) => {
+      let end = lineIndex + 1
+      while (end < d.length && d[end]!.kind !== "directive") end++
+      return insertLineAt(d, end, directive("end_of_verse"))
+    },
+  ])
+}
+
+/** Removes a section's start and end lines; its lines stay where they are. */
+export function removeSection(doc: ChartDoc, lineIndex: number): Edit {
+  const block = sectionBlock(doc, lineIndex)
+  const steps = [(d: ChartDoc) => removeLineAt(d, block.end), (d: ChartDoc) => removeLineAt(d, block.start)]
+  return chain(doc, block.closed ? steps : steps.slice(1))
+}
+
+/**
+ * Moves a section past its neighbouring section (-1 up, 1 down). The text is
+ * removed and written again, so marks anchored inside the moved section lose
+ * their place; marks in the other sections follow.
+ */
+export function moveSection(doc: ChartDoc, lineIndex: number, delta: -1 | 1): Edit {
+  const block = sectionBlock(doc, lineIndex)
+  const starts = doc.flatMap((l, i) => (isStart(l) ? [i] : []))
+  const neighbour = starts[starts.indexOf(lineIndex) + delta]
+  if (neighbour === undefined) return { doc, changes: [] }
+  const lines = doc.slice(block.start, block.end + 1)
+  const other = sectionBlock(doc, neighbour)
+  const count = lines.length
+  return chain(doc, [
+    ...lines.map(() => (d: ChartDoc) => removeLineAt(d, block.start)),
+    // After the removal, the neighbour's lines sit `count` earlier when it was below.
+    ...lines.map((line, i) => (d: ChartDoc) => {
+      const base = delta === 1 ? other.end + 1 - count : other.start
+      return insertLineAt(d, base + i, line)
+    }),
+  ])
+}
+
 /** The section a line sits in: its label, or null before the first section. */
 export function sectionLabel(doc: ChartDoc, lineIndex: number): string | null {
   for (let i = lineIndex; i >= 0; i--) {
@@ -213,6 +267,72 @@ export function sectionLabel(doc: ChartDoc, lineIndex: number): string | null {
 
 // ---------------------------------------------------------------------------
 // Helpers
+
+/** `{name}` or `{name: label}`. */
+function directive(name: string, label?: string): DocLine {
+  return { kind: "directive", raw: label ? `{${name}: ${label}}` : `{${name}}` }
+}
+
+function cleanLabel(label: string): string {
+  return label.replace(/[{}[\]\n]/g, " ").trim()
+}
+
+const isStart = (line: DocLine) => line.kind === "directive" && /^\{\s*start_of_\w+/.test(line.raw)
+
+/** The section that `lineIndex` is inside (after its start line, before its end), or null. */
+function enclosingSection(doc: ChartDoc, lineIndex: number): { start: number; kind: string } | null {
+  for (let i = lineIndex - 1; i >= 0; i--) {
+    const line = doc[i]!
+    if (line.kind !== "directive") continue
+    if (/^\{\s*end_of_/.test(line.raw)) return null
+    const start = /^\{\s*start_of_(\w+)/.exec(line.raw)
+    if (start) return { start: i, kind: start[1]! }
+  }
+  return null
+}
+
+/** The lines of the section whose start is at `lineIndex`: through its end line, or before the next start when it has none. */
+function sectionBlock(doc: ChartDoc, lineIndex: number): { start: number; end: number; closed: boolean } {
+  const line = doc[lineIndex]
+  if (!line || !isStart(line)) throw new Error(`line ${lineIndex} is not a section start`)
+  for (let i = lineIndex + 1; i < doc.length; i++) {
+    const next = doc[i]!
+    if (next.kind !== "directive") continue
+    if (/^\{\s*end_of_/.test(next.raw)) return { start: lineIndex, end: i, closed: true }
+    if (isStart(next)) break
+  }
+  return { start: lineIndex, end: lineIndex, closed: false }
+}
+
+/** Puts `line` at `index`, with the newline that separates it from its neighbour. */
+function insertLineAt(doc: ChartDoc, index: number, line: DocLine): Edit {
+  const next = [...doc.slice(0, index), line, ...doc.slice(index)]
+  const length = anchorLine(line).length + 1
+  // At the end the separator goes before the new line, so the last line needs no trailing newline.
+  const at = index === doc.length ? lineStart(next, index) - 1 : lineStart(next, index)
+  return { doc: next, changes: [{ from: at, to: at, insert: length }] }
+}
+
+/** Removes the line at `index` with the newline that separates it from its neighbour. */
+function removeLineAt(doc: ChartDoc, index: number): Edit {
+  const next = doc.filter((_, i) => i !== index)
+  const start = lineStart(doc, index)
+  const length = anchorLine(doc[index]!).length
+  return index === doc.length - 1 && index > 0
+    ? { doc: next, changes: [{ from: start - 1, to: start + length, insert: 0 }] }
+    : { doc: next, changes: [{ from: start, to: start + length + 1, insert: 0 }] }
+}
+
+/** Runs edits one after another and gives their change sets as one. */
+function chain(doc: ChartDoc, steps: ReadonlyArray<(doc: ChartDoc) => Edit>): Edit {
+  return steps.reduce<Edit>(
+    (done, step) => {
+      const edit = step(done.doc)
+      return { doc: edit.doc, changes: composeChanges(done.changes, edit.changes) }
+    },
+    { doc, changes: [] },
+  )
+}
 
 function lyricsLine(doc: ChartDoc, index: number): Extract<DocLine, { kind: "lyrics" }> {
   const line = doc[index]
