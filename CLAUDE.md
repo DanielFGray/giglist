@@ -52,6 +52,10 @@ guide doesn't cover, search through the source code in `node_modules/effect/src`
 - `bun run test:unit` — pure-module tests next to the code in `src/`
 - `bun run test:db` — RLS checks in `tests/db/` as the authenticator, on a scratch database `setlist_test_rls`
 
+## Reaching the dev server from another machine
+
+`HOST=0.0.0.0 bun run dev` makes Vite listen on every interface (it defaults to the host in `VITE_ROOT_URL`, so `localhost`). Open `http://<tailscale-ip-or-name>:3001`. Vite accepts IP addresses and `*.ts.net` names; any other Host header gets a 403. The API server always listens on every interface, and Vite proxies `/api` to it.
+
 ## Dev login
 
 Log in as a throwaway user by opening a URL — no signup, no console:

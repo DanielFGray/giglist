@@ -9,8 +9,10 @@ if (!process.env.VITE_ROOT_URL) {
   throw new Error("VITE_ROOT_URL environment variable is not defined");
 }
 // `host` from URL includes the port ("localhost:3001"); Vite needs the bare
-// hostname, so take `hostname`.
+// hostname, so take `hostname`. HOST overrides it to listen on another
+// interface, e.g. `HOST=0.0.0.0 bun run dev` to reach the app over Tailscale.
 const { port, hostname } = new URL(process.env.VITE_ROOT_URL);
+const host = process.env.HOST ?? hostname;
 
 // The browser talks to Vite on VITE_ROOT_URL; the Effect API server listens on
 // PORT. Proxying /api to Vite's own port would loop back to the SPA.
@@ -19,7 +21,10 @@ const API_PORT = process.env.PORT ?? "3000";
 export default defineConfig({
   server: {
     port: Number(port),
-    host: hostname,
+    host,
+    // Vite rejects requests whose Host header it does not know. IP addresses
+    // and localhost always pass; this adds Tailscale MagicDNS names.
+    allowedHosts: [".ts.net"],
     proxy: {
       "/api": {
         target: `http://localhost:${API_PORT}`,
