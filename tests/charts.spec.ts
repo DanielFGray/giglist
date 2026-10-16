@@ -190,6 +190,9 @@ test.describe("lyrics charts", () => {
 
     await page.goto(`/band/${bandId}/songs/${songId}`)
     await expect(getPw(page, "chart")).toHaveCount(1, { timeout: 10000 })
+    // Delete is offered only in edit mode, so the test enters it first.
+    await expect(getPw(page, "chart-delete")).toHaveCount(0)
+    await getPw(page, "chart-edit").click()
     await getPw(page, "chart-delete").click()
     await expect(getPw(page, "charts-empty")).toBeVisible({ timeout: 10000 })
   })

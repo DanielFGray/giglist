@@ -60,7 +60,6 @@ export function MarkedChart({
   const [preview, setPreview] = useState<Stroke | null>(null)
 
   const frame = useRef<HTMLDivElement>(null)
-  const gutter = useRef<HTMLDivElement>(null)
   // The ink mark that strokes drawn close together are still adding to.
   const inkDraft = useRef<{ markId: string; strokes: Array<Stroke> } | null>(null)
   // Writes run one after another, so a stroke drawn while the last one saves joins it.
@@ -102,7 +101,7 @@ export function MarkedChart({
     const size = parseFloat(getComputedStyle(root).fontSize)
     setEm(size)
     const items = itemsOf(root)
-    const margin = gutter.current ? relativeBox(gutter.current, root).x : 0
+    const margin = marginLeft(root)
     const next = new Map<string, Point>()
     for (const { mark, resolution } of resolved) {
       if (resolution.state === "orphaned") continue
@@ -142,8 +141,8 @@ export function MarkedChart({
    */
   const placementAt = (corner: Point, probe: Point, scale: number): Placement | null => {
     const root = frame.current!
-    const margin = relativeBox(gutter.current!, root)
-    const inMargin = probe.x >= margin.x
+    const margin = marginLeft(root)
+    const inMargin = probe.x >= margin
     let best: { item: ChartItemBox; distance: number } | null = null
     for (const item of itemsOf(root)) {
       const dy = Math.max(item.box.y - probe.y, 0, probe.y - (item.box.y + item.box.h))
@@ -156,7 +155,7 @@ export function MarkedChart({
       range_start: best.item.start,
       range_end: best.item.end,
       side: inMargin ? "margin" : "inline",
-      dx: (corner.x - (inMargin ? margin.x : best.item.box.x)) / em,
+      dx: (corner.x - (inMargin ? margin : best.item.box.x)) / em,
       dy: (corner.y - best.item.box.y) / em,
       scale,
     }
@@ -384,7 +383,6 @@ export function MarkedChart({
         <div className="min-w-0 flex-1">
           <LyricsChart source={chart.source} shownKey={shownKey} tempo={tempo} size={size} chordShapes={tool === "read"} />
         </div>
-        <div ref={gutter} aria-hidden data-pwid="chart-margin" className="w-32 shrink-0 border-l border-dashed border-[var(--color-border-subtle)]" />
         <div className="pointer-events-none absolute inset-0">
           {resolved.map(({ mark, resolution }) => {
             const at = placed.get(mark.id)
@@ -482,6 +480,16 @@ function summary(body: Body): string {
 }
 
 type ChartItemBox = { start: number; end: number; box: Box }
+
+/**
+ * Where a mark placed in the margin is anchored: the x of the strip at the chart's
+ * right edge, MARGIN_EM wide. It is not a box of its own, so the lyrics keep the
+ * full width and a margin mark sits over the last words of the lines.
+ */
+const MARGIN_EM = 8
+function marginLeft(root: HTMLElement): number {
+  return root.clientWidth - MARGIN_EM * parseFloat(getComputedStyle(root).fontSize)
+}
 
 /** The chart's items on screen, with their anchor ranges and boxes relative to `root`. */
 function itemsOf(root: HTMLElement): ReadonlyArray<ChartItemBox> {

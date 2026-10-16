@@ -114,8 +114,10 @@ test.describe("marks", () => {
     await expect(getPw(page, "mark").locator("path")).toHaveCount(2, { timeout: 10000 })
     await expect(getPw(page, "mark")).toHaveCount(1)
 
-    const margin = (await getPw(page, "chart-margin").boundingBox())!
-    await stroke(page, [{ x: margin.x + 20, y: margin.y + 10 }, { x: margin.x + 60, y: margin.y + 20 }])
+    // The margin is the strip at the chart's right edge, so the stroke starts there.
+    const frame = (await getPw(page, "marked-chart").boundingBox())!
+    const right = frame.x + frame.width
+    await stroke(page, [{ x: right - 20, y: frame.y + 10 }, { x: right - 5, y: frame.y + 20 }])
     await expect(getPw(page, "mark")).toHaveCount(2, { timeout: 10000 })
 
     await page.reload()
