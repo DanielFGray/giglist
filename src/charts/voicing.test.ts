@@ -51,10 +51,16 @@ describe("voicings", () => {
     }
   })
 
-  test("all chords above take under 2 seconds together", () => {
-    const start = performance.now()
-    for (const name of NAMES) voicings(spell(name)!)
-    expect(performance.now() - start).toBeLessThan(2000)
+  test("a tap answers quickly: the slowest chord above takes under 50 ms", () => {
+    const slowest = Math.max(
+      ...NAMES.map((name) => {
+        const chord = spell(name)!
+        const start = performance.now()
+        voicings(chord)
+        return performance.now() - start
+      }),
+    )
+    expect(slowest).toBeLessThan(50)
   })
 })
 
