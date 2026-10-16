@@ -146,6 +146,43 @@ test.describe("lyrics charts", () => {
     expect(res.status()).toBe(400)
   })
 
+  test("keeps pasted tab as written: no chords on it, in any key, and editable as text", async ({ page, testing }) => {
+    const riff = readFileSync(fixturePath("riff-and-solo.txt"), "utf8")
+    const tabRows = riff.split("\n").filter((row) => row.includes("-|") || row.includes("|-"))
+    await testing.login()
+    const { bandId, songId } = await createSong(page)
+    const res = await page.request.post("/api/charts", { data: { song_id: songId, name: "Riff", written_key: "G", pasted: riff } })
+    expect(res.ok(), await res.text()).toBe(true)
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+
+    // Each tab line is drawn exactly as pasted, the chord row above the intro tab with it.
+    await expect(getPw(page, "chart-tab")).toHaveText(["   G                 C", ...tabRows], { useInnerText: true })
+    // The only chords drawn as chords are the verse's.
+    await expect(getPw(page, "chart-chord").filter({ hasText: /\S/ })).toHaveText(["G", "C", "G", "D"])
+    const height = async () => (await getPw(page, "chart-tab").nth(1).boundingBox())!.height
+    const lyricHeight = (await getPw(page, "chart-lyric").first().boundingBox())!.height
+    // One text row: no empty chord row above it, and no wrapping.
+    expect(await height()).toBeLessThan(lyricHeight * 1.5)
+
+    await getPw(page, "chart-shown-key").selectOption("A")
+    await expectChords(page, ["A", "D", "E"])
+    await expect(getPw(page, "chart-tab")).toHaveText(["   G                 C", ...tabRows], { useInnerText: true })
+    await expect(getPw(page, "chart-tab-key").first()).toHaveText("tab as written, in G")
+
+    await getPw(page, "chart-edit").click()
+    // Tab lines offer no words to drop chords on.
+    await expect(getPw(page, "editor-tab")).toHaveCount(tabRows.length + 1)
+    await expect(getPw(page, "editor-tab").locator("[data-pwid=editor-segment]")).toHaveCount(0)
+    const solo = getPw(page, "editor-tab").filter({ hasText: "3h5" })
+    await solo.hover()
+    await solo.getByRole("button", { name: "Edit tab line" }).click()
+    await getPw(page, "line-input").fill("B|--3h5h7--------------|")
+    await getPw(page, "line-input").press("Enter")
+    await getPw(page, "editor-save").click()
+    await expect(getPw(page, "chart-editor")).toHaveCount(0, { timeout: 10000 })
+    await expect(getPw(page, "chart-tab").filter({ hasText: "3h5h7" })).toHaveText("B|--3h5h7--------------|", { useInnerText: true })
+  })
+
   test("deletes a chart", async ({ page, testing }) => {
     await testing.login()
     const { bandId, songId } = await createSong(page)

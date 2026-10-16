@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { readFileSync } from "node:fs"
 import { anchorText, parseDoc } from "./doc"
-import { exportChords, importPasted, renderLyrics, suggestedChords, type ChartItem } from "./lyrics"
+import { exportChords, importPasted, isTabLine, renderLyrics, suggestedChords, type ChartItem } from "./lyrics"
 
 const pasted = readFileSync(new URL("../../tests/fixtures/amazing-grace.txt", import.meta.url), "utf8")
 
@@ -129,5 +129,57 @@ describe("exportChords", () => {
     const source = "{key: C}\n[C][G]Hi\n[Am]\nWords here\n\n[F]Ok"
     const rows = exportChords(source).split("\n")
     expect(rows).toEqual(["C G", "Hi", "Am", "", "Words here", "", "F", "Ok"])
+  })
+})
+
+describe("tab", () => {
+  const riff = readFileSync(new URL("../../tests/fixtures/riff-and-solo.txt", import.meta.url), "utf8")
+  const stored = importPasted(riff, "G")
+  const rows = riff.split("\n")
+  const tabRows = rows.filter(isTabLine)
+
+  test("recognises tab lines and nothing else in a chart", () => {
+    expect(tabRows).toHaveLength(10)
+    expect(pasted.split("\n").filter(isTabLine)).toEqual([])
+    for (const lyric of ["Well - I - don't - know", "----", "Oh-oh-oh-oh-oh", "G - C - D"]) expect(isTabLine(lyric)).toBe(false)
+  })
+
+  test("a tab run becomes a tab section kept exactly, with the chord row above it", () => {
+    const lines = stored.split("\n")
+    const intro = lines.indexOf("{start_of_tab: Intro}")
+    // The header had nothing under it before the tab, so the tab section takes its label.
+    expect(intro).toBe(1)
+    expect(lines.slice(intro + 1, intro + 8)).toEqual(rows.slice(1, 8))
+    expect(lines[intro + 8]).toBe("{end_of_tab}")
+    // Two runs under one header: the first takes the label, the second has none.
+    expect(stored).toContain("{start_of_tab: Solo}\ne|-----3--5/7--<12>--|")
+    expect(stored).toContain("{start_of_tab}\ne|--(5)--3p0---------|")
+    expect(stored).toContain("{start_of_verse: Verse 1}\n[G]Amazing grace")
+  })
+
+  test("tab lines are drawn as written, in any key, and nothing in them is a chord", () => {
+    for (const key of [undefined, "A"]) {
+      const shown = renderLyrics(stored, key).flat()
+      expect(shown.filter((i) => i.kind === "tab").map((i) => (i as { text: string }).text)).toEqual([rows[1]!.trimEnd(), ...tabRows])
+      expect(shown.some((i) => i.kind === "pair" && i.chord.includes("12"))).toBe(false)
+    }
+  })
+
+  test("a tab section shown in another key says its tab is as written", () => {
+    const tabSections = (key?: string) =>
+      renderLyrics(stored, key).flat().filter((i): i is Extract<ChartItem, { kind: "section" }> => i.kind === "section" && i.label !== "Verse 1")
+    expect(tabSections().map((s) => s.tabWrittenIn)).toEqual([undefined, undefined, undefined])
+    expect(tabSections("A").map((s) => s.tabWrittenIn)).toEqual(["G", "G", "G"])
+  })
+
+  test("each tab item's range holds its line in the anchor text", () => {
+    const anchor = anchorText(parseDoc(stored))
+    for (const item of renderLyrics(stored).flat()) {
+      if (item.kind === "tab") expect(anchor.slice(item.start, item.end)).toBe(item.text)
+    }
+  })
+
+  test("pasting the export back gives the chart that was exported", () => {
+    expect(importPasted(exportChords(stored), "G")).toBe(stored)
   })
 })

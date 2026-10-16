@@ -8,7 +8,7 @@
  *
  * Pure and free of the DOM, so the server and the browser share it.
  */
-import { ChordLyricsPair, ChordProParser, Tag } from "chordsheetjs"
+import { ChordLyricsPair, ChordProParser, Literal, Tag } from "chordsheetjs"
 
 /**
  * One drawable piece of a chart line. `start` and `end` are its range in the
@@ -17,8 +17,11 @@ import { ChordLyricsPair, ChordProParser, Tag } from "chordsheetjs"
  */
 export type ChartItem = { readonly start: number; readonly end: number } & (
   | { kind: "pair"; chord: string; lyric: string }
-  | { kind: "section"; label: string }
+  /** `tabWrittenIn` is set on a tab section drawn in another key: its tab is shown as written, in that key. */
+  | { kind: "section"; label: string; tabWrittenIn?: string }
   | { kind: "comment"; text: string }
+  /** A line of ASCII tab, kept exactly as written: its columns are the music. */
+  | { kind: "tab"; text: string }
 )
 
 /** A chart line; an empty one is a blank line. */
@@ -41,8 +44,13 @@ export function renderLyrics(source: string, shownKey?: string | null): Readonly
     return line.items.flatMap((item, itemIndex) => {
       // Ranges come from the stored chart: a transposed chord may be longer or shorter.
       const start = offset
-      offset += anchorSegment(stored.lines[lineIndex]!.items[itemIndex]).length
-      return toItem(item, start, offset)
+      const written = stored.lines[lineIndex]!.items[itemIndex]
+      offset += anchorSegment(written).length
+      // ChordSheetJS transposes chord names in a tab line too; tab is shown as written, chords and frets alike.
+      const shown = toItem(item instanceof Literal ? written : item, start, offset)
+      return song === stored || !(item instanceof Tag && isTabStart(item.name))
+        ? shown
+        : shown.map((i) => ({ ...i, tabWrittenIn: stored.key! }))
     })
   })
 }
@@ -57,6 +65,7 @@ function anchorSegment(item: unknown): string {
     if (item.isSectionStart()) return item.label || item.value
     if (item.isComment()) return item.value
   }
+  if (item instanceof Literal) return item.string
   return ""
 }
 
@@ -84,7 +93,14 @@ function toItem(item: unknown, start: number, end: number): ReadonlyArray<ChartI
   }
   if (item instanceof Tag && item.isSectionStart()) return [{ kind: "section", label: item.label || item.value, start, end }]
   if (item instanceof Tag && item.isComment()) return [{ kind: "comment", text: item.value, start, end }]
+  // ChordSheetJS keeps each line of a tab section as one literal, unparsed.
+  if (item instanceof Literal) return [{ kind: "tab", text: item.string, start, end }]
   return []
+}
+
+/** `{start_of_tab}` and its short form `{sot}`. */
+export function isTabStart(directiveName: string): boolean {
+  return directiveName === "start_of_tab" || directiveName === "sot"
 }
 
 /**
@@ -93,6 +109,12 @@ function toItem(item: unknown, start: number, end: number): ReadonlyArray<ChartI
  * The lyrics are kept exactly, except that `[ ] { }` become parentheses because
  * ChordPro reads them as chord and directive syntax. Header lines (`[Chorus]`,
  * `Verse 1:`) start sections.
+ *
+ * A run of ASCII tab lines becomes a tab section, kept exactly, with a chord
+ * row typed just above a tab line kept in it so the chords stay over their
+ * notes. Sections do not nest, so a tab run ends the section it is in; when
+ * nothing came between a header and the tab, the tab section takes the
+ * header's label.
  *
  * ChordSheetJS's own chords-over-words parsers are not used: on real pastes its
  * Ultimate Guitar parser drops spaces from lyrics, and neither parser turns
@@ -106,8 +128,24 @@ export function importPasted(text: string, writtenKey?: string | null): string {
     if (open) out.push(`{end_of_${open}}`)
     open = null
   }
+  const startsTab = (i: number) => {
+    const line = lines[i] ?? ""
+    return isTabLine(line) || (isChordLine(line) && isTabLine(lines[i + 1] ?? ""))
+  }
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]!.trimEnd()
+    if (startsTab(i)) {
+      const header = open ? /^\{start_of_\w+: (.*)\}$/.exec(out[out.length - 1]!) : null
+      if (header) {
+        out.pop()
+        open = null
+      } else close()
+      out.push(header ? `{start_of_tab: ${header[1]}}` : "{start_of_tab}")
+      for (; i < lines.length && startsTab(i); i++) out.push(lines[i]!.trimEnd())
+      i--
+      out.push("{end_of_tab}")
+      continue
+    }
     const header = sectionHeader(line)
     if (header) {
       close()
@@ -140,7 +178,8 @@ export function importPasted(text: string, writtenKey?: string | null): string {
  * Each chord sits on the row above the word it belongs to. A chord that would
  * touch the one before it moves right to leave a space, and a chord-only line
  * is followed by a blank line so the importer does not pair it with the lyrics
- * below. Directives other than sections and comments are dropped.
+ * or tab below. Tab lines are written as stored, and a section with no label
+ * gets no header line. Directives other than sections and comments are dropped.
  */
 export function exportChords(source: string, shownKey?: string | null): string {
   const out: Array<string> = []
@@ -151,9 +190,14 @@ export function exportChords(source: string, shownKey?: string | null): string {
     let chords = ""
     let lyrics = ""
     for (const item of line) {
-      if (item.kind === "section") out.push(`[${item.label}]`)
-      else if (item.kind === "comment") out.push(item.text)
-      else {
+      if (item.kind === "section") {
+        if (item.label) out.push(`[${item.label}]`)
+      } else if (item.kind === "comment") out.push(item.text)
+      else if (item.kind === "tab") {
+        if (chordsOnly) out.push("")
+        out.push(item.text)
+        chordsOnly = false
+      } else {
         if (item.chord) {
           const gap = chords.length >= lyrics.length && chords !== "" ? " " : ""
           chords = chords.padEnd(lyrics.length, " ") + gap + item.chord
@@ -186,6 +230,23 @@ function placeChords(lyrics: string, chords: ReadonlyArray<{ column: number; cho
 function sectionHeader(line: string): string | null {
   const match = /^\s*\[([^\]]+)\]\s*$/.exec(line) ?? /^\s*([A-Za-z][A-Za-z -]*\d*)\s*:\s*$/.exec(line)
   return match && !isChordLine(match[1]!) ? match[1]!.trim() : null
+}
+
+/**
+ * True for a line of ASCII tab (`e|--0--3h5--|`): an optional string name,
+ * then dashes, frets, bar lines and technique letters, with at least four
+ * dashes making up a third of it, and a bar line or a string name.
+ */
+export function isTabLine(line: string): boolean {
+  const trimmed = line.trim()
+  const body = trimmed.replace(/^[A-Ga-g][#b]?(?=\s*[|:-])/, "")
+  const dashes = body.match(/-/g)?.length ?? 0
+  return (
+    dashes >= 4 &&
+    dashes * 3 >= body.length &&
+    (body.includes("|") || body !== trimmed) &&
+    /^[\s|:\-0-9a-zA-Z/\\~()<>^.*=+]+$/.test(body)
+  )
 }
 
 /** True when every token on the line is a chord or a chart symbol (bar lines, repeats, N.C.). */
