@@ -176,14 +176,17 @@ function ChartCard({
               Edit
             </button>
           )}
-        <button
-          data-pwid="chart-delete"
-          type="button"
-          onClick={remove}
-          className="px-3 py-1.5 rounded-md border border-red-500/20 text-xs text-red-400 cursor-pointer"
-        >
-          Delete
-        </button>
+          {/* A score has no Edit, so its Delete stays: it would have no other way out. */}
+          {(chart.source === null || editing) && (
+            <button
+              data-pwid="chart-delete"
+              type="button"
+              onClick={remove}
+              className="px-3 py-1.5 rounded-md border border-red-500/20 text-xs text-red-400 cursor-pointer"
+            >
+              Delete
+            </button>
+          )}
         </div>
       </header>
       {chart.source !== null && editing ? (
