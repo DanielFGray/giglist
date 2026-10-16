@@ -70,7 +70,7 @@ export const testingHandlers = HttpApiBuilder.group(SetListApi, "testing", (hand
       ),
     )
     .handle(
-      // Stands in for accepting an invitation, which the app cannot do yet.
+      // Puts a user in a band without an invitation, for specs that are not about invitations.
       "addBandMember",
       Effect.fnUntraced(function* ({ payload }) {
         const db = yield* Db;

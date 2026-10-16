@@ -1,7 +1,12 @@
-import { Link, createFileRoute } from "@tanstack/react-router"
+import { useState } from "react"
+import { Link, createFileRoute, useRouter } from "@tanstack/react-router"
+import { bands as bandsApi, type BandInvitationInfo } from "~/api/client"
 import { useActiveBandId, useAuth } from "~/components/AuthContext"
+import { errorMessage } from "~/components/form"
 
 export const Route = createFileRoute("/")({
+  // Empty for a signed-out visitor.
+  loader: async () => ({ invitations: await bandsApi.invitations() }),
   component: Home,
 })
 
@@ -10,6 +15,7 @@ function Home() {
   const { user, bands } = useAuth()
   const bandId = useActiveBandId()
   const band = bands.find((b) => b.id === bandId)
+  const { invitations } = Route.useLoaderData()
 
   if (user === null) {
     return (
@@ -47,6 +53,7 @@ function Home() {
 
   return (
     <div data-pwid="dashboard" className="space-y-6">
+      <Invitations invitations={invitations} />
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Setlists</h1>
         <p className="text-sm text-zinc-500 mt-1">
@@ -94,5 +101,55 @@ function Home() {
         </div>
       )}
     </div>
+  )
+}
+
+/** Bands that invited the signed-in user; accepting one makes them a member. */
+function Invitations({ invitations }: { invitations: ReadonlyArray<BandInvitationInfo> }) {
+  const router = useRouter()
+  const [error, setError] = useState<string | null>(null)
+  if (invitations.length === 0) return null
+
+  const answer = async (write: () => Promise<unknown>) => {
+    setError(null)
+    try {
+      await write()
+    } catch (e) {
+      setError(errorMessage(e))
+    }
+    // The root route holds the user's bands, so reloading it is what shows the new one.
+    await router.invalidate()
+  }
+
+  return (
+    <section data-pwid="invitations" className="rounded-lg border border-[var(--color-amber-accent)]/40 bg-[var(--color-amber-accent)]/10 p-4 space-y-3">
+      <h2 className="text-sm font-semibold">You are invited</h2>
+      <ul className="space-y-2">
+        {invitations.map((invitation) => (
+          <li key={invitation.id} data-pwid="invitation" className="flex items-center justify-between gap-3">
+            <span className="text-sm">Join <strong>{invitation.band_name}</strong></span>
+            <span className="flex gap-2">
+              <button
+                data-pwid="invitation-accept"
+                type="button"
+                onClick={() => void answer(() => bandsApi.acceptInvitation(invitation.id))}
+                className="px-3 py-1.5 rounded-md bg-[var(--color-amber-accent)] text-zinc-950 text-xs font-semibold cursor-pointer"
+              >
+                Accept
+              </button>
+              <button
+                data-pwid="invitation-decline"
+                type="button"
+                onClick={() => void answer(() => bandsApi.declineInvitation(invitation.id))}
+                className="px-3 py-1.5 rounded-md border border-[var(--color-border-subtle)] text-xs text-zinc-300 cursor-pointer"
+              >
+                Decline
+              </button>
+            </span>
+          </li>
+        ))}
+      </ul>
+      {error && <div data-pwid="invitation-error" className="text-sm text-red-400">{error}</div>}
+    </section>
   )
 }

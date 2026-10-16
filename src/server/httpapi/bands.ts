@@ -43,6 +43,38 @@ export const bandsHandlers = HttpApiBuilder.group(SetListApi, "myBands", (handle
       }),
     )
     .handle(
+      "listInvitations",
+      Effect.fnUntraced(function* () {
+        const session = yield* CurrentSession;
+        if (!session.sessionId || !session.userId) return [];
+        return yield* BandService.listInvitations().pipe(
+          Effect.map((rows) => rows.map((r) => ({ id: r.id, band_id: r.band_id, band_name: r.band_name }))),
+          Effect.orDie,
+          withAuthContext(session.sessionId),
+        );
+      }),
+    )
+    .handle(
+      "acceptInvitation",
+      Effect.fnUntraced(function* ({ params: { invitationId } }) {
+        const session = yield* requireSession();
+        return yield* BandService.acceptInvitation(invitationId).pipe(
+          withAuthContext(session.sessionId),
+          Effect.mapError((e) => new BandError({ message: e.message })),
+        );
+      }),
+    )
+    .handle(
+      "declineInvitation",
+      Effect.fnUntraced(function* ({ params: { invitationId } }) {
+        const session = yield* requireSession();
+        return yield* BandService.declineInvitation(invitationId).pipe(
+          withAuthContext(session.sessionId),
+          Effect.mapError((e) => new BandError({ message: e.message })),
+        );
+      }),
+    )
+    .handle(
       "getBandMembers",
       Effect.fnUntraced(function* ({ params: { bandId } }) {
         const session = yield* requireSession();

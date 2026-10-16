@@ -2,6 +2,8 @@ drop function if exists app_public.transfer_band_ownership(uuid, uuid);
 drop function if exists app_public.delete_band(uuid);
 drop function if exists app_public.remove_from_band(uuid, uuid);
 drop function if exists app_public.bands_current_user_is_owner(app_public.bands);
+drop function if exists app_public.decline_invitation_to_band(uuid) cascade;
+drop function if exists app_public.my_band_invitations() cascade;
 drop function if exists app_public.accept_invitation_to_band(uuid, text) cascade;
 drop function if exists app_public.get_band_for_invitation(uuid, text) cascade;
 drop function if exists app_public.band_for_invitation(uuid, text) cascade;
@@ -194,6 +196,24 @@ begin
   delete from app_public.band_invitations where id = invitation_id;
 end;
 $$ language plpgsql volatile security definer set search_path = pg_catalog, public, pg_temp;
+
+-- The invitations addressed to the current user. The visitor role cannot select
+-- band_invitations (an invitation by email carries a secret code), so the user
+-- reads their own through this function, which never returns the code.
+create function app_public.my_band_invitations()
+  returns table (id uuid, band_id uuid, band_name text) as $$
+  select invitation.id, invitation.band_id, band.name
+  from app_public.band_invitations as invitation
+  join app_public.bands as band on band.id = invitation.band_id
+  where invitation.user_id = app_public.current_user_id()
+  order by band.name
+$$ language sql stable security definer set search_path = pg_catalog, public, pg_temp;
+
+create function app_public.decline_invitation_to_band(invitation_id uuid)
+  returns void as $$
+  delete from app_public.band_invitations
+    where id = invitation_id and user_id = app_public.current_user_id();
+$$ language sql volatile security definer set search_path = pg_catalog, public, pg_temp;
 
 --------------------------------------------------------------------------------
 
