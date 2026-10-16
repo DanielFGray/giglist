@@ -1,10 +1,11 @@
-import { Suspense, lazy, useState } from "react"
+import { Suspense, lazy, useEffect, useState } from "react"
 import { charts, type ChartInfo } from "~/api/client"
 import { exportChords } from "~/charts/lyrics"
 import { MusicalKeys, type MusicalKeyType } from "~/api/contracts"
 import { AddScore } from "./AddScore"
 import { ChartEditor } from "./ChartEditor"
 import { MarkedChart } from "./MarkedChart"
+import { ReadChartFile } from "./ReadChartFile"
 import { SelectField, SubmitButton, TextAreaField, TextField, errorMessage } from "./form"
 
 // alphaTab is large and only score charts need it, so it loads on demand.
@@ -56,7 +57,7 @@ export function SongCharts({
       </div>
       {list.length === 0 && !adding && !addingScore && (
         <p data-pwid="charts-empty" className="text-sm text-zinc-500">
-          No charts yet. Paste chords over lyrics, or upload a Guitar Pro file, to make one{songKey ? `; this song is in ${songKey}` : ""}.
+          No charts yet. Paste chords over lyrics, read them from a PDF or a photo, or upload a Guitar Pro file, to make one{songKey ? `; this song is in ${songKey}` : ""}.
         </p>
       )}
       {list.map((chart) => (
@@ -215,8 +216,13 @@ function AddLyricsChart({
   const [name, setName] = useState("Chords")
   const [writtenKey, setWrittenKey] = useState<MusicalKeyType | null>(defaultKey)
   const [pasted, setPasted] = useState("")
+  // The file the text was read from, shown beside it so the player can check the reading.
+  const [original, setOriginal] = useState<{ url: string; pdf: boolean } | null>(null)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  useEffect(() => () => {
+    if (original) URL.revokeObjectURL(original.url)
+  }, [original])
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -246,14 +252,33 @@ function AddLyricsChart({
         onChange={(key) => setWrittenKey(key === "" ? null : key)}
         options={keyOptions}
       />
-      <TextAreaField
-        label="Chords over lyrics"
-        pwid="chart-form-pasted"
-        value={pasted}
-        onChange={setPasted}
-        rows={12}
-        placeholder={"[Verse 1]\nG         C\nAmazing grace, how sweet"}
+      <ReadChartFile
+        onRead={({ text, file }) => {
+          setPasted(text)
+          setOriginal({ url: URL.createObjectURL(file), pdf: file.type === "application/pdf" })
+        }}
       />
+      <div className={original ? "grid gap-3 md:grid-cols-2" : undefined}>
+        <TextAreaField
+          label="Chords over lyrics"
+          pwid="chart-form-pasted"
+          value={pasted}
+          onChange={setPasted}
+          rows={original ? 24 : 12}
+          monospace
+          placeholder={"[Verse 1]\nG         C\nAmazing grace, how sweet"}
+        />
+        {original && (
+          <figure data-pwid="chart-form-original" className="space-y-1">
+            <figcaption className="text-sm text-zinc-300">The file it was read from</figcaption>
+            {original.pdf ? (
+              <iframe src={original.url} title="The uploaded PDF" className="h-[36rem] w-full rounded-md bg-white" />
+            ) : (
+              <img src={original.url} alt="The uploaded chart" className="max-h-[36rem] w-full rounded-md object-contain bg-white" />
+            )}
+          </figure>
+        )}
+      </div>
       {error && <div data-pwid="chart-form-error" className="text-sm text-red-400">{error}</div>}
       <div className="flex gap-2">
         <SubmitButton pwid="chart-form-submit" disabled={pasted.trim() === ""} pending={pending} label="Add chart" pendingLabel="Adding…" />

@@ -832,6 +832,9 @@ export class ChartInvalid extends S.TaggedError<ChartInvalid, { readonly brand: 
   message: S.String,
 }) {}
 
+/** An uploaded file as the raw request or response body. */
+const fileBytes = S.Uint8Array.pipe(HttpApiSchema.asUint8Array({ contentType: "application/octet-stream" }))
+
 export const ChartsApiGroup = HttpApiGroup.make("charts")
   .add(
     HttpApiEndpoint.get("listCharts", "/song/:songId", {
@@ -845,6 +848,18 @@ export const ChartsApiGroup = HttpApiGroup.make("charts")
       payload: LyricsChartInsert,
       success: Chart.pipe(HttpApiSchema.status(201)),
       error: ChartForbidden.pipe(HttpApiSchema.status(403)),
+    }),
+  )
+  .add(
+    // The body is a PDF or an image; the answer is the chords and lyrics read
+    // from it, as text for the paste box. Nothing is stored.
+    HttpApiEndpoint.post("readChartFile", "/read", {
+      payload: fileBytes,
+      success: S.Struct({ text: S.String }),
+      error: [
+        ChartForbidden.pipe(HttpApiSchema.status(403)),
+        ChartInvalid.pipe(HttpApiSchema.status(400)),
+      ],
     }),
   )
   .add(
@@ -1017,14 +1032,12 @@ export const ScoreUploadQuery = {
   file_name: S.String.pipe(S.check(S.isMinLength(1)), S.check(S.isMaxLength(255))),
 }
 
-const guitarProFile = S.Uint8Array.pipe(HttpApiSchema.asUint8Array({ contentType: "application/octet-stream" }))
-
 export const ScoresApiGroup = HttpApiGroup.make("scores")
   .add(
     // The body is the Guitar Pro file, stored byte for byte as the chart's first revision.
     HttpApiEndpoint.post("uploadScore", "/", {
       query: ScoreUploadQuery,
-      payload: guitarProFile,
+      payload: fileBytes,
       success: Chart.pipe(HttpApiSchema.status(201)),
       error: [
         ChartForbidden.pipe(HttpApiSchema.status(403)),
@@ -1036,7 +1049,7 @@ export const ScoresApiGroup = HttpApiGroup.make("scores")
     // A revision never changes, so the same URL always answers the same bytes.
     HttpApiEndpoint.get("scoreFile", "/:revisionId/file", {
       params: { revisionId: S.String.check(S.isUUID()) },
-      success: guitarProFile,
+      success: fileBytes,
       error: ChartForbidden.pipe(HttpApiSchema.status(403)),
     }),
   )

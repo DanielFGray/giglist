@@ -189,7 +189,7 @@ function sectionHeader(line: string): string | null {
 }
 
 /** True when every token on the line is a chord or a chart symbol (bar lines, repeats, N.C.). */
-function isChordLine(line: string): boolean {
+export function isChordLine(line: string): boolean {
   const tokens = line.trim().split(/\s+/)
   return line.trim() !== "" && tokens.every((token) => CHORD_TOKEN.test(token))
 }

@@ -30,7 +30,8 @@ export function chartNameFromFile(fileName: string): string {
   return stem === "" ? "Score" : stem.slice(0, 200)
 }
 
-function startsWith(bytes: Uint8Array, offset: number, text: string): boolean {
+/** True when `bytes` hold the characters of `text` from `offset` on. */
+export function startsWith(bytes: Uint8Array, offset: number, text: string): boolean {
   if (bytes.length < offset + text.length) return false
   for (let i = 0; i < text.length; i++) {
     if (bytes[offset + i] !== text.charCodeAt(i)) return false

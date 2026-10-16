@@ -158,6 +158,10 @@ export const charts = {
   createLyrics: (data: LyricsChartCreateData) =>
     run(api.pipe(Effect.flatMap((c) => c.charts.createLyricsChart({ payload: data })))),
 
+  /** The chords and lyrics of a PDF or image, as text for the paste box. Nothing is stored. */
+  readFile: (bytes: Uint8Array) =>
+    run(api.pipe(Effect.flatMap((c) => c.charts.readChartFile({ payload: bytes })))),
+
   saveRevision: (id: string, data: ChartRevisionData) =>
     run(api.pipe(Effect.flatMap((c) => c.charts.saveRevision({ params: { id }, payload: data })))),
 
