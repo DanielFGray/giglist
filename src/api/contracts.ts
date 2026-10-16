@@ -501,6 +501,33 @@ export const SetlistEntryUpdate = S.Struct({
   notes_override: S.NullOr(S.String.pipe(S.check(S.isMaxLength(10000)))),
 })
 
+/** A named group of entries in a setlist ("Set 1", "Encore"), in the order the setlist plays them. */
+export const SetlistSection = S.Struct({
+  id: S.String.check(S.isUUID()),
+  setlist_id: S.String.check(S.isUUID()),
+  name: S.String,
+  position: S.Finite,
+})
+
+export const SetlistSectionName = S.Struct({
+  name: S.String.pipe(S.check(S.isMinLength(1)), S.check(S.isMaxLength(200))),
+})
+
+/**
+ * The whole play order in one value: sections in order, each with its entries
+ * in order. A null `section_id` is the group of entries that belong to no
+ * section. The server numbers the positions itself, so the client never
+ * computes a position and gaps never run out.
+ */
+export const SetlistArrangement = S.Struct({
+  groups: S.Array(
+    S.Struct({
+      section_id: S.NullOr(S.String.check(S.isUUID())),
+      entries: S.Array(S.String.check(S.isUUID())),
+    }),
+  ),
+})
+
 export class SetlistForbidden extends S.TaggedError<
   SetlistForbidden,
   { readonly brand: unique symbol }
@@ -597,6 +624,63 @@ export const SetlistsApiGroup = HttpApiGroup.make("setlists")
         id: S.String.check(S.isUUID()),
         entryId: S.String.check(S.isUUID()),
       },
+      error: [
+        SetlistNotFound.pipe(HttpApiSchema.status(404)),
+        SetlistForbidden.pipe(HttpApiSchema.status(403)),
+      ],
+    }),
+  )
+  .add(
+    HttpApiEndpoint.get("listSections", "/:id/sections", {
+      params: { id: S.String.check(S.isUUID()) },
+      success: S.Array(SetlistSection),
+      error: [
+        SetlistNotFound.pipe(HttpApiSchema.status(404)),
+        SetlistForbidden.pipe(HttpApiSchema.status(403)),
+      ],
+    }),
+  )
+  .add(
+    HttpApiEndpoint.post("addSection", "/:id/sections", {
+      params: { id: S.String.check(S.isUUID()) },
+      payload: SetlistSectionName,
+      success: SetlistSection.pipe(HttpApiSchema.status(201)),
+      error: [
+        SetlistNotFound.pipe(HttpApiSchema.status(404)),
+        SetlistForbidden.pipe(HttpApiSchema.status(403)),
+      ],
+    }),
+  )
+  .add(
+    HttpApiEndpoint.put("renameSection", "/:id/sections/:sectionId", {
+      params: {
+        id: S.String.check(S.isUUID()),
+        sectionId: S.String.check(S.isUUID()),
+      },
+      payload: SetlistSectionName,
+      success: SetlistSection,
+      error: [
+        SetlistNotFound.pipe(HttpApiSchema.status(404)),
+        SetlistForbidden.pipe(HttpApiSchema.status(403)),
+      ],
+    }),
+  )
+  .add(
+    HttpApiEndpoint.delete("deleteSection", "/:id/sections/:sectionId", {
+      params: {
+        id: S.String.check(S.isUUID()),
+        sectionId: S.String.check(S.isUUID()),
+      },
+      error: [
+        SetlistNotFound.pipe(HttpApiSchema.status(404)),
+        SetlistForbidden.pipe(HttpApiSchema.status(403)),
+      ],
+    }),
+  )
+  .add(
+    HttpApiEndpoint.put("arrange", "/:id/arrangement", {
+      params: { id: S.String.check(S.isUUID()) },
+      payload: SetlistArrangement,
       error: [
         SetlistNotFound.pipe(HttpApiSchema.status(404)),
         SetlistForbidden.pipe(HttpApiSchema.status(403)),
