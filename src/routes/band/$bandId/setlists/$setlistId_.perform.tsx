@@ -194,7 +194,13 @@ function Perform() {
               </p>
               {current.entry.notes && <p data-pwid="perform-notes" className="mt-2 whitespace-pre-wrap text-lg text-zinc-300">{current.entry.notes}</p>}
             </div>
-            <SongCharts key={current.entry.song_id} songId={current.entry.song_id} shownKey={current.entry.key} size={size} />
+            <SongCharts
+              key={current.entry.song_id}
+              songId={current.entry.song_id}
+              shownKey={current.entry.key}
+              tempo={current.entry.tempo_bpm}
+              size={size}
+            />
           </div>
 
           <aside className="hidden w-64 shrink-0 overflow-y-auto border-l border-zinc-800 p-3 md:block">
@@ -235,7 +241,7 @@ function Perform() {
 }
 
 /** The charts of one song, in the entry's key. A lyrics chart shows the player's own marks but cannot be marked up here. */
-function SongCharts({ songId, shownKey, size }: { songId: string; shownKey: string | null; size: number }) {
+function SongCharts({ songId, shownKey, tempo, size }: { songId: string; shownKey: string | null; tempo: number | null; size: number }) {
   const [list, setList] = useState<ReadonlyArray<ChartInfo> | null>(null)
   const [error, setError] = useState<string | null>(null)
   useEffect(() => {
@@ -256,7 +262,7 @@ function SongCharts({ songId, shownKey, size }: { songId: string; shownKey: stri
     <div className="space-y-8">
       {list.map((chart) =>
         chart.source !== null ? (
-          <MarkedChart key={chart.id} chart={{ ...chart, source: chart.source }} shownKey={shownKey} toolbar={false} size={size} />
+          <MarkedChart key={chart.id} chart={{ ...chart, source: chart.source }} shownKey={shownKey} tempo={tempo} toolbar={false} size={size} />
         ) : (
           <div key={chart.id} className="rounded-lg bg-white p-2">
             <Suspense fallback={<p className="text-zinc-500">Loading the score…</p>}>

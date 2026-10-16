@@ -1,6 +1,7 @@
 /**
  * The lyrics chart as the editor sees it: lines, each a ChordPro directive, a
- * lyric with chords placed at columns, or a line of tab kept as written.
+ * lyric with chords placed at columns, or a literal line: a line of tab or of
+ * a phrase's notation, kept as written.
  *
  * Every edit returns the new chart and the change set that turns the old
  * anchor text into the new one (docs/adr/0001). The editor knows exactly what
@@ -11,15 +12,15 @@
  * derived from the stored text, never stored.
  */
 import { composeChanges, type Change } from "./changes"
-import { isTabStart } from "./lyrics"
+import { isLiteralEnd, isLiteralStart, isPhraseStart } from "./lyrics"
 
 export type PlacedChord = { readonly at: number; readonly chord: string }
 
 export type DocLine =
   | { readonly kind: "directive"; readonly raw: string }
   | { readonly kind: "lyrics"; readonly text: string; readonly chords: ReadonlyArray<PlacedChord> }
-  /** A line inside a tab section: brackets in it are tab, not chords. */
-  | { readonly kind: "tab"; readonly text: string }
+  /** A line inside a tab section or a phrase: brackets in it are notation, not chords. */
+  | { readonly kind: "literal"; readonly text: string }
 
 export type ChartDoc = ReadonlyArray<DocLine>
 
@@ -33,16 +34,16 @@ export type Segment = { readonly start: number; readonly end: number; readonly c
 // Text <-> chart
 
 export function parseDoc(source: string): ChartDoc {
-  let inTab = false
+  let literal = false
   return source.split("\n").map((line): DocLine => {
     if (/^\{.*\}$/.test(line)) {
       const directive: DocLine = { kind: "directive", raw: line }
       const name = directiveName(directive)
-      if (isTabStart(name)) inTab = true
-      else if (name === "end_of_tab" || name === "eot") inTab = false
+      if (isLiteralStart(name)) literal = true
+      else if (isLiteralEnd(name)) literal = false
       return directive
     }
-    if (inTab) return { kind: "tab", text: line }
+    if (literal) return { kind: "literal", text: line }
     const chords: Array<PlacedChord> = []
     let text = ""
     let at = 0
@@ -61,7 +62,7 @@ export function serializeDoc(doc: ChartDoc): string {
 
 function lineSource(line: DocLine): string {
   if (line.kind === "directive") return line.raw
-  if (line.kind === "tab") return line.text
+  if (line.kind === "literal") return line.text
   return withChords(line.text, line.chords)
 }
 
@@ -83,7 +84,7 @@ export function anchorText(doc: ChartDoc): string {
 
 function anchorLine(line: DocLine): string {
   if (line.kind === "lyrics") return withChords(line.text, line.chords)
-  if (line.kind === "tab") return line.text
+  if (line.kind === "literal") return line.text
   const match = /^\{\s*(start_of_\w+|comment|c)\s*(?::\s*(.*?))?\s*\}$/.exec(line.raw)
   return match ? (match[2] ?? "") : ""
 }
@@ -153,20 +154,20 @@ export function moveChord(
 }
 
 /**
- * Replaces the text of a lyric or tab line. On a lyric line, chords stay on
+ * Replaces the text of a lyric or literal line. On a lyric line, chords stay on
  * the text around the edit; a chord inside the replaced stretch moves to its
  * start, and a chord where text is only inserted goes with the text after it. The change is the
  * common-prefix-and-suffix replacement, which is exact except where the edit
  * sits inside a repeat within the one line.
  */
 export function editLine(doc: ChartDoc, lineIndex: number, text: string): Edit {
-  const tab = doc[lineIndex]
-  if (tab?.kind === "tab") {
-    if (text === tab.text) return { doc, changes: [] }
-    const [change] = commonEnds(tab.text, text).change
+  const literal = doc[lineIndex]
+  if (literal?.kind === "literal") {
+    if (text === literal.text) return { doc, changes: [] }
+    const [change] = commonEnds(literal.text, text).change
     const base = lineStart(doc, lineIndex)
     return {
-      doc: replaceLine(doc, lineIndex, { kind: "tab", text }),
+      doc: replaceLine(doc, lineIndex, { kind: "literal", text }),
       changes: change ? [{ from: base + change.from, to: base + change.to, insert: change.insert }] : [],
     }
   }
@@ -199,9 +200,9 @@ export function insertLineAfter(doc: ChartDoc, lineIndex: number): Edit {
     : { doc: next, changes: [{ from: at, to: at, insert: 1 }] }
 }
 
-/** Deletes a lyric or tab line with the newline that separates it from its neighbour. */
+/** Deletes a lyric or literal line with the newline that separates it from its neighbour. */
 export function deleteLine(doc: ChartDoc, lineIndex: number): Edit {
-  if (doc[lineIndex]?.kind !== "tab") lyricsLine(doc, lineIndex)
+  if (doc[lineIndex]?.kind !== "literal") lyricsLine(doc, lineIndex)
   const next = doc.filter((_, i) => i !== lineIndex)
   const start = lineStart(doc, lineIndex)
   const length = anchorLine(doc[lineIndex]!).length
@@ -251,12 +252,13 @@ export function addSection(doc: ChartDoc, lineIndex: number, label: string): Edi
 
 /**
  * Removes a section's start and end lines; its lines stay where they are. A
- * tab section goes with its lines, since tab lines exist only inside one.
+ * tab section or a phrase goes with its lines, since literal lines exist only
+ * inside one.
  */
 export function removeSection(doc: ChartDoc, lineIndex: number): Edit {
   const block = sectionBlock(doc, lineIndex)
-  if (isTabStart(directiveName(doc[lineIndex]!))) {
-    const last = block.closed ? block.end : lineIndex + countTab(doc, lineIndex + 1)
+  if (isLiteralStart(directiveName(doc[lineIndex]!))) {
+    const last = block.closed ? block.end : lineIndex + countLiteral(doc, lineIndex + 1)
     return chain(doc, Array.from({ length: last - lineIndex + 1 }, () => (d: ChartDoc) => removeLineAt(d, lineIndex)))
   }
   const steps = [(d: ChartDoc) => removeLineAt(d, block.end), (d: ChartDoc) => removeLineAt(d, block.start)]
@@ -268,11 +270,57 @@ export function directiveName(line: DocLine): string {
   return line.kind === "directive" ? (/^\{\s*(\w+)/.exec(line.raw)?.[1] ?? "") : ""
 }
 
-/** How many tab lines follow from `index` on. */
-function countTab(doc: ChartDoc, index: number): number {
+/** How many literal lines follow from `index` on. */
+function countLiteral(doc: ChartDoc, index: number): number {
   let n = 0
-  while (doc[index + n]?.kind === "tab") n++
+  while (doc[index + n]?.kind === "literal") n++
   return n
+}
+
+/** True for a line of a phrase's notation, which the editor shows as the drawn phrase. */
+export function inPhrase(doc: ChartDoc, lineIndex: number): boolean {
+  const open = enclosingSection(doc, lineIndex)
+  return open !== null && isPhraseStart(`start_of_${open.kind}`)
+}
+
+/** The phrase whose start line is at `lineIndex`: its name and its alphaTex. */
+export function phraseAt(doc: ChartDoc, lineIndex: number): { name: string; tex: string } {
+  const line = doc[lineIndex]!
+  if (!isPhraseStart(directiveName(line))) throw new Error(`line ${lineIndex} is not a phrase`)
+  const n = countLiteral(doc, lineIndex + 1)
+  const tex = doc.slice(lineIndex + 1, lineIndex + 1 + n).map((l) => (l.kind === "literal" ? l.text : ""))
+  return { name: anchorLine(line), tex: tex.join("\n") }
+}
+
+/**
+ * Puts a phrase after the line at `lineIndex`. Sections do not nest, so inside
+ * a section the phrase splits it, and the second half continues with no label;
+ * after a section's last line the phrase goes after the section.
+ */
+export function addPhrase(doc: ChartDoc, lineIndex: number, name: string, tex: string): Edit {
+  const open = enclosingSection(doc, lineIndex + 1)
+  const next = doc[lineIndex + 1]
+  const atEnd = open !== null && next !== undefined && directiveName(next) === `end_of_${open.kind}`
+  const at = atEnd ? lineIndex + 2 : lineIndex + 1
+  const block = [directive("start_of_textblock", cleanLabel(name)), ...literalLines(tex), directive("end_of_textblock")]
+  const split = open && !atEnd ? [directive(`end_of_${open.kind}`), ...block, directive(`start_of_${open.kind}`)] : block
+  return chain(doc, split.map((line, i) => (d: ChartDoc) => insertLineAt(d, at + i, line)))
+}
+
+/** Gives the phrase whose start line is at `lineIndex` a new name and new alphaTex. */
+export function setPhrase(doc: ChartDoc, lineIndex: number, name: string, tex: string): Edit {
+  const old = countLiteral(doc, lineIndex + 1)
+  const lines = literalLines(tex)
+  return chain(doc, [
+    (d) => renameSection(d, lineIndex, name),
+    ...Array.from({ length: old }, () => (d: ChartDoc) => removeLineAt(d, lineIndex + 1)),
+    ...lines.map((line, i) => (d: ChartDoc) => insertLineAt(d, lineIndex + 1 + i, line)),
+  ])
+}
+
+/** alphaTex as literal lines. A line that looks like a directive would end the block, so it is indented. */
+function literalLines(tex: string): ReadonlyArray<DocLine> {
+  return tex.split("\n").map((text) => ({ kind: "literal", text: /^\{.*\}$/.test(text) ? ` ${text}` : text }))
 }
 
 /**

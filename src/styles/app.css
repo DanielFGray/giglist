@@ -50,3 +50,20 @@
     color: #1c1917;
   }
 }
+
+/* alphaTab's play cursor, in phrases and scores: the bar and the beat being played. */
+@layer components {
+  .at-cursor-bar {
+    background-color: color-mix(in oklch, var(--color-amber-accent) 15%, transparent);
+  }
+
+  .at-cursor-beat {
+    width: 3px;
+    background-color: var(--color-amber-accent);
+  }
+
+  .at-highlight * {
+    fill: var(--color-amber-accent);
+    stroke: var(--color-amber-accent);
+  }
+}

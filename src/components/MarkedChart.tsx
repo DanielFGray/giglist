@@ -33,11 +33,14 @@ const buttonClass =
 export function MarkedChart({
   chart,
   shownKey,
+  tempo = null,
   toolbar = true,
   size,
 }: {
   chart: ChartInfo & { source: string }
   shownKey: string | null
+  /** The song's tempo, which phrases play at. */
+  tempo?: number | null
   /** False on stage: the player's marks show, but nothing can be drawn, moved or shared. */
   toolbar?: boolean
   /** Text size in rem; see LyricsChart. */
@@ -379,7 +382,7 @@ export function MarkedChart({
         className={`relative flex ${tool === "read" ? "" : tool === "move" ? "cursor-default" : "cursor-crosshair"}`}
       >
         <div className="min-w-0 flex-1">
-          <LyricsChart source={chart.source} shownKey={shownKey} size={size} />
+          <LyricsChart source={chart.source} shownKey={shownKey} tempo={tempo} size={size} />
         </div>
         <div ref={gutter} aria-hidden data-pwid="chart-margin" className="w-32 shrink-0 border-l border-dashed border-[var(--color-border-subtle)]" />
         <div className="pointer-events-none absolute inset-0">

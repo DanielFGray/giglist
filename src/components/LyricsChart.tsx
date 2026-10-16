@@ -1,5 +1,6 @@
 import { useMemo } from "react"
 import { renderLyrics, type ChartItem, type ChartLine } from "~/charts/lyrics"
+import { Phrase } from "./Phrase"
 
 /**
  * A lyrics chart drawn in `shownKey`: each chord sits over the word it was placed on.
@@ -9,10 +10,13 @@ import { renderLyrics, type ChartItem, type ChartLine } from "~/charts/lyrics"
 export function LyricsChart({
   source,
   shownKey,
+  tempo = null,
   size = 0.875,
 }: {
   source: string
   shownKey: string | null
+  /** The song's tempo, which its phrases play at. */
+  tempo?: number | null
   /** Text size in rem; marks are placed in em of this size, so they scale with it. */
   size?: number
 }) {
@@ -20,19 +24,31 @@ export function LyricsChart({
   return (
     <div data-pwid="lyrics-chart" style={{ fontSize: `${size}rem` }} className="font-mono leading-tight">
       {lines.map((line, index) => (
-        <Line key={index} line={line} />
+        <Line key={index} line={line} tempo={tempo} />
       ))}
     </div>
   )
 }
 
-function Line({ line }: { line: ChartLine }) {
+function Line({ line, tempo }: { line: ChartLine; tempo: number | null }) {
   if (line.length === 0) return <div className="h-4" />
-  // A tab line has no chord row above it, and never wraps: its columns are the music.
-  if (line.length === 1 && line[0]!.kind === "tab") {
+  const only = line.length === 1 ? line[0]! : null
+  // Tab and phrases have no chord row above them, and never wrap: their columns are the music.
+  if (only?.kind === "tab") {
     return (
-      <div data-pwid="chart-tab" data-start={line[0]!.start} data-end={line[0]!.end} className="whitespace-pre">
-        {line[0]!.text}
+      <div data-pwid="chart-tab" data-start={only.start} data-end={only.end} className="whitespace-pre">
+        {only.text}
+      </div>
+    )
+  }
+  if (only?.kind === "phrase") {
+    return (
+      <div data-pwid="chart-phrase" data-start={only.start} data-end={only.end} className="my-2">
+        <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+          {only.name}
+          {only.writtenIn && <WrittenIn what="notation" keyName={only.writtenIn} spaced={only.name !== ""} />}
+        </div>
+        <Phrase tex={only.tex} tempo={tempo} />
       </div>
     )
   }
@@ -51,17 +67,15 @@ function Item({ item }: { item: ChartItem }) {
       return (
         <span data-pwid="chart-section" data-start={item.start} data-end={item.end} className="mt-3 mb-1 w-full text-xs font-semibold uppercase tracking-wide text-zinc-400">
           {item.label}
-          {item.tabWrittenIn && (
-            <span data-pwid="chart-tab-key" className={`${item.label ? "ml-2 " : ""}normal-case tracking-normal font-normal text-zinc-500`}>
-              tab as written, in {item.tabWrittenIn}
-            </span>
-          )}
+          {item.writtenIn && <WrittenIn what="tab" keyName={item.writtenIn} spaced={item.label !== ""} />}
         </span>
       )
     case "comment":
       return <span data-start={item.start} data-end={item.end} className="italic text-zinc-500">{item.text}</span>
     case "tab":
-      return <span data-start={item.start} data-end={item.end} className="whitespace-pre">{item.text}</span>
+    case "phrase":
+      // Each is drawn as a whole line above.
+      return null
     case "pair":
       return (
         <span data-start={item.start} data-end={item.end} className="inline-flex flex-col">
@@ -72,4 +86,13 @@ function Item({ item }: { item: ChartItem }) {
         </span>
       )
   }
+}
+
+/** The note on tab or notation shown in another key: it is drawn as written, in the written key. */
+function WrittenIn({ what, keyName, spaced }: { what: "tab" | "notation"; keyName: string; spaced: boolean }) {
+  return (
+    <span data-pwid="chart-written-in" className={`${spaced ? "ml-2 " : ""}normal-case tracking-normal font-normal text-zinc-500`}>
+      {what} as written, in {keyName}
+    </span>
+  )
 }

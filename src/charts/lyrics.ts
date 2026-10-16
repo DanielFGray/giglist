@@ -17,14 +17,24 @@ import { ChordLyricsPair, ChordProParser, Literal, Tag } from "chordsheetjs"
  */
 export type ChartItem = { readonly start: number; readonly end: number } & (
   | { kind: "pair"; chord: string; lyric: string }
-  /** `tabWrittenIn` is set on a tab section drawn in another key: its tab is shown as written, in that key. */
-  | { kind: "section"; label: string; tabWrittenIn?: string }
+  /** `writtenIn` is set on a tab section drawn in another key: its tab is shown as written, in that key. */
+  | { kind: "section"; label: string; writtenIn?: string }
   | { kind: "comment"; text: string }
   /** A line of ASCII tab, kept exactly as written: its columns are the music. */
   | { kind: "tab"; text: string }
+  /**
+   * A phrase: `tex` is its alphaTex (docs/adr/0003). Its range covers its
+   * name and every line of its notation. `writtenIn` is set when the chart is
+   * drawn in another key, since the notation is drawn as written.
+   */
+  | { kind: "phrase"; name: string; tex: string; writtenIn?: string }
 )
 
-/** A chart line; an empty one is a blank line. */
+/**
+ * A drawn chart line; an empty one is a blank line. A directive that draws
+ * nothing (`{key}`, a section's end) gives no line, and a phrase's lines give
+ * one line holding the phrase.
+ */
 export type ChartLine = ReadonlyArray<ChartItem>
 
 /**
@@ -38,21 +48,41 @@ export type ChartLine = ReadonlyArray<ChartItem>
 export function renderLyrics(source: string, shownKey?: string | null): ReadonlyArray<ChartLine> {
   const stored = new ChordProParser().parse(source)
   const song = stored.key && shownKey && shownKey !== stored.key ? stored.changeKey(shownKey) : stored
+  const writtenIn = song === stored ? {} : { writtenIn: stored.key! }
+  const lines: Array<ChartLine> = []
+  // The phrase whose lines are being read, from its start line to its end line.
+  let phrase: { name: string; tex: Array<string>; start: number; end: number } | null = null
+  const closePhrase = () => {
+    if (!phrase) return
+    lines.push([{ kind: "phrase", name: phrase.name, tex: phrase.tex.join("\n"), start: phrase.start, end: phrase.end, ...writtenIn }])
+    phrase = null
+  }
   let offset = 0
-  return song.lines.map((line, lineIndex) => {
+  song.lines.forEach((line, lineIndex) => {
     if (lineIndex > 0) offset += 1
-    return line.items.flatMap((item, itemIndex) => {
+    const items = line.items.flatMap((item, itemIndex): ReadonlyArray<ChartItem> => {
       // Ranges come from the stored chart: a transposed chord may be longer or shorter.
       const start = offset
       const written = stored.lines[lineIndex]!.items[itemIndex]
       offset += anchorSegment(written).length
+      if (item instanceof Tag && isPhraseStart(item.name)) {
+        phrase = { name: item.label || item.value, tex: [], start, end: offset }
+        return []
+      }
+      if (phrase && item instanceof Literal) {
+        phrase.tex.push(item.string)
+        phrase.end = offset
+        return []
+      }
+      if (item instanceof Tag && item.isSectionEnd()) closePhrase()
       // ChordSheetJS transposes chord names in a tab line too; tab is shown as written, chords and frets alike.
       const shown = toItem(item instanceof Literal ? written : item, start, offset)
-      return song === stored || !(item instanceof Tag && isTabStart(item.name))
-        ? shown
-        : shown.map((i) => ({ ...i, tabWrittenIn: stored.key! }))
+      return item instanceof Tag && isTabStart(item.name) ? shown.map((i) => ({ ...i, ...writtenIn })) : shown
     })
+    if (items.length > 0 || (line.items.length === 0 && !phrase)) lines.push(items)
   })
+  closePhrase()
+  return lines
 }
 
 /** The text one item contributes to the anchor text. */
@@ -101,6 +131,24 @@ function toItem(item: unknown, start: number, end: number): ReadonlyArray<ChartI
 /** `{start_of_tab}` and its short form `{sot}`. */
 export function isTabStart(directiveName: string): boolean {
   return directiveName === "start_of_tab" || directiveName === "sot"
+}
+
+/**
+ * A phrase is stored as a ChordPro textblock (docs/adr/0003): the only section
+ * whose lines ChordSheetJS neither parses nor transposes, which alphaTex needs.
+ */
+export function isPhraseStart(directiveName: string): boolean {
+  return directiveName === "start_of_textblock"
+}
+
+/** The start of a section whose lines ChordSheetJS keeps as written: tab or a phrase. */
+export function isLiteralStart(directiveName: string): boolean {
+  return isTabStart(directiveName) || isPhraseStart(directiveName)
+}
+
+/** The end of a section whose lines ChordSheetJS keeps as written. */
+export function isLiteralEnd(directiveName: string): boolean {
+  return ["end_of_tab", "eot", "end_of_textblock"].includes(directiveName)
 }
 
 /**
@@ -179,20 +227,20 @@ export function importPasted(text: string, writtenKey?: string | null): string {
  * touch the one before it moves right to leave a space, and a chord-only line
  * is followed by a blank line so the importer does not pair it with the lyrics
  * or tab below. Tab lines are written as stored, and a section with no label
- * gets no header line. Directives other than sections and comments are dropped.
+ * gets no header line. A phrase has no form in this text, so only its name is
+ * written, as a header. Directives other than sections and comments are dropped.
  */
 export function exportChords(source: string, shownKey?: string | null): string {
   const out: Array<string> = []
   // True right after a chord-only row, which the importer would pair with a lyric row below it.
   let chordsOnly = false
-  const stored = source.split("\n")
-  for (const [i, line] of renderLyrics(source, shownKey).entries()) {
+  for (const line of renderLyrics(source, shownKey)) {
     let chords = ""
     let lyrics = ""
     for (const item of line) {
       if (item.kind === "section") {
         if (item.label) out.push(`[${item.label}]`)
-      } else if (item.kind === "comment") out.push(item.text)
+      } else if (item.kind === "comment" || item.kind === "phrase") out.push(item.kind === "phrase" ? `[${item.name}]` : item.text)
       else if (item.kind === "tab") {
         if (chordsOnly) out.push("")
         out.push(item.text)
@@ -210,7 +258,7 @@ export function exportChords(source: string, shownKey?: string | null): string {
     if (text) {
       if (chordsOnly && !chords) out.push("")
       out.push(text)
-    } else if (!chords && stored[i]!.trim() === "") out.push("")
+    } else if (line.length === 0) out.push("")
     chordsOnly = chords !== "" && text === ""
   }
   return out.join("\n")

@@ -19,6 +19,14 @@ _Avoid_: chord sheet, ChordPro
 A chart in standard notation and tab for one or more instruments, uploaded as a Guitar Pro file.
 _Avoid_: tab file, notation
 
+**Tab**:
+Lines of ASCII tablature in a lyrics chart, drawn exactly as written.
+_Avoid_: tab file
+
+**Phrase**:
+A short piece of real notation in a lyrics chart (a riff, a lick, a fill, a groove), with a name, drawn as a row between lyric lines and played at the song's tempo.
+_Avoid_: snippet, lick block, notation block
+
 **Revision**:
 One saved version of a chart. A revision never changes; an edit makes a new one.
 _Avoid_: version, draft

@@ -24,6 +24,7 @@ const keyOptions: ReadonlyArray<{ value: MusicalKeyType | ""; label: string }> =
 export function SongCharts({
   songId,
   songKey,
+  tempo,
   shownKey,
   onShownKeyChange,
   list,
@@ -31,6 +32,8 @@ export function SongCharts({
 }: {
   songId: string
   songKey: MusicalKeyType | null
+  /** The song's tempo, which phrases in its charts play at. */
+  tempo: number | null
   shownKey: MusicalKeyType | null
   onShownKeyChange: (key: MusicalKeyType | null) => void
   list: ReadonlyArray<ChartInfo>
@@ -61,7 +64,7 @@ export function SongCharts({
         </p>
       )}
       {list.map((chart) => (
-        <ChartCard key={chart.id} chart={chart} shownKey={shownKey} onChanged={onChanged} />
+        <ChartCard key={chart.id} chart={chart} shownKey={shownKey} tempo={tempo} onChanged={onChanged} />
       ))}
       {adding ? (
         <AddLyricsChart
@@ -109,10 +112,12 @@ export function SongCharts({
 function ChartCard({
   chart,
   shownKey,
+  tempo,
   onChanged,
 }: {
   chart: ChartInfo
   shownKey: MusicalKeyType | null
+  tempo: number | null
   onChanged: () => Promise<void>
 }) {
   const [error, setError] = useState<string | null>(null)
@@ -184,6 +189,7 @@ function ChartCard({
       {chart.source !== null && editing ? (
         <ChartEditor
           chart={{ ...chart, source: chart.source }}
+          tempo={tempo}
           onCancel={() => setEditing(false)}
           onSaved={async () => {
             setEditing(false)
@@ -191,7 +197,7 @@ function ChartCard({
           }}
         />
       ) : chart.source !== null ? (
-        <MarkedChart chart={{ ...chart, source: chart.source }} shownKey={shownKey} />
+        <MarkedChart chart={{ ...chart, source: chart.source }} shownKey={shownKey} tempo={tempo} />
       ) : (
         <Suspense fallback={<p className="text-sm text-zinc-500">Loading the score…</p>}>
           <ScoreViewer key={chart.revision_id} revisionId={chart.revision_id} />
