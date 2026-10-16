@@ -1,0 +1,472 @@
+[
+ {
+  "source": "Carry On My Wayward Son.gp5",
+  "name": "A5",
+  "frets": [
+   5,
+   7,
+   null,
+   null,
+   5,
+   5
+  ],
+  "firstFret": 5,
+  "barreFrets": [
+   5
+  ]
+ },
+ {
+  "source": "Carry On My Wayward Son.gp5",
+  "name": "Gadd11",
+  "frets": [
+   3,
+   2,
+   null,
+   5,
+   3,
+   null
+  ],
+  "firstFret": 1,
+  "barreFrets": []
+ },
+ {
+  "source": "Carry On My Wayward Son.gp5",
+  "name": "F6",
+  "frets": [
+   1,
+   3,
+   null,
+   5,
+   3,
+   null
+  ],
+  "firstFret": 1,
+  "barreFrets": [
+   3
+  ]
+ },
+ {
+  "source": "Carry On My Wayward Son.gp5",
+  "name": "G5",
+  "frets": [
+   3,
+   5,
+   null,
+   0,
+   3,
+   null
+  ],
+  "firstFret": 1,
+  "barreFrets": []
+ },
+ {
+  "source": "Carry On My Wayward Son.gp5",
+  "name": "Dm",
+  "frets": [
+   null,
+   null,
+   0,
+   2,
+   3,
+   1
+  ],
+  "firstFret": 1,
+  "barreFrets": []
+ },
+ {
+  "source": "Carry On My Wayward Son.gp5",
+  "name": "C/G",
+  "frets": [
+   null,
+   3,
+   2,
+   0,
+   1,
+   3
+  ],
+  "firstFret": 1,
+  "barreFrets": []
+ },
+ {
+  "source": "Carry On My Wayward Son.gp5",
+  "name": "A#",
+  "frets": [
+   null,
+   1,
+   null,
+   null,
+   null,
+   null
+  ],
+  "firstFret": 1,
+  "barreFrets": []
+ },
+ {
+  "source": "Carry On My Wayward Son.gp5",
+  "name": "Dm",
+  "frets": [
+   null,
+   null,
+   0,
+   null,
+   null,
+   null
+  ],
+  "firstFret": 1,
+  "barreFrets": []
+ },
+ {
+  "source": "Carry On My Wayward Son.gp5",
+  "name": "C/G",
+  "frets": [
+   null,
+   3,
+   null,
+   null,
+   null,
+   null
+  ],
+  "firstFret": 1,
+  "barreFrets": []
+ },
+ {
+  "source": "Carry On My Wayward Son.gp5",
+  "name": "Gadd11",
+  "frets": [
+   3,
+   2,
+   null,
+   0,
+   1,
+   null
+  ],
+  "firstFret": 1,
+  "barreFrets": []
+ },
+ {
+  "source": "Classique.gpx",
+  "name": "C7M",
+  "frets": [
+   null,
+   3,
+   2,
+   0,
+   0,
+   3
+  ],
+  "firstFret": 1,
+  "barreFrets": []
+ },
+ {
+  "source": "Classique.gpx",
+  "name": "G",
+  "frets": [
+   3,
+   2,
+   0,
+   0,
+   0,
+   3
+  ],
+  "firstFret": 1,
+  "barreFrets": []
+ },
+ {
+  "source": "Classique.gpx",
+  "name": "Em",
+  "frets": [
+   0,
+   2,
+   2,
+   0,
+   0,
+   0
+  ],
+  "firstFret": 1,
+  "barreFrets": []
+ },
+ {
+  "source": "Classique.gpx",
+  "name": "Am",
+  "frets": [
+   null,
+   0,
+   2,
+   2,
+   1,
+   0
+  ],
+  "firstFret": 1,
+  "barreFrets": []
+ },
+ {
+  "source": "Classique.gpx",
+  "name": "B7/F#",
+  "frets": [
+   2,
+   null,
+   1,
+   2,
+   0,
+   null
+  ],
+  "firstFret": 1,
+  "barreFrets": []
+ },
+ {
+  "source": "Classique.gpx",
+  "name": "B7",
+  "frets": [
+   null,
+   2,
+   1,
+   2,
+   0,
+   2
+  ],
+  "firstFret": 1,
+  "barreFrets": []
+ },
+ {
+  "source": "Classique.gpx",
+  "name": "Am/G",
+  "frets": [
+   3,
+   0,
+   2,
+   2,
+   1,
+   0
+  ],
+  "firstFret": 1,
+  "barreFrets": []
+ },
+ {
+  "source": "Classique.gpx",
+  "name": "F#dim7",
+  "frets": [
+   2,
+   null,
+   1,
+   2,
+   1,
+   null
+  ],
+  "firstFret": 1,
+  "barreFrets": []
+ },
+ {
+  "source": "Daniel - AAL medley.gp5",
+  "name": "A7Madd13",
+  "frets": [
+   null,
+   0,
+   6,
+   6,
+   7,
+   null
+  ],
+  "firstFret": 6,
+  "barreFrets": [
+   6
+  ]
+ },
+ {
+  "source": "Daniel - AAL medley.gp5",
+  "name": "F#7sus4",
+  "frets": [
+   null,
+   null,
+   4,
+   6,
+   5,
+   7
+  ],
+  "firstFret": 4,
+  "barreFrets": []
+ },
+ {
+  "source": "Daniel - AAL medley.gp5",
+  "name": "Aadd9",
+  "frets": [
+   null,
+   12,
+   9,
+   9,
+   10,
+   9
+  ],
+  "firstFret": 9,
+  "barreFrets": [
+   9
+  ]
+ },
+ {
+  "source": "Daniel - AAL medley.gp5",
+  "name": "Fm6",
+  "frets": [
+   null,
+   8,
+   6,
+   7,
+   6,
+   null
+  ],
+  "firstFret": 6,
+  "barreFrets": [
+   6
+  ]
+ },
+ {
+  "source": "Daniel - AAL medley.gp5",
+  "name": "F#madd9",
+  "frets": [
+   null,
+   9,
+   7,
+   null,
+   9,
+   null
+  ],
+  "firstFret": 7,
+  "barreFrets": []
+ },
+ {
+  "source": "Daniel - AAL medley.gp5",
+  "name": "Aadd9",
+  "frets": [
+   null,
+   12,
+   11,
+   null,
+   12,
+   null
+  ],
+  "firstFret": 11,
+  "barreFrets": []
+ },
+ {
+  "source": "Daniel - AAL medley.gp5",
+  "name": "Eadd9",
+  "frets": [
+   null,
+   7,
+   6,
+   null,
+   7,
+   null
+  ],
+  "firstFret": 6,
+  "barreFrets": []
+ },
+ {
+  "source": "Daniel - AAL medley.gp5",
+  "name": "D7M",
+  "frets": [
+   null,
+   5,
+   null,
+   6,
+   7,
+   null
+  ],
+  "firstFret": 5,
+  "barreFrets": []
+ },
+ {
+  "source": "Daniel - AAL medley.gp5",
+  "name": "E6add9",
+  "frets": [
+   null,
+   7,
+   6,
+   6,
+   7,
+   null
+  ],
+  "firstFret": 6,
+  "barreFrets": [
+   6
+  ]
+ },
+ {
+  "source": "Daniel - Chords and Arpeggios.gp5",
+  "name": "E",
+  "frets": [
+   0,
+   2,
+   2,
+   1,
+   0,
+   0
+  ],
+  "firstFret": 1,
+  "barreFrets": []
+ },
+ {
+  "source": "Daniel - Chords and Arpeggios.gp5",
+  "name": "E",
+  "frets": [
+   null,
+   7,
+   9,
+   9,
+   9,
+   7
+  ],
+  "firstFret": 7,
+  "barreFrets": [
+   7
+  ]
+ },
+ {
+  "source": "Daniel - Chords and Arpeggios.gp5",
+  "name": "Em",
+  "frets": [
+   null,
+   7,
+   9,
+   9,
+   8,
+   7
+  ],
+  "firstFret": 7,
+  "barreFrets": [
+   7
+  ]
+ },
+ {
+  "source": "Daniel - blackmetal sounding gayness.gpx",
+  "name": "Em",
+  "frets": [
+   6,
+   7,
+   9,
+   9,
+   8,
+   7
+  ],
+  "firstFret": 7,
+  "barreFrets": [
+   7
+  ]
+ },
+ {
+  "source": "Daniel - blackmetal sounding gayness.gpx",
+  "name": "Cm",
+  "frets": [
+   8,
+   10,
+   10,
+   8,
+   8,
+   8
+  ],
+  "firstFret": 8,
+  "barreFrets": [
+   8,
+   8,
+   8
+  ]
+ }
+]

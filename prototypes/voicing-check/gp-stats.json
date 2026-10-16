@@ -1,0 +1,784 @@
+{
+ "files": 225,
+ "readFailures": 2,
+ "staves": 731,
+ "capoStaves": 1,
+ "stavesWithChords": 6,
+ "distinctShapes": 32,
+ "failures": [
+  "Diminished to Be.gp5: undefined is not an object (evaluating 'nextVoice.beats')",
+  "Mine - Garrett trent.gp5: Unexpected end of data within reader"
+ ],
+ "raw": [
+  {
+   "source": "Carry On My Wayward Son.gp5",
+   "name": "A5",
+   "firstFret": 5,
+   "strings": [
+    5,
+    5,
+    -1,
+    -1,
+    7,
+    5
+   ],
+   "barreFrets": [
+    5
+   ]
+  },
+  {
+   "source": "Carry On My Wayward Son.gp5",
+   "name": "Gadd11",
+   "firstFret": 1,
+   "strings": [
+    -1,
+    3,
+    5,
+    -1,
+    2,
+    3
+   ],
+   "barreFrets": []
+  },
+  {
+   "source": "Carry On My Wayward Son.gp5",
+   "name": "F6",
+   "firstFret": 1,
+   "strings": [
+    -1,
+    3,
+    5,
+    -1,
+    3,
+    1
+   ],
+   "barreFrets": [
+    3
+   ]
+  },
+  {
+   "source": "Carry On My Wayward Son.gp5",
+   "name": "G5",
+   "firstFret": 1,
+   "strings": [
+    -1,
+    3,
+    0,
+    -1,
+    5,
+    3
+   ],
+   "barreFrets": []
+  },
+  {
+   "source": "Carry On My Wayward Son.gp5",
+   "name": "A5",
+   "firstFret": 5,
+   "strings": [
+    5,
+    5,
+    -1,
+    -1,
+    7,
+    5
+   ],
+   "barreFrets": [
+    5
+   ]
+  },
+  {
+   "source": "Carry On My Wayward Son.gp5",
+   "name": "Gadd11",
+   "firstFret": 1,
+   "strings": [
+    -1,
+    3,
+    5,
+    -1,
+    2,
+    3
+   ],
+   "barreFrets": []
+  },
+  {
+   "source": "Carry On My Wayward Son.gp5",
+   "name": "F6",
+   "firstFret": 1,
+   "strings": [
+    -1,
+    3,
+    5,
+    -1,
+    3,
+    1
+   ],
+   "barreFrets": [
+    3
+   ]
+  },
+  {
+   "source": "Carry On My Wayward Son.gp5",
+   "name": "G5",
+   "firstFret": 1,
+   "strings": [
+    -1,
+    3,
+    0,
+    -1,
+    5,
+    3
+   ],
+   "barreFrets": []
+  },
+  {
+   "source": "Carry On My Wayward Son.gp5",
+   "name": "Dm",
+   "firstFret": 1,
+   "strings": [
+    1,
+    3,
+    2,
+    0,
+    -1,
+    -1
+   ],
+   "barreFrets": []
+  },
+  {
+   "source": "Carry On My Wayward Son.gp5",
+   "name": "C/G",
+   "firstFret": 1,
+   "strings": [
+    3,
+    1,
+    0,
+    2,
+    3,
+    -1
+   ],
+   "barreFrets": []
+  },
+  {
+   "source": "Carry On My Wayward Son.gp5",
+   "name": "A#",
+   "firstFret": 1,
+   "strings": [
+    -1,
+    -1,
+    -1,
+    -1,
+    1,
+    -1
+   ],
+   "barreFrets": []
+  },
+  {
+   "source": "Carry On My Wayward Son.gp5",
+   "name": "Dm",
+   "firstFret": 1,
+   "strings": [
+    -1,
+    -1,
+    -1,
+    0,
+    -1,
+    -1
+   ],
+   "barreFrets": []
+  },
+  {
+   "source": "Carry On My Wayward Son.gp5",
+   "name": "C/G",
+   "firstFret": 1,
+   "strings": [
+    -1,
+    -1,
+    -1,
+    -1,
+    3,
+    -1
+   ],
+   "barreFrets": []
+  },
+  {
+   "source": "Carry On My Wayward Son.gp5",
+   "name": "Gadd11",
+   "firstFret": 1,
+   "strings": [
+    -1,
+    1,
+    0,
+    -1,
+    2,
+    3
+   ],
+   "barreFrets": []
+  },
+  {
+   "source": "Classique.gpx",
+   "name": "C7M",
+   "firstFret": 1,
+   "strings": [
+    3,
+    0,
+    0,
+    2,
+    3,
+    -1
+   ],
+   "barreFrets": []
+  },
+  {
+   "source": "Classique.gpx",
+   "name": "G",
+   "firstFret": 1,
+   "strings": [
+    3,
+    0,
+    0,
+    0,
+    2,
+    3
+   ],
+   "barreFrets": []
+  },
+  {
+   "source": "Classique.gpx",
+   "name": "Em",
+   "firstFret": 1,
+   "strings": [
+    0,
+    0,
+    0,
+    2,
+    2,
+    0
+   ],
+   "barreFrets": []
+  },
+  {
+   "source": "Classique.gpx",
+   "name": "Am",
+   "firstFret": 1,
+   "strings": [
+    0,
+    1,
+    2,
+    2,
+    0,
+    -1
+   ],
+   "barreFrets": []
+  },
+  {
+   "source": "Classique.gpx",
+   "name": "B7/F#",
+   "firstFret": 1,
+   "strings": [
+    -1,
+    0,
+    2,
+    1,
+    -1,
+    2
+   ],
+   "barreFrets": []
+  },
+  {
+   "source": "Classique.gpx",
+   "name": "B7",
+   "firstFret": 1,
+   "strings": [
+    2,
+    0,
+    2,
+    1,
+    2,
+    -1
+   ],
+   "barreFrets": []
+  },
+  {
+   "source": "Classique.gpx",
+   "name": "Am/G",
+   "firstFret": 1,
+   "strings": [
+    0,
+    1,
+    2,
+    2,
+    0,
+    3
+   ],
+   "barreFrets": []
+  },
+  {
+   "source": "Classique.gpx",
+   "name": "F#dim7",
+   "firstFret": 1,
+   "strings": [
+    -1,
+    1,
+    2,
+    1,
+    -1,
+    2
+   ],
+   "barreFrets": []
+  },
+  {
+   "source": "Daniel - AAL medley.gp5",
+   "name": "A7Madd13",
+   "firstFret": 6,
+   "strings": [
+    -1,
+    7,
+    6,
+    6,
+    0,
+    -1
+   ],
+   "barreFrets": [
+    6
+   ]
+  },
+  {
+   "source": "Daniel - AAL medley.gp5",
+   "name": "F#7sus4",
+   "firstFret": 4,
+   "strings": [
+    7,
+    5,
+    6,
+    4,
+    -1,
+    -1
+   ],
+   "barreFrets": []
+  },
+  {
+   "source": "Daniel - AAL medley.gp5",
+   "name": "Aadd9",
+   "firstFret": 9,
+   "strings": [
+    9,
+    10,
+    9,
+    9,
+    12,
+    -1
+   ],
+   "barreFrets": [
+    9
+   ]
+  },
+  {
+   "source": "Daniel - AAL medley.gp5",
+   "name": "A7Madd13",
+   "firstFret": 6,
+   "strings": [
+    -1,
+    7,
+    6,
+    6,
+    0,
+    -1
+   ],
+   "barreFrets": [
+    6
+   ]
+  },
+  {
+   "source": "Daniel - AAL medley.gp5",
+   "name": "F#7sus4",
+   "firstFret": 4,
+   "strings": [
+    7,
+    5,
+    6,
+    4,
+    -1,
+    -1
+   ],
+   "barreFrets": []
+  },
+  {
+   "source": "Daniel - AAL medley.gp5",
+   "name": "Aadd9",
+   "firstFret": 9,
+   "strings": [
+    9,
+    10,
+    9,
+    9,
+    12,
+    -1
+   ],
+   "barreFrets": [
+    9
+   ]
+  },
+  {
+   "source": "Daniel - AAL medley.gp5",
+   "name": "Fm6",
+   "firstFret": 6,
+   "strings": [
+    -1,
+    6,
+    7,
+    6,
+    8,
+    -1
+   ],
+   "barreFrets": [
+    6
+   ]
+  },
+  {
+   "source": "Daniel - AAL medley.gp5",
+   "name": "F#madd9",
+   "firstFret": 7,
+   "strings": [
+    -1,
+    9,
+    -1,
+    7,
+    9,
+    -1
+   ],
+   "barreFrets": []
+  },
+  {
+   "source": "Daniel - AAL medley.gp5",
+   "name": "Aadd9",
+   "firstFret": 11,
+   "strings": [
+    -1,
+    12,
+    -1,
+    11,
+    12,
+    -1
+   ],
+   "barreFrets": []
+  },
+  {
+   "source": "Daniel - AAL medley.gp5",
+   "name": "Eadd9",
+   "firstFret": 6,
+   "strings": [
+    -1,
+    7,
+    -1,
+    6,
+    7,
+    -1
+   ],
+   "barreFrets": []
+  },
+  {
+   "source": "Daniel - AAL medley.gp5",
+   "name": "D7M",
+   "firstFret": 5,
+   "strings": [
+    -1,
+    7,
+    6,
+    -1,
+    5,
+    -1
+   ],
+   "barreFrets": []
+  },
+  {
+   "source": "Daniel - AAL medley.gp5",
+   "name": "E6add9",
+   "firstFret": 6,
+   "strings": [
+    -1,
+    7,
+    6,
+    6,
+    7,
+    -1
+   ],
+   "barreFrets": [
+    6
+   ]
+  },
+  {
+   "source": "Daniel - Chords and Arpeggios.gp5",
+   "name": "E",
+   "firstFret": 1,
+   "strings": [
+    0,
+    0,
+    1,
+    2,
+    2,
+    0
+   ],
+   "barreFrets": []
+  },
+  {
+   "source": "Daniel - Chords and Arpeggios.gp5",
+   "name": "E",
+   "firstFret": 7,
+   "strings": [
+    7,
+    9,
+    9,
+    9,
+    7,
+    -1
+   ],
+   "barreFrets": [
+    7
+   ]
+  },
+  {
+   "source": "Daniel - Chords and Arpeggios.gp5",
+   "name": "Em",
+   "firstFret": 1,
+   "strings": [
+    0,
+    0,
+    0,
+    2,
+    2,
+    0
+   ],
+   "barreFrets": []
+  },
+  {
+   "source": "Daniel - Chords and Arpeggios.gp5",
+   "name": "Em",
+   "firstFret": 7,
+   "strings": [
+    7,
+    8,
+    9,
+    9,
+    7,
+    -1
+   ],
+   "barreFrets": [
+    7
+   ]
+  },
+  {
+   "source": "Daniel - blackmetal sounding gayness.gpx",
+   "name": "Em",
+   "firstFret": 7,
+   "strings": [
+    7,
+    8,
+    9,
+    9,
+    7,
+    6
+   ],
+   "barreFrets": [
+    7
+   ]
+  },
+  {
+   "source": "Daniel - blackmetal sounding gayness.gpx",
+   "name": "Cm",
+   "firstFret": 8,
+   "strings": [
+    8,
+    8,
+    8,
+    10,
+    10,
+    8
+   ],
+   "barreFrets": [
+    8,
+    8,
+    8
+   ]
+  },
+  {
+   "source": "on impulse.gp5",
+   "name": "A7Madd13",
+   "firstFret": 6,
+   "strings": [
+    -1,
+    7,
+    6,
+    6,
+    0,
+    -1
+   ],
+   "barreFrets": [
+    6
+   ]
+  },
+  {
+   "source": "on impulse.gp5",
+   "name": "F#7sus4",
+   "firstFret": 4,
+   "strings": [
+    7,
+    5,
+    6,
+    4,
+    -1,
+    -1
+   ],
+   "barreFrets": []
+  },
+  {
+   "source": "on impulse.gp5",
+   "name": "Aadd9",
+   "firstFret": 9,
+   "strings": [
+    9,
+    10,
+    9,
+    9,
+    12,
+    -1
+   ],
+   "barreFrets": [
+    9
+   ]
+  },
+  {
+   "source": "on impulse.gp5",
+   "name": "A7Madd13",
+   "firstFret": 6,
+   "strings": [
+    -1,
+    7,
+    6,
+    6,
+    0,
+    -1
+   ],
+   "barreFrets": [
+    6
+   ]
+  },
+  {
+   "source": "on impulse.gp5",
+   "name": "F#7sus4",
+   "firstFret": 4,
+   "strings": [
+    7,
+    5,
+    6,
+    4,
+    -1,
+    -1
+   ],
+   "barreFrets": []
+  },
+  {
+   "source": "on impulse.gp5",
+   "name": "Aadd9",
+   "firstFret": 9,
+   "strings": [
+    9,
+    10,
+    9,
+    9,
+    12,
+    -1
+   ],
+   "barreFrets": [
+    9
+   ]
+  },
+  {
+   "source": "on impulse.gp5",
+   "name": "Fm6",
+   "firstFret": 6,
+   "strings": [
+    -1,
+    6,
+    7,
+    6,
+    8,
+    -1
+   ],
+   "barreFrets": [
+    6
+   ]
+  },
+  {
+   "source": "on impulse.gp5",
+   "name": "F#madd9",
+   "firstFret": 7,
+   "strings": [
+    -1,
+    9,
+    -1,
+    7,
+    9,
+    -1
+   ],
+   "barreFrets": []
+  },
+  {
+   "source": "on impulse.gp5",
+   "name": "Aadd9",
+   "firstFret": 11,
+   "strings": [
+    -1,
+    12,
+    -1,
+    11,
+    12,
+    -1
+   ],
+   "barreFrets": []
+  },
+  {
+   "source": "on impulse.gp5",
+   "name": "Eadd9",
+   "firstFret": 6,
+   "strings": [
+    -1,
+    7,
+    -1,
+    6,
+    7,
+    -1
+   ],
+   "barreFrets": []
+  },
+  {
+   "source": "on impulse.gp5",
+   "name": "D7M",
+   "firstFret": 5,
+   "strings": [
+    -1,
+    7,
+    6,
+    -1,
+    5,
+    -1
+   ],
+   "barreFrets": []
+  },
+  {
+   "source": "on impulse.gp5",
+   "name": "E6add9",
+   "firstFret": 6,
+   "strings": [
+    -1,
+    7,
+    6,
+    6,
+    7,
+    -1
+   ],
+   "barreFrets": [
+    6
+   ]
+  }
+ ]
+}

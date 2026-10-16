@@ -1,0 +1,9614 @@
+[
+ {
+  "name": "A",
+  "frets": [
+   null,
+   0,
+   2,
+   2,
+   2,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A/B",
+  "frets": [
+   null,
+   2,
+   2,
+   2,
+   2,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A/C#",
+  "frets": [
+   null,
+   4,
+   2,
+   2,
+   2,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A/D",
+  "frets": [
+   null,
+   null,
+   0,
+   2,
+   2,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A/E",
+  "frets": [
+   0,
+   0,
+   2,
+   2,
+   2,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A11",
+  "frets": [
+   5,
+   4,
+   null,
+   2,
+   3,
+   3
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "A13",
+  "frets": [
+   null,
+   0,
+   2,
+   0,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A13(b9)",
+  "frets": [
+   5,
+   null,
+   5,
+   6,
+   7,
+   6
+  ],
+  "reading": "pos+base"
+ },
+ {
+  "name": "A2",
+  "frets": [
+   null,
+   0,
+   2,
+   2,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A2/C#",
+  "frets": [
+   null,
+   4,
+   2,
+   2,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A2/E",
+  "frets": [
+   0,
+   0,
+   2,
+   2,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A2/F#",
+  "frets": [
+   2,
+   0,
+   2,
+   2,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A2/G#",
+  "frets": [
+   4,
+   null,
+   2,
+   2,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Asus",
+  "frets": [
+   null,
+   0,
+   2,
+   2,
+   3,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Asus/E",
+  "frets": [
+   0,
+   0,
+   2,
+   2,
+   3,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A5",
+  "frets": [
+   null,
+   0,
+   2,
+   2,
+   null,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A6",
+  "frets": [
+   null,
+   0,
+   2,
+   2,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A7",
+  "frets": [
+   null,
+   0,
+   2,
+   0,
+   2,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A7(#5b9)",
+  "frets": [
+   5,
+   null,
+   5,
+   6,
+   6,
+   6
+  ],
+  "reading": "pos+base"
+ },
+ {
+  "name": "A7(b5)",
+  "frets": [
+   null,
+   0,
+   1,
+   0,
+   2,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A7/E",
+  "frets": [
+   0,
+   0,
+   2,
+   0,
+   2,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A7(b9)",
+  "frets": [
+   null,
+   0,
+   2,
+   3,
+   2,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A7sus4",
+  "frets": [
+   null,
+   0,
+   2,
+   0,
+   3,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A7sus4/E",
+  "frets": [
+   0,
+   0,
+   2,
+   0,
+   3,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A9(b5)",
+  "frets": [
+   null,
+   0,
+   1,
+   4,
+   2,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Aaug",
+  "frets": [
+   null,
+   0,
+   3,
+   2,
+   2,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#9",
+  "frets": [
+   4,
+   3,
+   4,
+   3,
+   4,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#sus",
+  "frets": [
+   4,
+   4,
+   1,
+   1,
+   2,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#ma9",
+  "frets": [
+   4,
+   null,
+   1,
+   3,
+   1,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Adim7",
+  "frets": [
+   null,
+   0,
+   1,
+   2,
+   1,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Am",
+  "frets": [
+   null,
+   0,
+   2,
+   2,
+   1,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Am/C",
+  "frets": [
+   null,
+   3,
+   2,
+   2,
+   1,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Am13",
+  "frets": [
+   null,
+   0,
+   0,
+   0,
+   1,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Am6",
+  "frets": [
+   null,
+   0,
+   2,
+   2,
+   1,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Am7",
+  "frets": [
+   null,
+   0,
+   2,
+   0,
+   1,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Am7(b5)",
+  "frets": [
+   null,
+   0,
+   1,
+   0,
+   1,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Ama7",
+  "frets": [
+   null,
+   0,
+   2,
+   1,
+   2,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Ama9",
+  "frets": [
+   null,
+   0,
+   2,
+   4,
+   2,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "B",
+  "frets": [
+   null,
+   2,
+   4,
+   4,
+   4,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "B/A",
+  "frets": [
+   null,
+   0,
+   4,
+   4,
+   4,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "B/C#",
+  "frets": [
+   null,
+   4,
+   4,
+   4,
+   4,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "B/D#",
+  "frets": [
+   null,
+   null,
+   1,
+   4,
+   4,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "B/F#",
+  "frets": [
+   2,
+   2,
+   4,
+   4,
+   4,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "B/G#",
+  "frets": [
+   4,
+   null,
+   4,
+   4,
+   4,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "B11",
+  "frets": [
+   null,
+   2,
+   1,
+   2,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "B13",
+  "frets": [
+   null,
+   2,
+   4,
+   2,
+   4,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "B13(b9)",
+  "frets": [
+   7,
+   null,
+   7,
+   8,
+   9,
+   8
+  ],
+  "reading": "pos+base"
+ },
+ {
+  "name": "B2",
+  "frets": [
+   null,
+   2,
+   4,
+   4,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Bsus",
+  "frets": [
+   null,
+   2,
+   4,
+   4,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Bsus/F#",
+  "frets": [
+   2,
+   2,
+   4,
+   4,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "B5",
+  "frets": [
+   null,
+   2,
+   4,
+   4,
+   0,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "B6",
+  "frets": [
+   null,
+   2,
+   4,
+   4,
+   4,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "B6/9",
+  "frets": [
+   null,
+   2,
+   1,
+   1,
+   2,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "B7",
+  "frets": [
+   null,
+   2,
+   1,
+   2,
+   0,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "B7(#5b9)",
+  "frets": [
+   7,
+   null,
+   7,
+   8,
+   8,
+   8
+  ],
+  "reading": "pos+base"
+ },
+ {
+  "name": "B7(#9)",
+  "frets": [
+   null,
+   2,
+   1,
+   2,
+   3,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "B7(b5)",
+  "frets": [
+   null,
+   2,
+   3,
+   2,
+   4,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "B7(b9)",
+  "frets": [
+   null,
+   2,
+   1,
+   2,
+   1,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "B7/A",
+  "frets": [
+   null,
+   0,
+   1,
+   2,
+   0,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "B7/D#",
+  "frets": [
+   null,
+   null,
+   1,
+   2,
+   0,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "B7/F#",
+  "frets": [
+   2,
+   2,
+   4,
+   2,
+   4,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "B7sus4",
+  "frets": [
+   null,
+   2,
+   2,
+   2,
+   0,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "B9",
+  "frets": [
+   null,
+   2,
+   1,
+   2,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "B9(b5)",
+  "frets": [
+   null,
+   2,
+   1,
+   2,
+   2,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Baug",
+  "frets": [
+   null,
+   2,
+   1,
+   0,
+   0,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#/D",
+  "frets": [
+   null,
+   null,
+   0,
+   3,
+   3,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#/F",
+  "frets": [
+   1,
+   1,
+   3,
+   3,
+   3,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#11",
+  "frets": [
+   null,
+   1,
+   0,
+   3,
+   4,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#13",
+  "frets": [
+   null,
+   1,
+   3,
+   1,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#2",
+  "frets": [
+   null,
+   1,
+   3,
+   3,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#2/F",
+  "frets": [
+   1,
+   1,
+   3,
+   3,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#sus",
+  "frets": [
+   null,
+   1,
+   3,
+   3,
+   4,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#7",
+  "frets": [
+   null,
+   1,
+   3,
+   1,
+   3,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#aug7",
+  "frets": [
+   null,
+   1,
+   4,
+   1,
+   3,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#7(#5b9)",
+  "frets": [
+   6,
+   null,
+   6,
+   7,
+   7,
+   7
+  ],
+  "reading": "pos+base"
+ },
+ {
+  "name": "A#7(#9)",
+  "frets": [
+   null,
+   1,
+   0,
+   1,
+   2,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#7/F",
+  "frets": [
+   1,
+   1,
+   3,
+   1,
+   3,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#9(b5)",
+  "frets": [
+   null,
+   1,
+   0,
+   1,
+   1,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#m13",
+  "frets": [
+   null,
+   1,
+   1,
+   1,
+   2,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#m6",
+  "frets": [
+   null,
+   null,
+   null,
+   3,
+   2,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#m7",
+  "frets": [
+   null,
+   1,
+   3,
+   1,
+   2,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#m7(b5)",
+  "frets": [
+   null,
+   1,
+   2,
+   1,
+   2,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#ma9",
+  "frets": [
+   null,
+   1,
+   0,
+   2,
+   1,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Bdim7",
+  "frets": [
+   null,
+   2,
+   0,
+   1,
+   0,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Bm",
+  "frets": [
+   null,
+   2,
+   4,
+   4,
+   3,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Bm/D",
+  "frets": [
+   null,
+   null,
+   0,
+   4,
+   3,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Bm11",
+  "frets": [
+   null,
+   2,
+   0,
+   2,
+   2,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Bm6",
+  "frets": [
+   null,
+   2,
+   0,
+   1,
+   0,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Bm7",
+  "frets": [
+   null,
+   2,
+   4,
+   2,
+   3,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Bm7(b5)",
+  "frets": [
+   null,
+   2,
+   3,
+   2,
+   3,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Bma7",
+  "frets": [
+   2,
+   2,
+   4,
+   3,
+   4,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Bma9",
+  "frets": [
+   null,
+   2,
+   1,
+   3,
+   2,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#/G#",
+  "frets": [
+   null,
+   null,
+   null,
+   1,
+   2,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#11",
+  "frets": [
+   null,
+   4,
+   3,
+   4,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#13",
+  "frets": [
+   null,
+   4,
+   3,
+   4,
+   4,
+   6
+  ],
+  "reading": "pos+base"
+ },
+ {
+  "name": "C#2",
+  "frets": [
+   null,
+   4,
+   1,
+   1,
+   2,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#2/G#",
+  "frets": [
+   4,
+   4,
+   6,
+   6,
+   4,
+   4
+  ],
+  "reading": "pos+base"
+ },
+ {
+  "name": "C#7",
+  "frets": [
+   null,
+   4,
+   3,
+   4,
+   2,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#aug7",
+  "frets": [
+   null,
+   4,
+   3,
+   2,
+   0,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#7(b5)",
+  "frets": [
+   null,
+   4,
+   3,
+   4,
+   null,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#7(b9)",
+  "frets": [
+   null,
+   4,
+   3,
+   4,
+   3,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#7/G#",
+  "frets": [
+   4,
+   4,
+   6,
+   4,
+   6,
+   4
+  ],
+  "reading": "pos+base"
+ },
+ {
+  "name": "C#9",
+  "frets": [
+   null,
+   4,
+   3,
+   4,
+   4,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#m7",
+  "frets": [
+   null,
+   4,
+   2,
+   4,
+   2,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#m7(b5)",
+  "frets": [
+   null,
+   4,
+   2,
+   4,
+   2,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#m9",
+  "frets": [
+   null,
+   4,
+   2,
+   4,
+   4,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C/A",
+  "frets": [
+   null,
+   0,
+   2,
+   0,
+   1,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C/D",
+  "frets": [
+   null,
+   null,
+   0,
+   0,
+   1,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C/E",
+  "frets": [
+   0,
+   3,
+   2,
+   0,
+   1,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C/F",
+  "frets": [
+   null,
+   null,
+   3,
+   0,
+   1,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C/G",
+  "frets": [
+   3,
+   3,
+   2,
+   0,
+   1,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C11",
+  "frets": [
+   null,
+   3,
+   3,
+   3,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C2",
+  "frets": [
+   null,
+   3,
+   2,
+   0,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C2/E",
+  "frets": [
+   0,
+   3,
+   2,
+   0,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C2/G",
+  "frets": [
+   3,
+   3,
+   2,
+   0,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C5",
+  "frets": [
+   null,
+   3,
+   null,
+   0,
+   1,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C5/B",
+  "frets": [
+   null,
+   2,
+   null,
+   0,
+   1,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C5/G",
+  "frets": [
+   3,
+   3,
+   null,
+   0,
+   1,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C6",
+  "frets": [
+   null,
+   3,
+   2,
+   2,
+   1,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C7",
+  "frets": [
+   0,
+   3,
+   2,
+   3,
+   1,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C7(b9)",
+  "frets": [
+   null,
+   3,
+   2,
+   3,
+   2,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C7/E",
+  "frets": [
+   0,
+   3,
+   2,
+   3,
+   1,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C7/G",
+  "frets": [
+   3,
+   null,
+   2,
+   3,
+   1,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C7sus4",
+  "frets": [
+   null,
+   3,
+   3,
+   3,
+   1,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Caug",
+  "frets": [
+   null,
+   3,
+   2,
+   1,
+   1,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Cdim7",
+  "frets": [
+   null,
+   3,
+   4,
+   2,
+   4,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Cm",
+  "frets": [
+   null,
+   3,
+   1,
+   null,
+   1,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Cm/D#",
+  "frets": [
+   null,
+   null,
+   1,
+   null,
+   1,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Cm11",
+  "frets": [
+   null,
+   3,
+   3,
+   3,
+   4,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Cm7",
+  "frets": [
+   null,
+   3,
+   1,
+   3,
+   4,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Cm9",
+  "frets": [
+   null,
+   3,
+   1,
+   3,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Cma7",
+  "frets": [
+   null,
+   3,
+   2,
+   0,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Cma9",
+  "frets": [
+   null,
+   3,
+   2,
+   4,
+   3,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D",
+  "frets": [
+   null,
+   null,
+   0,
+   2,
+   3,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D/A",
+  "frets": [
+   null,
+   0,
+   0,
+   2,
+   3,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D/B",
+  "frets": [
+   null,
+   2,
+   0,
+   2,
+   3,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D/C",
+  "frets": [
+   null,
+   3,
+   null,
+   2,
+   3,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D/C#",
+  "frets": [
+   null,
+   4,
+   null,
+   2,
+   3,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D/E",
+  "frets": [
+   null,
+   null,
+   2,
+   2,
+   3,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D/F#",
+  "frets": [
+   2,
+   0,
+   0,
+   2,
+   3,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D/G",
+  "frets": [
+   3,
+   null,
+   0,
+   0,
+   3,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D11",
+  "frets": [
+   null,
+   5,
+   5,
+   5,
+   5,
+   5
+  ],
+  "reading": "pos+base"
+ },
+ {
+  "name": "D2/A",
+  "frets": [
+   null,
+   0,
+   0,
+   2,
+   3,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D2/B",
+  "frets": [
+   null,
+   2,
+   0,
+   2,
+   3,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D2/C#",
+  "frets": [
+   null,
+   4,
+   0,
+   2,
+   3,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D2/F#",
+  "frets": [
+   2,
+   null,
+   0,
+   2,
+   3,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Dsus",
+  "frets": [
+   null,
+   null,
+   0,
+   2,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Dsus/A",
+  "frets": [
+   null,
+   0,
+   0,
+   2,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D5",
+  "frets": [
+   null,
+   null,
+   0,
+   2,
+   3,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D6",
+  "frets": [
+   null,
+   null,
+   0,
+   2,
+   0,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D7",
+  "frets": [
+   null,
+   null,
+   0,
+   2,
+   1,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D7(#9)",
+  "frets": [
+   null,
+   5,
+   4,
+   5,
+   6,
+   null
+  ],
+  "reading": "pos+base"
+ },
+ {
+  "name": "D7(b5)",
+  "frets": [
+   null,
+   null,
+   0,
+   1,
+   1,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D7(b9)",
+  "frets": [
+   null,
+   5,
+   null,
+   5,
+   4,
+   2
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "D7/A",
+  "frets": [
+   null,
+   0,
+   0,
+   2,
+   1,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D7/C",
+  "frets": [
+   null,
+   3,
+   0,
+   2,
+   1,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D7/F#",
+  "frets": [
+   2,
+   0,
+   0,
+   2,
+   1,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Daug",
+  "frets": [
+   null,
+   null,
+   0,
+   3,
+   3,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Ddim7",
+  "frets": [
+   null,
+   null,
+   0,
+   1,
+   0,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Dm7",
+  "frets": [
+   null,
+   null,
+   0,
+   2,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Dm7(b5)",
+  "frets": [
+   null,
+   null,
+   0,
+   1,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Dma7",
+  "frets": [
+   null,
+   null,
+   0,
+   2,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "E",
+  "frets": [
+   0,
+   2,
+   2,
+   1,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "E/A",
+  "frets": [
+   null,
+   0,
+   2,
+   1,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "E/B",
+  "frets": [
+   null,
+   2,
+   2,
+   1,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "E/D",
+  "frets": [
+   null,
+   null,
+   0,
+   1,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "E/D#",
+  "frets": [
+   null,
+   null,
+   1,
+   1,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "E/F#",
+  "frets": [
+   2,
+   2,
+   2,
+   1,
+   0,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "E/G#",
+  "frets": [
+   4,
+   null,
+   2,
+   4,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "E11",
+  "frets": [
+   0,
+   2,
+   0,
+   2,
+   3,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "E2",
+  "frets": [
+   0,
+   2,
+   4,
+   1,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "E2/B",
+  "frets": [
+   null,
+   2,
+   4,
+   1,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "E2/G#",
+  "frets": [
+   4,
+   null,
+   4,
+   4,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Esus",
+  "frets": [
+   0,
+   2,
+   2,
+   2,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Esus/B",
+  "frets": [
+   null,
+   2,
+   2,
+   2,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "E5/B",
+  "frets": [
+   null,
+   2,
+   2,
+   4,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "E6",
+  "frets": [
+   0,
+   2,
+   2,
+   1,
+   2,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "E7",
+  "frets": [
+   0,
+   2,
+   0,
+   1,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "E7(#9)",
+  "frets": [
+   0,
+   2,
+   0,
+   1,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "E7(b5)",
+  "frets": [
+   0,
+   1,
+   2,
+   1,
+   3,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "E7(b9)",
+  "frets": [
+   0,
+   null,
+   0,
+   1,
+   0,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "E7/B",
+  "frets": [
+   null,
+   2,
+   0,
+   1,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "E7/D",
+  "frets": [
+   null,
+   null,
+   0,
+   1,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "E7/G#",
+  "frets": [
+   4,
+   null,
+   0,
+   4,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "E7sus4",
+  "frets": [
+   0,
+   2,
+   0,
+   2,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Eaug",
+  "frets": [
+   0,
+   3,
+   2,
+   1,
+   1,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#/A#",
+  "frets": [
+   null,
+   null,
+   null,
+   3,
+   4,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#11",
+  "frets": [
+   null,
+   null,
+   1,
+   0,
+   2,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#13",
+  "frets": [
+   null,
+   6,
+   5,
+   6,
+   6,
+   8
+  ],
+  "reading": "pos+base"
+ },
+ {
+  "name": "D#2",
+  "frets": [
+   null,
+   null,
+   1,
+   3,
+   4,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#2/A#",
+  "frets": [
+   6,
+   6,
+   8,
+   8,
+   6,
+   6
+  ],
+  "reading": "pos+base"
+ },
+ {
+  "name": "D#7",
+  "frets": [
+   null,
+   null,
+   1,
+   3,
+   2,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#aug7",
+  "frets": [
+   null,
+   null,
+   1,
+   4,
+   2,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#7(#9)",
+  "frets": [
+   null,
+   null,
+   1,
+   0,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#7(b5)",
+  "frets": [
+   null,
+   null,
+   1,
+   2,
+   2,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#7(b9)",
+  "frets": [
+   null,
+   null,
+   1,
+   0,
+   2,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#7/A#",
+  "frets": [
+   6,
+   6,
+   8,
+   6,
+   8,
+   6
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "D#9",
+  "frets": [
+   null,
+   null,
+   1,
+   0,
+   2,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#dim7",
+  "frets": [
+   null,
+   null,
+   1,
+   2,
+   1,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#m9",
+  "frets": [
+   null,
+   6,
+   4,
+   6,
+   6,
+   6
+  ],
+  "reading": "pos+base"
+ },
+ {
+  "name": "D#ma9",
+  "frets": [
+   null,
+   null,
+   1,
+   0,
+   3,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Edim7",
+  "frets": [
+   0,
+   1,
+   2,
+   0,
+   2,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Em",
+  "frets": [
+   0,
+   2,
+   2,
+   0,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Em7",
+  "frets": [
+   0,
+   2,
+   2,
+   0,
+   3,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Ema7",
+  "frets": [
+   0,
+   2,
+   1,
+   1,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Ema9",
+  "frets": [
+   0,
+   2,
+   4,
+   4,
+   4,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F",
+  "frets": [
+   null,
+   null,
+   3,
+   2,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#/C#",
+  "frets": [
+   null,
+   4,
+   4,
+   3,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#13",
+  "frets": [
+   2,
+   4,
+   2,
+   3,
+   4,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#sus",
+  "frets": [
+   2,
+   4,
+   4,
+   4,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#6",
+  "frets": [
+   2,
+   null,
+   1,
+   3,
+   2,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#7(b5)",
+  "frets": [
+   2,
+   null,
+   2,
+   3,
+   1,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#7/C#",
+  "frets": [
+   null,
+   4,
+   2,
+   3,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#dim7",
+  "frets": [
+   2,
+   3,
+   4,
+   2,
+   4,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#m6",
+  "frets": [
+   2,
+   null,
+   1,
+   2,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#m7(b5)",
+  "frets": [
+   2,
+   null,
+   2,
+   2,
+   1,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#ma9",
+  "frets": [
+   2,
+   1,
+   3,
+   1,
+   2,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F/A",
+  "frets": [
+   null,
+   0,
+   3,
+   2,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F/A#",
+  "frets": [
+   null,
+   1,
+   3,
+   2,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F/C",
+  "frets": [
+   null,
+   3,
+   3,
+   2,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F/D",
+  "frets": [
+   null,
+   null,
+   0,
+   2,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F/E",
+  "frets": [
+   null,
+   null,
+   2,
+   2,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F/D#",
+  "frets": [
+   null,
+   null,
+   1,
+   2,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F/G",
+  "frets": [
+   3,
+   null,
+   3,
+   2,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F13",
+  "frets": [
+   1,
+   3,
+   1,
+   2,
+   3,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F2",
+  "frets": [
+   null,
+   null,
+   3,
+   0,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F2/A",
+  "frets": [
+   null,
+   0,
+   3,
+   0,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F2/C",
+  "frets": [
+   null,
+   3,
+   3,
+   0,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F2/D",
+  "frets": [
+   null,
+   null,
+   0,
+   0,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F2/E",
+  "frets": [
+   null,
+   null,
+   2,
+   0,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Fsus",
+  "frets": [
+   null,
+   null,
+   3,
+   3,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F5",
+  "frets": [
+   1,
+   3,
+   3,
+   null,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F6",
+  "frets": [
+   null,
+   null,
+   3,
+   2,
+   3,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F7",
+  "frets": [
+   1,
+   3,
+   1,
+   2,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F7(#9)",
+  "frets": [
+   null,
+   null,
+   3,
+   2,
+   4,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F7(b9)",
+  "frets": [
+   null,
+   null,
+   3,
+   2,
+   4,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F7/A",
+  "frets": [
+   null,
+   0,
+   1,
+   2,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F7/C",
+  "frets": [
+   null,
+   3,
+   1,
+   2,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F7sus4",
+  "frets": [
+   1,
+   3,
+   1,
+   3,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Faug",
+  "frets": [
+   null,
+   null,
+   3,
+   2,
+   2,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Fdim7",
+  "frets": [
+   null,
+   null,
+   3,
+   4,
+   3,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Fm",
+  "frets": [
+   null,
+   null,
+   3,
+   1,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Fm6",
+  "frets": [
+   1,
+   null,
+   0,
+   1,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Fm7",
+  "frets": [
+   1,
+   3,
+   1,
+   1,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Fm7(b5)",
+  "frets": [
+   1,
+   null,
+   1,
+   1,
+   0,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Fm9",
+  "frets": [
+   1,
+   3,
+   1,
+   1,
+   1,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Fma7",
+  "frets": [
+   null,
+   null,
+   3,
+   2,
+   1,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G",
+  "frets": [
+   3,
+   2,
+   0,
+   0,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#/D#",
+  "frets": [
+   null,
+   null,
+   1,
+   1,
+   1,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#11",
+  "frets": [
+   4,
+   null,
+   4,
+   3,
+   2,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#13",
+  "frets": [
+   4,
+   null,
+   4,
+   3,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#13(b9)",
+  "frets": [
+   4,
+   null,
+   4,
+   5,
+   6,
+   5
+  ],
+  "reading": "pos+base"
+ },
+ {
+  "name": "G#7",
+  "frets": [
+   4,
+   3,
+   4,
+   1,
+   1,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#7(#5b9)",
+  "frets": [
+   4,
+   null,
+   4,
+   5,
+   5,
+   5
+  ],
+  "reading": "pos+base"
+ },
+ {
+  "name": "G#7(b5)",
+  "frets": [
+   4,
+   3,
+   4,
+   null,
+   3,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#7/D#",
+  "frets": [
+   null,
+   6,
+   4,
+   5,
+   4,
+   4
+  ],
+  "reading": "pos+base"
+ },
+ {
+  "name": "G#m11",
+  "frets": [
+   4,
+   null,
+   4,
+   4,
+   2,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#m13",
+  "frets": [
+   4,
+   2,
+   4,
+   null,
+   null,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#m7",
+  "frets": [
+   4,
+   2,
+   4,
+   4,
+   null,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#m7(b5)",
+  "frets": [
+   4,
+   null,
+   4,
+   4,
+   3,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#m9",
+  "frets": [
+   4,
+   2,
+   4,
+   3,
+   null,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G/B",
+  "frets": [
+   null,
+   2,
+   0,
+   0,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G/E",
+  "frets": [
+   0,
+   2,
+   0,
+   0,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G/F",
+  "frets": [
+   1,
+   2,
+   0,
+   0,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G/F#",
+  "frets": [
+   2,
+   2,
+   0,
+   0,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G11",
+  "frets": [
+   3,
+   null,
+   3,
+   2,
+   1,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G13",
+  "frets": [
+   3,
+   2,
+   3,
+   0,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G13(b9)",
+  "frets": [
+   3,
+   null,
+   3,
+   4,
+   5,
+   4
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "G2",
+  "frets": [
+   3,
+   null,
+   0,
+   2,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G2/B",
+  "frets": [
+   null,
+   2,
+   0,
+   2,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G2/D",
+  "frets": [
+   null,
+   null,
+   0,
+   2,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G2/E",
+  "frets": [
+   null,
+   null,
+   2,
+   2,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G2/F#",
+  "frets": [
+   2,
+   null,
+   0,
+   2,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Gsus",
+  "frets": [
+   3,
+   null,
+   0,
+   0,
+   1,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Gsus/D",
+  "frets": [
+   null,
+   null,
+   0,
+   0,
+   1,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G5",
+  "frets": [
+   3,
+   null,
+   0,
+   0,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G5/D",
+  "frets": [
+   null,
+   null,
+   0,
+   0,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G5/F#",
+  "frets": [
+   2,
+   null,
+   0,
+   0,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G6",
+  "frets": [
+   3,
+   2,
+   0,
+   0,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G7",
+  "frets": [
+   3,
+   2,
+   3,
+   0,
+   0,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G7(#5b9)",
+  "frets": [
+   3,
+   null,
+   3,
+   4,
+   4,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G7(#9)",
+  "frets": [
+   3,
+   2,
+   3,
+   3,
+   3,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G7/B",
+  "frets": [
+   null,
+   2,
+   3,
+   0,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G7/D",
+  "frets": [
+   null,
+   null,
+   0,
+   0,
+   0,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G7sus4",
+  "frets": [
+   3,
+   null,
+   0,
+   0,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Gaug",
+  "frets": [
+   3,
+   2,
+   1,
+   0,
+   0,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#9",
+  "frets": [
+   2,
+   4,
+   2,
+   3,
+   2,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Gdim7",
+  "frets": [
+   null,
+   1,
+   2,
+   0,
+   2,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Gm11",
+  "frets": [
+   3,
+   null,
+   3,
+   3,
+   1,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Gm6",
+  "frets": [
+   3,
+   null,
+   2,
+   3,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Gm7(b5)",
+  "frets": [
+   3,
+   null,
+   3,
+   3,
+   2,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A9(#5)",
+  "frets": [
+   null,
+   0,
+   3,
+   4,
+   2,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A9sus4",
+  "frets": [
+   null,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#",
+  "frets": [
+   4,
+   3,
+   1,
+   1,
+   1,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#(2)",
+  "frets": [
+   4,
+   1,
+   1,
+   3,
+   1,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#6",
+  "frets": [
+   4,
+   3,
+   1,
+   1,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#6/9",
+  "frets": [
+   4,
+   3,
+   3,
+   3,
+   4,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#7sus4",
+  "frets": [
+   null,
+   null,
+   1,
+   1,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#9(#5)",
+  "frets": [
+   4,
+   3,
+   2,
+   3,
+   null,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#9sus4",
+  "frets": [
+   4,
+   null,
+   4,
+   3,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#dim7",
+  "frets": [
+   null,
+   null,
+   0,
+   1,
+   0,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#m",
+  "frets": [
+   4,
+   2,
+   1,
+   1,
+   4,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#m(ma7)",
+  "frets": [
+   4,
+   2,
+   1,
+   1,
+   null,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#ma7",
+  "frets": [
+   4,
+   3,
+   1,
+   1,
+   1,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#ma7(#11)",
+  "frets": [
+   4,
+   null,
+   5,
+   5,
+   3,
+   null
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "G#2",
+  "frets": [
+   4,
+   1,
+   1,
+   1,
+   4,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Am11",
+  "frets": [
+   null,
+   0,
+   0,
+   0,
+   1,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Ama7(#11)",
+  "frets": [
+   null,
+   0,
+   1,
+   1,
+   2,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "B(2)",
+  "frets": [
+   null,
+   2,
+   1,
+   null,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "B9(#5)",
+  "frets": [
+   null,
+   2,
+   1,
+   2,
+   2,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "B9sus4",
+  "frets": [
+   null,
+   2,
+   2,
+   2,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#(2)",
+  "frets": [
+   null,
+   1,
+   0,
+   3,
+   1,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#5",
+  "frets": [
+   null,
+   1,
+   3,
+   3,
+   null,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#6",
+  "frets": [
+   null,
+   1,
+   3,
+   3,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#6/9",
+  "frets": [
+   null,
+   1,
+   0,
+   0,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#7(b9)",
+  "frets": [
+   null,
+   1,
+   0,
+   1,
+   0,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#7sus4",
+  "frets": [
+   null,
+   1,
+   3,
+   1,
+   4,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#9sus4",
+  "frets": [
+   null,
+   1,
+   1,
+   1,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#dim7",
+  "frets": [
+   null,
+   null,
+   2,
+   3,
+   2,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#m(ma7)",
+  "frets": [
+   null,
+   1,
+   3,
+   2,
+   2,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#ma7",
+  "frets": [
+   null,
+   1,
+   3,
+   2,
+   3,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#ma7(#11)",
+  "frets": [
+   null,
+   1,
+   2,
+   2,
+   3,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Bm(ma7)",
+  "frets": [
+   null,
+   2,
+   0,
+   3,
+   3,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Bma7(#11)",
+  "frets": [
+   null,
+   2,
+   3,
+   3,
+   4,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C(2)",
+  "frets": [
+   null,
+   3,
+   2,
+   0,
+   3,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#5",
+  "frets": [
+   null,
+   null,
+   null,
+   null,
+   2,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C13",
+  "frets": [
+   null,
+   3,
+   2,
+   3,
+   3,
+   5
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "C6/9",
+  "frets": [
+   null,
+   3,
+   2,
+   2,
+   3,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C7(#9)",
+  "frets": [
+   null,
+   3,
+   2,
+   3,
+   4,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C7(b5)",
+  "frets": [
+   null,
+   3,
+   2,
+   3,
+   null,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C9(#5)",
+  "frets": [
+   null,
+   3,
+   2,
+   3,
+   3,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C9(b5)",
+  "frets": [
+   null,
+   3,
+   2,
+   3,
+   3,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C9sus4",
+  "frets": [
+   null,
+   3,
+   3,
+   3,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Cm(ma7)",
+  "frets": [
+   null,
+   3,
+   1,
+   0,
+   0,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Cm13",
+  "frets": [
+   null,
+   3,
+   3,
+   3,
+   4,
+   5
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "Cm6",
+  "frets": [
+   null,
+   3,
+   1,
+   2,
+   1,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Cm7(b5)",
+  "frets": [
+   null,
+   3,
+   4,
+   3,
+   4,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Cma7(#11)",
+  "frets": [
+   null,
+   3,
+   4,
+   4,
+   5,
+   null
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "D6/9",
+  "frets": [
+   null,
+   5,
+   null,
+   4,
+   5,
+   2
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "D9(#5)",
+  "frets": [
+   null,
+   5,
+   4,
+   5,
+   5,
+   6
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "D9(b5)",
+  "frets": [
+   null,
+   5,
+   4,
+   5,
+   5,
+   4
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "D9sus4",
+  "frets": [
+   null,
+   null,
+   0,
+   0,
+   1,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#",
+  "frets": [
+   null,
+   4,
+   3,
+   1,
+   2,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#(2)",
+  "frets": [
+   null,
+   4,
+   3,
+   1,
+   4,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#6",
+  "frets": [
+   null,
+   4,
+   3,
+   3,
+   2,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#6/9",
+  "frets": [
+   null,
+   4,
+   3,
+   3,
+   4,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#7(#9)",
+  "frets": [
+   null,
+   4,
+   3,
+   4,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#7sus4",
+  "frets": [
+   null,
+   4,
+   4,
+   4,
+   2,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#9(#5)",
+  "frets": [
+   null,
+   4,
+   3,
+   4,
+   4,
+   5
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "C#9(b5)",
+  "frets": [
+   null,
+   4,
+   3,
+   4,
+   4,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#9sus4",
+  "frets": [
+   null,
+   4,
+   4,
+   4,
+   4,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#dim7",
+  "frets": [
+   null,
+   null,
+   2,
+   3,
+   2,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#m",
+  "frets": [
+   null,
+   4,
+   2,
+   null,
+   2,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#m(ma7)",
+  "frets": [
+   null,
+   4,
+   2,
+   1,
+   1,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#m11",
+  "frets": [
+   null,
+   4,
+   2,
+   4,
+   4,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#m13",
+  "frets": [
+   null,
+   4,
+   4,
+   4,
+   5,
+   6
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "C#m6",
+  "frets": [
+   null,
+   4,
+   2,
+   3,
+   2,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#ma7",
+  "frets": [
+   null,
+   4,
+   3,
+   1,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#ma7(#11)",
+  "frets": [
+   null,
+   4,
+   5,
+   5,
+   6,
+   null
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "C#sus",
+  "frets": [
+   null,
+   4,
+   4,
+   1,
+   2,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Dm(ma7)",
+  "frets": [
+   null,
+   null,
+   0,
+   2,
+   2,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Dm11",
+  "frets": [
+   null,
+   5,
+   3,
+   5,
+   5,
+   3
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "Dm13",
+  "frets": [
+   null,
+   5,
+   5,
+   5,
+   6,
+   7
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "Dm6",
+  "frets": [
+   null,
+   null,
+   0,
+   2,
+   0,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Dma7(#11)",
+  "frets": [
+   null,
+   5,
+   6,
+   6,
+   7,
+   null
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "E(2)",
+  "frets": [
+   0,
+   2,
+   2,
+   1,
+   0,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "E6/9",
+  "frets": [
+   0,
+   null,
+   2,
+   1,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "E9(#5)",
+  "frets": [
+   0,
+   null,
+   0,
+   1,
+   1,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "E9(b5)",
+  "frets": [
+   0,
+   1,
+   2,
+   1,
+   3,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "E9sus4",
+  "frets": [
+   0,
+   2,
+   0,
+   2,
+   0,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#",
+  "frets": [
+   null,
+   null,
+   1,
+   3,
+   4,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#aug",
+  "frets": [
+   null,
+   null,
+   1,
+   0,
+   0,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#(2)",
+  "frets": [
+   null,
+   6,
+   5,
+   3,
+   6,
+   null
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "D#5",
+  "frets": [
+   null,
+   null,
+   1,
+   3,
+   4,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#6",
+  "frets": [
+   null,
+   null,
+   1,
+   3,
+   1,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#6/9",
+  "frets": [
+   null,
+   null,
+   1,
+   0,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#7sus4",
+  "frets": [
+   null,
+   null,
+   1,
+   1,
+   2,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#9sus4",
+  "frets": [
+   null,
+   null,
+   1,
+   1,
+   2,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#m",
+  "frets": [
+   null,
+   null,
+   1,
+   3,
+   4,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#m(ma7)",
+  "frets": [
+   null,
+   null,
+   1,
+   3,
+   3,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#m11",
+  "frets": [
+   null,
+   6,
+   4,
+   6,
+   6,
+   4
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "D#m13",
+  "frets": [
+   null,
+   6,
+   6,
+   6,
+   7,
+   8
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "D#m7",
+  "frets": [
+   null,
+   null,
+   1,
+   3,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#m7(b5)",
+  "frets": [
+   null,
+   null,
+   1,
+   2,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#ma7",
+  "frets": [
+   null,
+   null,
+   1,
+   3,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#ma7(#11)",
+  "frets": [
+   null,
+   6,
+   7,
+   7,
+   8,
+   null
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "D#sus",
+  "frets": [
+   null,
+   1,
+   1,
+   3,
+   4,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Em(ma7)",
+  "frets": [
+   0,
+   2,
+   1,
+   0,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Em11",
+  "frets": [
+   0,
+   2,
+   0,
+   2,
+   0,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Em6",
+  "frets": [
+   0,
+   2,
+   2,
+   0,
+   2,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Em7(b5)",
+  "frets": [
+   0,
+   null,
+   2,
+   3,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Ema7(#11)",
+  "frets": [
+   0,
+   null,
+   2,
+   3,
+   4,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F(2)",
+  "frets": [
+   null,
+   null,
+   3,
+   2,
+   1,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#(2)",
+  "frets": [
+   2,
+   null,
+   4,
+   3,
+   2,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#5",
+  "frets": [
+   2,
+   4,
+   4,
+   null,
+   null,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#6/9",
+  "frets": [
+   2,
+   1,
+   1,
+   1,
+   2,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#aug7",
+  "frets": [
+   2,
+   null,
+   2,
+   3,
+   3,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#7(#9)",
+  "frets": [
+   2,
+   1,
+   2,
+   2,
+   null,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#9(#5)",
+  "frets": [
+   2,
+   1,
+   2,
+   1,
+   3,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#9sus4",
+  "frets": [
+   2,
+   4,
+   2,
+   4,
+   2,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#m",
+  "frets": [
+   2,
+   4,
+   4,
+   2,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#m(ma7)",
+  "frets": [
+   2,
+   4,
+   3,
+   2,
+   2,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#m11",
+  "frets": [
+   2,
+   null,
+   2,
+   2,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#ma7",
+  "frets": [
+   2,
+   null,
+   3,
+   3,
+   2,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#ma7(#11)",
+  "frets": [
+   2,
+   null,
+   3,
+   3,
+   1,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#2",
+  "frets": [
+   2,
+   4,
+   4,
+   null,
+   2,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F6/9",
+  "frets": [
+   1,
+   0,
+   0,
+   0,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F7(b5)",
+  "frets": [
+   1,
+   0,
+   1,
+   2,
+   0,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F9(#5)",
+  "frets": [
+   1,
+   0,
+   1,
+   0,
+   2,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F9(b5)",
+  "frets": [
+   1,
+   0,
+   1,
+   0,
+   0,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F9sus4",
+  "frets": [
+   1,
+   3,
+   1,
+   3,
+   1,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Fm(ma7)",
+  "frets": [
+   1,
+   null,
+   null,
+   1,
+   1,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Fm11",
+  "frets": [
+   1,
+   3,
+   1,
+   3,
+   1,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Fm13",
+  "frets": [
+   1,
+   3,
+   1,
+   1,
+   3,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Fma7(#11)",
+  "frets": [
+   1,
+   null,
+   2,
+   2,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Fma9",
+  "frets": [
+   1,
+   0,
+   2,
+   0,
+   1,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G(2)",
+  "frets": [
+   3,
+   null,
+   0,
+   2,
+   0,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#5",
+  "frets": [
+   4,
+   null,
+   1,
+   1,
+   4,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G6/9",
+  "frets": [
+   3,
+   2,
+   2,
+   2,
+   3,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G9(#5)",
+  "frets": [
+   3,
+   2,
+   3,
+   2,
+   4,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G9sus4",
+  "frets": [
+   3,
+   null,
+   3,
+   2,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Gm",
+  "frets": [
+   3,
+   null,
+   0,
+   3,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Gm9",
+  "frets": [
+   3,
+   1,
+   3,
+   2,
+   null,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Gm(ma7)",
+  "frets": [
+   3,
+   null,
+   0,
+   3,
+   3,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Gm13",
+  "frets": [
+   3,
+   null,
+   3,
+   3,
+   1,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Gm7",
+  "frets": [
+   3,
+   null,
+   3,
+   3,
+   3,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Gma7(#11)",
+  "frets": [
+   3,
+   null,
+   4,
+   4,
+   2,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A(2)",
+  "frets": [
+   null,
+   0,
+   2,
+   4,
+   2,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A(4)",
+  "frets": [
+   null,
+   0,
+   0,
+   2,
+   2,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Am2",
+  "frets": [
+   null,
+   0,
+   2,
+   4,
+   1,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A6/9",
+  "frets": [
+   null,
+   0,
+   2,
+   4,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A13sus4",
+  "frets": [
+   null,
+   0,
+   0,
+   0,
+   0,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Am(ma7)",
+  "frets": [
+   null,
+   null,
+   null,
+   2,
+   1,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A7(#9)",
+  "frets": [
+   5,
+   null,
+   2,
+   5,
+   2,
+   3
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "Am7(#5)",
+  "frets": [
+   null,
+   0,
+   3,
+   2,
+   1,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Ama7(#5)",
+  "frets": [
+   null,
+   0,
+   3,
+   1,
+   2,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Ama7(b5)",
+  "frets": [
+   null,
+   0,
+   1,
+   2,
+   2,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A/A#",
+  "frets": [
+   null,
+   1,
+   2,
+   2,
+   2,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A/C",
+  "frets": [
+   null,
+   3,
+   2,
+   2,
+   2,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A/D#",
+  "frets": [
+   null,
+   null,
+   1,
+   2,
+   2,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A/F",
+  "frets": [
+   1,
+   4,
+   2,
+   2,
+   null,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Am/A#",
+  "frets": [
+   null,
+   1,
+   2,
+   2,
+   1,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Am/B",
+  "frets": [
+   null,
+   2,
+   2,
+   2,
+   1,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Am/C#",
+  "frets": [
+   null,
+   4,
+   2,
+   2,
+   1,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Am/D",
+  "frets": [
+   null,
+   null,
+   0,
+   2,
+   1,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Am/D#",
+  "frets": [
+   null,
+   null,
+   1,
+   2,
+   1,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Am/E",
+  "frets": [
+   null,
+   null,
+   2,
+   2,
+   1,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Am/F",
+  "frets": [
+   1,
+   3,
+   2,
+   2,
+   null,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Am/F#",
+  "frets": [
+   2,
+   3,
+   2,
+   2,
+   null,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Am/G",
+  "frets": [
+   3,
+   3,
+   2,
+   2,
+   null,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Am/G#",
+  "frets": [
+   4,
+   3,
+   2,
+   2,
+   null,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#",
+  "frets": [
+   null,
+   1,
+   3,
+   3,
+   3,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#(4)",
+  "frets": [
+   null,
+   1,
+   1,
+   3,
+   3,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#m2",
+  "frets": [
+   6,
+   3,
+   3,
+   6,
+   6,
+   null
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "A#aug",
+  "frets": [
+   null,
+   null,
+   null,
+   3,
+   3,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#dim",
+  "frets": [
+   null,
+   1,
+   2,
+   3,
+   2,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#13sus4",
+  "frets": [
+   null,
+   1,
+   1,
+   1,
+   4,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#m(ma9)",
+  "frets": [
+   6,
+   4,
+   null,
+   5,
+   6,
+   5
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "A#m7(#5)",
+  "frets": [
+   null,
+   1,
+   4,
+   1,
+   2,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#ma7(#5)",
+  "frets": [
+   null,
+   1,
+   4,
+   2,
+   3,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#ma7(b5)",
+  "frets": [
+   null,
+   1,
+   2,
+   2,
+   3,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#/A",
+  "frets": [
+   null,
+   0,
+   0,
+   3,
+   3,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#/B",
+  "frets": [
+   null,
+   2,
+   3,
+   3,
+   3,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#/C",
+  "frets": [
+   null,
+   3,
+   3,
+   3,
+   3,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#/C#",
+  "frets": [
+   null,
+   4,
+   3,
+   3,
+   3,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#/D#",
+  "frets": [
+   null,
+   null,
+   1,
+   3,
+   3,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#/E",
+  "frets": [
+   0,
+   1,
+   3,
+   null,
+   3,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#/F#",
+  "frets": [
+   2,
+   1,
+   3,
+   null,
+   3,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#/G",
+  "frets": [
+   3,
+   1,
+   3,
+   null,
+   3,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#/G#",
+  "frets": [
+   4,
+   1,
+   3,
+   null,
+   3,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#m/A",
+  "frets": [
+   null,
+   0,
+   3,
+   3,
+   2,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#m/B",
+  "frets": [
+   null,
+   2,
+   3,
+   3,
+   2,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#m/C",
+  "frets": [
+   null,
+   3,
+   3,
+   3,
+   2,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#m/C#",
+  "frets": [
+   null,
+   4,
+   3,
+   3,
+   null,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#m/D",
+  "frets": [
+   null,
+   null,
+   0,
+   3,
+   2,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#m/D#",
+  "frets": [
+   null,
+   null,
+   1,
+   3,
+   2,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#m/E",
+  "frets": [
+   0,
+   1,
+   3,
+   3,
+   2,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#m/F",
+  "frets": [
+   1,
+   1,
+   3,
+   3,
+   2,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#m/F#",
+  "frets": [
+   2,
+   1,
+   null,
+   3,
+   2,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#m/G",
+  "frets": [
+   3,
+   1,
+   3,
+   null,
+   2,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#m/G#",
+  "frets": [
+   4,
+   1,
+   3,
+   null,
+   2,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "B(4)",
+  "frets": [
+   null,
+   2,
+   2,
+   4,
+   4,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Bm2",
+  "frets": [
+   null,
+   2,
+   0,
+   null,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "B13sus4",
+  "frets": [
+   null,
+   2,
+   2,
+   2,
+   0,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Bm(ma9)",
+  "frets": [
+   null,
+   2,
+   0,
+   3,
+   2,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Bm7(#5)",
+  "frets": [
+   null,
+   2,
+   null,
+   2,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Bma7(#5)",
+  "frets": [
+   null,
+   2,
+   1,
+   3,
+   4,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Bma7(b5)",
+  "frets": [
+   null,
+   2,
+   1,
+   3,
+   4,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "B/C",
+  "frets": [
+   null,
+   3,
+   4,
+   4,
+   4,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "B/D",
+  "frets": [
+   null,
+   null,
+   0,
+   4,
+   4,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "B/F",
+  "frets": [
+   1,
+   2,
+   1,
+   null,
+   4,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "B/G",
+  "frets": [
+   3,
+   2,
+   4,
+   null,
+   4,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Bm/A",
+  "frets": [
+   null,
+   0,
+   0,
+   4,
+   3,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Bm/A#",
+  "frets": [
+   null,
+   1,
+   null,
+   4,
+   3,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Bm/C",
+  "frets": [
+   null,
+   3,
+   4,
+   4,
+   3,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Bm/C#",
+  "frets": [
+   null,
+   4,
+   4,
+   4,
+   3,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Bm/D#",
+  "frets": [
+   null,
+   null,
+   1,
+   4,
+   3,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Bm/E",
+  "frets": [
+   0,
+   2,
+   0,
+   4,
+   3,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Bm/F",
+  "frets": [
+   null,
+   null,
+   3,
+   4,
+   3,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Bm/F#",
+  "frets": [
+   2,
+   2,
+   4,
+   4,
+   3,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Bm/G",
+  "frets": [
+   3,
+   2,
+   null,
+   4,
+   3,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Bm/G#",
+  "frets": [
+   4,
+   2,
+   4,
+   null,
+   3,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C(4)",
+  "frets": [
+   null,
+   3,
+   2,
+   0,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Cm2",
+  "frets": [
+   null,
+   3,
+   1,
+   null,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C13sus4",
+  "frets": [
+   null,
+   3,
+   3,
+   3,
+   6,
+   5
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "Cm(ma9)",
+  "frets": [
+   null,
+   3,
+   1,
+   4,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Cm7(#5)",
+  "frets": [
+   null,
+   3,
+   1,
+   3,
+   1,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Cma7(#5)",
+  "frets": [
+   null,
+   3,
+   2,
+   4,
+   null,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Cma7(b5)",
+  "frets": [
+   null,
+   3,
+   2,
+   4,
+   null,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C/C#",
+  "frets": [
+   null,
+   4,
+   2,
+   null,
+   1,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C/D#",
+  "frets": [
+   null,
+   null,
+   1,
+   0,
+   1,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C/F#",
+  "frets": [
+   2,
+   3,
+   2,
+   null,
+   null,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C/G#",
+  "frets": [
+   4,
+   3,
+   2,
+   0,
+   null,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Cm/A",
+  "frets": [
+   null,
+   0,
+   1,
+   0,
+   1,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Cm/A#",
+  "frets": [
+   null,
+   1,
+   1,
+   null,
+   1,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Cm/B",
+  "frets": [
+   null,
+   2,
+   1,
+   null,
+   1,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Cm/C#",
+  "frets": [
+   null,
+   4,
+   1,
+   0,
+   1,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Cm/D",
+  "frets": [
+   null,
+   5,
+   5,
+   5,
+   4,
+   null
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "Cm/E",
+  "frets": [
+   0,
+   3,
+   1,
+   0,
+   1,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Cm/F",
+  "frets": [
+   1,
+   3,
+   1,
+   0,
+   null,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Cm/F#",
+  "frets": [
+   2,
+   3,
+   1,
+   null,
+   null,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Cm/G",
+  "frets": [
+   3,
+   3,
+   1,
+   null,
+   null,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Cm/G#",
+  "frets": [
+   4,
+   3,
+   null,
+   null,
+   4,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#(4)",
+  "frets": [
+   null,
+   4,
+   4,
+   1,
+   2,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#m2",
+  "frets": [
+   null,
+   4,
+   2,
+   1,
+   4,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#aug",
+  "frets": [
+   null,
+   4,
+   3,
+   2,
+   2,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#dim",
+  "frets": [
+   null,
+   4,
+   2,
+   null,
+   2,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#13sus4",
+  "frets": [
+   null,
+   4,
+   4,
+   4,
+   2,
+   6
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "C#m(ma9)",
+  "frets": [
+   null,
+   4,
+   2,
+   5,
+   4,
+   4
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "C#m7(#5)",
+  "frets": [
+   null,
+   4,
+   2,
+   2,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#ma7(#5)",
+  "frets": [
+   null,
+   4,
+   3,
+   2,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#ma7(b5)",
+  "frets": [
+   null,
+   4,
+   3,
+   null,
+   1,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#/A",
+  "frets": [
+   null,
+   0,
+   3,
+   1,
+   2,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#/A#",
+  "frets": [
+   null,
+   1,
+   3,
+   1,
+   2,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#/B",
+  "frets": [
+   null,
+   2,
+   3,
+   1,
+   2,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#/C",
+  "frets": [
+   null,
+   3,
+   3,
+   1,
+   2,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#/D",
+  "frets": [
+   null,
+   null,
+   0,
+   1,
+   2,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#/D#",
+  "frets": [
+   null,
+   null,
+   1,
+   1,
+   2,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#/E",
+  "frets": [
+   0,
+   4,
+   3,
+   1,
+   2,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#/F",
+  "frets": [
+   null,
+   null,
+   3,
+   1,
+   2,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#/F#",
+  "frets": [
+   null,
+   null,
+   4,
+   1,
+   2,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#/G",
+  "frets": [
+   3,
+   null,
+   3,
+   1,
+   2,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#m/A",
+  "frets": [
+   null,
+   0,
+   2,
+   1,
+   2,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#m/A#",
+  "frets": [
+   null,
+   1,
+   2,
+   1,
+   2,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#m/B",
+  "frets": [
+   null,
+   2,
+   2,
+   1,
+   2,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#m/C",
+  "frets": [
+   null,
+   3,
+   2,
+   1,
+   2,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#m/D",
+  "frets": [
+   null,
+   null,
+   0,
+   1,
+   2,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#m/D#",
+  "frets": [
+   null,
+   null,
+   1,
+   1,
+   2,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#m/E",
+  "frets": [
+   null,
+   null,
+   2,
+   1,
+   2,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#m/F",
+  "frets": [
+   1,
+   null,
+   2,
+   1,
+   2,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#m/F#",
+  "frets": [
+   2,
+   null,
+   2,
+   1,
+   2,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#m/G",
+  "frets": [
+   3,
+   4,
+   2,
+   1,
+   null,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#m/G#",
+  "frets": [
+   4,
+   4,
+   2,
+   null,
+   null,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D(4)",
+  "frets": [
+   null,
+   5,
+   5,
+   2,
+   3,
+   2
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "Dm2",
+  "frets": [
+   null,
+   5,
+   3,
+   2,
+   5,
+   5
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "D13sus4",
+  "frets": [
+   null,
+   5,
+   5,
+   5,
+   8,
+   7
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "Dm7(#5)",
+  "frets": [
+   null,
+   null,
+   0,
+   3,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Dma7(#5)",
+  "frets": [
+   null,
+   null,
+   0,
+   3,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Dma7(b5)",
+  "frets": [
+   null,
+   null,
+   0,
+   1,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D/A#",
+  "frets": [
+   null,
+   1,
+   4,
+   2,
+   3,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D/D#",
+  "frets": [
+   null,
+   null,
+   1,
+   2,
+   3,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D/F",
+  "frets": [
+   null,
+   null,
+   3,
+   2,
+   3,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D/G#",
+  "frets": [
+   4,
+   null,
+   4,
+   2,
+   3,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Dm/A",
+  "frets": [
+   null,
+   null,
+   null,
+   2,
+   3,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Dm/A#",
+  "frets": [
+   null,
+   1,
+   3,
+   2,
+   3,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Dm/B",
+  "frets": [
+   null,
+   2,
+   3,
+   2,
+   3,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Dm/C",
+  "frets": [
+   null,
+   3,
+   3,
+   2,
+   3,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Dm/C#",
+  "frets": [
+   null,
+   4,
+   3,
+   2,
+   3,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Dm/D#",
+  "frets": [
+   null,
+   null,
+   1,
+   2,
+   3,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Dm/E",
+  "frets": [
+   0,
+   0,
+   0,
+   2,
+   3,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Dm/F#",
+  "frets": [
+   2,
+   null,
+   3,
+   2,
+   3,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Dm/G",
+  "frets": [
+   3,
+   null,
+   3,
+   2,
+   3,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Dm/G#",
+  "frets": [
+   4,
+   null,
+   3,
+   2,
+   3,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#(4)",
+  "frets": [
+   null,
+   6,
+   6,
+   3,
+   4,
+   3
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "D#m2",
+  "frets": [
+   null,
+   6,
+   4,
+   3,
+   6,
+   6
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "D#dim",
+  "frets": [
+   null,
+   null,
+   1,
+   2,
+   4,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#m6",
+  "frets": [
+   null,
+   null,
+   1,
+   3,
+   1,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#13sus4",
+  "frets": [
+   null,
+   6,
+   6,
+   6,
+   9,
+   8
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "D#m(ma9)",
+  "frets": [
+   null,
+   6,
+   4,
+   7,
+   6,
+   null
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "D#m7(#5)",
+  "frets": [
+   null,
+   null,
+   1,
+   4,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#ma7(#5)",
+  "frets": [
+   null,
+   null,
+   1,
+   4,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#ma7(b5)",
+  "frets": [
+   null,
+   null,
+   1,
+   2,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#9(#5)",
+  "frets": [
+   null,
+   6,
+   5,
+   6,
+   6,
+   7
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "D#9(b5)",
+  "frets": [
+   null,
+   6,
+   5,
+   6,
+   6,
+   5
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "D#/A",
+  "frets": [
+   null,
+   0,
+   1,
+   3,
+   4,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#/B",
+  "frets": [
+   null,
+   2,
+   1,
+   3,
+   4,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#/C",
+  "frets": [
+   null,
+   3,
+   1,
+   3,
+   4,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#/C#",
+  "frets": [
+   null,
+   4,
+   null,
+   3,
+   4,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#/D",
+  "frets": [
+   null,
+   null,
+   0,
+   3,
+   4,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#/E",
+  "frets": [
+   0,
+   null,
+   1,
+   3,
+   4,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#/F",
+  "frets": [
+   1,
+   1,
+   1,
+   3,
+   4,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#/F#",
+  "frets": [
+   null,
+   null,
+   4,
+   3,
+   4,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#/G",
+  "frets": [
+   3,
+   1,
+   1,
+   3,
+   4,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#/G#",
+  "frets": [
+   4,
+   null,
+   null,
+   3,
+   4,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#m/A",
+  "frets": [
+   null,
+   0,
+   4,
+   3,
+   4,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#m/A#",
+  "frets": [
+   null,
+   1,
+   1,
+   3,
+   4,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#m/B",
+  "frets": [
+   null,
+   2,
+   4,
+   3,
+   4,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#m/C",
+  "frets": [
+   null,
+   3,
+   4,
+   3,
+   4,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#m/C#",
+  "frets": [
+   null,
+   4,
+   4,
+   3,
+   4,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#m/D",
+  "frets": [
+   null,
+   null,
+   0,
+   3,
+   4,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#m/E",
+  "frets": [
+   0,
+   null,
+   4,
+   3,
+   4,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#m/F",
+  "frets": [
+   1,
+   1,
+   1,
+   3,
+   4,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#m/F#",
+  "frets": [
+   2,
+   null,
+   4,
+   3,
+   4,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#m/G",
+  "frets": [
+   3,
+   1,
+   1,
+   3,
+   null,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#m/G#",
+  "frets": [
+   4,
+   1,
+   1,
+   3,
+   null,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "E(4)",
+  "frets": [
+   0,
+   0,
+   2,
+   1,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Em2",
+  "frets": [
+   0,
+   2,
+   4,
+   0,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "E13sus4",
+  "frets": [
+   0,
+   0,
+   0,
+   2,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Em(ma9)",
+  "frets": [
+   0,
+   2,
+   1,
+   0,
+   0,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Em7(#5)",
+  "frets": [
+   0,
+   3,
+   0,
+   0,
+   3,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Ema7(#5)",
+  "frets": [
+   0,
+   3,
+   2,
+   1,
+   4,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Ema7(b5)",
+  "frets": [
+   null,
+   null,
+   2,
+   3,
+   4,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "E/A#",
+  "frets": [
+   null,
+   1,
+   2,
+   4,
+   null,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "E/C",
+  "frets": [
+   null,
+   3,
+   2,
+   4,
+   null,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "E/F",
+  "frets": [
+   1,
+   2,
+   2,
+   1,
+   null,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "E/G",
+  "frets": [
+   3,
+   2,
+   2,
+   4,
+   null,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Em/A",
+  "frets": [
+   null,
+   0,
+   2,
+   0,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Em/A#",
+  "frets": [
+   null,
+   1,
+   2,
+   4,
+   null,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Em/B",
+  "frets": [
+   null,
+   2,
+   2,
+   4,
+   null,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Em/C",
+  "frets": [
+   null,
+   3,
+   2,
+   4,
+   null,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Em/C#",
+  "frets": [
+   null,
+   4,
+   2,
+   4,
+   null,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Em/D",
+  "frets": [
+   null,
+   null,
+   0,
+   0,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Em/D#",
+  "frets": [
+   null,
+   null,
+   1,
+   0,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Em/F",
+  "frets": [
+   1,
+   2,
+   2,
+   4,
+   null,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Em/F#",
+  "frets": [
+   null,
+   null,
+   4,
+   0,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Em/G#",
+  "frets": [
+   4,
+   2,
+   2,
+   4,
+   null,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F(4)",
+  "frets": [
+   1,
+   1,
+   3,
+   2,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Fm2",
+  "frets": [
+   null,
+   null,
+   3,
+   1,
+   1,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F11",
+  "frets": [
+   1,
+   0,
+   1,
+   3,
+   null,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F13sus4",
+  "frets": [
+   1,
+   3,
+   1,
+   3,
+   3,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Fm(ma9)",
+  "frets": [
+   1,
+   3,
+   2,
+   1,
+   1,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Fm7(#5)",
+  "frets": [
+   1,
+   4,
+   1,
+   1,
+   4,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Fma7(#5)",
+  "frets": [
+   1,
+   null,
+   2,
+   2,
+   2,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Fma7(b5)",
+  "frets": [
+   1,
+   2,
+   2,
+   2,
+   null,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F/B",
+  "frets": [
+   null,
+   2,
+   3,
+   2,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F/C#",
+  "frets": [
+   null,
+   4,
+   3,
+   2,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F/F#",
+  "frets": [
+   2,
+   null,
+   3,
+   2,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F/G#",
+  "frets": [
+   4,
+   3,
+   null,
+   2,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Fm/A",
+  "frets": [
+   null,
+   0,
+   3,
+   1,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Fm/A#",
+  "frets": [
+   null,
+   1,
+   3,
+   1,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Fm/B",
+  "frets": [
+   null,
+   2,
+   3,
+   1,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Fm/C",
+  "frets": [
+   null,
+   3,
+   3,
+   1,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Fm/C#",
+  "frets": [
+   null,
+   4,
+   3,
+   1,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Fm/D",
+  "frets": [
+   null,
+   null,
+   0,
+   1,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Fm/D#",
+  "frets": [
+   null,
+   null,
+   1,
+   1,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Fm/E",
+  "frets": [
+   0,
+   3,
+   3,
+   1,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Fm/F#",
+  "frets": [
+   2,
+   3,
+   3,
+   1,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Fm/G",
+  "frets": [
+   3,
+   3,
+   3,
+   1,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Fm/G#",
+  "frets": [
+   null,
+   null,
+   null,
+   1,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#(4)",
+  "frets": [
+   2,
+   2,
+   4,
+   3,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#m2",
+  "frets": [
+   null,
+   null,
+   4,
+   2,
+   2,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#aug",
+  "frets": [
+   2,
+   null,
+   4,
+   3,
+   3,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#dim",
+  "frets": [
+   2,
+   3,
+   4,
+   2,
+   null,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#11",
+  "frets": [
+   2,
+   1,
+   2,
+   4,
+   null,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#13sus4",
+  "frets": [
+   2,
+   4,
+   2,
+   4,
+   4,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#m(ma9)",
+  "frets": [
+   2,
+   4,
+   3,
+   2,
+   2,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#m7(#5)",
+  "frets": [
+   2,
+   null,
+   2,
+   2,
+   3,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#ma7(#5)",
+  "frets": [
+   2,
+   null,
+   3,
+   3,
+   3,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#ma7(b5)",
+  "frets": [
+   2,
+   1,
+   3,
+   3,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#/A",
+  "frets": [
+   null,
+   0,
+   4,
+   3,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#/A#",
+  "frets": [
+   null,
+   null,
+   null,
+   3,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#/B",
+  "frets": [
+   null,
+   2,
+   4,
+   3,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#/C",
+  "frets": [
+   null,
+   3,
+   4,
+   3,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#/D",
+  "frets": [
+   null,
+   null,
+   0,
+   3,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#/D#",
+  "frets": [
+   null,
+   null,
+   1,
+   3,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#/E",
+  "frets": [
+   0,
+   4,
+   4,
+   3,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#/F",
+  "frets": [
+   null,
+   null,
+   3,
+   3,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#/G",
+  "frets": [
+   3,
+   null,
+   4,
+   3,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#/G#",
+  "frets": [
+   4,
+   null,
+   4,
+   3,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#m/A#",
+  "frets": [
+   null,
+   1,
+   4,
+   2,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#m/B",
+  "frets": [
+   null,
+   2,
+   4,
+   2,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#m/C",
+  "frets": [
+   null,
+   3,
+   4,
+   2,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#m/C#",
+  "frets": [
+   null,
+   4,
+   4,
+   2,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#m/D",
+  "frets": [
+   null,
+   null,
+   0,
+   2,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#m/D#",
+  "frets": [
+   null,
+   null,
+   1,
+   2,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#m/E",
+  "frets": [
+   0,
+   0,
+   4,
+   2,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#m/F",
+  "frets": [
+   null,
+   null,
+   3,
+   2,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#m/G",
+  "frets": [
+   3,
+   4,
+   4,
+   2,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#m/G#",
+  "frets": [
+   4,
+   4,
+   4,
+   2,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G(4)",
+  "frets": [
+   3,
+   3,
+   null,
+   4,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Gm2",
+  "frets": [
+   3,
+   1,
+   null,
+   2,
+   3,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G13sus4",
+  "frets": [
+   3,
+   3,
+   3,
+   0,
+   3,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Gm(ma9)",
+  "frets": [
+   3,
+   1,
+   4,
+   2,
+   null,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Gm7(#5)",
+  "frets": [
+   3,
+   1,
+   1,
+   3,
+   4,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Gma7(#5)",
+  "frets": [
+   3,
+   2,
+   4,
+   null,
+   4,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Gma7(b5)",
+  "frets": [
+   3,
+   2,
+   4,
+   4,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G/A#",
+  "frets": [
+   null,
+   1,
+   null,
+   4,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G/C#",
+  "frets": [
+   null,
+   4,
+   null,
+   4,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G/D#",
+  "frets": [
+   null,
+   null,
+   1,
+   4,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G/G#",
+  "frets": [
+   4,
+   null,
+   null,
+   4,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Gm/A",
+  "frets": [
+   null,
+   0,
+   0,
+   3,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Gm/A#",
+  "frets": [
+   null,
+   null,
+   null,
+   3,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Gm/B",
+  "frets": [
+   null,
+   2,
+   null,
+   3,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Gm/C",
+  "frets": [
+   null,
+   3,
+   null,
+   3,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Gm/C#",
+  "frets": [
+   null,
+   4,
+   null,
+   3,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Gm/D",
+  "frets": [
+   null,
+   null,
+   0,
+   3,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Gm/D#",
+  "frets": [
+   null,
+   null,
+   1,
+   3,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Gm/E",
+  "frets": [
+   0,
+   1,
+   0,
+   0,
+   null,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Gm/F",
+  "frets": [
+   null,
+   null,
+   3,
+   3,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Gm/F#",
+  "frets": [
+   null,
+   null,
+   4,
+   3,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Gm/G#",
+  "frets": [
+   4,
+   null,
+   null,
+   3,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#(4)",
+  "frets": [
+   4,
+   3,
+   1,
+   1,
+   2,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#m2",
+  "frets": [
+   4,
+   1,
+   1,
+   4,
+   4,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#aug",
+  "frets": [
+   4,
+   null,
+   2,
+   1,
+   1,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#dim",
+  "frets": [
+   4,
+   2,
+   null,
+   4,
+   3,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#13sus4",
+  "frets": [
+   4,
+   null,
+   4,
+   1,
+   2,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#m(ma9)",
+  "frets": [
+   4,
+   2,
+   null,
+   3,
+   4,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#m7(#5)",
+  "frets": [
+   4,
+   2,
+   2,
+   4,
+   null,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#ma7(#5)",
+  "frets": [
+   4,
+   null,
+   2,
+   1,
+   1,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#ma7(b5)",
+  "frets": [
+   4,
+   3,
+   null,
+   1,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#/A",
+  "frets": [
+   null,
+   0,
+   1,
+   1,
+   1,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#/A#",
+  "frets": [
+   null,
+   1,
+   1,
+   1,
+   1,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#/B",
+  "frets": [
+   null,
+   2,
+   1,
+   1,
+   1,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#/C",
+  "frets": [
+   null,
+   3,
+   1,
+   1,
+   4,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#/C#",
+  "frets": [
+   null,
+   4,
+   1,
+   1,
+   1,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#/D",
+  "frets": [
+   null,
+   5,
+   6,
+   5,
+   4,
+   4
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "G#/E",
+  "frets": [
+   0,
+   3,
+   1,
+   1,
+   null,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#/F",
+  "frets": [
+   1,
+   3,
+   1,
+   1,
+   1,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#/F#",
+  "frets": [
+   2,
+   3,
+   1,
+   1,
+   4,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#/G",
+  "frets": [
+   3,
+   3,
+   1,
+   1,
+   4,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#m/A",
+  "frets": [
+   null,
+   0,
+   1,
+   4,
+   4,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#m/A#",
+  "frets": [
+   null,
+   1,
+   1,
+   4,
+   4,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#m/B",
+  "frets": [
+   null,
+   null,
+   null,
+   4,
+   4,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#m/C",
+  "frets": [
+   null,
+   3,
+   1,
+   4,
+   4,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#m/C#",
+  "frets": [
+   null,
+   4,
+   null,
+   4,
+   4,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#m/D",
+  "frets": [
+   null,
+   null,
+   0,
+   4,
+   4,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#m/D#",
+  "frets": [
+   null,
+   null,
+   1,
+   4,
+   4,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#m/E",
+  "frets": [
+   0,
+   2,
+   1,
+   1,
+   0,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#m/F",
+  "frets": [
+   1,
+   2,
+   1,
+   1,
+   4,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#m/F#",
+  "frets": [
+   null,
+   null,
+   4,
+   4,
+   4,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#m/G",
+  "frets": [
+   3,
+   2,
+   1,
+   1,
+   4,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Am(4)",
+  "frets": [
+   null,
+   0,
+   0,
+   2,
+   1,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Am6/9",
+  "frets": [
+   null,
+   0,
+   4,
+   4,
+   1,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Am6/7",
+  "frets": [
+   null,
+   0,
+   2,
+   0,
+   1,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Am7(4)",
+  "frets": [
+   null,
+   0,
+   0,
+   0,
+   1,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Ama11",
+  "frets": [
+   5,
+   4,
+   6,
+   null,
+   3,
+   null
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "Ama13",
+  "frets": [
+   null,
+   0,
+   2,
+   1,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#m(4)",
+  "frets": [
+   null,
+   1,
+   1,
+   3,
+   2,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#m6/9",
+  "frets": [
+   6,
+   4,
+   3,
+   5,
+   null,
+   3
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "A#m6/7",
+  "frets": [
+   null,
+   1,
+   3,
+   1,
+   2,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#m7(4)",
+  "frets": [
+   null,
+   1,
+   1,
+   1,
+   2,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#ma11",
+  "frets": [
+   null,
+   1,
+   0,
+   2,
+   4,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "A#ma13",
+  "frets": [
+   null,
+   1,
+   3,
+   2,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Bm(4)",
+  "frets": [
+   null,
+   2,
+   2,
+   4,
+   3,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Bm6/9",
+  "frets": [
+   null,
+   2,
+   0,
+   1,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Bm6/7",
+  "frets": [
+   null,
+   2,
+   4,
+   2,
+   3,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Bm7(4)",
+  "frets": [
+   null,
+   2,
+   2,
+   2,
+   3,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Bma11",
+  "frets": [
+   null,
+   2,
+   1,
+   3,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Bma13",
+  "frets": [
+   null,
+   2,
+   4,
+   3,
+   4,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Cm(4)",
+  "frets": [
+   null,
+   3,
+   3,
+   null,
+   4,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Cm6/9",
+  "frets": [
+   null,
+   3,
+   1,
+   2,
+   3,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Cm6/7",
+  "frets": [
+   null,
+   3,
+   5,
+   3,
+   4,
+   5
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "Cm7(4)",
+  "frets": [
+   null,
+   3,
+   1,
+   3,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Cma11",
+  "frets": [
+   null,
+   3,
+   2,
+   4,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Cma13",
+  "frets": [
+   null,
+   3,
+   2,
+   4,
+   5,
+   5
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "C#m(4)",
+  "frets": [
+   null,
+   4,
+   2,
+   1,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#m6/9",
+  "frets": [
+   null,
+   4,
+   2,
+   3,
+   4,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#m6/7",
+  "frets": [
+   null,
+   4,
+   2,
+   3,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#m7(4)",
+  "frets": [
+   null,
+   4,
+   2,
+   4,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#ma11",
+  "frets": [
+   null,
+   4,
+   3,
+   1,
+   1,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "C#ma13",
+  "frets": [
+   null,
+   4,
+   6,
+   5,
+   6,
+   6
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "Dm(4)",
+  "frets": [
+   null,
+   5,
+   3,
+   2,
+   3,
+   3
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "Dm6/7",
+  "frets": [
+   null,
+   null,
+   0,
+   4,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Dm7(4)",
+  "frets": [
+   null,
+   null,
+   0,
+   0,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Dma11",
+  "frets": [
+   null,
+   5,
+   4,
+   2,
+   2,
+   3
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "Dma13",
+  "frets": [
+   null,
+   5,
+   4,
+   6,
+   7,
+   7
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "D#m(4)",
+  "frets": [
+   null,
+   6,
+   4,
+   3,
+   4,
+   4
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "D#m6/9",
+  "frets": [
+   null,
+   6,
+   4,
+   5,
+   6,
+   6
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "D#m6/7",
+  "frets": [
+   null,
+   6,
+   8,
+   6,
+   7,
+   8
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "D#m7(4)",
+  "frets": [
+   null,
+   null,
+   1,
+   1,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#ma11",
+  "frets": [
+   null,
+   null,
+   1,
+   0,
+   3,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "D#ma13",
+  "frets": [
+   null,
+   6,
+   8,
+   7,
+   8,
+   8
+  ],
+  "reading": "pos+base-1"
+ },
+ {
+  "name": "Em(4)",
+  "frets": [
+   0,
+   0,
+   2,
+   0,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Em6/9",
+  "frets": [
+   0,
+   2,
+   2,
+   0,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Em6/7",
+  "frets": [
+   0,
+   4,
+   0,
+   0,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Em7(4)",
+  "frets": [
+   null,
+   null,
+   2,
+   2,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Ema11",
+  "frets": [
+   0,
+   null,
+   4,
+   2,
+   4,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Ema13",
+  "frets": [
+   0,
+   2,
+   1,
+   1,
+   2,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Fm(4)",
+  "frets": [
+   1,
+   1,
+   3,
+   1,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Fm6/9",
+  "frets": [
+   1,
+   3,
+   null,
+   1,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Fm6/7",
+  "frets": [
+   1,
+   3,
+   1,
+   1,
+   3,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Fm7(4)",
+  "frets": [
+   1,
+   1,
+   1,
+   1,
+   1,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Fma11",
+  "frets": [
+   1,
+   0,
+   2,
+   3,
+   1,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Fma13",
+  "frets": [
+   1,
+   null,
+   2,
+   2,
+   3,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#m(4)",
+  "frets": [
+   2,
+   2,
+   4,
+   2,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#m6/9",
+  "frets": [
+   2,
+   null,
+   4,
+   2,
+   4,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#m6/7",
+  "frets": [
+   2,
+   4,
+   2,
+   2,
+   4,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#m7(4)",
+  "frets": [
+   2,
+   2,
+   2,
+   2,
+   2,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#ma11",
+  "frets": [
+   2,
+   1,
+   3,
+   4,
+   null,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "F#ma13",
+  "frets": [
+   2,
+   1,
+   3,
+   1,
+   4,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Gm(4)",
+  "frets": [
+   3,
+   3,
+   null,
+   3,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Gm6/9",
+  "frets": [
+   3,
+   1,
+   2,
+   2,
+   3,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Gm6/7",
+  "frets": [
+   3,
+   1,
+   2,
+   3,
+   null,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Gm7(4)",
+  "frets": [
+   3,
+   3,
+   3,
+   3,
+   3,
+   3
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Gma11",
+  "frets": [
+   3,
+   2,
+   4,
+   null,
+   1,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "Gma13",
+  "frets": [
+   3,
+   2,
+   4,
+   0,
+   0,
+   0
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#m(4)",
+  "frets": [
+   4,
+   2,
+   1,
+   1,
+   2,
+   null
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#m6/9",
+  "frets": [
+   4,
+   2,
+   1,
+   3,
+   null,
+   1
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#m6/7",
+  "frets": [
+   4,
+   2,
+   3,
+   4,
+   null,
+   2
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#m7(4)",
+  "frets": [
+   4,
+   4,
+   4,
+   4,
+   4,
+   4
+  ],
+  "reading": "absolute"
+ },
+ {
+  "name": "G#ma11",
+  "frets": [
+   4,
+   3,
+   null,
+   null,
+   2,
+   3
+  ],
+  "reading": "absolute"
+ }
+]
