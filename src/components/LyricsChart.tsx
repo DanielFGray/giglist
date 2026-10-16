@@ -28,6 +28,14 @@ export function LyricsChart({
 
 function Line({ line }: { line: ChartLine }) {
   if (line.length === 0) return <div className="h-4" />
+  // A tab line has no chord row above it, and never wraps: its columns are the music.
+  if (line.length === 1 && line[0]!.kind === "tab") {
+    return (
+      <div data-pwid="chart-tab" data-start={line[0]!.start} data-end={line[0]!.end} className="whitespace-pre">
+        {line[0]!.text}
+      </div>
+    )
+  }
   return (
     <div className="flex flex-wrap items-end">
       {line.map((item, index) => (
@@ -43,10 +51,17 @@ function Item({ item }: { item: ChartItem }) {
       return (
         <span data-pwid="chart-section" data-start={item.start} data-end={item.end} className="mt-3 mb-1 w-full text-xs font-semibold uppercase tracking-wide text-zinc-400">
           {item.label}
+          {item.tabWrittenIn && (
+            <span data-pwid="chart-tab-key" className={`${item.label ? "ml-2 " : ""}normal-case tracking-normal font-normal text-zinc-500`}>
+              tab as written, in {item.tabWrittenIn}
+            </span>
+          )}
         </span>
       )
     case "comment":
       return <span data-start={item.start} data-end={item.end} className="italic text-zinc-500">{item.text}</span>
+    case "tab":
+      return <span data-start={item.start} data-end={item.end} className="whitespace-pre">{item.text}</span>
     case "pair":
       return (
         <span data-start={item.start} data-end={item.end} className="inline-flex flex-col">

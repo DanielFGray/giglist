@@ -2,10 +2,10 @@ import { useMemo, useRef, useState, type DragEvent } from "react"
 import { charts, type ChartInfo } from "~/api/client"
 import { composeChanges } from "~/charts/changes"
 import {
-  addSection, deleteLine, editLyrics, insertLineAfter, moveChord, moveSection, parseDoc, placeChord, removeChord, removeSection, renameSection,
+  addSection, deleteLine, directiveName, editLine, insertLineAfter, moveChord, moveSection, parseDoc, placeChord, removeChord, removeSection, renameSection,
   segments, serializeDoc, type DocLine, type Edit,
 } from "~/charts/doc"
-import { suggestedChords } from "~/charts/lyrics"
+import { isTabStart, suggestedChords } from "~/charts/lyrics"
 import { errorMessage } from "./form"
 
 /** A chord in hand: dragged or armed from the palette (no `from`), or picked up off the chart. */
@@ -126,7 +126,7 @@ export function ChartEditor({
             onEditStart={() => setEditingLine(index)}
             onEditEnd={(text) => {
               setEditingLine(null)
-              if (text !== null) apply(editLyrics(doc, index, text))
+              if (text !== null) apply(editLine(doc, index, text))
             }}
             onInsertAfter={() => {
               const edit = insertLineAfter(doc, index)
@@ -232,6 +232,7 @@ function Line(props: {
     return section ? (
       <SectionHeading
         label={section[1] ?? ""}
+        tab={isTabStart(directiveName(line))}
         onRename={props.onRename}
         onRemove={props.onRemoveSection}
         onMove={props.onMoveSection}
@@ -239,6 +240,23 @@ function Line(props: {
     ) : null
   }
   if (props.editing) return <LyricInput text={line.text} onDone={props.onEditEnd} />
+  if (line.kind === "tab") {
+    // Tab is kept as written: no chords go on it, but its text can be corrected.
+    return (
+      <div data-pwid="editor-tab" className="group relative flex items-center">
+        <span className="whitespace-pre">{line.text}</span>
+        {/* Out of the flow: a row as tall as the buttons would pull the tab's rows apart. */}
+        <span className="absolute left-full z-10 ml-2 flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
+          <button data-pwid="line-edit" type="button" onClick={props.onEditStart} aria-label="Edit tab line" className={button}>
+            Edit
+          </button>
+          <button data-pwid="line-delete" type="button" onClick={props.onDelete} aria-label="Delete line" className={button}>
+            Delete
+          </button>
+        </span>
+      </div>
+    )
+  }
   if (naming) {
     return (
       <LyricInput
@@ -312,11 +330,14 @@ function Line(props: {
 
 function SectionHeading({
   label,
+  tab,
   onRename,
   onRemove,
   onMove,
 }: {
   label: string
+  /** A tab section: removing it removes its tab lines too. */
+  tab: boolean
   onRename: (label: string) => void
   onRemove: () => void
   onMove: (delta: -1 | 1) => void
@@ -343,7 +364,7 @@ function SectionHeading({
         title="Rename section"
         className="block text-xs font-semibold uppercase tracking-wide text-zinc-400 cursor-text"
       >
-        {label || "Section"}
+        {label || (tab ? "Tab" : "Section")}
       </button>
       <span className="flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
         <button data-pwid="section-move-up" type="button" onClick={() => onMove(-1)} aria-label="Move section up" className={button}>
@@ -352,8 +373,8 @@ function SectionHeading({
         <button data-pwid="section-move-down" type="button" onClick={() => onMove(1)} aria-label="Move section down" className={button}>
           ↓
         </button>
-        <button data-pwid="section-remove" type="button" onClick={onRemove} aria-label="Remove section" className={button}>
-          Remove section
+        <button data-pwid="section-remove" type="button" onClick={onRemove} aria-label={tab ? "Remove tab" : "Remove section"} className={button}>
+          {tab ? "Remove tab" : "Remove section"}
         </button>
       </span>
     </div>

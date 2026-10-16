@@ -1,6 +1,6 @@
 /**
- * The lyrics chart as the editor sees it: lines, each either a ChordPro
- * directive or a lyric with chords placed at columns.
+ * The lyrics chart as the editor sees it: lines, each a ChordPro directive, a
+ * lyric with chords placed at columns, or a line of tab kept as written.
  *
  * Every edit returns the new chart and the change set that turns the old
  * anchor text into the new one (docs/adr/0001). The editor knows exactly what
@@ -11,12 +11,15 @@
  * derived from the stored text, never stored.
  */
 import { composeChanges, type Change } from "./changes"
+import { isTabStart } from "./lyrics"
 
 export type PlacedChord = { readonly at: number; readonly chord: string }
 
 export type DocLine =
   | { readonly kind: "directive"; readonly raw: string }
   | { readonly kind: "lyrics"; readonly text: string; readonly chords: ReadonlyArray<PlacedChord> }
+  /** A line inside a tab section: brackets in it are tab, not chords. */
+  | { readonly kind: "tab"; readonly text: string }
 
 export type ChartDoc = ReadonlyArray<DocLine>
 
@@ -30,8 +33,16 @@ export type Segment = { readonly start: number; readonly end: number; readonly c
 // Text <-> chart
 
 export function parseDoc(source: string): ChartDoc {
+  let inTab = false
   return source.split("\n").map((line): DocLine => {
-    if (/^\{.*\}$/.test(line)) return { kind: "directive", raw: line }
+    if (/^\{.*\}$/.test(line)) {
+      const directive: DocLine = { kind: "directive", raw: line }
+      const name = directiveName(directive)
+      if (isTabStart(name)) inTab = true
+      else if (name === "end_of_tab" || name === "eot") inTab = false
+      return directive
+    }
+    if (inTab) return { kind: "tab", text: line }
     const chords: Array<PlacedChord> = []
     let text = ""
     let at = 0
@@ -50,6 +61,7 @@ export function serializeDoc(doc: ChartDoc): string {
 
 function lineSource(line: DocLine): string {
   if (line.kind === "directive") return line.raw
+  if (line.kind === "tab") return line.text
   return withChords(line.text, line.chords)
 }
 
@@ -71,6 +83,7 @@ export function anchorText(doc: ChartDoc): string {
 
 function anchorLine(line: DocLine): string {
   if (line.kind === "lyrics") return withChords(line.text, line.chords)
+  if (line.kind === "tab") return line.text
   const match = /^\{\s*(start_of_\w+|comment|c)\s*(?::\s*(.*?))?\s*\}$/.exec(line.raw)
   return match ? (match[2] ?? "") : ""
 }
@@ -140,13 +153,23 @@ export function moveChord(
 }
 
 /**
- * Replaces the lyrics of a line. Chords stay on the text around the edit; a
- * chord inside the replaced stretch moves to its start, and a chord where text
- * is only inserted goes with the text after it. The change is the
+ * Replaces the text of a lyric or tab line. On a lyric line, chords stay on
+ * the text around the edit; a chord inside the replaced stretch moves to its
+ * start, and a chord where text is only inserted goes with the text after it. The change is the
  * common-prefix-and-suffix replacement, which is exact except where the edit
  * sits inside a repeat within the one line.
  */
-export function editLyrics(doc: ChartDoc, lineIndex: number, text: string): Edit {
+export function editLine(doc: ChartDoc, lineIndex: number, text: string): Edit {
+  const tab = doc[lineIndex]
+  if (tab?.kind === "tab") {
+    if (text === tab.text) return { doc, changes: [] }
+    const [change] = commonEnds(tab.text, text).change
+    const base = lineStart(doc, lineIndex)
+    return {
+      doc: replaceLine(doc, lineIndex, { kind: "tab", text }),
+      changes: change ? [{ from: base + change.from, to: base + change.to, insert: change.insert }] : [],
+    }
+  }
   const line = lyricsLine(doc, lineIndex)
   if (text === line.text) return { doc, changes: [] }
   const keep = commonEnds(line.text, text)
@@ -176,9 +199,9 @@ export function insertLineAfter(doc: ChartDoc, lineIndex: number): Edit {
     : { doc: next, changes: [{ from: at, to: at, insert: 1 }] }
 }
 
-/** Deletes a lyric line with the newline that separates it from its neighbour. */
+/** Deletes a lyric or tab line with the newline that separates it from its neighbour. */
 export function deleteLine(doc: ChartDoc, lineIndex: number): Edit {
-  lyricsLine(doc, lineIndex)
+  if (doc[lineIndex]?.kind !== "tab") lyricsLine(doc, lineIndex)
   const next = doc.filter((_, i) => i !== lineIndex)
   const start = lineStart(doc, lineIndex)
   const length = anchorLine(doc[lineIndex]!).length
@@ -226,11 +249,30 @@ export function addSection(doc: ChartDoc, lineIndex: number, label: string): Edi
   ])
 }
 
-/** Removes a section's start and end lines; its lines stay where they are. */
+/**
+ * Removes a section's start and end lines; its lines stay where they are. A
+ * tab section goes with its lines, since tab lines exist only inside one.
+ */
 export function removeSection(doc: ChartDoc, lineIndex: number): Edit {
   const block = sectionBlock(doc, lineIndex)
+  if (isTabStart(directiveName(doc[lineIndex]!))) {
+    const last = block.closed ? block.end : lineIndex + countTab(doc, lineIndex + 1)
+    return chain(doc, Array.from({ length: last - lineIndex + 1 }, () => (d: ChartDoc) => removeLineAt(d, lineIndex)))
+  }
   const steps = [(d: ChartDoc) => removeLineAt(d, block.end), (d: ChartDoc) => removeLineAt(d, block.start)]
   return chain(doc, block.closed ? steps : steps.slice(1))
+}
+
+/** The name of a directive line (`start_of_tab` for `{start_of_tab: Intro}`), or "" for any other line. */
+export function directiveName(line: DocLine): string {
+  return line.kind === "directive" ? (/^\{\s*(\w+)/.exec(line.raw)?.[1] ?? "") : ""
+}
+
+/** How many tab lines follow from `index` on. */
+function countTab(doc: ChartDoc, index: number): number {
+  let n = 0
+  while (doc[index + n]?.kind === "tab") n++
+  return n
 }
 
 /**

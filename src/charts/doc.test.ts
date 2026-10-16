@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test"
 import { readFileSync } from "node:fs"
-import { ChordLyricsPair, ChordProParser, Tag } from "chordsheetjs"
+import { ChordLyricsPair, ChordProParser, Literal, Tag } from "chordsheetjs"
 import { composeChanges, explains, type Change } from "./changes"
 import {
   addSection, moveSection, removeSection,
-  anchorText, deleteLine, editLyrics, insertLineAfter, moveChord, parseDoc, placeChord, removeChord,
+  anchorText, deleteLine, editLine, insertLineAfter, moveChord, parseDoc, placeChord, removeChord,
   renameSection, segments, serializeDoc, type ChartDoc, type DocLine, type Edit,
 } from "./doc"
 import { follow } from "./follow"
@@ -24,6 +24,7 @@ const anchorFromSong = (text: string) => {
           if (item instanceof ChordLyricsPair) return (item.chords.trim() ? `[${item.chords.trim()}]` : "") + (item.lyrics ?? "")
           if (item instanceof Tag && item.isSectionStart()) return item.label || item.value
           if (item instanceof Tag && item.isComment()) return item.value
+          if (item instanceof Literal) return item.string
           return ""
         })
         .join(""),
@@ -93,14 +94,14 @@ describe("edits", () => {
   })
 
   test("editing lyrics keeps chords on the words around the edit", () => {
-    const edit = editLyrics(doc, i, "Amazing grace, how very sweet the sound")
+    const edit = editLine(doc, i, "Amazing grace, how very sweet the sound")
     const line = edit.doc[i]!
     expect(line.kind === "lyrics" && line.chords.map((c) => `${c.at}${c.chord}`)).toEqual(["0G", "18C", "33G"])
     expectExact(doc, edit)
   })
 
   test("editing lyrics before a chord moves the chord with its word", () => {
-    const edit = editLyrics(doc, i, "Oh Amazing grace, how sweet the sound")
+    const edit = editLine(doc, i, "Oh Amazing grace, how sweet the sound")
     const line = edit.doc[i]!
     expect(line.kind === "lyrics" && line.chords.map((c) => c.at)).toEqual([3, 21, 31])
     expectExact(doc, edit)
@@ -128,7 +129,7 @@ describe("edits", () => {
     for (const step of [
       (d: ChartDoc) => placeChord(d, i, 8, "Am"),
       (d: ChartDoc) => moveChord(d, { line: i, chord: 0 }, { line: i, at: 15 }),
-      (d: ChartDoc) => editLyrics(d, i, "Amazing grace, how sweet the sound!"),
+      (d: ChartDoc) => editLine(d, i, "Amazing grace, how sweet the sound!"),
       (d: ChartDoc) => renameSection(d, 1, "Verse"),
     ]) {
       const edit = step(current)
@@ -234,5 +235,42 @@ describe("segments", () => {
     const line = parseDoc("Hello[C]")[0]!
     if (line.kind !== "lyrics") throw new Error("expected a lyric line")
     expect(segments(line).map((s) => s.chords)).toEqual([[], [0]])
+  })
+})
+
+describe("tab", () => {
+  const riff = importPasted(readFileSync(new URL("../../tests/fixtures/riff-and-solo.txt", import.meta.url), "utf8"), "G")
+  const tabDoc = parseDoc(riff)
+  const tabLine = (prefix: string) => tabDoc.findIndex((l) => l.kind === "tab" && l.text.startsWith(prefix))
+
+  test("lines inside a tab section are tab, kept as written, and their anchor text matches ChordSheetJS", () => {
+    expect(serializeDoc(tabDoc)).toBe(riff)
+    expect(anchorText(tabDoc)).toBe(anchorFromSong(riff))
+    expect(tabDoc[tabLine("e|-----3--5/7")]).toEqual({ kind: "tab", text: "e|-----3--5/7--<12>--|" })
+    // The chord row typed above the intro tab is part of the tab, not chords.
+    expect(tabDoc[2]).toEqual({ kind: "tab", text: "   G                 C" })
+  })
+
+  test("editing a tab line is exact, and a mark later on the line follows", () => {
+    const index = tabLine("B|--3h5")
+    const edit = editLine(tabDoc, index, "B|--3h5h7--------------|")
+    expectExact(tabDoc, edit)
+    expect(edit.doc[index]).toEqual({ kind: "tab", text: "B|--3h5h7--------------|" })
+    const before = anchorText(tabDoc)
+    const at = before.indexOf("e|--(5)")
+    const step = { before, after: anchorText(edit.doc), recorded: edit.changes }
+    expect(follow({ start: at, end: at + 7 }, [step])).toEqual({ state: "kept", start: at + 2, end: at + 9 })
+  })
+
+  test("deleting a tab line is exact", () => {
+    expectExact(tabDoc, deleteLine(tabDoc, tabLine("B|--3h5")))
+  })
+
+  test("removing a tab section removes its tab with it; the next section is untouched", () => {
+    const start = tabDoc.findIndex((l) => l.kind === "directive" && l.raw === "{start_of_tab: Intro}")
+    const edit = removeSection(tabDoc, start)
+    expectExact(tabDoc, edit)
+    expect(serializeDoc(edit.doc)).not.toContain("e|-------------------|")
+    expect(serializeDoc(edit.doc).startsWith("{key: G}\n\n{start_of_verse: Verse 1}")).toBe(true)
   })
 })
