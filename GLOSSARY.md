@@ -27,6 +27,10 @@ _Avoid_: tab file
 A short piece of real notation in a lyrics chart (a riff, a lick, a fill, a groove), with a name, drawn as a row between lyric lines and played at the song's tempo.
 _Avoid_: snippet, lick block, notation block
 
+**Chord shape**:
+One way to hold a chord on the guitar: a fret, open or not-played for each string. A player taps a chord name to see its shapes, best first.
+_Avoid_: fingering, grip, chord diagram (the diagram is the drawing of a shape)
+
 **Revision**:
 One saved version of a chart. A revision never changes; an edit makes a new one.
 _Avoid_: version, draft
