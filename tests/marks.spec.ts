@@ -1,6 +1,6 @@
 import type { Locator, Page } from "@playwright/test"
 import { deleteLine, insertLineAfter, parseDoc, serializeDoc, type Edit } from "../src/charts/doc"
-import { test, expect, getPw, TEST_PASSWORD } from "./helpers"
+import { test, expect, getPw, openTool, TEST_PASSWORD } from "./helpers"
 
 /** A band, a song and a bare-lyrics chart; marks start from a chart. */
 const createChart = async (page: Page) => {
@@ -38,7 +38,7 @@ const center = async (target: Locator) => {
 }
 
 const placeText = async (page: Page, text: string, on: string) => {
-  await getPw(page, "tool-text").click()
+  await openTool(page, "text")
   await getPw(page, "mark-text-input").fill(text)
   const at = await center(word(page, on))
   await page.mouse.click(at.x, at.y)
@@ -103,7 +103,7 @@ test.describe("marks", () => {
     const { url } = await createChart(page)
     await page.goto(url)
     await expect(getPw(page, "marked-chart")).toBeVisible({ timeout: 10000 })
-    await getPw(page, "tool-ink").click()
+    await openTool(page, "ink")
 
     const at = await center(word(page, "sound"))
     await stroke(page, [{ x: at.x, y: at.y + 20 }, { x: at.x + 20, y: at.y + 30 }, { x: at.x + 40, y: at.y + 20 }])
@@ -135,7 +135,7 @@ test.describe("marks", () => {
     await expect(mark).toHaveAttribute("data-shared", "private")
 
     // Move it onto another word; it re-anchors there and the position survives a reload.
-    await getPw(page, "tool-move").click()
+    await openTool(page, "move")
     const from = await center(mark)
     const to = await center(word(page, "wretch"))
     await page.mouse.move(from.x, from.y)
@@ -143,13 +143,16 @@ test.describe("marks", () => {
     await page.mouse.move(to.x, to.y, { steps: 6 })
     await page.mouse.up()
     await expect.poll(async () => Math.abs((await center(mark)).y - to.y)).toBeLessThan(6)
-    const moved = await center(mark)
+    // The mark stays with its word. The mark tools take a strip above the chart while
+    // annotating, so the word moves when the reload turns annotate off: compare to the word.
+    const offsetFromWord = async () => (await center(mark)).y - (await center(word(page, "wretch"))).y
+    const before = await offsetFromWord()
     await page.reload()
     await expect(mark).toHaveCount(1, { timeout: 10000 })
-    expect(Math.abs((await center(mark)).y - moved.y)).toBeLessThan(2)
+    expect(Math.abs((await offsetFromWord()) - before)).toBeLessThan(2)
 
     // Share with the band, save as a stamp, and paste the stamp elsewhere.
-    await getPw(page, "tool-move").click()
+    await openTool(page, "move")
     const here = await center(mark)
     await page.mouse.click(here.x, here.y)
     await getPw(page, "mark-share").click()
@@ -157,7 +160,7 @@ test.describe("marks", () => {
     await getPw(page, "mark-stamp-name").fill("subdivide")
     await getPw(page, "mark-stamp-save").click()
 
-    await getPw(page, "tool-stamp").click()
+    await openTool(page, "stamp")
     await expect(getPw(page, "stamp-select")).toContainText("subdivide", { timeout: 10000 })
     const target = await center(word(page, "sound"))
     await page.mouse.click(target.x, target.y)
@@ -184,7 +187,7 @@ test.describe("marks", () => {
     await expect(getPw(mate, "mark")).toHaveCount(0)
 
     // Shared, the mark shows for the bandmate as theirs to read, with no way to edit it.
-    await getPw(page, "tool-move").click()
+    await openTool(page, "move")
     const here = await center(getPw(page, "mark"))
     await page.mouse.click(here.x, here.y)
     await getPw(page, "mark-share").click()
@@ -192,7 +195,7 @@ test.describe("marks", () => {
     await mate.reload()
     await expect(getPw(mate, "mark")).toHaveText("watch the break", { timeout: 10000 })
     await expect(getPw(mate, "mark")).toHaveAttribute("data-shared", "theirs")
-    await getPw(mate, "tool-move").click()
+    await openTool(mate, "move")
     const there = await center(getPw(mate, "mark"))
     await mate.mouse.click(there.x, there.y)
     await expect(getPw(mate, "mark-share")).toHaveCount(0)

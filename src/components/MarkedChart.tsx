@@ -11,8 +11,8 @@ type Point = { x: number; y: number }
 type Body = MarkInfo["body"]
 type Placement = Pick<MarkData, "range_start" | "range_end" | "side" | "dx" | "dy" | "scale">
 
+// The tools of annotate mode. Read is not a button: it is the state when no tool is armed or annotate is off.
 const TOOLS: ReadonlyArray<{ tool: Tool; label: string }> = [
-  { tool: "read", label: "Read" },
   { tool: "move", label: "Move" },
   { tool: "ink", label: "Ink" },
   { tool: "text", label: "Text" },
@@ -35,6 +35,7 @@ export function MarkedChart({
   shownKey,
   tempo = null,
   toolbar = true,
+  annotating = false,
   size,
 }: {
   chart: ChartInfo & { source: string }
@@ -43,6 +44,8 @@ export function MarkedChart({
   tempo?: number | null
   /** False on stage: the player's marks show, but nothing can be drawn, moved or shared. */
   toolbar?: boolean
+  /** True while the player is annotating: the mark tools show, and a chord opens no shapes. */
+  annotating?: boolean
   /** Text size in rem; see LyricsChart. */
   size?: number
 }) {
@@ -50,6 +53,10 @@ export function MarkedChart({
   const [data, setData] = useState<ChartMarksInfo>({ marks: [], revisions: [] })
   const [stampList, setStampList] = useState<ReadonlyArray<StampInfo>>([])
   const [tool, setTool] = useState<Tool>("read")
+  // Leaving annotate mode disarms any tool, so the chart reads as before.
+  useEffect(() => {
+    if (!annotating) setTool("read")
+  }, [annotating])
   const [text, setText] = useState("")
   const [stampId, setStampId] = useState("")
   const [stampName, setStampName] = useState("")
@@ -299,7 +306,7 @@ export function MarkedChart({
 
   return (
     <div className="space-y-2">
-      {toolbar && (
+      {toolbar && annotating && (
         <>
       <div data-pwid="marks-toolbar" className="flex flex-wrap items-center gap-2">
         {TOOLS.map(({ tool: t, label }) => (

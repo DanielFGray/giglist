@@ -111,4 +111,11 @@ export const createSetlist = async (page: Page) => {
   return { bandId: band.id as string, setlistId: setlist.id as string }
 }
 
+/** Turns annotate mode on if it is off, then arms a mark tool. */
+export const openTool = async (page: Page, tool: "move" | "ink" | "text" | "stamp") => {
+  const annotate = getPw(page, "chart-annotate")
+  if ((await annotate.getAttribute("aria-pressed")) !== "true") await annotate.click()
+  await getPw(page, `tool-${tool}`).click()
+}
+
 export { expect, getPw, loginViaUi }
