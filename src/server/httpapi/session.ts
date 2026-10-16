@@ -1,6 +1,7 @@
 import { Effect, Layer, Redacted } from "effect"
 import { Db } from "../db"
 import {
+  CurrentSession,
   SessionMiddleware,
   type SessionData,
 } from "../../api/contracts"
@@ -12,10 +13,14 @@ export const SessionMiddlewareLive = Layer.effect(
   Effect.gen(function* () {
     const db = yield* Db
 
-    return SessionMiddleware.of({
-      session: (redactedToken: Redacted.Redacted<string>) => {
-        const token = Redacted.value(redactedToken)
-        if (!token) return Effect.succeed(noSession)
+    // v4 middleware runs as a wrapper: it receives the inner handler effect and
+    // the decoded credential, and must provide the session it declares.
+    return {
+      session: (effect, { credential }) => {
+        const token = Redacted.value(credential)
+        if (!token) {
+          return Effect.provideService(effect, CurrentSession, noSession)
+        }
 
         return db
           .selectFrom("app_private.sessions")
@@ -24,12 +29,15 @@ export const SessionMiddlewareLive = Layer.effect(
           .pipe(
             Effect.head,
             Effect.map((row) => ({
-              sessionId: row.uuid as string,
-              userId: row.user_id as string,
+              sessionId: row.uuid,
+              userId: row.user_id,
             })),
-            Effect.catchAll(() => Effect.succeed(noSession)),
+            Effect.orElseSucceed(() => noSession),
+            Effect.flatMap((session) =>
+              Effect.provideService(effect, CurrentSession, session),
+            ),
           )
       },
-    })
+    }
   }),
 )

@@ -1,6 +1,6 @@
 import { Config, Context, Effect, Layer } from "effect"
 import { PgClient } from "@effect/sql-pg"
-import * as PgKysely from "@effect/sql-kysely/Pg"
+import * as PgKysely from "./effect-kysely"
 import { sql } from "kysely"
 import type { DB } from "../../generated/DB.js"
 
@@ -15,16 +15,16 @@ export type KyselyDB = PgKysely.EffectKysely<DB>
  * a user identity may run on it: RLS is the only thing keeping one band's songs
  * out of another band's result set.
  */
-export class Db extends Context.Tag("Db")<Db, KyselyDB>() {
-  static Conn = Layer.unwrapEffect(
-    Config.redacted("DATABASE_URL").pipe(
+export class Db extends Context.Service<Db, KyselyDB>()("Db") {
+  static Conn = Layer.unwrap(
+    Config.Redacted("DATABASE_URL").pipe(
       Effect.map((url) =>
         PgClient.layer({ url }),
       ),
     ),
   )
 
-  static Kysely = Layer.effect(this, PgKysely.make<DB>())
+  static Kysely = Layer.effect(this, PgKysely.makePg<DB>())
 
   static Live = this.Kysely.pipe(Layer.provide(this.Conn))
 }
@@ -34,25 +34,25 @@ export class Db extends Context.Tag("Db")<Db, KyselyDB>() {
  * it holds none of the grants until a request says `SET ROLE` to the visitor
  * role — see `withAuthContext`.
  */
-export class AuthDb extends Context.Tag("AuthDb")<AuthDb, KyselyDB>() {
-  static Conn = Layer.unwrapEffect(
-    Config.redacted("AUTH_DATABASE_URL").pipe(
+export class AuthDb extends Context.Service<AuthDb, KyselyDB>()("AuthDb") {
+  static Conn = Layer.unwrap(
+    Config.Redacted("AUTH_DATABASE_URL").pipe(
       Effect.map((url) =>
         PgClient.layer({ url }),
       ),
     ),
   )
 
-  static Kysely = Layer.effect(this, PgKysely.make<DB>())
+  static Kysely = Layer.effect(this, PgKysely.makePg<DB>())
 
   static Live = this.Kysely.pipe(Layer.provide(this.Conn))
 }
 
 /** The visitor role that the authenticator must set. */
-export class AuthVisitor extends Context.Tag("AuthVisitor")<AuthVisitor, string>() {
+export class AuthVisitor extends Context.Service<AuthVisitor, string>()("AuthVisitor") {
   static Live = Layer.effect(
     this,
-    Config.string("DATABASE_VISITOR"),
+    Config.String("DATABASE_VISITOR"),
   )
 }
 
@@ -62,7 +62,7 @@ export class AuthVisitor extends Context.Tag("AuthVisitor")<AuthVisitor, string>
  * `withAuthContext` swaps it for the authenticated connection for the duration
  * of one request.
  */
-export class Kysely extends Context.Tag("Kysely")<Kysely, KyselyDB>() {
+export class Kysely extends Context.Service<Kysely, KyselyDB>()("Kysely") {
   static Live = Layer.effect(this, Db)
 }
 
@@ -100,7 +100,7 @@ export const withAuthContext =
             sql<string>`set_config('my.session_id', ${sessionId ?? ""}, true)`.as("_"),
           ])
 
-          return yield* effect.pipe(Effect.provide(Layer.succeed(Kysely, db)))
+          return yield* effect.pipe(Effect.provideService(Kysely, db))
         }),
       ).pipe(Effect.catchTag("SqlError", Effect.die))
     })

@@ -4,7 +4,7 @@ export const touch = async filepath => {
   try {
     const time = new Date()
     await fs.utimes(filepath, time, time)
-  } catch (err) {
+  } catch {
     const filehandle = await fs.open(filepath, 'w')
     await filehandle.close()
   }

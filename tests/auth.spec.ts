@@ -8,6 +8,31 @@ test.describe("auth", () => {
     await expect(getPw(page, "nav-links")).not.toBeVisible()
   })
 
+  test("offers sign in, not band creation, on the landing page", async ({ page }) => {
+    await page.goto("/")
+    await expect(getPw(page, "dashboard-signin")).toBeVisible()
+    await expect(getPw(page, "dashboard-signup")).toBeVisible()
+    // Band creation needs a session; offering it here led to a 4xx on submit.
+    await expect(getPw(page, "dashboard-create-band")).toHaveCount(0)
+  })
+
+  test("sends a signed-out visitor from a band page to sign in", async ({ page }) => {
+    await page.goto("/band/new")
+    await expect(getPw(page, "login-page")).toBeVisible()
+    await expect(page).toHaveURL(/\/login/)
+  })
+
+  test("logs in by opening a GET testing URL", async ({ page }) => {
+    // The dev shortcut: no console, no signup form. A fixed name so repeated
+    // runs reuse one account instead of littering the database.
+    await page.goto(
+      `/api/testing/login?username=dev_gologin&password=${encodeURIComponent(TEST_PASSWORD)}`,
+    )
+    await expect(getPw(page, "nav-links")).toBeVisible({ timeout: 10000 })
+    await expect(getPw(page, "nav-signin")).toHaveCount(0)
+    await expect(page).not.toHaveURL(/\/api\/testing\//)
+  })
+
   test("can navigate between login and signup", async ({ page }) => {
     await page.goto("/login")
     await expect(getPw(page, "login-page")).toBeVisible()

@@ -1,7 +1,8 @@
 import { Effect, Layer } from "effect";
 import { BunRuntime } from "@effect/platform-bun";
 import * as BunHttpServer from "@effect/platform-bun/BunHttpServer";
-import { HttpApiBuilder } from "@effect/platform";
+import { HttpRouter } from "effect/http";
+import { HttpApiBuilder } from "effect/http-api";
 import { AuthDb, AuthVisitor, Db } from "./db";
 import { SetListApi } from "../api/contracts";
 
@@ -10,18 +11,21 @@ import { authHandlers } from "./httpapi/auth";
 import { bandsHandlers } from "./httpapi/bands";
 import { testingHandlers } from "./httpapi/testing";
 import { songsHandlers } from "./httpapi/songs";
+import { setlistsHandlers } from "./httpapi/setlists";
+import { chartsHandlers } from "./httpapi/charts";
+import { scoresHandlers } from "./httpapi/scores";
+import { marksHandlers, stampsHandlers } from "./httpapi/marks";
 import { SessionMiddlewareLive } from "./httpapi/session";
 
 const PORT = Number(process.env.PORT ?? 3001);
 
-const ApiLive = HttpApiBuilder.api(SetListApi).pipe(
-  Layer.provide(Layer.mergeAll(authHandlers, bandsHandlers, testingHandlers, songsHandlers)),
+const ApiLive = HttpApiBuilder.layer(SetListApi).pipe(
+  Layer.provide(Layer.mergeAll(authHandlers, bandsHandlers, testingHandlers, songsHandlers, setlistsHandlers, chartsHandlers, scoresHandlers, marksHandlers, stampsHandlers)),
+  Layer.provide(SessionMiddlewareLive),
 );
 
 // HTTP server layer
-const ServerLive = HttpApiBuilder.serve().pipe(
-  Layer.provide(ApiLive),
-  Layer.provide(SessionMiddlewareLive),
+const ServerLive = HttpRouter.serve(ApiLive).pipe(
   // User traffic runs on the authenticator connection as the visitor role,
   // which is what makes the RLS policies apply at all. The owner pool is
   // reachable only through the services that need app_private.
@@ -33,7 +37,6 @@ const ServerLive = HttpApiBuilder.serve().pipe(
 
 // Launch
 Layer.launch(ServerLive).pipe(
-  Effect.tap(Effect.log(`Starting SetList API server on port ${PORT}`)),
-  Effect.orDie,
+  Effect.tap(() => Effect.log(`Starting SetList API server on port ${PORT}`)),
   BunRuntime.runMain,
 );

@@ -33,6 +33,43 @@ A service that reads or writes user data must `yield* Kysely` (the tag `withAuth
 - Database access via `Kysely` tag, backed by `Db` by default and swapped by `withAuthContext`
 - Use `withAuthContext` pattern to set RLS session context before queries
 
+## Learning more about Effect
+
+This repository uses the Effect Typescript library.
+
+Before writing any Effect code, first read `node_modules/effect/AGENTS.md`
+**completely**, and follow the links in the file when required.
+
+If you need to learn more about particular Effect apis and concepts that the
+guide doesn't cover, search through the source code in `node_modules/effect/src`.
+
+## Verification
+
+- `bun run typecheck` — patched `tsc` with Effect diagnostics (`TS377xxx`)
+- `bun run lint` — type-aware oxlint with Effect rules (`effecttsgo/*`)
+- `bun run prepare` — re-patches `tsc` and `oxlint` binaries after install
+- `bun run test` — Playwright specs in `tests/` (needs the dev server and database)
+- `bun run test:unit` — pure-module tests next to the code in `src/`
+- `bun run test:db` — RLS checks in `tests/db/` as the authenticator, on a scratch database `setlist_test_rls`
+
+## Dev login
+
+Log in as a throwaway user by opening a URL — no signup, no console:
+
+    http://localhost:3001/api/testing/login?username=dev_dan
+
+It creates the user on first use, sets the session cookie, and redirects into the
+app. The password defaults to `TestUserPassword`; add `&password=...` to pick one.
+Two things to know:
+
+- Pick a username that does NOT start with `test_` or `testuser` — `POST
+  /api/testing/clear` deletes exactly those (the Playwright suite calls it).
+- This exists only while the testing API is mounted; `src/server/httpapi/testing.ts`
+  throws at import under `NODE_ENV=production`.
+
+Scripts can use the JSON form instead: `POST /api/testing/login` with
+`{ "username": ..., "password": ... }`.
+
 ## Domain Model
 
 - Users + auth (from graphile-starter migrations)
@@ -40,3 +77,5 @@ A service that reads or writes user data must `yield* Kysely` (the tag `withAuth
 - Songs: band-scoped catalog with rich metadata (title, artist, key, tempo, duration, capo, notes)
 - Setlists: ordered collection of songs for a gig, with sections (Set 1, Encore, etc.)
 - SetlistEntries: song in a setlist, with optional per-entry overrides (key, tempo, notes) inheriting from song defaults
+- Charts: a song has many charts (lyrics chart or score), each a chain of immutable revisions; a lyrics chart is stored as ChordPro text that players never see and is transposed at display time (`src/charts/lyrics.ts`). Marks are a player's own ink/text/stamps anchored to a revision: `src/charts/follow.ts` maps a mark's range through later revisions, `src/charts/marks.ts` resolves marks and draws ink, `MarkedChart.tsx` is the view (a mark sits at its anchored item plus an em offset; the chart must not shift while a drag is in progress). Design: `docs/adr/`, vocabulary: `GLOSSARY.md`.
+- `generated/DB.ts` holds the Kysely table types and is maintained by hand: add an interface when a migration adds a table.

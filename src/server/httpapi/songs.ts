@@ -1,7 +1,7 @@
 import { Effect, Schema as S } from "effect"
-import { HttpApiBuilder } from "@effect/platform"
-import { sql } from "kysely"
+import { HttpApiBuilder } from "effect/http-api"
 import { Kysely, withAuthContext } from "../db"
+import { isBandMember } from "./scope"
 import {
   Song,
   SetListApi,
@@ -16,31 +16,16 @@ import {
   songFindByBandId,
 } from "../../../generated/queries.js"
 
-const decodeSong = S.decodeUnknown(Song)
+const decodeSong = S.decodeUnknownEffect(Song)
 
 /** The pg driver hands back timestamps as Date; the wire schema uses strings. */
-const toWire = (row: Record<string, unknown>) => ({
+const toWire = <T extends { created_at: unknown; updated_at: unknown }>(
+  row: T,
+) => ({
   ...row,
   created_at: String(row.created_at),
   updated_at: String(row.updated_at),
 })
-
-/** `current_user_member_band_ids()` is `setof uuid`, so each row carries the id
- *  under the function's own name rather than a `band_id` column. */
-const memberBandIds = Effect.fnUntraced(function*() {
-    const db = yield* Kysely
-    return yield* db
-      .selectFrom(
-        sql<{ current_user_member_band_ids: string }>`app_public.current_user_member_band_ids()`.as(
-          "ids",
-        ),
-      )
-      .selectAll()
-      .pipe(
-        Effect.map((rows) => rows.map((r) => r.current_user_member_band_ids)),
-        Effect.orDie,
-      )
-  })
 
 /**
  * Require that the session is a member of `bandId`.
@@ -50,11 +35,8 @@ const memberBandIds = Effect.fnUntraced(function*() {
  * transaction, so they cannot disagree about who the user is.
  */
 const assertBandMember = Effect.fnUntraced(function*(bandId: string) {
-    const ids = yield* memberBandIds()
-    if (!ids.includes(bandId)) {
-      return yield* Effect.fail(
-        new SongForbidden({ message: "You are not a member of that band" }),
-      )
+    if (!(yield* isBandMember(bandId))) {
+      return yield* new SongForbidden({ message: "You are not a member of that band" })
     }
   })
 
@@ -65,9 +47,7 @@ const asSession = <A, E>(
   Effect.gen(function* () {
     const session = yield* CurrentSession
     if (!session.sessionId) {
-      return yield* Effect.fail(
-        new SongForbidden({ message: "You must be signed in" }),
-      )
+      return yield* new SongForbidden({ message: "You must be signed in" })
     }
     return yield* query(session).pipe(withAuthContext(session.sessionId))
   })
@@ -83,7 +63,7 @@ const songRow = Effect.fnUntraced(function*(id: string) {
     const db = yield* Kysely
     return yield* songFindById(db)({ id }).pipe(
       Effect.head,
-      Effect.catchTag("NoSuchElementException", () =>
+      Effect.catchTag("NoSuchElementError", () =>
         Effect.fail(
           new SongForbidden({ message: "You are not a member of that band" }),
         ),
@@ -93,14 +73,22 @@ const songRow = Effect.fnUntraced(function*(id: string) {
 
 export const songsHandlers = HttpApiBuilder.group(SetListApi, "songs", (handlers) =>
   handlers
-    .handle("songFindByBandId", ({ path: { bandId } }) =>
+    .handle("songFindById", ({ params: { id } }) =>
+      asSession((_session) =>
+        Effect.gen(function* () {
+          const row = yield* songRow(id)
+          return yield* decodeSong(toWire(row)).pipe(Effect.orDie)
+        }),
+      ),
+    )
+    .handle("songFindByBandId", ({ params: { bandId } }) =>
       asSession((_session) =>
         Effect.gen(function* () {
           const db = yield* Kysely
           yield* assertBandMember(bandId)
           return yield* songFindByBandId(db)({ band_id: bandId }).pipe(
-            Effect.map((rows) => (rows as unknown as Record<string, unknown>[]).map(toWire)),
-            Effect.andThen(S.decodeUnknown(S.Array(Song))),
+            Effect.map((rows) => rows.map(toWire)),
+            Effect.andThen(S.decodeUnknownEffect(S.Array(Song))),
             Effect.orDie,
           )
         }),
@@ -124,7 +112,7 @@ export const songsHandlers = HttpApiBuilder.group(SetListApi, "songs", (handlers
         }),
       ),
     )
-    .handle("songUpdate", ({ path: { id }, payload }) =>
+    .handle("songUpdate", ({ params: { id }, payload }) =>
       asSession((_session) =>
         Effect.gen(function* () {
           const db = yield* Kysely
@@ -155,7 +143,7 @@ export const songsHandlers = HttpApiBuilder.group(SetListApi, "songs", (handlers
         }),
       ),
     )
-    .handle("songDelete", ({ path: { id } }) =>
+    .handle("songDelete", ({ params: { id } }) =>
       asSession((_session) =>
         Effect.gen(function* () {
           const db = yield* Kysely

@@ -14,13 +14,7 @@
 
   "afterAllMigrations": [],
 
-  "afterCurrent": [
-    {
-      "_": "command",
-      "shadow": false,
-      "command": "DATABASE_URL=$GM_DBURL bun sourcerer"
-    }
-  ],
+  "afterCurrent": [],
 
   "//generatedWith": "0.1.0"
 }

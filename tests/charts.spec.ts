@@ -1,0 +1,222 @@
+import { readFileSync } from "node:fs"
+import type { APIRequestContext, Page } from "@playwright/test"
+import type { Change } from "../src/charts/changes"
+import { parseDoc, placeChord, serializeDoc } from "../src/charts/doc"
+import { test, expect, getPw } from "./helpers"
+
+const pasted = readFileSync(new URL("./fixtures/amazing-grace.txt", import.meta.url), "utf8")
+
+/** Create a band and a song in G through the API; chart specs start from a song. */
+const createSong = async (page: Page) => {
+  const bandRes = await page.request.post("/api/my/bands", {
+    data: { slug: `test-charts-${Date.now()}`, name: "Test: charts" },
+  })
+  expect(bandRes.ok(), `create band failed: ${await bandRes.text()}`).toBe(true)
+  const bandId = (await bandRes.json()).id as string
+  const songRes = await page.request.post("/api/songs", {
+    data: { band_id: bandId, title: "Amazing Grace", artist: null, key: "G", tempo_bpm: null, duration_seconds: null, capo: null, notes: null },
+  })
+  expect(songRes.ok(), `create song failed: ${await songRes.text()}`).toBe(true)
+  return { bandId, songId: (await songRes.json()).id as string }
+}
+
+const createChart = async (request: APIRequestContext, songId: string) => {
+  const res = await request.post("/api/charts", {
+    data: { song_id: songId, name: "Chords", written_key: "G", pasted },
+  })
+  expect(res.ok(), `create chart failed: ${await res.text()}`).toBe(true)
+}
+
+/** The lyrics as drawn, with the chords above them left out. */
+const shownLyrics = async (page: Page) => (await getPw(page, "chart-lyric").allTextContents()).join("")
+
+/** The distinct chords as drawn. Polls: a key change redraws after the URL updates. */
+const expectChords = (page: Page, chords: ReadonlyArray<string>) =>
+  expect
+    .poll(async () => [...new Set((await getPw(page, "chart-chord").allTextContents()).filter(Boolean))].sort())
+    .toEqual([...chords].sort())
+
+test.describe("lyrics charts", () => {
+  test("pastes chords over lyrics and shows them in the key the player picks", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, songId } = await createSong(page)
+
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    await expect(getPw(page, "charts-empty")).toBeVisible({ timeout: 10000 })
+
+    await getPw(page, "chart-add").click()
+    await getPw(page, "chart-form-pasted").fill(pasted)
+    await getPw(page, "chart-form-submit").click()
+
+    await expect(getPw(page, "chart")).toHaveCount(1, { timeout: 10000 })
+    await expect(getPw(page, "chart-name")).toContainText("written in G")
+    // The sections come from the pasted headers, the lyrics from the pasted lines.
+    await expect(getPw(page, "chart-section")).toHaveText(["Verse 1", "Chorus", "Verse 2", "Chorus"])
+    expect(await shownLyrics(page)).toContain("Amazing grace, how sweet the sound")
+    await expectChords(page, ["G", "C", "D", "Em"])
+
+    // The song's own key is the default, so the chart opens in G, as written.
+    await getPw(page, "chart-shown-key").selectOption("A")
+    await expectChords(page, ["A", "D", "E", "F#m"])
+    expect(await shownLyrics(page)).toContain("Amazing grace, how sweet the sound")
+    await expect(page).toHaveURL(/key=A/)
+
+    // Reloading keeps the key, and the stored chart is still the one written in G.
+    await page.reload()
+    await expect(getPw(page, "chart-shown-key")).toHaveValue("A")
+    await expect(getPw(page, "chart-name")).toContainText("written in G")
+  })
+
+  test("a setlist entry opens the chart in the entry's key", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, songId } = await createSong(page)
+    await createChart(page.request, songId)
+
+    const setlist = await (
+      await page.request.post("/api/setlists", {
+        data: { band_id: bandId, name: "Friday", description: null, gig_date: null, status: "draft" },
+      })
+    ).json()
+    const entry = await (
+      await page.request.post(`/api/setlists/${setlist.id}/entries`, { data: { song_id: songId, position: 1 } })
+    ).json()
+    const updated = await page.request.put(`/api/setlists/${setlist.id}/entries/${entry.id}`, {
+      data: { position: 1, section_id: null, key_override: "Bb", tempo_override: null, notes_override: null },
+    })
+    expect(updated.ok(), `override failed: ${await updated.text()}`).toBe(true)
+
+    await page.goto(`/band/${bandId}/setlists/${setlist.id}`)
+    await getPw(page, "entry-chart").click()
+
+    await expect(getPw(page, "chart-shown-key")).toHaveValue("Bb", { timeout: 10000 })
+    await expectChords(page, ["Bb", "Eb", "F", "Gm"])
+  })
+
+  test("deletes a chart", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, songId } = await createSong(page)
+    await createChart(page.request, songId)
+
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    await expect(getPw(page, "chart")).toHaveCount(1, { timeout: 10000 })
+    await getPw(page, "chart-delete").click()
+    await expect(getPw(page, "charts-empty")).toBeVisible({ timeout: 10000 })
+  })
+
+  test("a user outside the band can neither list nor add charts", async ({ page, testing }) => {
+    await testing.login({ username: "test_chart_owner" })
+    const { songId } = await createSong(page)
+    await createChart(page.request, songId)
+
+    await testing.login({ username: "test_chart_outsider" })
+    expect((await page.request.get(`/api/charts/song/${songId}`)).status()).toBe(403)
+    const add = await page.request.post("/api/charts", {
+      data: { song_id: songId, name: "Mine", written_key: "G", pasted },
+    })
+    expect(add.status()).toBe(403)
+  })
+})
+
+/** A chart of bare lyrics, the way a band starts one before it has any chords. */
+const createBareChart = async (page: Page, songId: string) => {
+  const res = await page.request.post("/api/charts", {
+    data: { song_id: songId, name: "Words", written_key: "G", pasted: "[Verse 1]\nAmazing grace, how sweet\nThe sound" },
+  })
+  expect(res.ok(), `create chart failed: ${await res.text()}`).toBe(true)
+  return (await res.json()) as { id: string; revision_id: string }
+}
+
+const segment = (page: Page, text: string) => getPw(page, "editor-segment").filter({ hasText: text })
+
+test.describe("chart editor", () => {
+  test("drops chords onto words, undoes one, and saves a revision", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, songId } = await createSong(page)
+    await createBareChart(page, songId)
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    await getPw(page, "chart-edit").click()
+
+    // Drag from the palette onto a word.
+    await getPw(page, "palette-chord").filter({ hasText: /^G$/ }).dragTo(segment(page, "Amazing"))
+    // Or hold a chord and click a word.
+    await getPw(page, "palette-chord").filter({ hasText: /^Em$/ }).click()
+    await segment(page, "sweet").click()
+    await segment(page, "The").click()
+    await expect(getPw(page, "placed-chord")).toHaveText(["G", "Em", "Em"])
+
+    await getPw(page, "editor-undo").click()
+    await expect(getPw(page, "placed-chord")).toHaveText(["G", "Em"])
+
+    await getPw(page, "editor-save").click()
+    await expect(getPw(page, "chart-editor")).toHaveCount(0, { timeout: 10000 })
+    await expect(getPw(page, "chart-chord").filter({ hasText: /\S/ })).toHaveText(["G", "Em"])
+
+    // The saved revision is the chart now.
+    await page.reload()
+    await expect(getPw(page, "chart-chord").filter({ hasText: /\S/ })).toHaveText(["G", "Em"])
+    expect(await shownLyrics(page)).toContain("Amazing grace, how sweet")
+  })
+
+  test("moves a chord to another word and removes one", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, songId } = await createSong(page)
+    await createChart(page.request, songId)
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    await getPw(page, "chart-edit").click()
+
+    const before = await getPw(page, "placed-chord").count()
+    const first = getPw(page, "placed-chord").first()
+    // The target stays in view: a native drag does not scroll the page.
+    await first.dragTo(segment(page, "saved"))
+    await expect(getPw(page, "placed-chord")).toHaveCount(before)
+    await expect(segment(page, "saved").locator("[data-pwid=placed-chord]")).toHaveCount(1)
+
+    await getPw(page, "placed-chord").first().dragTo(getPw(page, "palette-remove"))
+    await expect(getPw(page, "placed-chord")).toHaveCount(before - 1)
+  })
+
+  test("edits the words of a line and renames a section, keeping the chords", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, songId } = await createSong(page)
+    await createChart(page.request, songId)
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    await getPw(page, "chart-edit").click()
+
+    const line = getPw(page, "editor-line").filter({ hasText: "Amazing grace, how" }).first()
+    await line.hover()
+    await line.getByRole("button", { name: "Edit words" }).click()
+    await getPw(page, "line-input").fill("Amazing grace, how very sweet the sound")
+    await getPw(page, "line-input").press("Enter")
+    await expect.poll(async () => (await getPw(page, "editor-lyric").allTextContents()).join("")).toContain("how very sweet the sound")
+    // The chords that were on the words around the edit are still there.
+    await expect(getPw(page, "placed-chord").filter({ hasText: /^C$/ })).not.toHaveCount(0)
+
+    await getPw(page, "editor-section").first().click()
+    await getPw(page, "section-input").fill("Verse One")
+    await getPw(page, "section-input").press("Enter")
+    await getPw(page, "editor-save").click()
+
+    await expect(getPw(page, "chart-editor")).toHaveCount(0, { timeout: 10000 })
+    await expect(getPw(page, "chart-section").first()).toHaveText("Verse One")
+    expect(await shownLyrics(page)).toContain("how very sweet the sound")
+  })
+
+  test("saves a revision the editor could have made, and refuses a stale or unexplained one", async ({ page, testing }) => {
+    await testing.login()
+    const { songId } = await createSong(page)
+    const chart = await createBareChart(page, songId)
+    const stored = ((await (await page.request.get(`/api/charts/song/${songId}`)).json()) as Array<{ source: string }>)[0]!.source
+    const doc = parseDoc(stored)
+    const line = doc.findIndex((l) => l.kind === "lyrics" && l.text.startsWith("Amazing"))
+    const edit = placeChord(doc, line, 0, "G")
+    const save = (parent: string, source: string, changes: ReadonlyArray<Change>) =>
+      page.request.post(`/api/charts/${chart.id}/revisions`, { data: { parent_id: parent, source, changes } })
+
+    // The text changed but the change set says nothing did.
+    expect((await save(chart.revision_id, serializeDoc(edit.doc), [])).status()).toBe(400)
+    // A change set that fits the edit is stored as the chart's new revision.
+    expect((await save(chart.revision_id, serializeDoc(edit.doc), edit.changes)).status()).toBe(201)
+    // The same save again names a parent that is no longer the newest.
+    expect((await save(chart.revision_id, serializeDoc(edit.doc), edit.changes)).status()).toBe(409)
+  })
+})
