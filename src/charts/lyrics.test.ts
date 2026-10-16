@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { readFileSync } from "node:fs"
 import { anchorText, parseDoc } from "./doc"
-import { importPasted, renderLyrics, suggestedChords, type ChartItem } from "./lyrics"
+import { exportChords, importPasted, renderLyrics, suggestedChords, type ChartItem } from "./lyrics"
 
 const pasted = readFileSync(new URL("../../tests/fixtures/amazing-grace.txt", import.meta.url), "utf8")
 
@@ -98,5 +98,36 @@ describe("item ranges", () => {
   test("ranges do not change when the chart is shown in another key", () => {
     const ranges = (key?: string) => renderLyrics(source, key).flat().map((i) => [i.start, i.end])
     expect(ranges("Bb")).toEqual(ranges())
+  })
+})
+
+describe("exportChords", () => {
+  const stored = importPasted(pasted, "G")
+
+  test("puts each chord on the row above its word", () => {
+    const rows = exportChords(stored).split("\n")
+    const at = rows.indexOf("Amazing grace, how sweet the sound")
+    expect(at).toBeGreaterThan(0)
+    // Each chord stands over the column of the word it was placed on.
+    expect([...rows[at - 1]!.matchAll(/\S+/g)].map((m) => [m[0], m.index])).toEqual([["G", 0], ["C", 18], ["G", 28]])
+    expect(rows[0]).toBe("[Verse 1]")
+  })
+
+  test("pasting the export back gives the chart that was exported", () => {
+    expect(importPasted(exportChords(stored), "G")).toBe(stored)
+  })
+
+  test("exports in the shown key, and that pastes back as a chart in that key", () => {
+    const inA = exportChords(stored, "A")
+    expect(inA).toContain("A")
+    expect(inA).not.toMatch(/^\s*G\b/m)
+    expect(importPasted(inA, "A")).toBe(importPasted(exportChords(stored, "A"), "A"))
+    expect(renderLyrics(importPasted(inA, "A"))[2]).toEqual(renderLyrics(stored, "A")[2]!.map((i) => ({ ...i, start: expect.any(Number), end: expect.any(Number) })))
+  })
+
+  test("chords that touch are kept apart, a chord-only line stays apart from the words below, and a blank line stays", () => {
+    const source = "{key: C}\n[C][G]Hi\n[Am]\nWords here\n\n[F]Ok"
+    const rows = exportChords(source).split("\n")
+    expect(rows).toEqual(["C G", "Hi", "Am", "", "Words here", "", "F", "Ok"])
   })
 })

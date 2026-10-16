@@ -133,6 +133,45 @@ export function importPasted(text: string, writtenKey?: string | null): string {
   return out.join("\n")
 }
 
+/**
+ * The stored chart as chords over lyrics, drawn in `shownKey`: the form
+ * `importPasted` reads, so a chart can be copied out and pasted back in.
+ *
+ * Each chord sits on the row above the word it belongs to. A chord that would
+ * touch the one before it moves right to leave a space, and a chord-only line
+ * is followed by a blank line so the importer does not pair it with the lyrics
+ * below. Directives other than sections and comments are dropped.
+ */
+export function exportChords(source: string, shownKey?: string | null): string {
+  const out: Array<string> = []
+  // True right after a chord-only row, which the importer would pair with a lyric row below it.
+  let chordsOnly = false
+  const stored = source.split("\n")
+  for (const [i, line] of renderLyrics(source, shownKey).entries()) {
+    let chords = ""
+    let lyrics = ""
+    for (const item of line) {
+      if (item.kind === "section") out.push(`[${item.label}]`)
+      else if (item.kind === "comment") out.push(item.text)
+      else {
+        if (item.chord) {
+          const gap = chords.length >= lyrics.length && chords !== "" ? " " : ""
+          chords = chords.padEnd(lyrics.length, " ") + gap + item.chord
+        }
+        lyrics += item.lyric
+      }
+    }
+    const text = lyrics.trimEnd()
+    if (chords) out.push(chords)
+    if (text) {
+      if (chordsOnly && !chords) out.push("")
+      out.push(text)
+    } else if (!chords && stored[i]!.trim() === "") out.push("")
+    chordsOnly = chords !== "" && text === ""
+  }
+  return out.join("\n")
+}
+
 function placeChords(lyrics: string, chords: ReadonlyArray<{ column: number; chord: string }>): string {
   let result = ""
   let at = 0
