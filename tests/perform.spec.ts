@@ -31,6 +31,13 @@ test.describe("performance mode", () => {
     await expect(getPw(page, "mark")).toHaveText("tacet", { timeout: 10000 })
     await expect(getPw(page, "marks-toolbar")).toHaveCount(0)
 
+    // A tapped chord shows its shapes; Escape then closes the shapes and stays on stage.
+    await getPw(page, "chart-chord").filter({ hasText: /^Bb$/ }).first().click()
+    await expect(getPw(page, "chord-shapes")).toHaveAttribute("aria-label", "Bb on guitar")
+    await page.keyboard.press("Escape")
+    await expect(getPw(page, "chord-shapes")).toHaveCount(0)
+    await expect(getPw(page, "perform-title")).toHaveText("Beta")
+
     // Button, then the list, then space and back.
     await getPw(page, "perform-next").click()
     await expect(getPw(page, "perform-title")).toHaveText("Gamma")

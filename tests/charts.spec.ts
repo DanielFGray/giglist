@@ -208,6 +208,69 @@ test.describe("lyrics charts", () => {
   })
 })
 
+test.describe("chord shapes", () => {
+  const shapes = "[Verse 1]\nC        F#m7add11\nAmazing  grace how sweet"
+
+  test("a tapped chord opens its guitar shapes, and no other tool opens one", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, songId } = await createSong(page)
+    const made = await page.request.post("/api/charts", {
+      data: { song_id: songId, name: "Shapes", written_key: "G", pasted: shapes },
+    })
+    expect(made.ok(), `create chart failed: ${await made.text()}`).toBe(true)
+    const chart = (await made.json()) as { id: string; revision_id: string; source: string }
+
+    // `Hm` is no chord name, and a pasted chord row holds only names the paste
+    // parser reads, so this one is placed on a word the way the editor places it.
+    const doc = parseDoc(chart.source)
+    const line = doc.findIndex((l) => l.kind === "lyrics" && l.text.startsWith("Amazing"))
+    const edit = placeChord(doc, line, 17, "Hm")
+    const saved = await page.request.post(`/api/charts/${chart.id}/revisions`, {
+      data: { parent_id: chart.revision_id, source: serializeDoc(edit.doc), changes: edit.changes },
+    })
+    expect(saved.ok(), `save revision failed: ${await saved.text()}`).toBe(true)
+
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    await expect(getPw(page, "chart")).toHaveCount(1, { timeout: 10000 })
+
+    const chord = (name: string) => getPw(page, "chart-chord").filter({ hasText: new RegExp(`^${name}$`) })
+    const panel = getPw(page, "chord-shapes")
+
+    // The panel overlays the chart: the chord stays exactly where it was.
+    const beforeY = (await chord("C").boundingBox())!.y
+    await chord("C").click()
+    await expect(panel).toBeVisible()
+    await expect(panel.getByRole("img").first()).toHaveAttribute("data-frets", "x 3 2 0 1 0")
+    await expect(panel).toHaveAttribute("aria-label", "C on guitar")
+    expect((await chord("C").boundingBox())!.y).toBe(beforeY)
+
+    // One panel at a time: tapping another chord replaces it.
+    await chord("F#m7add11").click()
+    await expect(panel).toHaveAttribute("aria-label", "F#m7add11 on guitar")
+    await expect(panel.getByRole("img").first()).toBeVisible()
+    expect((await chord("C").boundingBox())!.y).toBe(beforeY)
+
+    // Escape, and a tap on the same chord again, close it.
+    await page.keyboard.press("Escape")
+    await expect(panel).toHaveCount(0)
+    await chord("F#m7add11").click()
+    await expect(panel).toHaveCount(1)
+    await chord("F#m7add11").click()
+    await expect(panel).toHaveCount(0)
+
+    // A name no hand can hold says so rather than showing nothing.
+    await chord("Hm").click()
+    await expect(getPw(page, "chord-shapes-none")).toHaveText("No guitar shape for Hm")
+    await page.keyboard.press("Escape")
+    await expect(panel).toHaveCount(0)
+
+    // With a drawing tool up, a chord is text again and opens nothing.
+    await getPw(page, "tool-ink").click()
+    await chord("C").click()
+    await expect(panel).toHaveCount(0)
+  })
+})
+
 /** A chart of bare lyrics, the way a band starts one before it has any chords. */
 const createBareChart = async (page: Page, songId: string) => {
   const res = await page.request.post("/api/charts", {

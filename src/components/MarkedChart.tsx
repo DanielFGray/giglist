@@ -382,7 +382,7 @@ export function MarkedChart({
         className={`relative flex ${tool === "read" ? "" : tool === "move" ? "cursor-default" : "cursor-crosshair"}`}
       >
         <div className="min-w-0 flex-1">
-          <LyricsChart source={chart.source} shownKey={shownKey} tempo={tempo} size={size} />
+          <LyricsChart source={chart.source} shownKey={shownKey} tempo={tempo} size={size} chordShapes={tool === "read"} />
         </div>
         <div ref={gutter} aria-hidden data-pwid="chart-margin" className="w-32 shrink-0 border-l border-dashed border-[var(--color-border-subtle)]" />
         <div className="pointer-events-none absolute inset-0">
