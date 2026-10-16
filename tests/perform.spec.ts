@@ -145,6 +145,29 @@ test.describe("performance mode", () => {
     await expect(getPw(page, "perform-song").first()).toBeVisible()
   })
 
+  test("the click track counts beats at the song's tempo and stops when pressed again", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, setlistId } = await createSetlist(page)
+    await page.goto(`/band/${bandId}/setlists/${setlistId}/perform`)
+    await expect(getPw(page, "perform-title")).toHaveText("Alpha", { timeout: 10000 })
+    await expect(getPw(page, "perform-click")).toHaveText("Click")
+
+    await getPw(page, "perform-click").click()
+    // At 120 BPM a beat lasts half a second, so beat 2 shows within about a second.
+    await expect(getPw(page, "perform-click")).toHaveText(/^Click 120 · [1-4]$/, { timeout: 5000 })
+    await expect.poll(async () => getPw(page, "perform-click").getAttribute("data-beat"), { timeout: 5000 }).not.toBeNull()
+
+    // Moving to another song stops the click.
+    await page.keyboard.press("ArrowRight")
+    await expect(getPw(page, "perform-click")).toHaveText("Click")
+
+    await getPw(page, "perform-click").click()
+    await expect(getPw(page, "perform-click")).toHaveAttribute("aria-pressed", "true")
+    await getPw(page, "perform-click").click()
+    await expect(getPw(page, "perform-click")).toHaveText("Click")
+    await expect(getPw(page, "perform-click")).not.toHaveAttribute("data-beat")
+  })
+
   test("auto-scroll moves a long chart down and stops when switched off", async ({ page, testing }) => {
     await testing.login()
     const { bandId, setlistId } = await createSetlist(page)
