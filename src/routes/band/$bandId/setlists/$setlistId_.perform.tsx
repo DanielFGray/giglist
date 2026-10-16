@@ -1,8 +1,10 @@
 import { Suspense, lazy, useEffect, useRef, useState, type TouchEvent } from "react"
-import { Link, createFileRoute } from "@tanstack/react-router"
+import { Link, createFileRoute, useRouter } from "@tanstack/react-router"
 import { charts, setlists, type ChartInfo } from "~/api/client"
 import { groupEntries, playOrder } from "~/components/arrangement"
 import { ClickTrack } from "~/components/ClickTrack"
+import { useSetlistLive } from "~/components/live"
+import { Viewers } from "~/components/Viewers"
 import { formatDuration } from "~/components/duration"
 import { MarkedChart } from "~/components/MarkedChart"
 import { TEXT_SIZES, indexFromSearch, stepIndex, stepSize, swipeDirection } from "~/components/perform"
@@ -38,6 +40,7 @@ function Perform() {
   const { setlist, order } = Route.useLoaderData()
   const search = Route.useSearch()
   const navigate = Route.useNavigate()
+  const router = useRouter()
 
   const index = indexFromSearch(search.at, order.length)
   const current = order[index]
@@ -48,8 +51,21 @@ function Perform() {
   const scroller = useRef<HTMLDivElement>(null)
   const touchStart = useRef<{ x: number; y: number } | null>(null)
 
-  const go = (delta: number) =>
+  // The band member whose song this page follows; going to a song yourself stops that.
+  const [following, setFollowing] = useState<string | null>(null)
+  const { client, viewers } = useSetlistLive(setlistId, { mode: "performing", at: index + 1 }, () => void router.invalidate())
+  const leader = following === null ? undefined : viewers.find((v) => v.client === following)
+  useEffect(() => {
+    if (leader?.at != null && leader.at !== index + 1) void navigate({ search: { at: leader.at }, replace: true })
+  }, [leader?.at, index, navigate])
+  useEffect(() => {
+    if (following !== null && !leader && viewers.length > 0) setFollowing(null)
+  }, [following, leader, viewers.length])
+
+  const go = (delta: number) => {
+    setFollowing(null)
     void navigate({ search: { at: stepIndex(index, delta, order.length) + 1 }, replace: true })
+  }
   const resize = (delta: number) => {
     const next = stepSize(sizeStep, delta)
     setSizeStep(next)
@@ -133,7 +149,10 @@ function Perform() {
   return (
     <div data-pwid="perform" className="fixed inset-0 z-50 flex flex-col bg-zinc-950 text-zinc-100">
       <header className="flex items-center justify-between gap-3 border-b border-zinc-800 px-4 py-2">
-        <span data-pwid="perform-setlist" className="truncate text-sm text-zinc-500">{setlist.name}</span>
+        <div className="flex min-w-0 items-center gap-3">
+          <span data-pwid="perform-setlist" className="truncate text-sm text-zinc-500">{setlist.name}</span>
+          <Viewers viewers={viewers} me={client} following={following} onFollow={setFollowing} />
+        </div>
         <div className="flex items-center gap-2">
           <button data-pwid="perform-smaller" type="button" aria-label="Smaller text" onClick={() => resize(-1)} disabled={sizeStep === 0} className={button}>A−</button>
           <button data-pwid="perform-larger" type="button" aria-label="Larger text" onClick={() => resize(1)} disabled={sizeStep === TEXT_SIZES.length - 1} className={button}>A+</button>
@@ -186,7 +205,10 @@ function Perform() {
                     data-pwid="perform-song"
                     data-current={i === index}
                     type="button"
-                    onClick={() => void navigate({ search: { at: i + 1 }, replace: true })}
+                    onClick={() => {
+                      setFollowing(null)
+                      void navigate({ search: { at: i + 1 }, replace: true })
+                    }}
                     className={`w-full truncate rounded-md px-3 py-2 text-left text-sm cursor-pointer ${
                       i === index ? "bg-[var(--color-amber-accent)] font-semibold text-zinc-950" : "text-zinc-400 hover:bg-zinc-900"
                     }`}

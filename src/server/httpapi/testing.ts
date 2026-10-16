@@ -70,6 +70,23 @@ export const testingHandlers = HttpApiBuilder.group(SetListApi, "testing", (hand
       ),
     )
     .handle(
+      // Stands in for accepting an invitation, which the app cannot do yet.
+      "addBandMember",
+      Effect.fnUntraced(function* ({ payload }) {
+        const db = yield* Db;
+        yield* db
+          .insertInto("app_public.band_memberships")
+          .columns(["band_id", "user_id"])
+          .expression((eb) =>
+            eb
+              .selectFrom("app_public.users")
+              .select([sql<string>`${payload.band_id}::uuid`.as("band_id"), "id"])
+              .where("username", "=", payload.username),
+          );
+        return { success: true };
+      }, Effect.orDie),
+    )
+    .handle(
       "testLogin",
       Effect.fnUntraced(
         function* ({ payload }) {
