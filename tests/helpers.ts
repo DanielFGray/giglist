@@ -37,8 +37,9 @@ const loginViaUi = async (
   await expect(getPw(page, "dashboard")).toBeVisible({ timeout: 5000 })
 }
 
+// `auto`: every test starts from a cleared database even when it never names the fixture.
 export const test = base.extend<{ testing: TestingApi }>({
-  testing: async ({ page }, use) => {
+  testing: [async ({ page }, use) => {
     const testing: TestingApi = {
       async login(opts = {}) {
         const res = await page.request.post("/api/testing/login", {
@@ -66,7 +67,7 @@ export const test = base.extend<{ testing: TestingApi }>({
 
     await testing.clear()
     await use(testing)
-  },
+  }, { auto: true }],
 })
 
 export { expect, getPw, loginViaUi }
