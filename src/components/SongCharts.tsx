@@ -1,5 +1,6 @@
 import { Suspense, lazy, useState } from "react"
 import { charts, type ChartInfo } from "~/api/client"
+import { exportChords } from "~/charts/lyrics"
 import { MusicalKeys, type MusicalKeyType } from "~/api/contracts"
 import { AddScore } from "./AddScore"
 import { ChartEditor } from "./ChartEditor"
@@ -115,6 +116,17 @@ function ChartCard({
 }) {
   const [error, setError] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const copy = async (source: string) => {
+    setError(null)
+    try {
+      await navigator.clipboard.writeText(exportChords(source, shownKey))
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (e) {
+      setError(errorMessage(e))
+    }
+  }
   const remove = async () => {
     setError(null)
     try {
@@ -137,6 +149,17 @@ function ChartCard({
           </span>
         </h3>
         <div className="flex gap-2">
+          {chart.source !== null && !editing && (
+            <button
+              data-pwid="chart-copy"
+              type="button"
+              onClick={() => void copy(chart.source!)}
+              title={`Copy the chords over lyrics${shownKey ? `, in ${shownKey}` : ""}`}
+              className="px-3 py-1.5 rounded-md border border-[var(--color-border-subtle)] text-xs text-zinc-300 cursor-pointer"
+            >
+              {copied ? "Copied" : "Copy"}
+            </button>
+          )}
           {chart.source !== null && !editing && (
             <button
               data-pwid="chart-edit"

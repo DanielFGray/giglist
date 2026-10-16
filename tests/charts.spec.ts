@@ -234,6 +234,32 @@ test.describe("chart editor", () => {
     expect(await shownLyrics(page)).toContain("Was blind, but now I see")
   })
 
+  test("copies a chart as chords over lyrics in the shown key, and pasting it back makes the same chart", async ({ page, context, testing }) => {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"])
+    await testing.login()
+    const { bandId, songId } = await createSong(page)
+    await createChart(page.request, songId)
+    await page.goto(`/band/${bandId}/songs/${songId}?key=A`)
+    await expect(getPw(page, "chart-section").first()).toBeVisible({ timeout: 10000 })
+
+    await getPw(page, "chart-copy").click()
+    await expect(getPw(page, "chart-copy")).toHaveText("Copied")
+    const copied = await page.evaluate(() => navigator.clipboard.readText())
+    expect(copied.split("\n")[0]).toBe("[Verse 1]")
+    expect(copied).toContain("Amazing grace, how sweet the sound")
+    expect(copied).toMatch(/^A +D +A$/m)
+
+    // Adding the copy as a new chart in A shows the same chords and words.
+    await getPw(page, "chart-add").click()
+    await getPw(page, "chart-form-key").selectOption("A")
+    await getPw(page, "chart-form-pasted").fill(copied)
+    await getPw(page, "chart-form-submit").click()
+    await expect(getPw(page, "chart")).toHaveCount(2, { timeout: 10000 })
+    const [first, second] = await getPw(page, "chart").all()
+    expect(await first!.locator("[data-pwid=chart-lyric]").allTextContents()).toEqual(await second!.locator("[data-pwid=chart-lyric]").allTextContents())
+    expect(await first!.locator("[data-pwid=chart-chord]").allTextContents()).toEqual(await second!.locator("[data-pwid=chart-chord]").allTextContents())
+  })
+
   test("saves a revision the editor could have made, and refuses a stale or unexplained one", async ({ page, testing }) => {
     await testing.login()
     const { songId } = await createSong(page)
