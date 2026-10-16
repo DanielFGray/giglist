@@ -30,7 +30,19 @@ const buttonClass =
  * offset in em, so it follows the item through transposition, resizing and
  * edits. A mark whose content was deleted waits in the tray.
  */
-export function MarkedChart({ chart, shownKey }: { chart: ChartInfo & { source: string }; shownKey: string | null }) {
+export function MarkedChart({
+  chart,
+  shownKey,
+  toolbar = true,
+  size,
+}: {
+  chart: ChartInfo & { source: string }
+  shownKey: string | null
+  /** False on stage: the player's marks show, but nothing can be drawn, moved or shared. */
+  toolbar?: boolean
+  /** Text size in rem; see LyricsChart. */
+  size?: number
+}) {
   const me = useAuth().user?.id
   const [data, setData] = useState<ChartMarksInfo>({ marks: [], revisions: [] })
   const [stampList, setStampList] = useState<ReadonlyArray<StampInfo>>([])
@@ -156,7 +168,7 @@ export function MarkedChart({ chart, shownKey }: { chart: ChartInfo & { source: 
   })
 
   const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (tool === "read") return
+    if (tool === "read" || !toolbar) return
     // Without this, a mouse drag over chart text starts a text selection or a
     // native drag, and the browser cancels the pointer stream mid-gesture.
     event.preventDefault()
@@ -285,6 +297,8 @@ export function MarkedChart({ chart, shownKey }: { chart: ChartInfo & { source: 
 
   return (
     <div className="space-y-2">
+      {toolbar && (
+        <>
       <div data-pwid="marks-toolbar" className="flex flex-wrap items-center gap-2">
         {TOOLS.map(({ tool: t, label }) => (
           <button
@@ -354,6 +368,9 @@ export function MarkedChart({ chart, shownKey }: { chart: ChartInfo & { source: 
         )}
       </div>
 
+        </>
+      )}
+
       <div
         ref={frame}
         data-pwid="marked-chart"
@@ -362,7 +379,7 @@ export function MarkedChart({ chart, shownKey }: { chart: ChartInfo & { source: 
         className={`relative flex ${tool === "read" ? "" : tool === "move" ? "cursor-default" : "cursor-crosshair"}`}
       >
         <div className="min-w-0 flex-1">
-          <LyricsChart source={chart.source} shownKey={shownKey} />
+          <LyricsChart source={chart.source} shownKey={shownKey} size={size} />
         </div>
         <div ref={gutter} aria-hidden data-pwid="chart-margin" className="w-32 shrink-0 border-l border-dashed border-[var(--color-border-subtle)]" />
         <div className="pointer-events-none absolute inset-0">
@@ -390,7 +407,7 @@ export function MarkedChart({ chart, shownKey }: { chart: ChartInfo & { source: 
 
       {error && <div data-pwid="marks-error" className="text-sm text-red-400">{error}</div>}
 
-      {tray.length > 0 && (
+      {toolbar && tray.length > 0 && (
         <div data-pwid="tray" className="rounded-md border border-[var(--color-border-subtle)] p-3 text-xs space-y-1">
           <div className="font-semibold text-zinc-300">Marks whose place is gone</div>
           {tray.map(({ mark, resolution }) => (

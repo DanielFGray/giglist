@@ -6,10 +6,19 @@ import { renderLyrics, type ChartItem, type ChartLine } from "~/charts/lyrics"
  * Every item carries its range in the anchor text as `data-start` / `data-end`,
  * which is how marks find the item they are anchored to.
  */
-export function LyricsChart({ source, shownKey }: { source: string; shownKey: string | null }) {
+export function LyricsChart({
+  source,
+  shownKey,
+  size = 0.875,
+}: {
+  source: string
+  shownKey: string | null
+  /** Text size in rem; marks are placed in em of this size, so they scale with it. */
+  size?: number
+}) {
   const lines = useMemo(() => renderLyrics(source, shownKey), [source, shownKey])
   return (
-    <div data-pwid="lyrics-chart" className="font-mono text-sm leading-tight">
+    <div data-pwid="lyrics-chart" style={{ fontSize: `${size}rem` }} className="font-mono leading-tight">
       {lines.map((line, index) => (
         <Line key={index} line={line} />
       ))}
