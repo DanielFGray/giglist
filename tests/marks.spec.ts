@@ -124,6 +124,30 @@ test.describe("marks", () => {
     await expect(getPw(page, "mark")).toHaveCount(2, { timeout: 10000 })
   })
 
+  test("an ink stroke stays on screen until its mark is saved, with no blank gap", async ({ page, testing }) => {
+    await testing.login()
+    const { url } = await createChart(page)
+    await page.goto(url)
+    await expect(getPw(page, "marked-chart")).toBeVisible({ timeout: 10000 })
+    // Hold the save back, so the time between the stroke and the saved mark is long enough to see.
+    await page.route("**/api/marks", async (route) => {
+      if (route.request().method() === "POST") await new Promise((done) => setTimeout(done, 800))
+      await route.continue()
+    })
+    await openTool(page, "ink")
+    const at = await center(word(page, "sound"))
+    await stroke(page, [{ x: at.x, y: at.y + 20 }, { x: at.x + 20, y: at.y + 30 }, { x: at.x + 40, y: at.y + 20 }])
+    const preview = page.locator('path[class~="fill-blue-500/70"]')
+    // While the save is held back, the stroke is still drawn and no mark exists yet.
+    for (let i = 0; i < 4; i++) {
+      await expect(preview).toHaveCount(1)
+      await expect(getPw(page, "mark")).toHaveCount(0)
+      await page.waitForTimeout(100)
+    }
+    await expect(getPw(page, "mark")).toHaveCount(1, { timeout: 10000 })
+    await expect(preview).toHaveCount(0)
+  })
+
   test("moves a mark, shares it, and pastes a saved stamp", async ({ page, testing }) => {
     await testing.login()
     const { url } = await createChart(page)
