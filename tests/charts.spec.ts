@@ -229,6 +229,31 @@ test.describe("lyrics charts", () => {
 test.describe("chord shapes", () => {
   const shapes = "[Verse 1]\nC        F#m7add11\nAmazing  grace how sweet"
 
+  test("a panel for a chord at the end of a line stays on the phone screen, under the chord", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, songId } = await createSong(page)
+    const made = await page.request.post("/api/charts", {
+      data: { song_id: songId, name: "Ends", written_key: "G", pasted: "[Verse 1]\nAmazing grace how sweet the sound\n            G\nthat saved a wretch like me" },
+    })
+    expect(made.ok(), `create chart failed: ${await made.text()}`).toBe(true)
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    await expect(getPw(page, "chart")).toHaveCount(1, { timeout: 10000 })
+
+    const chord = getPw(page, "chart-chord").filter({ hasText: /^G$/ }).last()
+    await chord.click()
+    const panel = getPw(page, "chord-shapes")
+    await expect(panel).toBeVisible()
+    // The page does not widen: the panel flips left of a chord at the right edge.
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    const box = (await panel.boundingBox())!
+    const at = (await chord.boundingBox())!
+    expect(box.x).toBeGreaterThanOrEqual(0)
+    expect(box.x + box.width).toBeLessThanOrEqual(390)
+    // The panel hangs under the chord, not over the lyric.
+    expect(box.y).toBeGreaterThanOrEqual(at.y + at.height - 1)
+  })
+
   test("a tapped chord opens its guitar shapes, and no other tool opens one", async ({ page, testing }) => {
     await testing.login()
     const { bandId, songId } = await createSong(page)

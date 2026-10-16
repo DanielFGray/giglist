@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useId, useMemo, useState, type CSSProperties } from "react"
 import { renderLyrics, type ChartItem, type ChartLine } from "~/charts/lyrics"
 import { ChordShapes } from "./ChordShapes"
 import { Phrase } from "./Phrase"
@@ -31,6 +31,8 @@ export function LyricsChart({
   const lines = useMemo(() => renderLyrics(source, shownKey), [source, shownKey])
   // The start of the item whose panel is open, or null when none is.
   const [open, setOpen] = useState<number | null>(null)
+  // Anchor names are shared by the whole page, so each chart names its chords with its own prefix.
+  const anchor = useId().replace(/\W/g, "")
 
   // A tap outside the panel closes it: the player is asking for something else.
   // Tapping the open chord again closes it too, in that chord's own click handler.
@@ -58,7 +60,7 @@ export function LyricsChart({
   return (
     <div data-pwid="lyrics-chart" style={{ fontSize: `${size}rem` }} className="font-mono leading-tight">
       {lines.map((line, index) => (
-        <Line key={index} line={line} tempo={tempo} chordShapes={chordShapes} open={open} setOpen={setOpen} />
+        <Line key={index} line={line} tempo={tempo} chordShapes={chordShapes} open={open} setOpen={setOpen} anchor={anchor} />
       ))}
     </div>
   )
@@ -70,12 +72,14 @@ function Line({
   chordShapes,
   open,
   setOpen,
+  anchor,
 }: {
   line: ChartLine
   tempo: number | null
   chordShapes: boolean
   open: number | null
   setOpen: (start: number | null) => void
+  anchor: string
 }) {
   if (line.length === 0) return <div className="h-4" />
   const only = line.length === 1 ? line[0]! : null
@@ -101,7 +105,7 @@ function Line({
   return (
     <div className="flex flex-wrap items-end">
       {line.map((item, index) => (
-        <Item key={index} item={item} chordShapes={chordShapes} open={open} setOpen={setOpen} />
+        <Item key={index} item={item} chordShapes={chordShapes} open={open} setOpen={setOpen} anchor={anchor} />
       ))}
     </div>
   )
@@ -112,11 +116,13 @@ function Item({
   chordShapes,
   open,
   setOpen,
+  anchor,
 }: {
   item: ChartItem
   chordShapes: boolean
   open: number | null
   setOpen: (start: number | null) => void
+  anchor: string
 }) {
   switch (item.kind) {
     case "section":
@@ -144,6 +150,7 @@ function Item({
               data-pwid="chart-chord"
               aria-expanded={showing}
               onClick={() => setOpen(showing ? null : item.start)}
+              style={{ anchorName: `--chord-${anchor}-${item.start}` } as CSSProperties}
               className={`${chordClass} cursor-pointer border-0 bg-transparent text-left`}
             >
               {item.chord}
@@ -154,7 +161,7 @@ function Item({
             </span>
           )}
           <span data-pwid="chart-lyric" className="whitespace-pre">{item.lyric}</span>
-          {showing && <ChordShapes name={item.chord} />}
+          {showing && <ChordShapes name={item.chord} anchor={`--chord-${anchor}-${item.start}`} />}
         </span>
       )
     }
