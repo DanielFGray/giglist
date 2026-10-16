@@ -2,7 +2,7 @@ import { useMemo, useRef, useState, type DragEvent } from "react"
 import { charts, type ChartInfo } from "~/api/client"
 import { composeChanges } from "~/charts/changes"
 import {
-  deleteLine, editLyrics, insertLineAfter, moveChord, parseDoc, placeChord, removeChord, renameSection,
+  addSection, deleteLine, editLyrics, insertLineAfter, moveChord, moveSection, parseDoc, placeChord, removeChord, removeSection, renameSection,
   segments, serializeDoc, type DocLine, type Edit,
 } from "~/charts/doc"
 import { suggestedChords } from "~/charts/lyrics"
@@ -135,6 +135,9 @@ export function ChartEditor({
             }}
             onDelete={() => apply(deleteLine(doc, index))}
             onRename={(label) => apply(renameSection(doc, index, label))}
+            onAddSection={(label) => apply(addSection(doc, index, label))}
+            onRemoveSection={() => apply(removeSection(doc, index))}
+            onMoveSection={(delta) => apply(moveSection(doc, index, delta))}
           />
         ))}
       </div>
@@ -218,13 +221,36 @@ function Line(props: {
   onInsertAfter: () => void
   onDelete: () => void
   onRename: (label: string) => void
+  onAddSection: (label: string) => void
+  onRemoveSection: () => void
+  onMoveSection: (delta: -1 | 1) => void
 }) {
   const { line, index } = props
+  const [naming, setNaming] = useState(false)
   if (line.kind === "directive") {
     const section = /^\{\s*start_of_\w+\s*(?::\s*(.*?))?\s*\}$/.exec(line.raw)
-    return section ? <SectionHeading label={section[1] ?? ""} onRename={props.onRename} /> : null
+    return section ? (
+      <SectionHeading
+        label={section[1] ?? ""}
+        onRename={props.onRename}
+        onRemove={props.onRemoveSection}
+        onMove={props.onMoveSection}
+      />
+    ) : null
   }
   if (props.editing) return <LyricInput text={line.text} onDone={props.onEditEnd} />
+  if (naming) {
+    return (
+      <LyricInput
+        text=""
+        pwid="new-section-input"
+        onDone={(label) => {
+          setNaming(false)
+          if (label?.trim()) props.onAddSection(label)
+        }}
+      />
+    )
+  }
   return (
     <div data-pwid="editor-line" className="group flex flex-wrap items-end">
       {segments(line).map((segment) => (
@@ -273,6 +299,9 @@ function Line(props: {
         <button data-pwid="line-add" type="button" onClick={props.onInsertAfter} aria-label="Add a line below" className={button}>
           + Line
         </button>
+        <button data-pwid="line-section" type="button" onClick={() => setNaming(true)} aria-label="Start a section here" className={button}>
+          + Section
+        </button>
         <button data-pwid="line-delete" type="button" onClick={props.onDelete} aria-label="Delete line" className={button}>
           Delete
         </button>
@@ -281,7 +310,17 @@ function Line(props: {
   )
 }
 
-function SectionHeading({ label, onRename }: { label: string; onRename: (label: string) => void }) {
+function SectionHeading({
+  label,
+  onRename,
+  onRemove,
+  onMove,
+}: {
+  label: string
+  onRename: (label: string) => void
+  onRemove: () => void
+  onMove: (delta: -1 | 1) => void
+}) {
   const [editing, setEditing] = useState(false)
   if (editing) {
     return (
@@ -296,15 +335,28 @@ function SectionHeading({ label, onRename }: { label: string; onRename: (label: 
     )
   }
   return (
-    <button
-      data-pwid="editor-section"
-      type="button"
-      onClick={() => setEditing(true)}
-      title="Rename section"
-      className="mt-3 mb-1 block text-xs font-semibold uppercase tracking-wide text-zinc-400 cursor-text"
-    >
-      {label || "Section"}
-    </button>
+    <div className="group mt-3 mb-1 flex items-center gap-2">
+      <button
+        data-pwid="editor-section"
+        type="button"
+        onClick={() => setEditing(true)}
+        title="Rename section"
+        className="block text-xs font-semibold uppercase tracking-wide text-zinc-400 cursor-text"
+      >
+        {label || "Section"}
+      </button>
+      <span className="flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
+        <button data-pwid="section-move-up" type="button" onClick={() => onMove(-1)} aria-label="Move section up" className={button}>
+          ↑
+        </button>
+        <button data-pwid="section-move-down" type="button" onClick={() => onMove(1)} aria-label="Move section down" className={button}>
+          ↓
+        </button>
+        <button data-pwid="section-remove" type="button" onClick={onRemove} aria-label="Remove section" className={button}>
+          Remove section
+        </button>
+      </span>
+    </div>
   )
 }
 

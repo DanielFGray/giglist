@@ -201,6 +201,39 @@ test.describe("chart editor", () => {
     expect(await shownLyrics(page)).toContain("how very sweet the sound")
   })
 
+  test("adds, moves and removes a section in the editor", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, songId } = await createSong(page)
+    await createChart(page.request, songId)
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    await getPw(page, "chart-edit").click()
+    const headings = () => getPw(page, "editor-section").allTextContents()
+    await expect.poll(headings).toEqual(["Verse 1", "Chorus", "Verse 2", "Chorus"])
+
+    // Start a section on a line inside the first verse: it splits in two.
+    const line = getPw(page, "editor-line").filter({ hasText: "Was blin" }).first()
+    await line.hover()
+    await line.getByRole("button", { name: "Start a section here" }).click()
+    await getPw(page, "new-section-input").fill("Bridge")
+    await getPw(page, "new-section-input").press("Enter")
+    await expect.poll(headings).toEqual(["Verse 1", "Bridge", "Chorus", "Verse 2", "Chorus"])
+
+    // Move the bridge below the chorus, then take the heading away again.
+    const bridge = () => getPw(page, "editor-section").filter({ hasText: "Bridge" }).locator("xpath=..")
+    await bridge().hover()
+    await bridge().getByRole("button", { name: "Move section down" }).click()
+    await expect.poll(headings).toEqual(["Verse 1", "Chorus", "Bridge", "Verse 2", "Chorus"])
+    await bridge().hover()
+    await bridge().getByRole("button", { name: "Remove section" }).click()
+    await expect.poll(headings).toEqual(["Verse 1", "Chorus", "Verse 2", "Chorus"])
+
+    // Saving keeps the words; the chart draws the same sections.
+    await getPw(page, "editor-save").click()
+    await expect(getPw(page, "chart-editor")).toHaveCount(0, { timeout: 10000 })
+    await expect(getPw(page, "chart-section")).toHaveText(["Verse 1", "Chorus", "Verse 2", "Chorus"])
+    expect(await shownLyrics(page)).toContain("Was blind, but now I see")
+  })
+
   test("saves a revision the editor could have made, and refuses a stale or unexplained one", async ({ page, testing }) => {
     await testing.login()
     const { songId } = await createSong(page)
