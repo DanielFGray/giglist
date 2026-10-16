@@ -51,6 +51,7 @@ export type SetlistUpdateData = Parameters<SetlistsClient["updateSetlist"]>[0]["
 export type SetlistEntryCreateData = Parameters<SetlistsClient["addEntry"]>[0]["payload"]
 export type SetlistEntryUpdateData = Parameters<SetlistsClient["updateEntry"]>[0]["payload"]
 export type SetlistArrangementData = Parameters<SetlistsClient["arrange"]>[0]["payload"]
+export type SetlistPresenceData = Parameters<SetlistsClient["reportPresence"]>[0]["payload"]
 
 /** The auth payloads, likewise taken from the contract. The password is a
  *  `Redacted` here, so the browser form builds one before it calls the API. */
@@ -256,6 +257,10 @@ export const setlists = {
 
   removeSection: (id: string, sectionId: string) =>
     run(api.pipe(Effect.flatMap((c) => c.setlists.deleteSection({ params: { id, sectionId } })))),
+
+  /** Tells the others watching the setlist what this connection is doing; see `useSetlistLive`. */
+  reportPresence: (id: string, data: SetlistPresenceData) =>
+    run(api.pipe(Effect.flatMap((c) => c.setlists.reportPresence({ params: { id }, payload: data })))),
 
   /** Stores the whole play order; see `SetlistArrangement`. */
   arrange: (id: string, arrangement: SetlistArrangementData) =>

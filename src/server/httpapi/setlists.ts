@@ -2,6 +2,8 @@ import { Effect, Schema as S } from "effect"
 import { HttpApiBuilder } from "effect/http-api"
 import { sql } from "kysely"
 import { Kysely, withAuthContext } from "../db"
+import { SetlistHub } from "../services/setlist-hub"
+import * as Auth from "../services/auth"
 import { isBandMember } from "./scope"
 import {
   SetListApi,
@@ -63,6 +65,17 @@ const asSession = <A, E>(query: (session: SessionData) => Effect.Effect<A, E, Ky
     }
     return yield* query(session).pipe(withAuthContext(session.sessionId))
   })
+
+/** Run a write as the session's user, then tell everyone watching the setlist that it changed. */
+const asWriter = <A, E>(setlistId: string, query: (session: SessionData) => Effect.Effect<A, E, Kysely>) =>
+  asSession(query).pipe(Effect.tap(() => announceChange(setlistId)))
+
+const announceChange = Effect.fnUntraced(function*(setlistId: string) {
+  const hub = yield* SetlistHub
+  const session = yield* CurrentSession
+  const me = yield* Auth.getMe(session.sessionId).pipe(Effect.orElseSucceed(() => null))
+  yield* hub.changed(setlistId, me?.username ?? null)
+})
 
 /**
  * A setlist the caller may touch.
@@ -181,7 +194,7 @@ export const setlistsHandlers = HttpApiBuilder.group(SetListApi, "setlists", (ha
     )
     .handle("getSetlist", ({ params: { id } }) => asSession((_session) => setlistOr404(id)))
     .handle("updateSetlist", ({ params: { id }, payload }) =>
-      asSession((_session) =>
+      asWriter(id, (_session) =>
         Effect.gen(function* () {
           const db = yield* Kysely
           const existing = yield* setlistOr404(id)
@@ -202,7 +215,7 @@ export const setlistsHandlers = HttpApiBuilder.group(SetListApi, "setlists", (ha
       ),
     )
     .handle("deleteSetlist", ({ params: { id } }) =>
-      asSession((_session) =>
+      asWriter(id, (_session) =>
         Effect.gen(function* () {
           const db = yield* Kysely
           const existing = yield* setlistOr404(id)
@@ -220,7 +233,7 @@ export const setlistsHandlers = HttpApiBuilder.group(SetListApi, "setlists", (ha
       ),
     )
     .handle("addEntry", ({ params: { id }, payload }) =>
-      asSession((_session) =>
+      asWriter(id, (_session) =>
         Effect.gen(function* () {
           const db = yield* Kysely
           const setlist = yield* setlistOr404(id)
@@ -259,7 +272,7 @@ export const setlistsHandlers = HttpApiBuilder.group(SetListApi, "setlists", (ha
       ),
     )
     .handle("updateEntry", ({ params: { id, entryId }, payload }) =>
-      asSession((_session) =>
+      asWriter(id, (_session) =>
         Effect.gen(function* () {
           const db = yield* Kysely
           yield* setlistOr404(id)
@@ -280,6 +293,29 @@ export const setlistsHandlers = HttpApiBuilder.group(SetListApi, "setlists", (ha
         }),
       ),
     )
+    .handle("watchSetlist", ({ params: { id }, query: { client } }) =>
+      Effect.gen(function* () {
+        const session = yield* CurrentSession
+        // Opening the stream is the visibility check; after that it holds no database connection.
+        yield* asSession(() => setlistOr404(id))
+        const me = yield* Auth.getMe(session.sessionId).pipe(Effect.orElseSucceed(() => null))
+        if (!me) return yield* new SetlistForbidden({ message: "You must be signed in" })
+        const hub = yield* SetlistHub
+        return hub.watch(id, {
+          userId: me.id,
+          viewer: { client, username: me.username, mode: "viewing", at: null },
+        })
+      }),
+    )
+    .handle("reportPresence", ({ params: { id }, payload }) =>
+      Effect.gen(function* () {
+        const session = yield* CurrentSession
+        yield* asSession(() => setlistOr404(id))
+        if (!session.userId || !(yield* (yield* SetlistHub).report(id, session.userId, payload))) {
+          return yield* new SetlistForbidden({ message: "That connection is not yours" })
+        }
+      }),
+    )
     .handle("listSections", ({ params: { id } }) =>
       asSession((_session) =>
         Effect.gen(function* () {
@@ -295,7 +331,7 @@ export const setlistsHandlers = HttpApiBuilder.group(SetListApi, "setlists", (ha
       ),
     )
     .handle("addSection", ({ params: { id }, payload }) =>
-      asSession((_session) =>
+      asWriter(id, (_session) =>
         Effect.gen(function* () {
           const db = yield* Kysely
           yield* setlistOr404(id)
@@ -315,7 +351,7 @@ export const setlistsHandlers = HttpApiBuilder.group(SetListApi, "setlists", (ha
       ),
     )
     .handle("renameSection", ({ params: { id, sectionId }, payload }) =>
-      asSession((_session) =>
+      asWriter(id, (_session) =>
         Effect.gen(function* () {
           const db = yield* Kysely
           yield* setlistOr404(id)
@@ -331,7 +367,7 @@ export const setlistsHandlers = HttpApiBuilder.group(SetListApi, "setlists", (ha
       ),
     )
     .handle("deleteSection", ({ params: { id, sectionId } }) =>
-      asSession((_session) =>
+      asWriter(id, (_session) =>
         Effect.gen(function* () {
           const db = yield* Kysely
           yield* setlistOr404(id)
@@ -346,7 +382,7 @@ export const setlistsHandlers = HttpApiBuilder.group(SetListApi, "setlists", (ha
       ),
     )
     .handle("arrange", ({ params: { id }, payload }) =>
-      asSession((_session) =>
+      asWriter(id, (_session) =>
         Effect.gen(function* () {
           const db = yield* Kysely
           yield* setlistOr404(id)
@@ -395,7 +431,7 @@ export const setlistsHandlers = HttpApiBuilder.group(SetListApi, "setlists", (ha
       ),
     )
     .handle("deleteEntry", ({ params: { id, entryId } }) =>
-      asSession((_session) =>
+      asWriter(id, (_session) =>
         Effect.gen(function* () {
           const db = yield* Kysely
           yield* setlistOr404(id)

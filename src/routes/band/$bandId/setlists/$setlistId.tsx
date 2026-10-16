@@ -1,4 +1,4 @@
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Link, createFileRoute, useRouter } from "@tanstack/react-router"
 import { useForm } from "@tanstack/react-form"
 import { Schema as S } from "effect"
@@ -10,7 +10,10 @@ import {
   type MusicalKeyType,
 } from "~/api/contracts"
 import { SelectField, SubmitButton, TextAreaField, TextField, NumberField, errorMessage, fieldError } from "~/components/form"
+import { useAuth } from "~/components/AuthContext"
 import { formatDuration } from "~/components/duration"
+import { useSetlistLive } from "~/components/live"
+import { Viewers } from "~/components/Viewers"
 import { groupEntries, placeEntry, stepEntry, stepSection, toPayload, type Group } from "~/components/arrangement"
 
 export const Route = createFileRoute("/band/$bandId/setlists/$setlistId")({
@@ -64,6 +67,19 @@ function SetlistEditor() {
   const totalSeconds = entries.reduce((sum, entry) => sum + (entry.duration_seconds ?? 0), 0)
   const refresh = () => router.invalidate()
 
+  // Someone else writing the setlist reloads it here and says who did.
+  const me = useAuth().user?.username
+  const [changedBy, setChangedBy] = useState<string | null>(null)
+  const { client, viewers } = useSetlistLive(setlistId, { mode: "viewing", at: null }, (by) => {
+    void router.invalidate()
+    if (by !== null && by !== me) setChangedBy(by)
+  })
+  useEffect(() => {
+    if (changedBy === null) return
+    const timer = setTimeout(() => setChangedBy(null), 6000)
+    return () => clearTimeout(timer)
+  }, [changedBy])
+
   /** Runs a server write, then reloads; a failure is shown instead of leaving the list stale. */
   const act = async (write: () => Promise<unknown>) => {
     setError(null)
@@ -113,6 +129,13 @@ function SetlistEditor() {
           </Link>
         </div>
       </div>
+
+      <Viewers viewers={viewers} me={client} />
+      {changedBy !== null && (
+        <div data-pwid="setlist-changed" role="status" className="rounded-md border border-[var(--color-amber-accent)]/40 bg-[var(--color-amber-accent)]/10 px-3 py-2 text-sm text-zinc-200">
+          {changedBy} changed this setlist. You are looking at the latest version.
+        </div>
+      )}
 
       <SetlistDetails
         setlistId={setlistId}

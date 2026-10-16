@@ -172,6 +172,12 @@ export const SeedBandPayload = S.Struct({
   bandSlug: S.String,
 })
 
+/** Test-only: put an existing user in a band without an invitation. */
+export const AddBandMemberPayload = S.Struct({
+  band_id: S.String.check(S.isUUID()),
+  username: S.String,
+})
+
 export const TestingLoginPayload = S.Struct({
   username: S.String,
   password: S.String,
@@ -242,6 +248,12 @@ export const TestingApiGroup = HttpApiGroup.make("testing")
   .add(
     HttpApiEndpoint.post("seedBand", "/seed-band", {
       payload: SeedBandPayload,
+      success: TestingSuccess,
+    }),
+  )
+  .add(
+    HttpApiEndpoint.post("addBandMember", "/band-member", {
+      payload: AddBandMemberPayload,
       success: TestingSuccess,
     }),
   )
@@ -528,6 +540,33 @@ export const SetlistArrangement = S.Struct({
   ),
 })
 
+/** Someone with a setlist open: reading it, or performing it from song number `at`. */
+export const SetlistViewer = S.Struct({
+  client: S.String.check(S.isUUID()),
+  username: S.String,
+  mode: S.Literals(["viewing", "performing"]),
+  at: S.NullOr(S.Finite),
+})
+
+/**
+ * What a setlist's event stream carries. `changed` says the setlist was written
+ * and by whom, and holds no data: a listener fetches the new state through the
+ * ordinary endpoints, so row-level security decides what it sees. `presence` is
+ * the full list of viewers each time it changes. `ping` keeps an idle
+ * connection alive and lets a client notice a dead one.
+ */
+export const SetlistEvent = S.Union([
+  S.Struct({ kind: S.Literal("changed"), by: S.NullOr(S.String) }),
+  S.Struct({ kind: S.Literal("presence"), viewers: S.Array(SetlistViewer) }),
+  S.Struct({ kind: S.Literal("ping") }),
+])
+
+export const SetlistPresence = S.Struct({
+  client: S.String.check(S.isUUID()),
+  mode: S.Literals(["viewing", "performing"]),
+  at: S.NullOr(S.Finite),
+})
+
 export class SetlistForbidden extends S.TaggedError<
   SetlistForbidden,
   { readonly brand: unique symbol }
@@ -624,6 +663,27 @@ export const SetlistsApiGroup = HttpApiGroup.make("setlists")
         id: S.String.check(S.isUUID()),
         entryId: S.String.check(S.isUUID()),
       },
+      error: [
+        SetlistNotFound.pipe(HttpApiSchema.status(404)),
+        SetlistForbidden.pipe(HttpApiSchema.status(403)),
+      ],
+    }),
+  )
+  .add(
+    HttpApiEndpoint.get("watchSetlist", "/:id/events", {
+      params: { id: S.String.check(S.isUUID()) },
+      query: { client: S.String.check(S.isUUID()) },
+      success: HttpApiSchema.StreamSse({ data: SetlistEvent }),
+      error: [
+        SetlistNotFound.pipe(HttpApiSchema.status(404)),
+        SetlistForbidden.pipe(HttpApiSchema.status(403)),
+      ],
+    }),
+  )
+  .add(
+    HttpApiEndpoint.post("reportPresence", "/:id/presence", {
+      params: { id: S.String.check(S.isUUID()) },
+      payload: SetlistPresence,
       error: [
         SetlistNotFound.pipe(HttpApiSchema.status(404)),
         SetlistForbidden.pipe(HttpApiSchema.status(403)),

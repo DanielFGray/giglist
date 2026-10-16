@@ -15,6 +15,7 @@ import { setlistsHandlers } from "./httpapi/setlists";
 import { chartsHandlers } from "./httpapi/charts";
 import { scoresHandlers } from "./httpapi/scores";
 import { marksHandlers, stampsHandlers } from "./httpapi/marks";
+import { SetlistHub } from "./services/setlist-hub";
 import { SessionMiddlewareLive } from "./httpapi/session";
 
 const PORT = Number(process.env.PORT ?? 3001);
@@ -32,6 +33,8 @@ const ServerLive = HttpRouter.serve(ApiLive).pipe(
   Layer.provide(AuthDb.Live),
   Layer.provide(AuthVisitor.Live),
   Layer.provide(Db.Live),
+  // One hub per process: viewers and change events are shared by every request.
+  Layer.provide(SetlistHub.Live),
   Layer.provide(BunHttpServer.layer({ port: PORT, hostname: "0.0.0.0" })),
 );
 
