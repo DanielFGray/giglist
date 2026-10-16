@@ -245,10 +245,14 @@ export function MarkedChart({
   const drawStroke = (event: ReactPointerEvent) => {
     const root = frame.current!
     const points: Array<[number, number, number]> = []
+    // The last preview this stroke set. The saved mark is drawn only after the save and the
+    // reload, so the preview stays until then: a stroke never vanishes for that round trip.
+    let shown: Stroke | null = null
     const add = (e: PointerEvent) => {
       const p = framePoint(e)
       points.push([p.x, p.y, e.pressure || 0.5])
-      setPreview([...points])
+      shown = [...points]
+      setPreview(shown)
     }
     root.setPointerCapture(event.pointerId)
     add(event.nativeEvent)
@@ -256,8 +260,8 @@ export function MarkedChart({
       root.removeEventListener("pointermove", add)
       root.removeEventListener("pointerup", onUp)
       root.removeEventListener("pointercancel", onUp)
-      setPreview(null)
       const stroke: Stroke = points
+      const finished = shown
       void write(async () => {
         const draft = inkDraft.current
         const joins = draft && data.marks.some((m) => m.id === draft.markId) && near(boundsOf(draft.strokes), boundsOf([stroke]), em)
@@ -278,6 +282,9 @@ export function MarkedChart({
         }
         const saved = joins ? await marksApi.update(draft.markId, payload(placement, body)) : await marksApi.create(payload(placement, body))
         inkDraft.current = { markId: saved.id, strokes }
+      }).finally(() => {
+        // A stroke begun meanwhile has set its own preview; only this stroke's is cleared.
+        setPreview((current) => (current === finished ? null : current))
       })
     }
     root.addEventListener("pointermove", add)
