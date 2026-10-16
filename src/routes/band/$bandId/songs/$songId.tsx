@@ -2,6 +2,7 @@ import { useState } from "react"
 import { Link, createFileRoute, useRouter } from "@tanstack/react-router"
 import { charts, songs } from "~/api/client"
 import { MusicalKeys, type MusicalKeyType } from "~/api/contracts"
+import { ClickTrack } from "~/components/ClickTrack"
 import { SongCharts } from "~/components/SongCharts"
 import { SongForm, songValues } from "~/components/SongForm"
 import { errorMessage } from "~/components/form"
@@ -40,7 +41,15 @@ function SongDetail() {
 
   return (
     <div className="space-y-6 max-w-3xl">
-      <h1 className="text-2xl font-bold tracking-tight">{song.title}</h1>
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold tracking-tight">{song.title}</h1>
+        {song.tempo_bpm !== null && (
+          <ClickTrack
+            bpm={song.tempo_bpm}
+            className="px-3 py-1.5 rounded-md border border-[var(--color-border-subtle)] text-sm text-zinc-300 cursor-pointer"
+          />
+        )}
+      </div>
 
       <SongCharts
         songId={songId}

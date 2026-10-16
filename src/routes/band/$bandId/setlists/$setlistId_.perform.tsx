@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect, useRef, useState, type TouchEvent } from "re
 import { Link, createFileRoute } from "@tanstack/react-router"
 import { charts, setlists, type ChartInfo } from "~/api/client"
 import { groupEntries, playOrder } from "~/components/arrangement"
+import { ClickTrack } from "~/components/ClickTrack"
 import { formatDuration } from "~/components/duration"
 import { MarkedChart } from "~/components/MarkedChart"
 import { TEXT_SIZES, indexFromSearch, stepIndex, stepSize, swipeDirection } from "~/components/perform"
@@ -136,6 +137,9 @@ function Perform() {
         <div className="flex items-center gap-2">
           <button data-pwid="perform-smaller" type="button" aria-label="Smaller text" onClick={() => resize(-1)} disabled={sizeStep === 0} className={button}>A−</button>
           <button data-pwid="perform-larger" type="button" aria-label="Larger text" onClick={() => resize(1)} disabled={sizeStep === TEXT_SIZES.length - 1} className={button}>A+</button>
+          {current?.entry.tempo_bpm != null && (
+            <ClickTrack key={current.entry.id} bpm={current.entry.tempo_bpm} pwid="perform-click" className={button} />
+          )}
           <button data-pwid="perform-scroll" type="button" aria-pressed={speedStep > 0} onClick={() => setSpeedStep((speedStep + 1) % SCROLL_SPEEDS.length)} className={button}>
             {speedStep === 0 ? "Scroll off" : `Scroll ${"▸".repeat(speedStep)}`}
           </button>
