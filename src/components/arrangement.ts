@@ -98,3 +98,10 @@ export function stepSection<E extends Slot, S extends Section>(
 export function toPayload<E extends Slot, S extends Section>(groups: ReadonlyArray<Group<E, S>>): ArrangementPayload {
   return { groups: groups.map((g) => ({ section_id: g.section?.id ?? null, entries: g.entries.map((e) => e.id) })) }
 }
+
+/** The entries in the order the band plays them, each with the name of its section (null when it has none). */
+export function playOrder<E extends Slot, S extends Section>(
+  groups: ReadonlyArray<Group<E, S>>,
+): Array<{ entry: E; section: string | null }> {
+  return groups.flatMap((g) => g.entries.map((entry) => ({ entry, section: g.section?.name ?? null })))
+}

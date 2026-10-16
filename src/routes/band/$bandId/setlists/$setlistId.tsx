@@ -94,14 +94,24 @@ function SetlistEditor() {
             {totalSeconds > 0 && <> · {formatDuration(totalSeconds)}</>}
           </p>
         </div>
-        <Link
-          to="/band/$bandId/setlists"
-          params={{ bandId }}
-          data-pwid="setlist-back"
-          className="px-3 py-1.5 rounded-md border border-[var(--color-border-subtle)] text-xs text-zinc-300 shrink-0"
-        >
-          All setlists
-        </Link>
+        <div className="flex gap-2 shrink-0">
+          <Link
+            to="/band/$bandId/setlists/$setlistId/perform"
+            params={{ bandId, setlistId }}
+            data-pwid="setlist-perform"
+            className="px-3 py-1.5 rounded-md bg-[var(--color-amber-accent)] text-zinc-950 text-xs font-semibold"
+          >
+            Perform
+          </Link>
+          <Link
+            to="/band/$bandId/setlists"
+            params={{ bandId }}
+            data-pwid="setlist-back"
+            className="px-3 py-1.5 rounded-md border border-[var(--color-border-subtle)] text-xs text-zinc-300"
+          >
+            All setlists
+          </Link>
+        </div>
       </div>
 
       <SetlistDetails
