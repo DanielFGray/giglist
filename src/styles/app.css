@@ -34,8 +34,8 @@
 
   :root.light {
     color-scheme: light;
-    --color-surface: #fafaf9;
-    --color-surface-raised: #f0f0ee;
+    --color-surface: #f0f0ee;
+    --color-surface-raised: #fafaf9;
     --color-surface-hover: #e7e5e4;
     --color-border-subtle: #d6d3d1;
     --color-border-active: #a8a29e;
