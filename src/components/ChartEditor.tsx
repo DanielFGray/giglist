@@ -192,7 +192,7 @@ function Chip({ chord, armed, onHold }: { chord: string; armed: boolean; onHold:
       className={`px-2.5 py-1 rounded-md border text-sm font-semibold cursor-grab ${
         armed
           ? "border-[var(--color-amber-accent)] bg-[var(--color-amber-accent)] text-zinc-950"
-          : "border-[var(--color-border-subtle)] text-[var(--color-amber-accent)]"
+          : "border-[var(--color-border-subtle)]"
       }`}
     >
       {chord}
