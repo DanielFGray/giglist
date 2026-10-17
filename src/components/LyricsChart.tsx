@@ -168,7 +168,7 @@ function Item({
   }
 }
 
-const chordClass = "h-5 whitespace-pre pr-1 font-semibold text-[var(--color-amber-accent)]"
+const chordClass = "h-5 whitespace-pre pr-1 font-semibold"
 
 /** The note on tab or notation shown in another key: it is drawn as written, in the written key. */
 function WrittenIn({ what, keyName, spaced }: { what: "tab" | "notation"; keyName: string; spaced: boolean }) {
