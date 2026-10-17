@@ -51,6 +51,19 @@
   }
 }
 
+/*
+ * The light page remaps the two lightest grey text shades to the darker ones
+ * that match their contrast on the dark page (about 12:1 and 7:1). Unlayered,
+ * so it wins over the utility classes; zinc-500 already has enough contrast.
+ */
+:root.light .text-zinc-300 {
+  color: var(--color-zinc-800);
+}
+
+:root.light .text-zinc-400 {
+  color: var(--color-zinc-600);
+}
+
 /* alphaTab's play cursor, in phrases and scores: the bar and the beat being played. */
 @layer components {
   .at-cursor-bar {
