@@ -777,9 +777,10 @@ export const SetlistsApiGroup = HttpApiGroup.make("setlists")
 // --- Charts schemas ---
 
 /**
- * A chart with the text of its newest revision. `source` is the stored lyrics
- * text, an internal format the browser feeds to `renderLyrics` and never shows;
- * it is null for a score, whose bytes are fetched separately.
+ * A chart with the text of its newest revision. `source` is the stored
+ * ChordPro text, which the browser draws with `renderLyrics` and edits as
+ * chords over lyrics (`exportChords`); it is null for a score, whose bytes are
+ * fetched separately.
  */
 export const Chart = S.Struct({
   id: S.String.check(S.isUUID()),
