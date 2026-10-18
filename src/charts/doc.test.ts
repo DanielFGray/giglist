@@ -194,6 +194,22 @@ describe("sections", () => {
     expect(serializeDoc(back.doc)).toBe(serializeDoc(doc))
   })
 
+  test("all adjacent moves preserve every section mark", () => {
+    const simple = parseDoc("{start_of_verse: A}\nalpha\n{end_of_verse}\n{start_of_verse: B}\nbeta\n{end_of_verse}\n{start_of_verse: C}\ngamma\n{end_of_verse}\n{start_of_verse: D}\ndelta\n{end_of_verse}")
+    const starts = simple.flatMap((line, index) => line.kind === "directive" && line.raw.startsWith("{start_of_") ? [index] : [])
+    for (const [index, delta] of [[0, 1], [1, -1], [1, 1], [2, -1], [2, 1], [3, -1]] as const) {
+      const before = anchorText(simple)
+      const edit = moveSection(simple, starts[index]!, delta)
+      expect(explains(before, anchorText(edit.doc), edit.changes)).toBe(true)
+      for (const word of ["alpha", "beta", "gamma", "delta"]) {
+        const at = before.indexOf(word)
+        const result = follow({ start: at, end: at + word.length }, [{ before, after: anchorText(edit.doc), recorded: edit.changes }])
+        expect(result.state).toBe("kept")
+        if (result.state !== "orphaned") expect(anchorText(edit.doc).slice(result.start, result.end)).toBe(word)
+      }
+    }
+  })
+
   test("a section at the end of the list does not move further, and a run composes exactly", () => {
     expect(moveSection(doc, starts[3]!, 1)).toEqual({ doc, changes: [] })
     expect(moveSection(doc, starts[0]!, -1)).toEqual({ doc, changes: [] })
@@ -202,7 +218,7 @@ describe("sections", () => {
     expectExact(doc, { doc: b.doc, changes: composeChanges(a.changes, b.changes) })
   })
 
-  test("a mark in the neighbouring section follows a move; a mark inside the moved one is orphaned", () => {
+  test("marks in both sections follow a move", () => {
     const before = anchorText(doc)
     const edit = moveSection(doc, starts[0]!, 1)
     const step = { before, after: anchorText(edit.doc), recorded: edit.changes }
@@ -211,7 +227,9 @@ describe("sections", () => {
     expect(kept.state).toBe("kept")
     if (kept.state !== "orphaned") expect(step.after.slice(kept.start, kept.end)).toBe("My God, my Savior")
     const verse = before.indexOf("That saved a wretch")
-    expect(follow({ start: verse, end: verse + 19 }, [step])).toEqual({ state: "orphaned", reason: "deleted" })
+    const moved = follow({ start: verse, end: verse + 19 }, [step])
+    expect(moved.state).toBe("kept")
+    if (moved.state !== "orphaned") expect(step.after.slice(moved.start, moved.end)).toBe("That saved a wretch")
   })
 })
 

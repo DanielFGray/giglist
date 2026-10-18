@@ -5,58 +5,32 @@
  * `insert` characters. A change set is sorted and has no overlapping changes.
  * The editor records one per edit; a marks module maps anchors through them.
  */
-export type Change = { readonly from: number; readonly to: number; readonly insert: number }
+export type Change = { readonly from: number; readonly to: number; readonly insert: number; readonly source?: number }
 
 /**
  * The change set that does `first`, then `second`, as one change set against
  * the text `first` started from. Text that `first` inserted and `second`
- * deleted again leaves no trace.
+ * deleted again leaves no trace; text that either moved keeps its link, and a
+ * move that is undone leaves no change.
  */
 export function composeChanges(first: ReadonlyArray<Change>, second: ReadonlyArray<Change>): Array<Change> {
-  const a = toAtoms(first)
-  const b = toAtoms(second)
-  const out: Array<Atom> = []
-  let i = 0
-  let j = 0
-  let ra = a[0]!.n
-  let rb = b[0]!.n
-  while (!(a[i]!.kind === "retain" && ra === Infinity && b[j]!.kind === "retain" && rb === Infinity)) {
-    const x = a[i]!
-    const y = b[j]!
-    if (x.kind === "delete") {
-      out.push({ kind: "delete", n: ra })
-      i++
-      ra = a[i]!.n
-    } else if (y.kind === "insert") {
-      out.push({ kind: "insert", n: rb })
-      j++
-      rb = b[j]!.n
-    } else {
-      const n = Math.min(ra, rb)
-      if (x.kind === "retain" && y.kind === "retain") out.push({ kind: "retain", n })
-      else if (x.kind === "retain" && y.kind === "delete") out.push({ kind: "delete", n })
-      else if (x.kind === "insert" && y.kind === "retain") out.push({ kind: "insert", n })
-      ra -= n
-      rb -= n
-      if (ra === 0) {
-          i++
-        ra = a[i]!.n
-      }
-      if (rb === 0) {
-          j++
-        rb = b[j]!.n
-      }
-    }
-  }
-  return fromAtoms(out)
+  return fromPieces(composePieces(toPieces(first), toPieces(second)))
 }
 
 /** Whether `changes` is a valid change set: sorted, without overlap, with no empty change. */
 export function isChangeSet(changes: ReadonlyArray<Change>): boolean {
   let end = 0
-  return changes.every((c) => {
+  const sources = changes.flatMap((change) => change.source === undefined ? [] : [{ start: change.source, end: change.source + change.insert }]).sort((a, b) => a.start - b.start)
+  const sourcesOverlap = sources.some((source, i) => i > 0 && source.start < sources[i - 1]!.end)
+  return !sourcesOverlap && changes.every((c) => {
+    const source = c.source
+    // A source must belong to one other deleted change, so it cannot be a copy.
+    const covered = source === undefined || changes.some((other) =>
+      other !== c && other.to > other.from && other.from <= source && source + c.insert <= other.to,
+    )
     const ok = Number.isInteger(c.from) && Number.isInteger(c.to) && Number.isInteger(c.insert) &&
-      c.from >= end && c.to >= c.from && c.insert >= 0 && (c.to > c.from || c.insert > 0)
+      (source === undefined || (Number.isInteger(source) && c.insert > 0)) && c.from >= end && c.to >= c.from &&
+      c.insert >= 0 && (c.to > c.from || c.insert > 0) && covered
     end = c.to
     return ok
   })
@@ -73,6 +47,7 @@ export function explains(before: string, after: string, changes: ReadonlyArray<C
   let to = 0
   for (const c of changes) {
     if (after.slice(to, to + c.from - from) !== before.slice(from, c.from)) return false
+    if (c.source !== undefined && after.slice(to + c.from - from, to + c.from - from + c.insert) !== before.slice(c.source, c.source + c.insert)) return false
     to += c.from - from + c.insert
     from = c.to
   }
@@ -84,41 +59,90 @@ export function lengthAfter(length: number, changes: ReadonlyArray<Change>): num
   return changes.reduce((n, c) => n + c.insert - (c.to - c.from), length)
 }
 
-type Atom = { kind: "retain" | "delete" | "insert"; n: number }
+/**
+ * A change set read as the later text, piece by piece: each piece is a copy of
+ * `[from, from + n)` of the earlier text, or new text when `from` is undefined.
+ * The last piece is the unchanged rest and has `n` of Infinity. Composing change
+ * sets is then composing these maps, which keeps every move's link exact.
+ */
+type Piece = { readonly n: number; readonly from: number | undefined }
 
-function toAtoms(changes: ReadonlyArray<Change>): Array<Atom> {
-  // The last atom keeps the rest of the text, however long it is.
-  const atoms: Array<Atom> = []
+function toPieces(changes: ReadonlyArray<Change>): Array<Piece> {
+  const pieces: Array<Piece> = []
   let at = 0
   for (const c of changes) {
-    if (c.from > at) atoms.push({ kind: "retain", n: c.from - at })
-    if (c.to > c.from) atoms.push({ kind: "delete", n: c.to - c.from })
-    if (c.insert > 0) atoms.push({ kind: "insert", n: c.insert })
+    if (c.from > at) pieces.push({ n: c.from - at, from: at })
+    if (c.insert > 0) pieces.push({ n: c.insert, from: c.source })
     at = c.to
   }
-  atoms.push({ kind: "retain", n: Infinity })
-  return atoms
+  pieces.push({ n: Infinity, from: at })
+  return pieces
 }
 
-function fromAtoms(atoms: ReadonlyArray<Atom>): Array<Change> {
-  const changes: Array<Change> = []
-  let at = 0
-  let open: { from: number; deleted: number; inserted: number } | undefined
-  for (const atom of atoms) {
-    if (atom.kind === "retain") {
-      if (open) changes.push({ from: open.from, to: open.from + open.deleted, insert: open.inserted })
-      open = undefined
-      at += atom.n
+/** `second` copies ranges of the text `first` made; read each range through `first`'s pieces. */
+function composePieces(first: ReadonlyArray<Piece>, second: ReadonlyArray<Piece>): Array<Piece> {
+  const out: Array<Piece> = []
+  for (const piece of second) {
+    if (piece.from === undefined) {
+      push(out, piece)
       continue
     }
-    open ??= { from: at, deleted: 0, inserted: 0 }
-    if (atom.kind === "delete") {
-      open.deleted += atom.n
-      at += atom.n
-    } else {
-      open.inserted += atom.n
+    let start = piece.from
+    let left = piece.n
+    let offset = 0
+    for (const through of first) {
+      if (left === 0) break
+      if (start >= offset + through.n) {
+        offset += through.n
+        continue
+      }
+      const skip = start - offset
+      const n = Math.min(through.n - skip, left)
+      push(out, { n, from: through.from === undefined ? undefined : through.from + skip })
+      start += n
+      left -= n
+      offset += through.n
     }
   }
-  if (open) changes.push({ from: open.from, to: open.from + open.deleted, insert: open.inserted })
+  return out
+}
+
+/**
+ * Turns pieces back into a change set. A piece that copies the next unread
+ * stretch of the earlier text stays in place; text skipped over is deleted,
+ * and a piece that copies text from before the cursor is a move, written as an
+ * insert with its `source`. Inserts at one position come before the change
+ * that deletes there, as a change set must be sorted.
+ */
+function fromPieces(pieces: ReadonlyArray<Piece>): Array<Change> {
+  const changes: Array<Change> = []
+  let at = 0
+  let inserts: Array<Piece> = []
+  const flush = (deleted: number) => {
+    const last = inserts.at(-1)
+    const fuse = deleted > 0 && last !== undefined && last.from === undefined
+    for (const piece of fuse ? inserts.slice(0, -1) : inserts) {
+      changes.push({ from: at, to: at, insert: piece.n, ...(piece.from === undefined ? {} : { source: piece.from }) })
+    }
+    if (fuse) changes.push({ from: at, to: at + deleted, insert: last.n })
+    else if (deleted > 0) changes.push({ from: at, to: at + deleted, insert: 0 })
+    inserts = []
+  }
+  for (const piece of pieces) {
+    if (piece.from !== undefined && piece.from >= at) {
+      flush(piece.from - at)
+      at = piece.from + piece.n
+    } else push(inserts, piece)
+  }
+  flush(0)
   return changes
+}
+
+/** Appends `piece`, joining it to the one before when they continue each other. */
+function push(pieces: Array<Piece>, piece: Piece): void {
+  const last = pieces.at(-1)
+  const joins = last !== undefined && Number.isFinite(last.n) &&
+    (last.from === undefined ? piece.from === undefined : piece.from === last.from + last.n)
+  if (last !== undefined && joins) pieces[pieces.length - 1] = { n: last.n + piece.n, from: last.from }
+  else pieces.push(piece)
 }

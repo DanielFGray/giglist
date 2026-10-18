@@ -805,11 +805,12 @@ export class ChartForbidden extends S.TaggedError<ChartForbidden, { readonly bra
   message: S.String,
 }) {}
 
-/** One replacement in a change set: `[from, to)` of the earlier anchor text became `insert` characters. */
+/** One replacement in a change set: `[from, to)` of the earlier anchor text became `insert` characters; optional `source` names the exact earlier anchor range copied as a move. */
 export const ChartChange = S.Struct({
   from: S.Int.check(S.isGreaterThanOrEqualTo(0)),
   to: S.Int.check(S.isGreaterThanOrEqualTo(0)),
   insert: S.Int.check(S.isGreaterThanOrEqualTo(0)),
+  source: S.optional(S.Int.check(S.isGreaterThanOrEqualTo(0))),
 })
 
 /**

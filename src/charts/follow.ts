@@ -78,6 +78,16 @@ export function changesBetween(before: string, after: string): Array<Change> {
 
 /** The range after the changes, or null when they deleted all of it. */
 export function mapRange(range: Range, changes: ReadonlyArray<Change>): Range | null {
+  // A range wholly inside a moved stretch moves with it; the stretch starts where the move's insert does.
+  let shift = 0
+  for (const change of changes) {
+    const { source } = change
+    if (source !== undefined && range.start >= source && range.end <= source + change.insert) {
+      const destination = change.from + shift
+      return { start: destination + range.start - source, end: destination + range.end - source }
+    }
+    shift += change.insert - (change.to - change.from)
+  }
   const start = mapPosition(range.start, changes, "start")
   const end = mapPosition(range.end, changes, "end")
   return end > start ? { start, end } : null
