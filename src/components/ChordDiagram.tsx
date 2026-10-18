@@ -185,16 +185,16 @@ const BAR_HEIGHT = 7
 const NUT = 4.5
 const OPEN_ROW = 9 // the ○/× row's center
 const NUT_GAP = 7 // from the ○/× row to the nut line
-const NAME_SPACE = 12
-const NAME_Y = 10 // the name's text baseline
-const NAME_FONT = 9
-const NUMERAL_SPACE = 9
-const NUMERAL_FONT = 8
-const LABEL_FONT = 8
-const DEGREE_FONT = 5.6
+const NAME_SPACE = 17
+const NAME_Y = 13 // the name's text baseline
+const NAME_FONT = 14
+const NUMERAL_SPACE = 13
+const NUMERAL_FONT = 11
+const LABEL_FONT = 10
+const DEGREE_FONT = 8
 // A degree above a dot sits inside that cell, and one above an open string sits
 // on the ○/× row; the lift keeps both off the fret lines.
-const LABEL_LIFT = 4.5
+const LABEL_LIFT = 5.5
 const FOOT = 3
 
 const widthOf = (strings: number) => LEFT + (strings - 1) * GAP + OVERHANG + 2

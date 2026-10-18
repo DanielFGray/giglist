@@ -364,9 +364,9 @@ test.describe("chord shapes", () => {
     await getPw(page, "chart-chord").filter({ hasText: /^C$/ }).first().click()
     const panel = getPw(page, "chord-shapes")
     await expect(panel).toBeVisible()
-    await expect(getPw(page, "shapes-numeral")).toHaveText("IV")
+    await expect(panel.locator("[data-pwid=shapes-numeral]").first()).toHaveText("IV")
 
-    const first = getPw(page, "chord-diagram").first()
+    const first = panel.locator("[data-pwid=chord-diagram]").first()
     await expect(first).toHaveAttribute("data-frets", "x 3 2 0 1 0")
     // The shape names every note it sounds, open strings included, low string to high.
     await expect(first.locator("[data-pwid=chord-degree]")).toHaveText(["R", "3", "5", "R", "3"])
@@ -387,9 +387,9 @@ test.describe("chord shapes", () => {
     await getPw(page, "chart-chord").filter({ hasText: /^C$/ }).first().click()
     const panel = getPw(page, "chord-shapes")
     await expect(panel).toBeVisible()
-    await expect(getPw(page, "chord-staff")).toBeVisible()
-    await expect(getPw(page, "chord-staff-note")).toHaveCount(3)
-    await expect(getPw(page, "chord-diagram")).toHaveCount(0)
+    await expect(panel.locator("[data-pwid=chord-staff]")).toBeVisible()
+    await expect(panel.locator("[data-pwid=chord-staff-note]")).toHaveCount(3)
+    await expect(panel.locator("[data-pwid=chord-diagram]")).toHaveCount(0)
   })
 
   test("the chord strip shows one entry per distinct chord", async ({ page, testing }) => {
@@ -919,8 +919,7 @@ test.describe("phrases", () => {
     await play.click()
     // The first Play waits for the sound font, a download of about 1 MB.
     await expect(play).toHaveText("Stop", { timeout: 30000 })
-    // alphaTab throws if it is stopped before its audio output has started.
-    await page.waitForTimeout(500)
+    // The Stop label means alphaTab has started playback and can be stopped safely.
     await play.click()
     await expect(play).toHaveText("Play")
   })

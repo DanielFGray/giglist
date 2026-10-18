@@ -60,7 +60,7 @@ export function SongCharts({
   const [blankError, setBlankError] = useState<string | null>(null)
   const [numeralDisplay, setNumeralDisplay] = useState<NumeralDisplay>("both")
   const [diagrams, setDiagrams] = useState<ChordDiagrams>("guitar")
-  const [showChordsAbove, setShowChordsAbove] = useState(false)
+  const [showChordsAbove, setShowChordsAbove] = useState(true)
   const startBlank = async () => {
     setBlankError(null)
     try {
