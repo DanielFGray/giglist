@@ -30,8 +30,7 @@ export function SongCharts({
   list,
   onChanged,
 }: {
-  /** Null while the song is being added: it has no charts until it is saved. */
-  songId: string | null
+  songId: string
   songKey: MusicalKeyType | null
   /** The song's tempo, which phrases in its charts play at. */
   tempo: number | null
@@ -42,6 +41,24 @@ export function SongCharts({
 }) {
   const [adding, setAdding] = useState(false)
   const [addingScore, setAddingScore] = useState(false)
+  // A chart made blank opens in the editor, the same view every chart is edited in.
+  const [opened, setOpened] = useState<string | null>(null)
+  const [blankError, setBlankError] = useState<string | null>(null)
+  const startBlank = async () => {
+    setBlankError(null)
+    try {
+      const created = await charts.createLyrics({
+        song_id: songId,
+        name: blankName(list),
+        written_key: songKey,
+        pasted: BLANK_CHART,
+      })
+      setOpened(created.id)
+      await onChanged()
+    } catch (e) {
+      setBlankError(errorMessage(e))
+    }
+  }
   const keyChoices = keyOptions.map((o) => (o.value === "" ? { value: o.value, label: "As written" } : o))
   return (
     <section data-pwid="song-charts" className="space-y-4">
@@ -59,20 +76,15 @@ export function SongCharts({
           </div>
         )}
       </div>
-      {list.length === 0 && !adding && !addingScore && songId === null && (
-        <p data-pwid="charts-empty" className="text-sm text-zinc-500">
-          Save the song first, then its charts can be added here.
-        </p>
-      )}
-      {list.length === 0 && !adding && !addingScore && songId !== null && (
+      {list.length === 0 && !adding && !addingScore && (
         <p data-pwid="charts-empty" className="text-sm text-zinc-500">
           No charts yet. Paste chords over lyrics, read them from a PDF or a photo, or upload a Guitar Pro file, to make one{songKey ? `; this song is in ${songKey}` : ""}.
         </p>
       )}
       {list.map((chart) => (
-        <ChartCard key={chart.id} chart={chart} shownKey={shownKey} tempo={tempo} onChanged={onChanged} />
+        <ChartCard key={chart.id} chart={chart} startEditing={chart.id === opened} shownKey={shownKey} tempo={tempo} onChanged={onChanged} />
       ))}
-      {adding && songId !== null ? (
+      {adding ? (
         <AddLyricsChart
           songId={songId}
           defaultKey={songKey}
@@ -82,7 +94,7 @@ export function SongCharts({
           }}
           onCancel={() => setAdding(false)}
         />
-      ) : addingScore && songId !== null ? (
+      ) : addingScore ? (
         <AddScore
           songId={songId}
           onDone={async () => {
@@ -94,42 +106,58 @@ export function SongCharts({
       ) : (
         <div className="flex gap-2">
           <button
+            data-pwid="chart-blank"
+            type="button"
+            onClick={() => void startBlank()}
+            className="px-4 py-2 rounded-md bg-[var(--color-amber-accent)] text-zinc-950 text-sm font-semibold cursor-pointer"
+          >
+            Write a chart
+          </button>
+          <button
             data-pwid="chart-add"
             type="button"
             onClick={() => setAdding(true)}
-            disabled={songId === null}
-            className="px-4 py-2 rounded-md border border-[var(--color-border-subtle)] text-sm text-zinc-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-4 py-2 rounded-md border border-[var(--color-border-subtle)] text-sm text-zinc-300 cursor-pointer"
           >
-            Add a chart
+            Paste or read a chart
           </button>
           <button
             data-pwid="score-add"
             type="button"
             onClick={() => setAddingScore(true)}
-            disabled={songId === null}
-            className="px-4 py-2 rounded-md border border-[var(--color-border-subtle)] text-sm text-zinc-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-4 py-2 rounded-md border border-[var(--color-border-subtle)] text-sm text-zinc-300 cursor-pointer"
           >
             Add a score
           </button>
         </div>
       )}
+      {blankError && <div data-pwid="chart-blank-error" className="text-sm text-red-400">{blankError}</div>}
     </section>
   )
 }
 
+/** One empty verse: the editor edits lines, so a new chart starts with a line to write on. */
+const BLANK_CHART = "[Verse 1]\n "
+
+/** "Chords", then "Chords 2" and so on, so a song's charts stay tellable apart. */
+const blankName = (list: ReadonlyArray<ChartInfo>): string =>
+  list.some((chart) => chart.name === "Chords") ? `Chords ${list.length + 1}` : "Chords"
+
 function ChartCard({
   chart,
+  startEditing,
   shownKey,
   tempo,
   onChanged,
 }: {
   chart: ChartInfo
+  startEditing: boolean
   shownKey: MusicalKeyType | null
   tempo: number | null
   onChanged: () => Promise<void>
 }) {
   const [error, setError] = useState<string | null>(null)
-  const [editing, setEditing] = useState(false)
+  const [editing, setEditing] = useState(startEditing && chart.source !== null)
   const [annotating, setAnnotating] = useState(false)
   const [copied, setCopied] = useState(false)
   const copy = async (source: string) => {
