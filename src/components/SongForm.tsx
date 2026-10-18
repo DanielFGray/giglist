@@ -27,16 +27,16 @@ const SongFormSchema = S.Struct({
 
 type SongFormValues = (typeof SongFormSchema)["Encoded"]
 
-/** The form values for a song that does not exist yet. */
-export const emptySong = (): SongFormValues => ({
-  title: "",
+/** What "Add song" saves: a song needs a title, and the player renames it once they know it. */
+export const BLANK_SONG: SongUpdateData = {
+  title: "Untitled song",
   artist: null,
   key: null,
   tempo_bpm: null,
   duration_seconds: null,
   capo: null,
   notes: null,
-})
+}
 
 /** The form values for an existing song. */
 export const songValues = (song: SongInfo): SongFormValues => ({
@@ -44,7 +44,8 @@ export const songValues = (song: SongInfo): SongFormValues => ({
   artist: song.artist,
   key: song.key,
   tempo_bpm: song.tempo_bpm,
-  duration_seconds: formatDuration(song.duration_seconds),
+  // An unknown duration is null, not "": the form's pattern rejects an empty string.
+  duration_seconds: song.duration_seconds === null ? null : formatDuration(song.duration_seconds),
   capo: song.capo,
   notes: song.notes,
 })
@@ -55,8 +56,7 @@ const keyOptions: ReadonlyArray<{ value: MusicalKeyType | ""; label: string }> =
 ]
 
 /**
- * One form for creating and editing a song, so both pages validate and lay out
- * the same seven metadata fields. The caller supplies the initial values and
+ * The form for a song's metadata. The caller supplies the initial values and
  * what to do with the built payload.
  */
 export function SongForm({

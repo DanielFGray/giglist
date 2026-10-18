@@ -4,6 +4,7 @@ import { Option, Schema as S } from "effect"
 import { songs, type SongInfo } from "~/api/client"
 import { errorMessage } from "~/components/form"
 import { formatDuration } from "~/components/duration"
+import { BLANK_SONG } from "~/components/SongForm"
 
 const SortKey = S.Literals(["title", "artist", "key", "tempo"])
 type SortKey = (typeof SortKey)["Type"]
@@ -62,6 +63,21 @@ function SongCatalog() {
   const q = search.q ?? ""
   const navigate = Route.useNavigate()
   const router = useRouter()
+  const [adding, setAdding] = useState(false)
+  const [addError, setAddError] = useState<string | null>(null)
+
+  // A song is saved the moment it is added, so its charts can be written before it has a name.
+  const add = async () => {
+    setAdding(true)
+    try {
+      const created = await songs.create({ ...BLANK_SONG, band_id: bandId })
+      await router.invalidate()
+      await router.navigate({ to: "/band/$bandId/songs/$songId", params: { bandId, songId: created.id } })
+    } catch (e) {
+      setAddError(errorMessage(e))
+      setAdding(false)
+    }
+  }
 
   const needle = q.trim().toLowerCase()
   const visible = list
@@ -75,15 +91,18 @@ function SongCatalog() {
           <h1 className="text-2xl font-bold tracking-tight">Songs</h1>
           <p className="text-sm text-zinc-500 mt-1">Your band's song catalog.</p>
         </div>
-        <Link
-          to="/band/$bandId/songs/new"
-          params={{ bandId }}
+        <button
+          type="button"
           data-pwid="song-new"
-          className="px-4 py-2 rounded-md bg-[var(--color-amber-accent)] text-zinc-950 text-sm font-semibold hover:brightness-110 transition shrink-0"
+          disabled={adding}
+          onClick={() => void add()}
+          className="px-4 py-2 rounded-md bg-[var(--color-amber-accent)] text-zinc-950 text-sm font-semibold hover:brightness-110 transition shrink-0 cursor-pointer disabled:opacity-60"
         >
           Add song
-        </Link>
+        </button>
       </div>
+
+      {addError && <div data-pwid="song-new-error" className="text-sm text-red-400">{addError}</div>}
 
       {list.length > 0 && (
         <div className="flex flex-wrap items-end gap-3">
