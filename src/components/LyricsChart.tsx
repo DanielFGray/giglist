@@ -201,7 +201,7 @@ function Item({
           )}
           {showNumeral && <span data-pwid="chart-numeral" className="text-xs leading-none text-zinc-500">{chordNumeral}</span>}
           <span data-pwid="chart-lyric" className="whitespace-pre">{item.lyric}</span>
-          {showing && <ChordShapes name={item.chord} anchor={`--chord-${anchor}-${item.start}`} />}
+          {showing && <ChordShapes name={item.chord} shownKey={shownKey} anchor={`--chord-${anchor}-${item.start}`} />}
         </span>
       )
     }

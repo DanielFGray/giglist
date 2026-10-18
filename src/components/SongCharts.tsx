@@ -5,6 +5,7 @@ import type { NumeralDisplay } from "~/charts/numeral"
 import { MusicalKeys, type MusicalKeyType } from "~/api/contracts"
 import { AddScore } from "./AddScore"
 import { ChartEditor } from "./ChartEditor"
+import type { ChordDiagrams } from "./ChordShapes"
 import { MarkedChart } from "./MarkedChart"
 import { ReadChartFile } from "./ReadChartFile"
 import { SelectField, SubmitButton, TextAreaField, TextField, errorMessage } from "./form"
@@ -13,6 +14,11 @@ const numeralDisplayOptions: ReadonlyArray<{ value: NumeralDisplay; label: strin
   { value: "both", label: "Names & numerals" },
   { value: "names", label: "Names only" },
   { value: "numerals", label: "Numerals only" },
+]
+
+const diagramOptions: ReadonlyArray<{ value: ChordDiagrams; label: string }> = [
+  { value: "guitar", label: "Guitar" },
+  { value: "off", label: "Off" },
 ]
 
 // alphaTab is large and only score charts need it, so it loads on demand.
@@ -52,6 +58,7 @@ export function SongCharts({
   const [opened, setOpened] = useState<string | null>(null)
   const [blankError, setBlankError] = useState<string | null>(null)
   const [numeralDisplay, setNumeralDisplay] = useState<NumeralDisplay>("both")
+  const [diagrams, setDiagrams] = useState<ChordDiagrams>("guitar")
   const startBlank = async () => {
     setBlankError(null)
     try {
@@ -69,32 +76,46 @@ export function SongCharts({
   }
   const keyChoices = keyOptions.map((o) => (o.value === "" ? { value: o.value, label: "As written" } : o))
   const hasLyricsWithKey = list.some((chart) => chart.kind === "lyrics" && chart.written_key)
+  const hasLyrics = list.some((chart) => chart.kind === "lyrics")
   return (
     <section data-pwid="song-charts" className="space-y-4">
       <div className="flex items-end justify-between gap-4">
         <h2 className="text-lg font-semibold">Charts</h2>
-        {hasLyricsWithKey && (
-          <div className="flex gap-4">
-            <div className="w-40">
+        <div className="flex flex-wrap justify-end gap-4">
+          {hasLyrics && (
+            <div className="w-32">
               <SelectField
-                label="Show in key"
-                pwid="chart-shown-key"
-                value={shownKey ?? ""}
-                onChange={(key) => onShownKeyChange(key === "" ? null : key)}
-                options={keyChoices}
+                label="Chord diagrams"
+                pwid="chart-diagrams"
+                value={diagrams}
+                onChange={(v) => v && setDiagrams(v)}
+                options={diagramOptions}
               />
             </div>
-            <div className="w-44">
-              <SelectField
-                label="Chord display"
-                pwid="chart-numeral-display"
-                value={numeralDisplay}
-                onChange={(v) => v && setNumeralDisplay(v)}
-                options={numeralDisplayOptions}
-              />
-            </div>
-          </div>
-        )}
+          )}
+          {hasLyricsWithKey && (
+            <>
+              <div className="w-40">
+                <SelectField
+                  label="Show in key"
+                  pwid="chart-shown-key"
+                  value={shownKey ?? ""}
+                  onChange={(key) => onShownKeyChange(key === "" ? null : key)}
+                  options={keyChoices}
+                />
+              </div>
+              <div className="w-44">
+                <SelectField
+                  label="Chord display"
+                  pwid="chart-numeral-display"
+                  value={numeralDisplay}
+                  onChange={(v) => v && setNumeralDisplay(v)}
+                  options={numeralDisplayOptions}
+                />
+              </div>
+            </>
+          )}
+        </div>
       </div>
       {list.length === 0 && !adding && !addingScore && (
         <p data-pwid="charts-empty" className="text-sm text-zinc-500">
@@ -110,6 +131,7 @@ export function SongCharts({
           tempo={tempo}
           onChanged={onChanged}
           numeralDisplay={numeralDisplay}
+          diagrams={diagrams}
         />
       ))}
       {adding ? (
@@ -178,6 +200,7 @@ function ChartCard({
   tempo,
   onChanged,
   numeralDisplay,
+  diagrams,
 }: {
   chart: ChartInfo
   startEditing: boolean
@@ -185,6 +208,7 @@ function ChartCard({
   tempo: number | null
   onChanged: () => Promise<void>
   numeralDisplay: NumeralDisplay
+  diagrams: ChordDiagrams
 }) {
   const [error, setError] = useState<string | null>(null)
   const [editing, setEditing] = useState(startEditing && chart.source !== null)
@@ -297,6 +321,7 @@ function ChartCard({
           tempo={tempo}
           annotating={annotating}
           numeralDisplay={numeralDisplay}
+          diagrams={diagrams}
         />
       ) : (
         <Suspense fallback={<p className="text-sm text-zinc-500">Loading the score…</p>}>
