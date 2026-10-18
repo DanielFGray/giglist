@@ -82,7 +82,7 @@ export function anchorText(doc: ChartDoc): string {
   return doc.map(anchorLine).join("\n")
 }
 
-function anchorLine(line: DocLine): string {
+export function anchorLine(line: DocLine): string {
   if (line.kind === "lyrics") return withChords(line.text, line.chords)
   if (line.kind === "literal") return line.text
   const match = /^\{\s*(start_of_\w+|comment|c)\s*(?::\s*(.*?))?\s*\}$/.exec(line.raw)
@@ -370,7 +370,7 @@ function cleanLabel(label: string): string {
 const isStart = (line: DocLine) => line.kind === "directive" && /^\{\s*start_of_\w+/.test(line.raw)
 
 /** The section that `lineIndex` is inside (after its start line, before its end), or null. */
-function enclosingSection(doc: ChartDoc, lineIndex: number): { start: number; kind: string } | null {
+export function enclosingSection(doc: ChartDoc, lineIndex: number): { start: number; kind: string } | null {
   for (let i = lineIndex - 1; i >= 0; i--) {
     const line = doc[i]!
     if (line.kind !== "directive") continue

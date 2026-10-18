@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { readFileSync } from "node:fs"
-import { anchorText, parseDoc } from "./doc"
+import { addSection, anchorText, parseDoc, renameSection, serializeDoc } from "./doc"
 import { chartChords, exportChords, importPasted, isTabLine, renderLyrics, suggestedChords, type ChartItem } from "./lyrics"
 
 const pasted = readFileSync(new URL("../../tests/fixtures/amazing-grace.txt", import.meta.url), "utf8")
@@ -256,5 +256,46 @@ describe("paste round trip", () => {
     const back = importPasted(exportChords(fixture, "G"), "G")
     expect(back).toBe(fixture)
     expect(anchorText(parseDoc(back))).toBe(anchorText(parseDoc(fixture)))
+  })
+})
+
+describe("round trip from doc edits", () => {
+  test("addSection then rename to 'Chorus' keeps anchor text", () => {
+    const base = parseDoc("{key: G}\n[G]Amazing grace\n[C]How sweet")
+    const added = addSection(base, 1, "Bridge")
+    const start = added.doc.findIndex((l) => l.kind === "directive" && l.raw === "{start_of_verse: Bridge}")
+    const renamed = renameSection(added.doc, start, "Chorus")
+    const source = serializeDoc(renamed.doc)
+    const back = importPasted(exportChords(source, "G"), "G")
+    expect(anchorText(parseDoc(back))).toBe(anchorText(parseDoc(source)))
+  })
+
+  test("renameSection to '' round-trips as source", () => {
+    const source = "{key: G}\n{start_of_verse: Verse 1}\n[G]Amazing grace\n{end_of_verse}"
+    const doc = parseDoc(source)
+    const renamed = renameSection(doc, 1, "")
+    const edited = serializeDoc(renamed.doc)
+    const back = importPasted(exportChords(edited, "G"), "G")
+    expect(back).toBe(edited)
+  })
+
+  test("an unlabelled bridge round-trips as source", () => {
+    const source = "{key: G}\n{start_of_bridge}\n[G]La\n{end_of_bridge}"
+    const back = importPasted(exportChords(source, "G"), "G")
+    expect(back).toBe(source)
+  })
+
+  test("a header section followed by a raw unlabelled section does not nest", () => {
+    const pasted = "[Verse 1]\nG\nLa\n{start_of_bridge}\nG\nLo\n{end_of_bridge}"
+    const stored = importPasted(pasted, "G")
+    expect(stored).not.toMatch(/\{start_of_verse: Bridge\}/)
+    const back = importPasted(exportChords(stored, "G"), "G")
+    expect(back).toBe(stored)
+  })
+
+  test("a chart with a second {key} line round-trips as source", () => {
+    const source = "{key: G}\n[G]Amazing grace\n{key: D}\n[D]How sweet"
+    const back = importPasted(exportChords(source, "G"), "G")
+    expect(back).toBe(source)
   })
 })
