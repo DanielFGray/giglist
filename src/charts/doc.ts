@@ -325,8 +325,8 @@ function literalLines(tex: string): ReadonlyArray<DocLine> {
 
 /**
  * Moves a section past its neighbouring section (-1 up, 1 down). The text is
- * removed and written again, so marks anchored inside the moved section lose
- * their place; marks in the other sections follow.
+ * removed and written again. The insertion records the removed anchor text as
+ * its source, so marks inside the moved section follow it.
  */
 export function moveSection(doc: ChartDoc, lineIndex: number, delta: -1 | 1): Edit {
   const block = sectionBlock(doc, lineIndex)
@@ -336,14 +336,24 @@ export function moveSection(doc: ChartDoc, lineIndex: number, delta: -1 | 1): Ed
   const lines = doc.slice(block.start, block.end + 1)
   const other = sectionBlock(doc, neighbour)
   const count = lines.length
-  return chain(doc, [
+  const edit = chain(doc, [
     ...lines.map(() => (d: ChartDoc) => removeLineAt(d, block.start)),
-    // After the removal, the neighbour's lines sit `count` earlier when it was below.
     ...lines.map((line, i) => (d: ChartDoc) => {
       const base = delta === 1 ? other.end + 1 - count : other.start
       return insertLineAt(d, base + i, line)
     }),
   ])
+  const blockStart = anchorOffset(doc, block.start)
+  const blockEnd = anchorOffset(doc, block.end + 1)
+  const lastBlock = blockEnd === anchorText(doc).length
+  const destination = anchorOffset(doc, delta === 1 ? other.end + 1 : other.start) - (lastBlock && delta === -1 ? 1 : 0)
+  const atEnd = destination === anchorText(doc).length
+  const sourceStart = atEnd || (lastBlock && delta === -1) ? blockStart - 1 : blockStart
+  const sourceEnd = atEnd && delta === 1 ? blockEnd - 1 : blockEnd
+  const deleteStart = sourceStart
+  const move = { from: deleteStart, to: sourceEnd, insert: 0 }
+  const copy = { from: destination, to: destination, insert: sourceEnd - sourceStart, source: sourceStart }
+  return { doc: edit.doc, changes: delta === 1 ? [move, copy] : [copy, move] }
 }
 
 /** The section a line sits in: its label, or null before the first section. */
@@ -353,6 +363,11 @@ export function sectionLabel(doc: ChartDoc, lineIndex: number): string | null {
     if (line.kind === "directive" && /^\{\s*start_of_/.test(line.raw)) return anchorLine(line)
   }
   return null
+}
+
+function anchorOffset(doc: ChartDoc, lineIndex: number): number {
+  if (lineIndex >= doc.length) return anchorText(doc).length
+  return doc.slice(0, lineIndex).reduce((length, line) => length + anchorLine(line).length + 1, 0)
 }
 
 // ---------------------------------------------------------------------------
