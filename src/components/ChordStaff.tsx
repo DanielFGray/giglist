@@ -1,4 +1,5 @@
 import { degreeName } from "~/charts/degrees"
+import { numeral } from "~/charts/numeral"
 import type { Spelling } from "~/charts/spelling"
 import { staffNotes, staffSides, staffStep, type StaffNote } from "~/charts/staff"
 import { alphaTabAssets } from "./alphatab"
@@ -82,6 +83,25 @@ export function ChordStaff({ spelling }: { spelling: Spelling }) {
         )
       })}
     </svg>
+  )
+}
+
+/**
+ * The staff view of one chord, as the panel and the chord strip draw it: the
+ * name, the numeral when the key is known, and the chord's notes on a staff.
+ */
+export function ChordStaffBlock({ name, spelling, shownKey }: { name: string; spelling: Spelling; shownKey: string | null }) {
+  const chordNumeral = numeral(name, shownKey)
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="text-center text-sm font-semibold">{name}</div>
+      {chordNumeral !== null && (
+        <div data-pwid="shapes-numeral" className="text-center text-xs text-zinc-500">
+          {chordNumeral}
+        </div>
+      )}
+      <ChordStaff spelling={spelling} />
+    </div>
   )
 }
 

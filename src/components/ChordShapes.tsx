@@ -5,7 +5,7 @@ import { spell } from "~/charts/spelling"
 import { voicings } from "~/charts/voicing"
 import { writeFrets } from "~/charts/fretting"
 import { ChordDiagram } from "./ChordDiagram"
-import { ChordStaff } from "./ChordStaff"
+import { ChordStaffBlock } from "./ChordStaff"
 
 /** Which chords of a chart show a diagram when tapped: guitar, staff, or none. */
 export type ChordDiagrams = "guitar" | "staff" | "off"
@@ -58,15 +58,7 @@ export function ChordShapes({
         chord === null ? (
           <div data-pwid="chord-shapes-none" className="text-xs">{`No notes for ${name}`}</div>
         ) : (
-          <div className="flex flex-col gap-1">
-            <div className="text-center text-sm font-semibold">{name}</div>
-            {chordNumeral !== null && (
-              <div data-pwid="shapes-numeral" className="text-center text-xs text-zinc-500">
-                {chordNumeral}
-              </div>
-            )}
-            <ChordStaff spelling={chord.spelled} />
-          </div>
+          <ChordStaffBlock name={name} spelling={chord.spelled} shownKey={shownKey} />
         )
       ) : chord === null || chord.shapes === null || chord.shapes.length === 0 ? (
         <div data-pwid="chord-shapes-none" className="text-xs">{`No guitar shape for ${name}`}</div>

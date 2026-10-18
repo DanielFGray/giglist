@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react"
 import { marks as marksApi, stamps as stampsApi, type ChartInfo, type ChartMarksInfo, type MarkData, type MarkInfo, type StampInfo } from "~/api/client"
 import { boundsOf, inkPath, markResolver, near, type Box, type Stroke } from "~/charts/marks"
+import { renderLyrics, chartChords } from "~/charts/lyrics"
 import type { Resolution } from "~/charts/follow"
 import type { NumeralDisplay } from "~/charts/numeral"
 import { useAuth } from "./AuthContext"
 import type { ChordDiagrams } from "./ChordShapes"
+import { ChordStrip } from "./ChordStrip"
 import { LyricsChart } from "./LyricsChart"
 import { errorMessage } from "./form"
 
@@ -41,6 +43,7 @@ export function MarkedChart({
   size,
   numeralDisplay = "both",
   diagrams = "guitar",
+  showChordsAbove,
 }: {
   chart: ChartInfo & { source: string }
   shownKey: string | null
@@ -56,6 +59,8 @@ export function MarkedChart({
   numeralDisplay?: NumeralDisplay
   /** Which chords show a diagram when tapped. Default: guitar. */
   diagrams?: ChordDiagrams
+  /** Whether the strip of every chord shows above the chart. */
+  showChordsAbove: boolean
 }) {
   const me = useAuth().user?.id
   const [data, setData] = useState<ChartMarksInfo>({ marks: [], revisions: [] })
@@ -108,6 +113,10 @@ export function MarkedChart({
     const resolve = markResolver(data.revisions)
     return data.marks.map((mark) => ({ mark, resolution: resolve(mark) }))
   }, [data])
+
+  // Read here, not from LyricsChart's lines: the strip sits above the frame whose
+  // boxes marks are measured in, so showing it never moves a mark.
+  const chords = useMemo(() => chartChords(renderLyrics(chart.source, shownKey)), [chart.source, shownKey])
 
   // Where each mark sits on screen: its anchored item's corner plus its offset.
   useLayoutEffect(() => {
@@ -393,6 +402,10 @@ export function MarkedChart({
       </div>
 
         </>
+      )}
+
+      {showChordsAbove && diagrams !== "off" && chords.length > 0 && (
+        <ChordStrip chords={chords} shownKey={shownKey} diagrams={diagrams} />
       )}
 
       <div

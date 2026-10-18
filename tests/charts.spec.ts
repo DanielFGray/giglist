@@ -391,6 +391,54 @@ test.describe("chord shapes", () => {
     await expect(getPw(page, "chord-staff-note")).toHaveCount(3)
     await expect(getPw(page, "chord-diagram")).toHaveCount(0)
   })
+
+  test("the chord strip shows one entry per distinct chord", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, songId } = await createSong(page)
+    const made = await page.request.post("/api/charts", {
+      data: { song_id: songId, name: "Shapes", written_key: "G", pasted: shapes },
+    })
+    expect(made.ok(), `create chart failed: ${await made.text()}`).toBe(true)
+
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    await expect(getPw(page, "chart")).toHaveCount(1, { timeout: 10000 })
+
+    const checkbox = getPw(page, "chart-show-chords-above")
+    await expect(checkbox).toBeEnabled()
+    await checkbox.check()
+
+    const strip = getPw(page, "chord-strip")
+    await expect(strip).toBeVisible()
+    // C and F#m7add11 are the distinct chords.
+    await expect(strip.locator("[data-pwid=chord-strip-entry]")).toHaveCount(2)
+    await expect(strip.locator("[data-pwid=chord-diagram]")).toHaveCount(2)
+
+    // Staff: each entry holds a chord-staff.
+    await getPw(page, "chart-diagrams").selectOption("staff")
+    await expect(strip.locator("[data-pwid=chord-staff]")).toHaveCount(2)
+
+    // Off: checkbox disabled and no strip.
+    await getPw(page, "chart-diagrams").selectOption("off")
+    await expect(checkbox).toBeDisabled()
+    await expect(getPw(page, "chord-strip")).toHaveCount(0)
+  })
+
+  test("the chord strip does not widen the page on a phone", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, songId } = await createSong(page)
+    const made = await page.request.post("/api/charts", {
+      data: { song_id: songId, name: "Shapes", written_key: "G", pasted: shapes },
+    })
+    expect(made.ok(), `create chart failed: ${await made.text()}`).toBe(true)
+
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    await expect(getPw(page, "chart")).toHaveCount(1, { timeout: 10000 })
+
+    await getPw(page, "chart-show-chords-above").check()
+    await expect(getPw(page, "chord-strip")).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  })
 })
 
 /** A chart of bare lyrics, the way a band starts one before it has any chords. */

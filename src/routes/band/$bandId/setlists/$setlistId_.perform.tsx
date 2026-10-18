@@ -52,6 +52,7 @@ function Perform() {
   const [speedStep, setSpeedStep] = useState(0)
   const [numeralDisplay, setNumeralDisplay] = useState<NumeralDisplay>("both")
   const [diagrams, setDiagrams] = useState<ChordDiagrams>("guitar")
+  const [showChordsAbove, setShowChordsAbove] = useState(false)
   const scroller = useRef<HTMLDivElement>(null)
   const touchStart = useRef<{ x: number; y: number } | null>(null)
 
@@ -171,6 +172,16 @@ function Perform() {
             <option value="staff">Staff</option>
             <option value="off">Off</option>
           </select>
+          <label className="flex items-center gap-1 text-sm text-zinc-200">
+            <input
+              data-pwid="perform-show-chords-above"
+              type="checkbox"
+              checked={showChordsAbove}
+              disabled={diagrams === "off"}
+              onChange={(e) => setShowChordsAbove(e.target.checked)}
+            />
+            Show chords above the chart
+          </label>
           <select
             data-pwid="perform-numeral-display"
             value={numeralDisplay}
@@ -228,6 +239,7 @@ function Perform() {
               size={size}
               numeralDisplay={numeralDisplay}
               diagrams={diagrams}
+              showChordsAbove={showChordsAbove}
             />
           </div>
 
@@ -276,6 +288,7 @@ function SongCharts({
   size,
   numeralDisplay,
   diagrams,
+  showChordsAbove,
 }: {
   songId: string
   shownKey: string | null
@@ -283,6 +296,7 @@ function SongCharts({
   size: number
   numeralDisplay: NumeralDisplay
   diagrams: ChordDiagrams
+  showChordsAbove: boolean
 }) {
   const [list, setList] = useState<ReadonlyArray<ChartInfo> | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -313,6 +327,7 @@ function SongCharts({
             size={size}
             numeralDisplay={numeralDisplay}
             diagrams={diagrams}
+            showChordsAbove={showChordsAbove}
           />
         ) : (
           <div key={chart.id} className="rounded-lg bg-white p-2">

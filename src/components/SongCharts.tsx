@@ -60,6 +60,7 @@ export function SongCharts({
   const [blankError, setBlankError] = useState<string | null>(null)
   const [numeralDisplay, setNumeralDisplay] = useState<NumeralDisplay>("both")
   const [diagrams, setDiagrams] = useState<ChordDiagrams>("guitar")
+  const [showChordsAbove, setShowChordsAbove] = useState(false)
   const startBlank = async () => {
     setBlankError(null)
     try {
@@ -84,15 +85,27 @@ export function SongCharts({
         <h2 className="text-lg font-semibold">Charts</h2>
         <div className="flex flex-wrap justify-end gap-4">
           {hasLyrics && (
-            <div className="w-32">
-              <SelectField
-                label="Chord diagrams"
-                pwid="chart-diagrams"
-                value={diagrams}
-                onChange={(v) => v && setDiagrams(v)}
-                options={diagramOptions}
-              />
-            </div>
+            <>
+              <div className="w-32">
+                <SelectField
+                  label="Chord diagrams"
+                  pwid="chart-diagrams"
+                  value={diagrams}
+                  onChange={(v) => v && setDiagrams(v)}
+                  options={diagramOptions}
+                />
+              </div>
+              <label className="flex items-center gap-2 text-sm text-zinc-300 self-end pb-2">
+                <input
+                  data-pwid="chart-show-chords-above"
+                  type="checkbox"
+                  checked={showChordsAbove}
+                  disabled={diagrams === "off"}
+                  onChange={(e) => setShowChordsAbove(e.target.checked)}
+                />
+                Show chords above the chart
+              </label>
+            </>
           )}
           {hasLyricsWithKey && (
             <>
@@ -133,6 +146,7 @@ export function SongCharts({
           onChanged={onChanged}
           numeralDisplay={numeralDisplay}
           diagrams={diagrams}
+          showChordsAbove={showChordsAbove}
         />
       ))}
       {adding ? (
@@ -202,6 +216,7 @@ function ChartCard({
   onChanged,
   numeralDisplay,
   diagrams,
+  showChordsAbove,
 }: {
   chart: ChartInfo
   startEditing: boolean
@@ -210,6 +225,7 @@ function ChartCard({
   onChanged: () => Promise<void>
   numeralDisplay: NumeralDisplay
   diagrams: ChordDiagrams
+  showChordsAbove: boolean
 }) {
   const [error, setError] = useState<string | null>(null)
   const [editing, setEditing] = useState(startEditing && chart.source !== null)
@@ -323,6 +339,7 @@ function ChartCard({
           annotating={annotating}
           numeralDisplay={numeralDisplay}
           diagrams={diagrams}
+          showChordsAbove={showChordsAbove}
         />
       ) : (
         <Suspense fallback={<p className="text-sm text-zinc-500">Loading the score…</p>}>
