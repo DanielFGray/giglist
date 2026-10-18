@@ -1,12 +1,21 @@
 import { useEffect, useRef, useState } from "react"
-import { AlphaTabApi, importer, LayoutMode, PlayerMode, StaveProfile } from "@coderline/alphatab"
+import { AlphaTabApi, importer, LayoutMode, model, PlayerMode, StaveProfile } from "@coderline/alphatab"
 import { scores } from "~/api/client"
-import { drawnRange, excerpt, type ScoreLinkReading } from "~/charts/score-link"
+import { drawnRange, excerpt, type ScoreLinkReading, type ScoreOutline } from "~/charts/score-link"
 import { trackOptions } from "~/charts/score-tracks"
 import { alphaTabAssets, inkFrom } from "./alphatab"
 import { errorMessage } from "./form"
 
 type Status = "loading" | "ready" | "problem"
+
+/** A loaded score's tracks, section markers and bar count: what a link is checked against. */
+export function outlineOf(score: model.Score): ScoreOutline {
+  return {
+    tracks: trackOptions(score.tracks).map((t) => t.label),
+    sections: score.masterBars.flatMap((bar, index) => (bar.section ? [{ index, marker: bar.section.marker }] : [])),
+    bars: score.masterBars.length,
+  }
+}
 
 /**
  * The bars of a score chart that a score link names (docs/adr/0004), drawn in
@@ -47,11 +56,7 @@ export function ScoreLink({ reading, revisionId }: { reading: ScoreLinkReading; 
       .then((bytes) => {
         if (disposed) return
         const score = importer.ScoreLoader.loadScoreFromBytes(bytes, view.settings)
-        const drawn = drawnRange(link, {
-          tracks: trackOptions(score.tracks).map((t) => t.label),
-          sections: score.masterBars.flatMap((bar, index) => (bar.section ? [{ index, marker: bar.section.marker }] : [])),
-          bars: score.masterBars.length,
-        })
+        const drawn = drawnRange(link, outlineOf(score))
         if ("problem" in drawn) return fail(drawn.problem)
         excerpt(score.masterBars, drawn.first, drawn.last)
         view.settings.display.startBar = drawn.first + 1

@@ -64,4 +64,38 @@ test.describe("score links", () => {
     await expect(links.nth(4).getByRole("alert")).toHaveText(`No section "Bridge" in this score`)
     await expect(links.nth(5).getByRole("alert")).toHaveText("This score is not in this song")
   })
+
+  test("the editor's picker writes a link that draws in the chart", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, songId, scoreId } = await setUp(page)
+    await addLyricsChart(page.request, songId, ["[Verse]", "Amazing grace"])
+
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    await getPw(page, "chart-edit").first().click()
+    await getPw(page, "line-score").first().click()
+    const picker = getPw(page, "score-picker")
+    await expect(picker.locator("[data-pwid=score-link][data-status=ready]")).toBeVisible({ timeout: 15000 })
+
+    await getPw(page, "score-picker-section").selectOption("Chorus")
+    await expect(picker.locator("[data-pwid=score-link][data-status=ready]")).toBeVisible({ timeout: 15000 })
+
+    await getPw(page, "score-picker-mode").selectOption("bars")
+    await getPw(page, "score-picker-to").fill("9")
+    await expect(getPw(page, "score-picker-keep")).toBeDisabled()
+    await expect(picker.getByRole("alert")).toHaveText("The bars 1-9 run past the score's 8 bars")
+
+    await getPw(page, "score-picker-mode").selectOption("section")
+    await getPw(page, "score-picker-section").selectOption("Chorus")
+    await getPw(page, "score-picker-keep").click()
+    await expect(getPw(page, "editor-score-link")).toHaveCount(1)
+    await getPw(page, "editor-save").click()
+    await expect(getPw(page, "chart-editor")).toHaveCount(0, { timeout: 10000 })
+
+    await expect(getPw(page, "chart-score-link").locator("[data-pwid=score-link][data-status=ready]")).toBeVisible({ timeout: 15000 })
+
+    // The saved text names the score chart, so a re-upload of that chart redraws the link.
+    const listed = (await (await page.request.get(`/api/charts/song/${songId}`)).json()) as Array<{ kind: string; source: string | null }>
+    const lyrics = listed.find((chart) => chart.kind === "lyrics")
+    expect(lyrics?.source).toContain(`{score: chart=${scoreId} track="Lead Gtr" section="Chorus"}`)
+  })
 })

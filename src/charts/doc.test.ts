@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs"
 import { ChordLyricsPair, ChordProParser, Literal, Tag } from "chordsheetjs"
 import { composeChanges, explains, type Change } from "./changes"
 import {
-  addPhrase, addSection, anchorLine, blockRange, canMoveBlockTo, dropSlots, hasHandle, deleteBlock, duplicateBlock, inPhrase, moveBlock, moveBlockTo, phraseAt, removeSection, setPhrase,
+  addPhrase, addScoreLink, addSection, anchorLine, blockRange, canMoveBlockTo, dropSlots, hasHandle, deleteBlock, duplicateBlock, inPhrase, moveBlock, moveBlockTo, phraseAt, removeSection, setPhrase,
   anchorText, deleteLine, editLine, insertLineAfter, moveChord, parseDoc, placeChord, removeChord,
   renameSection, segments, serializeDoc, type ChartDoc, type DocLine, type Edit,
 } from "./doc"
@@ -68,6 +68,12 @@ describe("edits", () => {
     const edit = placeChord(doc, i, 0, "D")
     expect(serializeDoc(edit.doc).split("\n")[i]).toStartWith("[D]Amazing")
     expect(edit.changes).toHaveLength(1)
+    expectExact(doc, edit)
+  })
+
+  test("a score link goes on the line below as one directive", () => {
+    const edit = addScoreLink(doc, i, `chart=abc track="Lead Gtr" section="Chorus"`)
+    expect(edit.doc[i + 1]).toEqual({ kind: "directive", raw: `{score: chart=abc track="Lead Gtr" section="Chorus"}` })
     expectExact(doc, edit)
   })
 

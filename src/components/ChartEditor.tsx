@@ -2,17 +2,20 @@ import { useEffect, useMemo, useRef, useState, type DragEvent } from "react"
 import { charts, type ChartInfo } from "~/api/client"
 import { composeChanges } from "~/charts/changes"
 import {
-  addPhrase, addSection, anchorLine, blockRange, canMoveBlockTo, deleteBlock, deleteLine, directiveName, dropSlots, duplicateBlock, editLine, hasHandle, inPhrase,
+  addPhrase, addScoreLink, addSection, anchorLine, blockRange, canMoveBlockTo, deleteBlock, deleteLine, directiveName, dropSlots, duplicateBlock, editLine, hasHandle, inPhrase,
   insertLineAfter, moveBlock, moveBlockTo, moveChord, parseDoc, phraseAt, placeChord, removeChord, removeSection, renameSection, segments, serializeDoc,
   setPhrase, type DocLine, type Edit,
 } from "~/charts/doc"
 import { isChordName, isPhraseStart, isTabStart, suggestedChords } from "~/charts/lyrics"
+import { readScoreLink } from "~/charts/score-link"
 import { BlockHandle, type Point } from "./BlockHandle"
 import { ChordSheet } from "./ChordSheet"
 import { slotUnder, type DropRow, type DropSlot } from "./drop-slot"
 import { errorMessage } from "./form"
 import { Phrase } from "./Phrase"
 import { PhraseForm } from "./PhraseForm"
+import { ScoreLink } from "./ScoreLink"
+import { ScorePicker } from "./ScorePicker"
 
 /** A chord in hand: dragged or armed from the palette (no `from`), or picked up off the chart. */
 type Held = { chord: string; from?: { line: number; chord: number } }
@@ -38,12 +41,15 @@ const button =
 export function ChartEditor({
   chart,
   tempo,
+  scoreCharts,
   onSaved,
   onCancel,
 }: {
   chart: ChartInfo & { source: string }
   /** The song's tempo, which phrases play at. */
   tempo: number | null
+  /** The song's score charts: score links draw from them, and the picker offers them. */
+  scoreCharts: ReadonlyArray<ChartInfo>
   onSaved: () => Promise<void>
   onCancel: () => void
 }) {
@@ -243,7 +249,7 @@ export function ChartEditor({
               {handled && editingLine !== index && (
                 <BlockHandle
                   label={blockLabel(line)}
-                  deleteLabel={line.kind === "lyrics" ? "Delete" : "Delete section and lines"}
+                  deleteLabel={line.kind === "lyrics" || directiveName(line) === "score" ? "Delete" : "Delete section and lines"}
                   canMove={(delta) => moveBlock(doc, index, delta).changes.length > 0}
                   onMove={(delta) => apply(moveBlock(doc, index, delta))}
                   onDuplicate={() => apply(duplicateBlock(doc, index))}
@@ -257,6 +263,7 @@ export function ChartEditor({
                 index={index}
                 phrase={line.kind === "directive" && isPhraseStart(directiveName(line)) ? phraseAt(doc, index) : null}
                 tempo={tempo}
+                scoreCharts={scoreCharts}
                 held={held}
                 editing={editingLine === index}
                 onDrop={dropOn}
@@ -276,6 +283,7 @@ export function ChartEditor({
                 onAddSection={(label) => apply(addSection(doc, index, label))}
                 onRemoveSection={() => apply(removeSection(doc, index))}
                 onAddPhrase={(name, tex) => apply(addPhrase(doc, index, name, tex))}
+                onAddScoreLink={(value) => apply(addScoreLink(doc, index, value))}
                 onSetPhrase={(name, tex) => apply(setPhrase(doc, index, name, tex))}
               />
             </div>
@@ -363,6 +371,7 @@ function Line(props: {
   /** Set on a phrase's start line, which draws the whole phrase. */
   phrase: { name: string; tex: string } | null
   tempo: number | null
+  scoreCharts: ReadonlyArray<ChartInfo>
   held: Held | null
   editing: boolean
   onDrop: (line: number, at: number, dropped: Held) => void
@@ -376,15 +385,19 @@ function Line(props: {
   onAddSection: (label: string) => void
   onRemoveSection: () => void
   onAddPhrase: (name: string, tex: string) => void
+  onAddScoreLink: (value: string) => void
   onSetPhrase: (name: string, tex: string) => void
 }) {
   const { line } = props
   const [naming, setNaming] = useState(false)
   const [writingPhrase, setWritingPhrase] = useState(false)
+  const [pickingScore, setPickingScore] = useState(false)
   if (props.phrase) {
     return <PhraseBlock {...props.phrase} tempo={props.tempo} onSet={props.onSetPhrase} onRemove={props.onRemoveSection} />
   }
   if (line.kind === "directive") {
+    const score = /^\{\s*score\s*:\s*(.*?)\s*\}$/.exec(line.raw)
+    if (score) return <ScoreLinkLine value={score[1]!} scoreCharts={props.scoreCharts} onDelete={props.onDelete} />
     const section = /^\{\s*start_of_\w+\s*(?::\s*(.*?))?\s*\}$/.exec(line.raw)
     return section ? (
       <SectionHeading
@@ -427,7 +440,22 @@ function Line(props: {
   }
   return (
     <>
-      <LyricLine {...props} onWritePhrase={() => setWritingPhrase(true)} onName={() => setNaming(true)} />
+      <LyricLine
+        {...props}
+        onWritePhrase={() => setWritingPhrase(true)}
+        onPickScore={() => setPickingScore(true)}
+        onName={() => setNaming(true)}
+      />
+      {pickingScore && (
+        <ScorePicker
+          scoreCharts={props.scoreCharts}
+          onCancel={() => setPickingScore(false)}
+          onSave={(value) => {
+            setPickingScore(false)
+            props.onAddScoreLink(value)
+          }}
+        />
+      )}
       {writingPhrase && (
         <PhraseForm
           name=""
@@ -444,8 +472,24 @@ function Line(props: {
   )
 }
 
+/** A score link line (docs/adr/0004): the bars it draws, with a Delete button above them. */
+function ScoreLinkLine({ value, scoreCharts, onDelete }: { value: string; scoreCharts: ReadonlyArray<ChartInfo>; onDelete: () => void }) {
+  const reading = useMemo(() => readScoreLink(value), [value])
+  const revisionId = "link" in reading ? scoreCharts.find((chart) => chart.id === reading.link.chartId)?.revision_id : undefined
+  return (
+    <div data-pwid="editor-score-link" className="my-2 space-y-1">
+      <div className="flex justify-end">
+        <button data-pwid="line-delete" type="button" onClick={onDelete} aria-label="Delete score link" className={button}>
+          Delete
+        </button>
+      </div>
+      <ScoreLink reading={reading} revisionId={revisionId} />
+    </div>
+  )
+}
+
 /** A lyric line: words to drop chords on, and the line's own buttons. */
-function LyricLine(props: Parameters<typeof Line>[0] & { onWritePhrase: () => void; onName: () => void }) {
+function LyricLine(props: Parameters<typeof Line>[0] & { onWritePhrase: () => void; onPickScore: () => void; onName: () => void }) {
   const { line, index } = props
   if (line.kind !== "lyrics") return null
   return (
@@ -501,6 +545,9 @@ function LyricLine(props: Parameters<typeof Line>[0] & { onWritePhrase: () => vo
         </button>
         <button data-pwid="line-phrase" type="button" onClick={props.onWritePhrase} aria-label="Add a phrase below" className={button}>
           + Phrase
+        </button>
+        <button data-pwid="line-score" type="button" onClick={props.onPickScore} aria-label="Add score bars below" className={button}>
+          + Score
         </button>
         <button data-pwid="line-delete" type="button" onClick={props.onDelete} aria-label="Delete line" className={button}>
           Delete
@@ -642,6 +689,7 @@ function readDrag(event: DragEvent): Held | null {
 /** What a block's handle moves, in words: the line's text, or the section's or phrase's name. */
 function blockLabel(line: DocLine): string {
   if (line.kind === "lyrics") return `line "${line.text.slice(0, 40) || "(empty)"}"`
+  if (directiveName(line) === "score") return "score link"
   const name = anchorLine(line)
   return `${isPhraseStart(directiveName(line)) ? "phrase" : "section"} "${name || "(unnamed)"}"`
 }

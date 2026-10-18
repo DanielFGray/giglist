@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { drawnRange, excerpt, readScoreLink, scoreRevisionsOf, type ExcerptBar, type ScoreLink, type ScoreOutline } from "./score-link"
+import { drawnRange, excerpt, formatScoreLink, readScoreLink, sectionChoices, type ExcerptBar, type ScoreLink, type ScoreOutline } from "./score-link"
 
 const outline: ScoreOutline = {
   tracks: ["Lead Gtr", "Bass"],
@@ -43,13 +43,12 @@ describe("readScoreLink", () => {
   })
 })
 
-describe("scoreRevisionsOf", () => {
-  it("maps each score chart to its latest revision and skips lyrics charts", () => {
-    const map = scoreRevisionsOf([
-      { id: "a", kind: "lyrics", revision_id: "r1" },
-      { id: "b", kind: "score", revision_id: "r2" },
-    ])
-    expect([...map]).toEqual([["b", "r2"]])
+describe("formatScoreLink", () => {
+  it("writes the directive that readScoreLink reads back", () => {
+    const section: ScoreLink = { chartId: "abc", track: "Lead Gtr", range: { section: "Chorus" } }
+    const bars: ScoreLink = { chartId: "abc", track: "Bass", range: { from: 5, to: 8 } }
+    expect(readScoreLink(formatScoreLink(section))).toEqual({ link: section })
+    expect(readScoreLink(formatScoreLink(bars))).toEqual({ link: bars })
   })
 })
 
@@ -73,6 +72,17 @@ describe("drawnRange", () => {
     expect(drawnRange(link({ section: "Chorus" }, "Drums"), outline)).toEqual({ problem: `No track named "Drums" in this score` })
     expect(drawnRange(link({ section: "Bridge" }), outline)).toEqual({ problem: `No section "Bridge" in this score` })
     expect(drawnRange(link({ from: 7, to: 9 }), outline)).toEqual({ problem: "The bars 7-9 run past the score's 8 bars" })
+  })
+})
+
+describe("sectionChoices", () => {
+  it("gives each section its bars and flags a marker that two sections share", () => {
+    const shared: ScoreOutline = { tracks: ["Lead Gtr"], sections: [{ index: 0, marker: "Verse" }, { index: 4, marker: "Chorus" }, { index: 6, marker: "Verse" }], bars: 8 }
+    expect(sectionChoices(shared)).toEqual([
+      { marker: "Verse", first: 0, last: 3, repeated: true },
+      { marker: "Chorus", first: 4, last: 5, repeated: false },
+      { marker: "Verse", first: 6, last: 7, repeated: true },
+    ])
   })
 })
 

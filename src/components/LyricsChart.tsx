@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useState, type CSSProperties } from "react"
+import type { ChartInfo } from "~/api/client"
 import { renderLyrics, type ChartItem, type ChartLine } from "~/charts/lyrics"
 import { numeral, type NumeralDisplay } from "~/charts/numeral"
 import { ChordShapes, type ChordDiagrams } from "./ChordShapes"
@@ -22,7 +23,7 @@ export function LyricsChart({
   chordShapes = false,
   diagrams = "guitar",
   numeralDisplay = "both",
-  scoreRevisions = new Map(),
+  scoreCharts,
 }: {
   source: string
   shownKey: string | null
@@ -36,8 +37,8 @@ export function LyricsChart({
   diagrams?: ChordDiagrams
   /** What to show for each chord: its name, its Roman numeral, or both. Default: both. */
   numeralDisplay?: NumeralDisplay
-  /** The latest revision of each score chart in the song, by the chart's id. Score links draw from it. */
-  scoreRevisions?: ReadonlyMap<string, string>
+  /** The song's score charts. A score link draws the latest revision of the one it names. */
+  scoreCharts: ReadonlyArray<ChartInfo>
 }) {
   const lines = useMemo(() => renderLyrics(source, shownKey), [source, shownKey])
   // The start of the item whose panel is open, or null when none is.
@@ -82,7 +83,7 @@ export function LyricsChart({
           anchor={anchor}
           shownKey={shownKey}
           numeralDisplay={numeralDisplay}
-          scoreRevisions={scoreRevisions}
+          scoreCharts={scoreCharts}
         />
       ))}
     </div>
@@ -99,7 +100,7 @@ function Line({
   anchor,
   shownKey,
   numeralDisplay,
-  scoreRevisions,
+  scoreCharts,
 }: {
   line: ChartLine
   tempo: number | null
@@ -110,7 +111,7 @@ function Line({
   anchor: string
   shownKey: string | null
   numeralDisplay: NumeralDisplay
-  scoreRevisions: ReadonlyMap<string, string>
+  scoreCharts: ReadonlyArray<ChartInfo>
 }) {
   if (line.length === 0) return <div className="h-4" />
   const only = line.length === 1 ? line[0]! : null
@@ -134,7 +135,8 @@ function Line({
     )
   }
   if (only?.kind === "score") {
-    const revisionId = "link" in only.reading ? scoreRevisions.get(only.reading.link.chartId) : undefined
+    const link = "link" in only.reading ? only.reading.link : null
+    const revisionId = link === null ? undefined : scoreCharts.find((chart) => chart.id === link.chartId)?.revision_id
     return (
       <div data-pwid="chart-score-link" className="my-2">
         <ScoreLink reading={only.reading} revisionId={revisionId} />

@@ -313,6 +313,11 @@ export function setPhrase(doc: ChartDoc, lineIndex: number, name: string, tex: s
   ])
 }
 
+/** Puts a score link (docs/adr/0004) below the line at `lineIndex`. `value` is the directive's text after `score:`. */
+export function addScoreLink(doc: ChartDoc, lineIndex: number, value: string): Edit {
+  return insertLineAt(doc, lineIndex + 1, directive("score", value))
+}
+
 /** alphaTex as literal lines. A line that looks like a directive would end the block, so it is indented. */
 function literalLines(tex: string): ReadonlyArray<DocLine> {
   return tex.split("\n").map((text) => ({ kind: "literal", text: /^\{.*\}$/.test(text) ? ` ${text}` : text }))
@@ -346,10 +351,10 @@ function sectionEnd(doc: ChartDoc, start: number): number {
   return end
 }
 
-/** Whether the editor gives the line a handle: a lyric line, or the start of a section. */
+/** Whether the editor gives the line a handle: a lyric line, the start of a section, or a score link. */
 export function hasHandle(doc: ChartDoc, lineIndex: number): boolean {
   const line = doc[lineIndex]
-  return line !== undefined && (line.kind === "lyrics" || isStart(line))
+  return line !== undefined && (line.kind === "lyrics" || isStart(line) || directiveName(line) === "score")
 }
 
 /**

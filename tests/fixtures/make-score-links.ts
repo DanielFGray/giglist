@@ -22,7 +22,7 @@ const tex = [
   bar(""),
   bar("\\rc 2"),
   bar('\\section "Chorus" "Chorus"'),
-  bar('\\section "Verse" "Verse 2"'),
+  bar('\\section "Verse 2" "Verse 2"'),
   bar(""),
 ].join("\n")
 

@@ -31,13 +31,6 @@ export type ScoreOutline = {
 /** The bars a link draws: `track` indexes the outline's tracks; `first` and `last` are 0-based and inclusive. */
 export type DrawnRange = { readonly track: number; readonly first: number; readonly last: number }
 
-/** The latest revision of each score chart in a song, by the chart's id: where a score link draws from. */
-export function scoreRevisionsOf(
-  charts: ReadonlyArray<{ readonly id: string; readonly kind: string; readonly revision_id: string }>,
-): ReadonlyMap<string, string> {
-  return new Map(charts.filter((chart) => chart.kind === "score").map((chart) => [chart.id, chart.revision_id]))
-}
-
 /** Reads a directive's value (the text after `score:`). */
 export function readScoreLink(value: string): ScoreLinkReading {
   const fields = new Map<string, string>()
@@ -58,6 +51,12 @@ export function readScoreLink(value: string): ScoreLinkReading {
   return { link: { chartId, track, range: { from, to } } }
 }
 
+/** A link's directive text (after `score:`): the inverse of readScoreLink. */
+export function formatScoreLink(link: ScoreLink): string {
+  const range = "section" in link.range ? `section="${link.range.section}"` : `bars=${link.range.from}-${link.range.to}`
+  return `chart=${link.chartId} track="${link.track}" ${range}`
+}
+
 /**
  * The bars a link draws in a score. A section runs from its marker's bar up to
  * the bar before the next marker, or to the last bar. A bar range must lie
@@ -70,12 +69,30 @@ export function drawnRange(link: ScoreLink, outline: ScoreOutline): DrawnRange |
   if ("section" in range) {
     const at = outline.sections.findIndex((s) => s.marker === range.section)
     if (at === -1) return { problem: `No section "${range.section}" in this score` }
-    const next = outline.sections[at + 1]
-    return { track, first: outline.sections[at]!.index, last: next ? next.index - 1 : outline.bars - 1 }
+    return { track, ...sectionSpan(outline, at) }
   }
   const { from, to } = range
   if (to > outline.bars) return { problem: `The bars ${from}-${to} run past the score's ${outline.bars} bars` }
   return { track, first: from - 1, last: to - 1 }
+}
+
+/** A section marker's bars, 0-based and inclusive: from its bar to the bar before the next marker, or to the last bar. */
+function sectionSpan(outline: ScoreOutline, at: number): { first: number; last: number } {
+  const next = outline.sections[at + 1]
+  return { first: outline.sections[at]!.index, last: next ? next.index - 1 : outline.bars - 1 }
+}
+
+/**
+ * Each section marker with the bars it covers (0-based, inclusive). A link names a
+ * section by its marker, so a marker used by two sections cannot be linked to
+ * either: `repeated` is set on both, and the bars must be named instead.
+ */
+export function sectionChoices(outline: ScoreOutline): Array<{ marker: string; first: number; last: number; repeated: boolean }> {
+  return outline.sections.map((section, at) => ({
+    marker: section.marker,
+    ...sectionSpan(outline, at),
+    repeated: outline.sections.some((other, i) => i !== at && other.marker === section.marker),
+  }))
 }
 
 /** The fields of an alphaTab bar that an excerpt changes. */
