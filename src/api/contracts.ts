@@ -811,7 +811,8 @@ export const ChartChange = S.Struct({
  */
 export const ChartRevisionInsert = S.Struct({
   parent_id: S.String.check(S.isUUID()),
-  source: S.String.pipe(S.check(S.isMinLength(1)), S.check(S.isMaxLength(200000))),
+  // An empty source is a chart whose last block was deleted; it parses to one empty line.
+  source: S.String.pipe(S.check(S.isMaxLength(200000))),
   changes: S.NullOr(S.Array(ChartChange).pipe(S.check(S.isMaxLength(10000)))),
 })
 

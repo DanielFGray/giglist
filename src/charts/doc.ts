@@ -11,7 +11,7 @@
  * sits, lines joined by newlines; a section start contributes its label. It is
  * derived from the stored text, never stored.
  */
-import { composeChanges, type Change } from "./changes"
+import { composeChanges, rearranged, type Change, type Part } from "./changes"
 import { isLiteralEnd, isLiteralStart, isPhraseStart } from "./lyrics"
 
 export type PlacedChord = { readonly at: number; readonly chord: string }
@@ -203,12 +203,7 @@ export function insertLineAfter(doc: ChartDoc, lineIndex: number): Edit {
 /** Deletes a lyric or literal line with the newline that separates it from its neighbour. */
 export function deleteLine(doc: ChartDoc, lineIndex: number): Edit {
   if (doc[lineIndex]?.kind !== "literal") lyricsLine(doc, lineIndex)
-  const next = doc.filter((_, i) => i !== lineIndex)
-  const start = lineStart(doc, lineIndex)
-  const length = anchorLine(doc[lineIndex]!).length
-  return lineIndex === doc.length - 1 && lineIndex > 0
-    ? { doc: next, changes: [{ from: start - 1, to: start + length, insert: 0 }] }
-    : { doc: next, changes: [{ from: start, to: start + length + 1, insert: 0 }] }
+  return removeLineAt(doc, lineIndex)
 }
 
 /** Renames a section; the label is the anchor text of its start line. */
@@ -324,36 +319,128 @@ function literalLines(tex: string): ReadonlyArray<DocLine> {
 }
 
 /**
- * Moves a section past its neighbouring section (-1 up, 1 down). The text is
- * removed and written again. The insertion records the removed anchor text as
- * its source, so marks inside the moved section follow it.
+ * The lines a handle moves as one: a section from its start line through its
+ * end line (or through the line before the next section, when it has no end),
+ * with the loose lines after its end line, up to the next section: any line
+ * that is not a section start (comments, blank lines, lyrics) belongs to the
+ * section above. A line inside a tab or a phrase
+ * stands for that whole section. Any other line is a block of its own.
  */
-export function moveSection(doc: ChartDoc, lineIndex: number, delta: -1 | 1): Edit {
-  const block = sectionBlock(doc, lineIndex)
-  const starts = doc.flatMap((l, i) => (isStart(l) ? [i] : []))
-  const neighbour = starts[starts.indexOf(lineIndex) + delta]
-  if (neighbour === undefined) return { doc, changes: [] }
-  const lines = doc.slice(block.start, block.end + 1)
-  const other = sectionBlock(doc, neighbour)
-  const count = lines.length
-  const edit = chain(doc, [
-    ...lines.map(() => (d: ChartDoc) => removeLineAt(d, block.start)),
-    ...lines.map((line, i) => (d: ChartDoc) => {
-      const base = delta === 1 ? other.end + 1 - count : other.start
-      return insertLineAt(d, base + i, line)
-    }),
-  ])
-  const blockStart = anchorOffset(doc, block.start)
-  const blockEnd = anchorOffset(doc, block.end + 1)
-  const lastBlock = blockEnd === anchorText(doc).length
-  const destination = anchorOffset(doc, delta === 1 ? other.end + 1 : other.start) - (lastBlock && delta === -1 ? 1 : 0)
-  const atEnd = destination === anchorText(doc).length
-  const sourceStart = atEnd || (lastBlock && delta === -1) ? blockStart - 1 : blockStart
-  const sourceEnd = atEnd && delta === 1 ? blockEnd - 1 : blockEnd
-  const deleteStart = sourceStart
-  const move = { from: deleteStart, to: sourceEnd, insert: 0 }
-  const copy = { from: destination, to: destination, insert: sourceEnd - sourceStart, source: sourceStart }
-  return { doc: edit.doc, changes: delta === 1 ? [move, copy] : [copy, move] }
+export function blockRange(doc: ChartDoc, lineIndex: number): { start: number; end: number } {
+  const open = enclosingSection(doc, lineIndex)
+  const start = open && isLiteralStart(`start_of_${open.kind}`) ? open.start : lineIndex
+  const line = doc[start]
+  if (!line) throw new Error(`line ${lineIndex} is not in the chart`)
+  if (!isStart(line)) return { start, end: start }
+  let end = sectionEnd(doc, start)
+  while (end + 1 < doc.length && !isStart(doc[end + 1]!)) end++
+  return { start, end }
+}
+
+/** The last line of the section that starts at `start`: its end line, or the line before the next section when it has none. */
+function sectionEnd(doc: ChartDoc, start: number): number {
+  const block = sectionBlock(doc, start)
+  if (block.closed) return block.end
+  let end = start
+  while (end + 1 < doc.length && !isStart(doc[end + 1]!)) end++
+  return end
+}
+
+/** Whether the editor gives the line a handle: a lyric line, or the start of a section. */
+export function hasHandle(doc: ChartDoc, lineIndex: number): boolean {
+  const line = doc[lineIndex]
+  return line !== undefined && (line.kind === "lyrics" || isStart(line))
+}
+
+/**
+ * The two slots a drop on the line's row can mean: before the row, or after it.
+ * A section's heading is followed by the section's first line; a tab or a phrase,
+ * which nothing can enter, is followed by whatever comes after its end line.
+ */
+export function dropSlots(doc: ChartDoc, lineIndex: number): { before: number; after: number } {
+  const { start } = blockRange(doc, lineIndex)
+  if (!isStart(doc[start]!)) return { before: start, after: start + 1 }
+  return { before: start, after: isLiteralStart(directiveName(doc[start]!)) ? sectionEnd(doc, start) + 1 : start + 1 }
+}
+
+/**
+ * Whether the block at `lineIndex` can move to stand before line `destination`
+ * (`doc.length` is the end). It cannot stay where it is, go inside a tab or a
+ * phrase, or, for a section, go inside another section.
+ */
+export function canMoveBlockTo(doc: ChartDoc, lineIndex: number, destination: number): boolean {
+  const { start, end } = blockRange(doc, lineIndex)
+  if (destination < 0 || destination > doc.length || (destination >= start && destination <= end + 1)) return false
+  const open = enclosingSection(doc, destination)
+  if (open && isLiteralStart(`start_of_${open.kind}`)) return false
+  if (!isStart(doc[start]!)) return true
+  return doc.every((line, i) => !isStart(line) || i === start || destination <= i || destination > sectionEnd(doc, i))
+}
+
+/**
+ * Moves the block at `lineIndex` to stand before line `destination`. The text
+ * is removed and written again; the insertion records the removed anchor text as
+ * its source, so marks inside the block follow it.
+ */
+export function moveBlockTo(doc: ChartDoc, lineIndex: number, destination: number): Edit {
+  if (!canMoveBlockTo(doc, lineIndex, destination)) return { doc, changes: [] }
+  const { start, end } = blockRange(doc, lineIndex)
+  const indexes = doc.map((_, i) => i)
+  const block = indexes.slice(start, end + 1)
+  const rest = indexes.filter((i) => i < start || i > end)
+  const at = destination < start ? destination : destination - block.length
+  return reorder(doc, [...rest.slice(0, at), ...block, ...rest.slice(at)])
+}
+
+/**
+ * Moves a block one step (-1 up, 1 down). A section steps past its neighbouring
+ * section. A line steps past its neighbouring line, or across a section's start or
+ * end line, which takes it out of or into that section; a tab or a phrase beside
+ * it counts as one line. A step and the opposite step restore the chart.
+ */
+export function moveBlock(doc: ChartDoc, lineIndex: number, delta: -1 | 1): Edit {
+  const { start, end } = blockRange(doc, lineIndex)
+  if (isStart(doc[start]!)) {
+    const starts = doc.flatMap((l, i) => (isStart(l) ? [i] : []))
+    const neighbour = starts[starts.indexOf(start) + delta]
+    if (neighbour === undefined) return { doc, changes: [] }
+    return moveBlockTo(doc, start, delta === 1 ? blockRange(doc, neighbour).end + 1 : neighbour)
+  }
+  const beside = doc[delta === 1 ? end + 1 : start - 1]
+  if (!beside) return { doc, changes: [] }
+  const name = directiveName(beside)
+  if (delta === 1) return moveBlockTo(doc, start, (isLiteralStart(name) ? sectionEnd(doc, end + 1) : end + 1) + 1)
+  return moveBlockTo(doc, start, isLiteralEnd(name) ? blockRange(doc, start - 1).start : start - 1)
+}
+
+/** Writes a copy of the block at `lineIndex` right after it. The copy is new text, with no source. */
+export function duplicateBlock(doc: ChartDoc, lineIndex: number): Edit {
+  const { start, end } = blockRange(doc, lineIndex)
+  const lines = doc.slice(start, end + 1)
+  return chain(doc, lines.map((line, i) => (d: ChartDoc) => insertLineAt(d, end + 1 + i, line)))
+}
+
+/** Deletes the block at `lineIndex`: for a section, its lines too. */
+export function deleteBlock(doc: ChartDoc, lineIndex: number): Edit {
+  const { start, end } = blockRange(doc, lineIndex)
+  return chain(doc, Array.from({ length: end - start + 1 }, () => (d: ChartDoc) => removeLineAt(d, start)))
+}
+
+/**
+ * The chart with its lines in the order of `order`, each an index of `doc`, and the change set that moves the text.
+ * The text has no newline at its end. A line that stops being last needs one, and takes the newline of the
+ * line that becomes last, so no newline is new text and a step and its inverse leave no change.
+ */
+function reorder(doc: ChartDoc, order: ReadonlyArray<number>): Edit {
+  const starts = doc.map((_, i) => lineStart(doc, i))
+  const newline = (old: number): Part => ({ from: starts[old]! + anchorLine(doc[old]!).length, n: 1 })
+  const lastLine = doc.length - 1
+  const parts = order.flatMap((old, position): Array<Part> => {
+    const text = { from: starts[old]!, n: anchorLine(doc[old]!).length }
+    if (position === order.length - 1) return [text]
+    return [text, newline(old === lastLine ? order.at(-1)! : old)]
+  })
+  return { doc: order.map((old) => doc[old]!), changes: rearranged(anchorText(doc).length, parts) }
 }
 
 /** The section a line sits in: its label, or null before the first section. */
@@ -363,11 +450,6 @@ export function sectionLabel(doc: ChartDoc, lineIndex: number): string | null {
     if (line.kind === "directive" && /^\{\s*start_of_/.test(line.raw)) return anchorLine(line)
   }
   return null
-}
-
-function anchorOffset(doc: ChartDoc, lineIndex: number): number {
-  if (lineIndex >= doc.length) return anchorText(doc).length
-  return doc.slice(0, lineIndex).reduce((length, line) => length + anchorLine(line).length + 1, 0)
 }
 
 // ---------------------------------------------------------------------------
@@ -420,9 +502,13 @@ function insertLineAt(doc: ChartDoc, index: number, line: DocLine): Edit {
 
 /** Removes the line at `index` with the newline that separates it from its neighbour. */
 function removeLineAt(doc: ChartDoc, index: number): Edit {
+  const length = anchorLine(doc[index]!).length
+  // The chart never holds no lines: removing the last one leaves an empty lyric line, which is what "" parses to.
+  if (doc.length === 1) {
+    return { doc: [{ kind: "lyrics", text: "", chords: [] }], changes: length > 0 ? [{ from: 0, to: length, insert: 0 }] : [] }
+  }
   const next = doc.filter((_, i) => i !== index)
   const start = lineStart(doc, index)
-  const length = anchorLine(doc[index]!).length
   return index === doc.length - 1 && index > 0
     ? { doc: next, changes: [{ from: start - 1, to: start + length, insert: 0 }] }
     : { doc: next, changes: [{ from: start, to: start + length + 1, insert: 0 }] }

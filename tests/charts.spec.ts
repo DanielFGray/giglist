@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs"
-import type { APIRequestContext, Page } from "@playwright/test"
+import type { APIRequestContext, Locator, Page } from "@playwright/test"
 import type { Change } from "../src/charts/changes"
 import { parseDoc, placeChord, serializeDoc } from "../src/charts/doc"
 import { test, expect, getPw, openTool } from "./helpers"
@@ -452,6 +452,13 @@ const createBareChart = async (page: Page, songId: string) => {
 
 const segment = (page: Page, text: string) => getPw(page, "editor-segment").filter({ hasText: text })
 
+/** The handle of the block whose first row is `row`: the row's wrapper owns it. */
+const handleOf = (row: Locator) => row.first().locator("xpath=ancestor::*[@data-line][1]").locator("[data-pwid=block-handle]")
+const headingRow = (page: Page, label: string) => getPw(page, "editor-section").filter({ hasText: label }).first()
+/** The words of each lyric line in the editor, without the chords. */
+const lyricRows = (page: Page) =>
+  getPw(page, "editor-line").evaluateAll((rows) => rows.map((row) => [...row.querySelectorAll("[data-pwid=editor-lyric]")].map((s) => s.textContent).join("").trim()))
+
 test.describe("chart editor", () => {
   test("drops chords onto words, undoes one, and saves a revision", async ({ page, testing }) => {
     await testing.login()
@@ -545,7 +552,8 @@ test.describe("chart editor", () => {
     // Move the bridge below the chorus, then take the heading away again.
     const bridge = () => getPw(page, "editor-section").filter({ hasText: "Bridge" }).locator("xpath=..")
     await bridge().hover()
-    await bridge().getByRole("button", { name: "Move section down" }).click()
+    await handleOf(headingRow(page, "Bridge")).click()
+        await getPw(page, "block-move-down").click()
     await expect.poll(headings).toEqual(["Verse 1", "Chorus", "Bridge", "Verse 2", "Chorus"])
     await bridge().hover()
     await bridge().getByRole("button", { name: "Remove section" }).click()
@@ -556,6 +564,139 @@ test.describe("chart editor", () => {
     await expect(getPw(page, "chart-editor")).toHaveCount(0, { timeout: 10000 })
     await expect(getPw(page, "chart-section")).toHaveText(["Verse 1", "Chorus", "Verse 2", "Chorus"])
     expect(await shownLyrics(page)).toContain("Was blind, but now I see")
+  })
+
+  test("reorders, duplicates and deletes a line and a section from the handle menu", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, songId } = await createSong(page)
+    await createChart(page.request, songId)
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    await getPw(page, "chart-edit").click()
+    const headings = () => getPw(page, "editor-section").allTextContents()
+    await expect.poll(headings).toEqual(["Verse 1", "Chorus", "Verse 2", "Chorus"])
+
+    // A section: the second verse steps above the first chorus.
+    await handleOf(headingRow(page, "Verse 2")).click()
+    await getPw(page, "block-move-up").click()
+    await expect.poll(headings).toEqual(["Verse 1", "Verse 2", "Chorus", "Chorus"])
+    await handleOf(headingRow(page, "Verse 2")).click()
+    await getPw(page, "block-duplicate").click()
+    await expect.poll(headings).toEqual(["Verse 1", "Verse 2", "Verse 2", "Chorus", "Chorus"])
+    await handleOf(getPw(page, "editor-section").filter({ hasText: "Verse 2" }).nth(1)).click()
+    await getPw(page, "block-delete").click()
+    await expect.poll(headings).toEqual(["Verse 1", "Verse 2", "Chorus", "Chorus"])
+
+    // A line: the first line steps below the second, and the menu offers no step above the first.
+    const first = await lyricRows(page)
+    const row = getPw(page, "editor-line").first()
+    await handleOf(row).click()
+    await expect(getPw(page, "block-move-up")).toBeEnabled()
+    await getPw(page, "block-move-down").click()
+    await expect.poll(() => lyricRows(page).then((rows) => rows.slice(0, 2))).toEqual([first[1], first[0]])
+    await getPw(page, "editor-undo").click()
+    await expect.poll(() => lyricRows(page).then((rows) => rows.slice(0, 2))).toEqual([first[0], first[1]])
+
+    // The menu is a keyboard menu: the first item takes focus, arrows move, Escape returns to the handle.
+    await handleOf(row).click()
+    await expect(getPw(page, "block-move-up")).toBeFocused()
+    await page.keyboard.press("ArrowDown")
+    await expect(getPw(page, "block-move-down")).toBeFocused()
+    await page.keyboard.press("End")
+    await expect(getPw(page, "block-delete")).toBeFocused()
+    await page.keyboard.press("Escape")
+    await expect(getPw(page, "block-menu")).toHaveCount(0)
+    await expect(handleOf(row)).toBeFocused()
+
+    // Saving keeps the words; the section order is the chart's.
+    await getPw(page, "editor-save").click()
+    await expect(getPw(page, "chart-editor")).toHaveCount(0, { timeout: 10000 })
+    await expect(getPw(page, "chart-section")).toHaveText(["Verse 1", "Verse 2", "Chorus", "Chorus"])
+  })
+
+  test("saves a chart whose every block was deleted", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, songId } = await createSong(page)
+    const made = await page.request.post("/api/charts", { data: { song_id: songId, name: "One line", written_key: null, pasted: "Only line" } })
+    expect(made.ok(), await made.text()).toBe(true)
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    await getPw(page, "chart-edit").click()
+    await handleOf(getPw(page, "editor-line").first()).click()
+    await getPw(page, "block-delete").click()
+    await getPw(page, "editor-save").click()
+    await expect(getPw(page, "chart-editor")).toHaveCount(0, { timeout: 10000 })
+    const [chart] = await (await page.request.get(`/api/charts/song/${songId}`)).json()
+    expect(chart.source).toBe("")
+  })
+
+  for (const width of [390, 1280]) {
+    test(`reorders a section and a line by dragging the handle at ${width}px`, async ({ page, testing }) => {
+      // Tall enough for the whole chart: a Playwright mouse drag does not scroll the page.
+      await page.setViewportSize({ width, height: 2400 })
+      await testing.login()
+      const { bandId, songId } = await createSong(page)
+      await createChart(page.request, songId)
+      await page.goto(`/band/${bandId}/songs/${songId}`)
+      await getPw(page, "chart-edit").click()
+      const headings = () => getPw(page, "editor-section").allTextContents()
+      await expect.poll(headings).toEqual(["Verse 1", "Chorus", "Verse 2", "Chorus"])
+
+      /** Presses the handle, moves in steps to `y` of the row's wrapper (0 top, 1 bottom) and releases. */
+      const drag = async (handle: ReturnType<typeof handleOf>, target: ReturnType<typeof getPw>, y: number) => {
+        await target.first().scrollIntoViewIfNeeded()
+        const from = (await handle.boundingBox())!
+        const to = (await target.first().locator("xpath=ancestor::*[@data-line][1]").boundingBox())!
+        await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
+        await page.mouse.down()
+        await page.mouse.move(to.x + 60, to.y + to.height * y, { steps: 8 })
+        await expect(page.locator("[data-drop]")).toHaveCount(1)
+        await page.mouse.up()
+      }
+
+      // The second verse, lines and all, goes above the first.
+      await drag(handleOf(headingRow(page, "Verse 2")), headingRow(page, "Verse 1"), 0.1)
+      await expect.poll(headings).toEqual(["Verse 2", "Verse 1", "Chorus", "Chorus"])
+      const lyrics = await lyricRows(page)
+      expect(lyrics[0]).toContain("Twas grace")
+
+      // A line goes to the lower half of the next one.
+      const rows = getPw(page, "editor-line")
+      await drag(handleOf(rows.first()), rows.nth(1), 0.9)
+      await expect.poll(() => lyricRows(page).then((all) => all.slice(0, 2))).toEqual([lyrics[1], lyrics[0]])
+
+      // A chord still drags onto a word.
+      const before = await getPw(page, "placed-chord").count()
+      await getPw(page, "placed-chord").first().dragTo(segment(page, "saved"))
+      await expect(getPw(page, "placed-chord")).toHaveCount(before)
+
+      await getPw(page, "editor-save").click()
+      await expect(getPw(page, "chart-editor")).toHaveCount(0, { timeout: 10000 })
+      await expect(getPw(page, "chart-section")).toHaveText(["Verse 2", "Verse 1", "Chorus", "Chorus"])
+    })
+  }
+
+  test("Escape cancels a handle drag and nothing moves", async ({ page, testing }) => {
+    await page.setViewportSize({ width: 1280, height: 2400 })
+    await testing.login()
+    const { bandId, songId } = await createSong(page)
+    await createChart(page.request, songId)
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    await getPw(page, "chart-edit").click()
+    const headings = () => getPw(page, "editor-section").allTextContents()
+    await expect.poll(headings).toEqual(["Verse 1", "Chorus", "Verse 2", "Chorus"])
+
+    const from = (await handleOf(headingRow(page, "Verse 2")).boundingBox())!
+    const to = (await headingRow(page, "Verse 1").locator("xpath=ancestor::*[@data-line][1]").boundingBox())!
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(to.x + 60, to.y + 2, { steps: 8 })
+    await expect(page.locator("[data-drop]")).toHaveCount(1)
+    await page.keyboard.press("Escape")
+    await expect(page.locator("[data-drop]")).toHaveCount(0)
+    await page.mouse.up()
+    // The release after the cancel neither drops the block nor opens the menu.
+    await expect(getPw(page, "block-menu")).toHaveCount(0)
+    await expect.poll(headings).toEqual(["Verse 1", "Chorus", "Verse 2", "Chorus"])
+    await expect(getPw(page, "editor-undo")).toBeDisabled()
   })
 
   test("copies a chart as chords over lyrics in the shown key, and pasting it back makes the same chart", async ({ page, context, testing }) => {

@@ -17,6 +17,22 @@ export function composeChanges(first: ReadonlyArray<Change>, second: ReadonlyArr
   return fromPieces(composePieces(toPieces(first), toPieces(second)))
 }
 
+/** A stretch of a rearranged text: a copy of `[from, from + n)` of the earlier text, or `n` new characters when `from` is absent. */
+export type Part = { readonly n: number; readonly from?: number }
+
+/**
+ * The change set for a later text made of `parts`, in order, from an earlier
+ * text of `length` characters. Earlier text that no part copies is deleted,
+ * and a part that copies text from before the one before it is a move with its
+ * `source`.
+ */
+export function rearranged(length: number, parts: ReadonlyArray<Part>): Array<Change> {
+  const pieces: Array<Piece> = []
+  for (const part of parts) if (part.n > 0) push(pieces, { n: part.n, from: part.from })
+  pieces.push({ n: Infinity, from: length })
+  return fromPieces(pieces)
+}
+
 /** Whether `changes` is a valid change set: sorted, without overlap, with no empty change. */
 export function isChangeSet(changes: ReadonlyArray<Change>): boolean {
   let end = 0

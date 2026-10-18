@@ -1,11 +1,14 @@
-import { useMemo, useRef, useState, type DragEvent } from "react"
+import { useEffect, useMemo, useRef, useState, type DragEvent } from "react"
 import { charts, type ChartInfo } from "~/api/client"
 import { composeChanges } from "~/charts/changes"
 import {
-  addPhrase, addSection, deleteLine, directiveName, editLine, inPhrase, insertLineAfter, moveChord, moveSection, parseDoc, phraseAt, placeChord,
-  removeChord, removeSection, renameSection, segments, serializeDoc, setPhrase, type DocLine, type Edit,
+  addPhrase, addSection, anchorLine, blockRange, canMoveBlockTo, deleteBlock, deleteLine, directiveName, dropSlots, duplicateBlock, editLine, hasHandle, inPhrase,
+  insertLineAfter, moveBlock, moveBlockTo, moveChord, parseDoc, phraseAt, placeChord, removeChord, removeSection, renameSection, segments, serializeDoc,
+  setPhrase, type DocLine, type Edit,
 } from "~/charts/doc"
 import { isPhraseStart, isTabStart, suggestedChords } from "~/charts/lyrics"
+import { BlockHandle, type Point } from "./BlockHandle"
+import { slotUnder, type DropRow, type DropSlot } from "./drop-slot"
 import { errorMessage } from "./form"
 import { Phrase } from "./Phrase"
 import { PhraseForm } from "./PhraseForm"
@@ -14,6 +17,13 @@ import { PhraseForm } from "./PhraseForm"
 type Held = { chord: string; from?: { line: number; chord: number } }
 
 const DRAG_TYPE = "application/x-setlist-chord"
+
+/** A block lifted by its handle, and the slot the pointer is over, if the block may go there. */
+type Drag = { block: number; over: DropSlot | null }
+
+/** While dragging a block, a pointer this close to the top or bottom of the window scrolls the page. */
+const EDGE = 70
+const SCROLL_STEP = 14
 
 const button =
   "px-3 py-1.5 rounded-md border border-[var(--color-border-subtle)] text-xs text-zinc-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
@@ -41,6 +51,8 @@ export function ChartEditor({
   const [held, setHeld] = useState<Held | null>(null)
   const [custom, setCustom] = useState("")
   const [editingLine, setEditingLine] = useState<number | null>(null)
+  const [drag, setDrag] = useState<Drag | null>(null)
+  const pointer = useRef<Point | null>(null)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -60,6 +72,47 @@ export function ChartEditor({
     apply(dropped.from ? moveChord(doc, dropped.from, { line, at }) : placeChord(doc, line, at, dropped.chord))
     setHeld(dropped.from ? null : held)
   }
+
+  const liftedRange = drag ? blockRange(doc, drag.block) : null
+
+  /** The slot under the pointer for the block at `block`, if the block may go there. */
+  const slotAt = (block: number, point: Point): Drag["over"] => {
+    const rows = [...document.querySelectorAll<HTMLElement>("[data-before]")].map((row): DropRow => {
+      const { left, right, top, bottom } = row.getBoundingClientRect()
+      return { line: Number(row.dataset.line), before: Number(row.dataset.before), after: Number(row.dataset.after), left, right, top, bottom }
+    })
+    const over = slotUnder(rows, point)
+    return over && canMoveBlockTo(doc, block, over.slot) ? over : null
+  }
+
+  const dragBlock = (block: number, point: Point) => {
+    pointer.current = point
+    setDrag({ block, over: slotAt(block, point) })
+  }
+
+  const dropBlock = (block: number, point: Point | null) => {
+    const over = point ? slotAt(block, point) : null
+    pointer.current = null
+    setDrag(null)
+    if (over) apply(moveBlockTo(doc, block, over.slot))
+  }
+
+  // A touch drag cannot scroll the page itself, so while a block is held near the top or bottom
+  // edge the page scrolls, even when the pointer is still. The slot under the pointer changes as it scrolls.
+  const heldBlock = drag?.block
+  useEffect(() => {
+    if (heldBlock === undefined) return
+    const id = setInterval(() => {
+      const point = pointer.current
+      if (!point) return
+      if (point.y < EDGE) window.scrollBy(0, -SCROLL_STEP)
+      else if (point.y > window.innerHeight - EDGE) window.scrollBy(0, SCROLL_STEP)
+      else return
+      setDrag({ block: heldBlock, over: slotAt(heldBlock, point) })
+    }, 16)
+    return () => clearInterval(id)
+  })
+
 
   const save = async () => {
     setPending(true)
@@ -119,37 +172,70 @@ export function ChartEditor({
       </p>
 
       <div className="font-mono text-sm leading-tight">
-        {doc.map((line, index) => (
-          <Line
-            key={index}
-            line={line}
-            index={index}
-            phrase={line.kind === "directive" && isPhraseStart(directiveName(line)) ? phraseAt(doc, index) : null}
-            hidden={line.kind === "literal" && inPhrase(doc, index)}
-            tempo={tempo}
-            held={held}
-            editing={editingLine === index}
-            onDrop={dropOn}
-            onHold={setHeld}
-            onEditStart={() => setEditingLine(index)}
-            onEditEnd={(text) => {
-              setEditingLine(null)
-              if (text !== null) apply(editLine(doc, index, text))
-            }}
-            onInsertAfter={() => {
-              const edit = insertLineAfter(doc, index)
-              apply(edit)
-              setEditingLine(index + 1)
-            }}
-            onDelete={() => apply(deleteLine(doc, index))}
-            onRename={(label) => apply(renameSection(doc, index, label))}
-            onAddSection={(label) => apply(addSection(doc, index, label))}
-            onRemoveSection={() => apply(removeSection(doc, index))}
-            onMoveSection={(delta) => apply(moveSection(doc, index, delta))}
-            onAddPhrase={(name, tex) => apply(addPhrase(doc, index, name, tex))}
-            onSetPhrase={(name, tex) => apply(setPhrase(doc, index, name, tex))}
-          />
-        ))}
+        {doc.map((line, index) => {
+          const hidden = line.kind === "literal" && inPhrase(doc, index)
+          const handled = hasHandle(doc, index)
+          if (hidden || (!handled && line.kind !== "literal")) return null
+          const { before, after } = dropSlots(doc, index)
+          const lifted = liftedRange !== null && index >= liftedRange.start && index <= liftedRange.end
+          return (
+            <div
+              key={index}
+              data-line={index}
+              data-before={before}
+              data-after={after}
+              data-drop={drag?.over?.line === index ? drag.over.side : undefined}
+              className={`relative pl-7 ${lifted ? "opacity-40" : ""} data-[drop=before]:shadow-[0_-2px_0_var(--color-amber-accent)] data-[drop=after]:shadow-[0_2px_0_var(--color-amber-accent)]`}
+            >
+              {handled && editingLine !== index && (
+                <BlockHandle
+                  label={blockLabel(line)}
+                  deleteLabel={line.kind === "lyrics" ? "Delete" : "Delete section and lines"}
+                  canMove={(delta) => moveBlock(doc, index, delta).changes.length > 0}
+                  onMove={(delta) => apply(moveBlock(doc, index, delta))}
+                  onDuplicate={() => apply(duplicateBlock(doc, index))}
+                  onDelete={() => apply(deleteBlock(doc, index))}
+                  onDrag={(point) => dragBlock(index, point)}
+                  onDrop={(point) => dropBlock(index, point)}
+                />
+              )}
+              <Line
+                line={line}
+                index={index}
+                phrase={line.kind === "directive" && isPhraseStart(directiveName(line)) ? phraseAt(doc, index) : null}
+                tempo={tempo}
+                held={held}
+                editing={editingLine === index}
+                onDrop={dropOn}
+                onHold={setHeld}
+                onEditStart={() => setEditingLine(index)}
+                onEditEnd={(text) => {
+                  setEditingLine(null)
+                  if (text !== null) apply(editLine(doc, index, text))
+                }}
+                onInsertAfter={() => {
+                  const edit = insertLineAfter(doc, index)
+                  apply(edit)
+                  setEditingLine(index + 1)
+                }}
+                onDelete={() => apply(deleteLine(doc, index))}
+                onRename={(label) => apply(renameSection(doc, index, label))}
+                onAddSection={(label) => apply(addSection(doc, index, label))}
+                onRemoveSection={() => apply(removeSection(doc, index))}
+                onAddPhrase={(name, tex) => apply(addPhrase(doc, index, name, tex))}
+                onSetPhrase={(name, tex) => apply(setPhrase(doc, index, name, tex))}
+              />
+            </div>
+          )
+        })}
+        {/* The slot after the last line, which a block dragged to the end of the chart lands on. */}
+        <div
+          data-line={doc.length}
+          data-before={doc.length}
+          data-after={doc.length}
+          data-drop={drag?.over?.line === doc.length ? "before" : undefined}
+          className="h-8 data-[drop=before]:shadow-[0_-2px_0_var(--color-amber-accent)]"
+        />
       </div>
 
       {error && <div data-pwid="editor-error" className="text-sm text-red-400">{error}</div>}
@@ -224,8 +310,6 @@ function Line(props: {
   index: number
   /** Set on a phrase's start line, which draws the whole phrase. */
   phrase: { name: string; tex: string } | null
-  /** A line of a phrase's notation: the phrase's start line draws it. */
-  hidden: boolean
   tempo: number | null
   held: Held | null
   editing: boolean
@@ -238,14 +322,12 @@ function Line(props: {
   onRename: (label: string) => void
   onAddSection: (label: string) => void
   onRemoveSection: () => void
-  onMoveSection: (delta: -1 | 1) => void
   onAddPhrase: (name: string, tex: string) => void
   onSetPhrase: (name: string, tex: string) => void
 }) {
   const { line } = props
   const [naming, setNaming] = useState(false)
   const [writingPhrase, setWritingPhrase] = useState(false)
-  if (props.hidden) return null
   if (props.phrase) {
     return <PhraseBlock {...props.phrase} tempo={props.tempo} onSet={props.onSetPhrase} onRemove={props.onRemoveSection} />
   }
@@ -257,7 +339,6 @@ function Line(props: {
         tab={isTabStart(directiveName(line))}
         onRename={props.onRename}
         onRemove={props.onRemoveSection}
-        onMove={props.onMoveSection}
       />
     ) : null
   }
@@ -428,14 +509,12 @@ function SectionHeading({
   tab,
   onRename,
   onRemove,
-  onMove,
 }: {
   label: string
   /** A tab section: removing it removes its tab lines too. */
   tab: boolean
   onRename: (label: string) => void
   onRemove: () => void
-  onMove: (delta: -1 | 1) => void
 }) {
   const [editing, setEditing] = useState(false)
   if (editing) {
@@ -462,12 +541,6 @@ function SectionHeading({
         {label || (tab ? "Tab" : "Section")}
       </button>
       <span className="flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
-        <button data-pwid="section-move-up" type="button" onClick={() => onMove(-1)} aria-label="Move section up" className={button}>
-          ↑
-        </button>
-        <button data-pwid="section-move-down" type="button" onClick={() => onMove(1)} aria-label="Move section down" className={button}>
-          ↓
-        </button>
         <button data-pwid="section-remove" type="button" onClick={onRemove} aria-label={tab ? "Remove tab" : "Remove section"} className={button}>
           {tab ? "Remove tab" : "Remove section"}
         </button>
@@ -511,4 +584,11 @@ function readDrag(event: DragEvent): Held | null {
   event.preventDefault()
   const raw = event.dataTransfer.getData(DRAG_TYPE)
   return raw ? (JSON.parse(raw) as Held) : null
+}
+
+/** What a block's handle moves, in words: the line's text, or the section's or phrase's name. */
+function blockLabel(line: DocLine): string {
+  if (line.kind === "lyrics") return `line "${line.text.slice(0, 40) || "(empty)"}"`
+  const name = anchorLine(line)
+  return `${isPhraseStart(directiveName(line)) ? "phrase" : "section"} "${name || "(unnamed)"}"`
 }
