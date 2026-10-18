@@ -4,7 +4,7 @@ status: proposed
 
 # Lyrics charts store ChordPro text; scores store the uploaded file
 
-A song has many charts. A lyrics chart (chords over lyrics) is stored as ChordPro text and rendered with ChordSheetJS. ChordPro is an internal format: players paste or type chords over lyrics and never see it. A score is stored as the Guitar Pro file the player uploaded, byte for byte, and rendered with alphaTab.
+A song has many charts. A lyrics chart (chords over lyrics) is stored as ChordPro text and rendered with ChordSheetJS. Players paste or type chords over lyrics, and that is the text they read and edit. ChordPro directives and alphaTex appear in it only for what chords over lyrics cannot say: a phrase (docs/adr/0003), a comment, or another directive. A power user can write them there, and a plain chart shows none. A score is stored as the Guitar Pro file the player uploaded, byte for byte, and rendered with alphaTab.
 
 We store the original file because alphaTab cannot write any format that keeps a Guitar Pro score unchanged. Measured on 223 real files, comparing every beat's duration and notes after an export and re-import:
 

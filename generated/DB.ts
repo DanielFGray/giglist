@@ -134,7 +134,7 @@ export interface AppPublicChartRevisions {
   id: Generated<string>;
   parent_id: string | null;
   /**
-   * ChordPro text of a lyrics chart. Internal format; players never see it.
+   * ChordPro text of a lyrics chart. Players edit it as chords over lyrics; directives and alphaTex pass through as written.
    */
   source: string | null;
 }

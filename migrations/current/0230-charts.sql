@@ -62,7 +62,7 @@ create index idx_chart_revisions_chart on app_public.chart_revisions (chart_id, 
 comment on table app_public.chart_revisions is
   E'One saved version of a chart. Immutable: an edit inserts a new revision.';
 comment on column app_public.chart_revisions.source is
-  E'ChordPro text of a lyrics chart. Internal format; players never see it.';
+  E'ChordPro text of a lyrics chart. Players edit it as chords over lyrics; directives and alphaTex pass through as written.';
 comment on column app_public.chart_revisions.file_key is
   E'Storage key of the uploaded Guitar Pro file of a score, kept byte for byte.';
 comment on column app_public.chart_revisions.changes is

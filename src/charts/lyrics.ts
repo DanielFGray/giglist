@@ -1,9 +1,10 @@
 /**
  * Lyrics charts: chords placed over words.
  *
- * A lyrics chart is stored as ChordPro text, an internal format players never
- * see (docs/adr/0002). Players paste chords over lyrics; `importPasted` turns
- * that into the stored text. `renderLyrics` turns stored text into plain data
+ * A lyrics chart is stored as ChordPro text (docs/adr/0002). Players paste
+ * chords over lyrics; `importPasted` turns that into the stored text, and
+ * `exportChords` turns it back. Directives and alphaTex pass through both as
+ * written, so a power user can write them. `renderLyrics` turns stored text into plain data
  * a view can draw, transposed to the key the player needs.
  *
  * Pure and free of the DOM, so the server and the browser share it.
