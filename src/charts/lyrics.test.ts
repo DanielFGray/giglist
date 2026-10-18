@@ -302,7 +302,7 @@ describe("round trip from doc edits", () => {
 
 describe("isChordName", () => {
   test("accepts names ChordSheetJS reads as a chord", () => {
-    for (const name of ["F#m7", "C/E", "Bb", "Dsus4", "Am(add9)"]) expect(isChordName(name)).toBe(true)
+    for (const name of ["F#m7", "C/E", "Bb", "Dsus4", "Am(add9)", "N.C.", "NC"]) expect(isChordName(name)).toBe(true)
   })
 
   test("refuses names that would change the line around them or are not chords", () => {

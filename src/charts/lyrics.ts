@@ -142,8 +142,11 @@ export function suggestedChords(key: string): ReadonlyArray<string> {
  */
 export function isChordName(name: string): boolean {
   if (name === "" || /[[\]\s\p{Cc}]/u.test(name)) return false
-  return Chord.parse(name) !== null
+  return NO_CHORD.test(name) || Chord.parse(name) !== null
 }
+
+/** No chord on this beat. ChordSheetJS does not parse it, so the chart reader and the sheet accept it by spelling. */
+const NO_CHORD = /^N\.?C\.?$/
 function toItem(item: unknown, start: number, end: number): ReadonlyArray<ChartItem> {
   if (item instanceof ChordLyricsPair) {
     const chord = item.chords.trim()
