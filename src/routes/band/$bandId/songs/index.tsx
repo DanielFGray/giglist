@@ -72,7 +72,11 @@ function SongCatalog() {
     try {
       const created = await songs.create({ ...BLANK_SONG, band_id: bandId })
       await router.invalidate()
-      await router.navigate({ to: "/band/$bandId/songs/$songId", params: { bandId, songId: created.id } })
+      await router.navigate({
+        to: "/band/$bandId/songs/$songId",
+        params: { bandId, songId: created.id },
+        search: { edit: true },
+      })
     } catch (e) {
       setAddError(errorMessage(e))
       setAdding(false)
@@ -193,7 +197,16 @@ function SongRow({
     <div data-pwid="song-row" className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] p-4">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <div data-pwid="song-row-title" className="font-medium">{song.title}</div>
+          <div className="font-medium">
+            <Link
+              to="/band/$bandId/songs/$songId"
+              params={{ bandId, songId: song.id }}
+              data-pwid="song-row-title"
+              className="hover:underline"
+            >
+              {song.title}
+            </Link>
+          </div>
           <div data-pwid="song-row-meta" className="text-sm text-zinc-500 mt-0.5">
             {meta.length > 0 ? meta.join(" · ") : "no details"}
           </div>
@@ -207,6 +220,7 @@ function SongRow({
           <Link
             to="/band/$bandId/songs/$songId"
             params={{ bandId, songId: song.id }}
+            search={{ edit: true }}
             data-pwid="song-edit"
             className="px-3 py-1.5 rounded-md border border-[var(--color-border-subtle)] text-xs text-zinc-300 cursor-pointer"
           >

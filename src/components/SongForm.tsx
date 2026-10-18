@@ -57,11 +57,13 @@ const keyOptions: ReadonlyArray<{ value: MusicalKeyType | ""; label: string }> =
 
 /**
  * The form for a song's metadata. The caller supplies the initial values and
- * what to do with the built payload.
+ * what to do with the built payload. Read-only, the fields are disabled and
+ * no submit button is drawn; the children still render.
  */
 export function SongForm({
   pwid,
   defaults,
+  readOnly,
   submitLabel,
   pendingLabel,
   onSubmit,
@@ -69,6 +71,7 @@ export function SongForm({
 }: {
   pwid: string
   defaults: SongFormValues
+  readOnly: boolean
   submitLabel: string
   pendingLabel: string
   onSubmit: (payload: SongUpdateData) => Promise<void>
@@ -104,116 +107,120 @@ export function SongForm({
       }}
       className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] p-4 space-y-3"
     >
-      <div className="grid gap-3 sm:grid-cols-2">
-        <form.Field name="title">
-          {(field) => (
-            <TextField
-              label="Title"
-              pwid="song-title"
-              value={field.state.value}
-              onChange={field.handleChange}
-              error={fieldError(field)}
-              required
-            />
-          )}
-        </form.Field>
+      <fieldset disabled={readOnly} className="space-y-3 min-w-0">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <form.Field name="title">
+            {(field) => (
+              <TextField
+                label="Title"
+                pwid="song-title"
+                value={field.state.value}
+                onChange={field.handleChange}
+                error={fieldError(field)}
+                required
+              />
+            )}
+          </form.Field>
 
-        <form.Field name="artist">
+          <form.Field name="artist">
+            {(field) => (
+              <TextField
+                label="Artist"
+                pwid="song-artist"
+                value={field.state.value ?? ""}
+                onChange={(value) => field.handleChange(value === "" ? null : value)}
+                error={fieldError(field)}
+              />
+            )}
+          </form.Field>
+
+          <form.Field name="key">
+            {(field) => (
+              <SelectField
+                label="Key"
+                pwid="song-key"
+                value={field.state.value}
+                onChange={(value) => field.handleChange(value === "" ? null : value)}
+                options={keyOptions}
+                error={fieldError(field)}
+              />
+            )}
+          </form.Field>
+
+          <form.Field name="tempo_bpm">
+            {(field) => (
+              <NumberField
+                label="Tempo (BPM)"
+                pwid="song-tempo"
+                value={field.state.value}
+                onChange={field.handleChange}
+                error={fieldError(field)}
+                min={0}
+                max={999}
+              />
+            )}
+          </form.Field>
+
+          <form.Field name="duration_seconds">
+            {(field) => (
+              <TextField
+                label="Duration (mm:ss)"
+                pwid="song-duration"
+                value={field.state.value ?? ""}
+                onChange={(value) => field.handleChange(value === "" ? null : value)}
+                error={fieldError(field)}
+                placeholder="3:45"
+              />
+            )}
+          </form.Field>
+
+          <form.Field name="capo">
+            {(field) => (
+              <NumberField
+                label="Capo"
+                pwid="song-capo"
+                value={field.state.value}
+                onChange={field.handleChange}
+                error={fieldError(field)}
+                min={0}
+                max={12}
+              />
+            )}
+          </form.Field>
+        </div>
+
+        <form.Field name="notes">
           {(field) => (
-            <TextField
-              label="Artist"
-              pwid="song-artist"
+            <TextAreaField
+              label="Notes"
+              pwid="song-notes"
               value={field.state.value ?? ""}
               onChange={(value) => field.handleChange(value === "" ? null : value)}
               error={fieldError(field)}
+              placeholder="Arrangement, intro, tuning…"
             />
           )}
         </form.Field>
 
-        <form.Field name="key">
-          {(field) => (
-            <SelectField
-              label="Key"
-              pwid="song-key"
-              value={field.state.value}
-              onChange={(value) => field.handleChange(value === "" ? null : value)}
-              options={keyOptions}
-              error={fieldError(field)}
-            />
-          )}
-        </form.Field>
-
-        <form.Field name="tempo_bpm">
-          {(field) => (
-            <NumberField
-              label="Tempo (BPM)"
-              pwid="song-tempo"
-              value={field.state.value}
-              onChange={field.handleChange}
-              error={fieldError(field)}
-              min={0}
-              max={999}
-            />
-          )}
-        </form.Field>
-
-        <form.Field name="duration_seconds">
-          {(field) => (
-            <TextField
-              label="Duration (mm:ss)"
-              pwid="song-duration"
-              value={field.state.value ?? ""}
-              onChange={(value) => field.handleChange(value === "" ? null : value)}
-              error={fieldError(field)}
-              placeholder="3:45"
-            />
-          )}
-        </form.Field>
-
-        <form.Field name="capo">
-          {(field) => (
-            <NumberField
-              label="Capo"
-              pwid="song-capo"
-              value={field.state.value}
-              onChange={field.handleChange}
-              error={fieldError(field)}
-              min={0}
-              max={12}
-            />
-          )}
-        </form.Field>
-      </div>
-
-      <form.Field name="notes">
-        {(field) => (
-          <TextAreaField
-            label="Notes"
-            pwid="song-notes"
-            value={field.state.value ?? ""}
-            onChange={(value) => field.handleChange(value === "" ? null : value)}
-            error={fieldError(field)}
-            placeholder="Arrangement, intro, tuning…"
-          />
+        {serverError && (
+          <div data-pwid="song-form-error" className="text-sm text-red-400">{serverError}</div>
         )}
-      </form.Field>
-
-      {serverError && (
-        <div data-pwid="song-form-error" className="text-sm text-red-400">{serverError}</div>
-      )}
+      </fieldset>
 
       <div className="flex gap-2">
-        <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
-          {([canSubmit, isSubmitting]) => (
-            <SubmitButton
-              pwid="song-submit"
-              disabled={!canSubmit || isSubmitting}
-              pending={isSubmitting}
-              label={submitLabel}
-              pendingLabel={pendingLabel}
-            />
-          )}
-        </form.Subscribe>
+        {!readOnly && (
+          <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
+            {([canSubmit, isSubmitting]) => (
+              <SubmitButton
+                pwid="song-submit"
+                disabled={!canSubmit || isSubmitting}
+                pending={isSubmitting}
+                label={submitLabel}
+                pendingLabel={pendingLabel}
+              />
+            )}
+          </form.Subscribe>
+        )}
         {children}
       </div>
     </form>
