@@ -64,6 +64,9 @@ test.describe("songs", () => {
     await getPw(page, "song-notes").fill("Capo 2, strummed")
     await getPw(page, "song-submit").click()
 
+    // Saving opens the new song's page; the list shows what the form collected.
+    await expect(getPw(page, "song-edit-form")).toBeVisible({ timeout: 10000 })
+    await page.goto(`/band/${bandId}/songs`)
     await expect(getPw(page, "song-row")).toHaveCount(1, { timeout: 10000 })
     await expect(getPw(page, "song-row-title")).toHaveText("Wonderwall")
     // The row carries the fields the form collected, duration as mm:ss.
@@ -109,6 +112,45 @@ test.describe("songs", () => {
     // The invalid value blocks submission, so it can never reach the API.
     await expect(getPw(page, "song-submit")).toBeDisabled()
     await expect(getPw(page, "song-form")).toBeVisible()
+  })
+
+  test("the add page shows the sections of the edit page", async ({ page, testing }) => {
+    await testing.login()
+    const bandId = await createBand(page, `test-songs-parity-${Date.now()}`)
+
+    await page.goto(`/band/${bandId}/songs/new`)
+    await expect(getPw(page, "song-form")).toBeVisible({ timeout: 10000 })
+    await expect(getPw(page, "song-charts")).toBeVisible()
+    await expect(getPw(page, "chart-add")).toBeDisabled()
+    await expect(getPw(page, "song-delete")).toBeDisabled()
+
+    await createSong(page, bandId, { title: "Parity", artist: "The Sames", tempo_bpm: 100 })
+    await page.goto(`/band/${bandId}/songs`)
+    await getPw(page, "song-edit").click()
+    await expect(getPw(page, "song-edit-form")).toBeVisible({ timeout: 10000 })
+    await expect(getPw(page, "song-charts")).toBeVisible()
+    await expect(getPw(page, "chart-add")).toBeEnabled()
+    await expect(getPw(page, "song-delete")).toBeEnabled()
+  })
+
+  test("a new song opens its own page, where charts can be added", async ({ page, testing }) => {
+    await testing.login()
+    const bandId = await createBand(page, `test-songs-parity-${Date.now()}`)
+
+    await page.goto(`/band/${bandId}/songs/new`)
+    await expect(getPw(page, "song-form")).toBeVisible({ timeout: 10000 })
+    await expect(getPw(page, "song-charts")).toBeVisible()
+    await expect(getPw(page, "chart-add")).toBeDisabled()
+    await expect(getPw(page, "song-delete")).toBeDisabled()
+
+    await getPw(page, "song-title").fill("Parity")
+    await getPw(page, "song-submit").click()
+
+    // The saved song's page has the same sections, now usable.
+    await expect(getPw(page, "song-edit-form")).toBeVisible({ timeout: 10000 })
+    await expect(getPw(page, "song-charts")).toBeVisible()
+    await expect(getPw(page, "chart-add")).toBeEnabled()
+    await expect(getPw(page, "song-delete")).toBeEnabled()
   })
 
   test("sorts and searches the catalog", async ({ page, testing }) => {
