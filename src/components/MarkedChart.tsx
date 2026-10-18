@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import { marks as marksApi, stamps as stampsApi, type ChartInfo, type ChartMarksInfo, type MarkData, type MarkInfo, type StampInfo } from "~/api/client"
 import { boundsOf, inkPath, markResolver, near, type Box, type Stroke } from "~/charts/marks"
 import type { Resolution } from "~/charts/follow"
+import type { NumeralDisplay } from "~/charts/numeral"
 import { useAuth } from "./AuthContext"
 import { LyricsChart } from "./LyricsChart"
 import { errorMessage } from "./form"
@@ -37,6 +38,7 @@ export function MarkedChart({
   toolbar = true,
   annotating = false,
   size,
+  numeralDisplay = "both",
 }: {
   chart: ChartInfo & { source: string }
   shownKey: string | null
@@ -48,6 +50,8 @@ export function MarkedChart({
   annotating?: boolean
   /** Text size in rem; see LyricsChart. */
   size?: number
+  /** What to show for each chord: its name, its Roman numeral, or both. Default: both. */
+  numeralDisplay?: NumeralDisplay
 }) {
   const me = useAuth().user?.id
   const [data, setData] = useState<ChartMarksInfo>({ marks: [], revisions: [] })
@@ -395,7 +399,14 @@ export function MarkedChart({
         className={`relative flex ${tool === "read" ? "" : tool === "move" ? "cursor-default" : "cursor-crosshair"}`}
       >
         <div className="min-w-0 flex-1">
-          <LyricsChart source={chart.source} shownKey={shownKey} tempo={tempo} size={size} chordShapes={tool === "read"} />
+          <LyricsChart
+            source={chart.source}
+            shownKey={shownKey}
+            tempo={tempo}
+            size={size}
+            chordShapes={tool === "read"}
+            numeralDisplay={numeralDisplay}
+          />
         </div>
         <div className="pointer-events-none absolute inset-0">
           {resolved.map(({ mark, resolution }) => {
