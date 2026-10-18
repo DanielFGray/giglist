@@ -179,6 +179,10 @@ function Item({
       const showName = !showNumeral || numeralDisplay === "both"
       // The name keeps its row when hidden, so the numeral sits where the name would.
       const nameClass = showName ? chordClass : `${chordClass} invisible`
+      // Every column of a line draws the same rows, each its full height even when
+      // empty: the line aligns its columns at the bottom, so a shorter column (the
+      // last chord of a chords-only line, or one with no numeral) would drop its chord.
+      const numeralRow = shownKey !== null && numeralDisplay !== "names"
 
       // The numeral is outside the chord element, so the chord element's text is the name alone.
       return (
@@ -199,8 +203,13 @@ function Item({
               {item.chord}
             </span>
           )}
-          {showNumeral && <span data-pwid="chart-numeral" className="text-xs leading-none text-zinc-500">{chordNumeral}</span>}
-          <span data-pwid="chart-lyric" className="whitespace-pre">{item.lyric}</span>
+          {numeralRow &&
+            (showNumeral ? (
+              <span data-pwid="chart-numeral" className={numeralClass}>{chordNumeral}</span>
+            ) : (
+              <span className={numeralClass} />
+            ))}
+          <span data-pwid="chart-lyric" className="min-h-[1lh] whitespace-pre">{item.lyric}</span>
           {showing && <ChordShapes name={item.chord} shownKey={shownKey} anchor={`--chord-${anchor}-${item.start}`} />}
         </span>
       )
@@ -209,6 +218,7 @@ function Item({
 }
 
 const chordClass = "h-5 whitespace-pre pr-1 font-semibold"
+const numeralClass = "h-3 text-xs leading-3 text-zinc-500"
 
 /** The note on tab or notation shown in another key: it is drawn as written, in the written key. */
 function WrittenIn({ what, keyName, spaced }: { what: "tab" | "notation"; keyName: string; spaced: boolean }) {
