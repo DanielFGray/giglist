@@ -139,12 +139,22 @@ export const chartsHandlers = HttpApiBuilder.group(SetListApi, "charts", (handle
           if (!newest || newest.revision_id !== payload.parent_id || newest.source === null) {
             return yield* new ChartConflict({ message: "The chart changed since you opened it" })
           }
-          if (!explains(anchorText(parseDoc(newest.source)), anchorText(parseDoc(payload.source)), payload.changes)) {
+          // A null change set is stored as null: a reader derives it from the two texts
+          // when it follows a mark, and keeps the stricter slide check for derived steps.
+          if (
+            payload.changes !== null &&
+            !explains(anchorText(parseDoc(newest.source)), anchorText(parseDoc(payload.source)), payload.changes)
+          ) {
             return yield* new ChartInvalid({ message: "The changes do not explain the new text" })
           }
           yield* db
             .insertInto("app_public.chart_revisions")
-            .values({ chart_id: id, parent_id: payload.parent_id, source: payload.source, changes: JSON.stringify(payload.changes) })
+            .values({
+              chart_id: id,
+              parent_id: payload.parent_id,
+              source: payload.source,
+              changes: payload.changes === null ? null : JSON.stringify(payload.changes),
+            })
             .pipe(Effect.orDie)
           const [saved] = yield* withNewestRevision([chart])
           return yield* decodeChart(saved).pipe(Effect.orDie)

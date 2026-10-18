@@ -819,7 +819,7 @@ export const ChartChange = S.Struct({
 export const ChartRevisionInsert = S.Struct({
   parent_id: S.String.check(S.isUUID()),
   source: S.String.pipe(S.check(S.isMinLength(1)), S.check(S.isMaxLength(200000))),
-  changes: S.Array(ChartChange).pipe(S.check(S.isMaxLength(10000))),
+  changes: S.NullOr(S.Array(ChartChange).pipe(S.check(S.isMaxLength(10000)))),
 })
 
 /** Someone saved a newer revision since the editor loaded the chart. */

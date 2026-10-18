@@ -465,15 +465,21 @@ test.describe("chart editor", () => {
     const doc = parseDoc(stored)
     const line = doc.findIndex((l) => l.kind === "lyrics" && l.text.startsWith("Amazing"))
     const edit = placeChord(doc, line, 0, "G")
-    const save = (parent: string, source: string, changes: ReadonlyArray<Change>) =>
+    const save = (parent: string, source: string, changes: ReadonlyArray<Change> | null) =>
       page.request.post(`/api/charts/${chart.id}/revisions`, { data: { parent_id: parent, source, changes } })
 
     // The text changed but the change set says nothing did.
     expect((await save(chart.revision_id, serializeDoc(edit.doc), [])).status()).toBe(400)
     // A change set that fits the edit is stored as the chart's new revision.
-    expect((await save(chart.revision_id, serializeDoc(edit.doc), edit.changes)).status()).toBe(201)
+    const saved = await save(chart.revision_id, serializeDoc(edit.doc), edit.changes)
+    expect(saved.status()).toBe(201)
     // The same save again names a parent that is no longer the newest.
     expect((await save(chart.revision_id, serializeDoc(edit.doc), edit.changes)).status()).toBe(409)
+
+    // A text edit with no change set is stored as well: a reader derives one when it follows a mark.
+    const typed = serializeDoc(edit.doc).replace("Amazing grace", "Amazing grace!")
+    const parent = ((await saved.json()) as { revision_id: string }).revision_id
+    expect((await save(parent, typed, null)).status()).toBe(201)
   })
 })
 
