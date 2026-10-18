@@ -30,7 +30,8 @@ export function SongCharts({
   list,
   onChanged,
 }: {
-  songId: string
+  /** Null while the song is being added: it has no charts until it is saved. */
+  songId: string | null
   songKey: MusicalKeyType | null
   /** The song's tempo, which phrases in its charts play at. */
   tempo: number | null
@@ -58,7 +59,12 @@ export function SongCharts({
           </div>
         )}
       </div>
-      {list.length === 0 && !adding && !addingScore && (
+      {list.length === 0 && !adding && !addingScore && songId === null && (
+        <p data-pwid="charts-empty" className="text-sm text-zinc-500">
+          Save the song first, then its charts can be added here.
+        </p>
+      )}
+      {list.length === 0 && !adding && !addingScore && songId !== null && (
         <p data-pwid="charts-empty" className="text-sm text-zinc-500">
           No charts yet. Paste chords over lyrics, read them from a PDF or a photo, or upload a Guitar Pro file, to make one{songKey ? `; this song is in ${songKey}` : ""}.
         </p>
@@ -66,7 +72,7 @@ export function SongCharts({
       {list.map((chart) => (
         <ChartCard key={chart.id} chart={chart} shownKey={shownKey} tempo={tempo} onChanged={onChanged} />
       ))}
-      {adding ? (
+      {adding && songId !== null ? (
         <AddLyricsChart
           songId={songId}
           defaultKey={songKey}
@@ -76,7 +82,7 @@ export function SongCharts({
           }}
           onCancel={() => setAdding(false)}
         />
-      ) : addingScore ? (
+      ) : addingScore && songId !== null ? (
         <AddScore
           songId={songId}
           onDone={async () => {
@@ -91,7 +97,8 @@ export function SongCharts({
             data-pwid="chart-add"
             type="button"
             onClick={() => setAdding(true)}
-            className="px-4 py-2 rounded-md border border-[var(--color-border-subtle)] text-sm text-zinc-300 cursor-pointer"
+            disabled={songId === null}
+            className="px-4 py-2 rounded-md border border-[var(--color-border-subtle)] text-sm text-zinc-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Add a chart
           </button>
@@ -99,7 +106,8 @@ export function SongCharts({
             data-pwid="score-add"
             type="button"
             onClick={() => setAddingScore(true)}
-            className="px-4 py-2 rounded-md border border-[var(--color-border-subtle)] text-sm text-zinc-300 cursor-pointer"
+            disabled={songId === null}
+            className="px-4 py-2 rounded-md border border-[var(--color-border-subtle)] text-sm text-zinc-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Add a score
           </button>
