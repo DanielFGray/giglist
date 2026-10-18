@@ -10,6 +10,7 @@
  * Pure and free of the DOM, so the server and the browser share it.
  */
 import { ChordLyricsPair, ChordProParser, Literal, Tag } from "chordsheetjs"
+import { anchorLine, enclosingSection, inPhrase, parseDoc } from "./doc"
 
 /**
  * One drawable piece of a chart line. `start` and `end` are its range in the
@@ -197,6 +198,10 @@ export function isLiteralEnd(directiveName: string): boolean {
  * ChordSheetJS's own chords-over-words parsers are not used: on real pastes its
  * Ultimate Guitar parser drops spaces from lyrics, and neither parser turns
  * `[Verse 1]` into a section.
+ *
+ * Round trip: importPasted(exportChords(source, key), key) is byte-equal for
+ * every chart importPasted makes. For a chart the drag editor wrote, the
+ * labelled sections keep the same anchor text and the drawn chart is the same.
  */
 export function importPasted(text: string, writtenKey?: string | null): string {
   const lines = text.replace(/\r\n?/g, "\n").replace(/\t/g, "    ").split("\n")
@@ -221,6 +226,8 @@ export function importPasted(text: string, writtenKey?: string | null): string {
     }
     const kept = keptDirectives(line)
     if (kept) {
+      // A kept section start closes any section opened from a [Header] above it, so sections never nest.
+      if (kept.some((tag) => tag.isSectionStart())) close()
       out.push(line)
       phrase = kept.some((tag) => isPhraseStart(tag.name))
       continue
@@ -278,21 +285,25 @@ export function importPasted(text: string, writtenKey?: string | null): string {
  * `[Header]` line, which the importer turns back into the section it came from.
  * The chart's key is not written: the form carries it as the key the player
  * chose, which is the argument `importPasted` takes.
+ *
+ * Round trip: importPasted(exportChords(source, key), key) is byte-equal for
+ * every chart importPasted makes. For a chart the drag editor wrote, the
+ * labelled sections keep the same anchor text and the drawn chart is the same.
  */
 export function exportChords(source: string, shownKey?: string | null): string {
   const out: Array<string> = []
   // True right after a chord-only row, which the importer would pair with a lyric row below it.
   let chordsOnly = false
   const drawn = renderLyrics(source, shownKey).flat()
-  const stored = new ChordProParser().parse(source).lines
-  // The stored lines as written: the parse keeps a directive's meaning, not its spelling.
+  // Stored lines are read through parseDoc, the same line-indexed view doc.ts uses.
+  const doc = parseDoc(source)
   const raw = source.split("\n")
   let next = 0 // the next drawn item, which items are in anchor order
   let at = 0 // where the current line's own text starts in the anchor text
-  let phrase = false // inside a phrase, whose lines are written as stored
-  stored.forEach((line, index) => {
+  doc.forEach((line, index) => {
     if (index > 0) at += 1
-    const end = at + line.items.reduce((n, item) => n + anchorSegment(item).length, 0)
+    const lineAnchor = anchorLine(line)
+    const end = at + lineAnchor.length
     // The items drawn for this line: every drawn item starting within it. A
     // phrase's or a comment's line is written as stored below, not from its item.
     const items: Array<Exclude<ChartItem, { kind: "phrase" | "comment" }>> = []
@@ -304,19 +315,47 @@ export function exportChords(source: string, shownKey?: string | null): string {
     const rawLine = raw[index]!
     // The same reading of a line as the importer's, so what one keeps the other keeps.
     const tags = directiveLine(rawLine)
-    if (phrase) {
-      out.push(rawLine)
-      if (tags?.some((tag) => isPhraseEnd(tag.name))) phrase = false
-      return
-    }
-    if (tags?.every(keptTag)) {
+
+    // Inside a phrase every line is written as stored, verbatim (one phrase rule shared with doc.ts).
+    if (inPhrase(doc, index)) {
       out.push(rawLine)
       chordsOnly = false
-      phrase = tags.some((tag) => isPhraseStart(tag.name))
       return
     }
-    // The importer writes the key from its argument and section ends from the headers around them.
-    if (tags?.every((tag) => tag.isSectionEnd() || tag.name === "key")) return
+    // An unlabelled (non-tab) section is shown as its stored directive lines, not as a [Header].
+    if (tags?.every((tag) => tag.isSectionStart() && !isTabStart(tag.name) && !(tag.label || tag.value))) {
+      out.push(rawLine)
+      chordsOnly = false
+      return
+    }
+    // A phrase start line is written as stored.
+    if (tags?.every((tag) => isPhraseStart(tag.name))) {
+      out.push(rawLine)
+      chordsOnly = false
+      return
+    }
+    // A section end line is kept only when it closes an unlabelled section.
+    if (tags?.every((tag) => tag.isSectionEnd())) {
+      const open = enclosingSection(doc, index)
+      const raw = open !== null && open.kind !== "tab" ? (doc[open.start] as { kind: "directive"; raw: string }).raw : ""
+      const label = /^\{\s*start_of_\w+\s*(?::\s*(.*?))?\s*\}$/.exec(raw)?.[1]
+      const unlabelled = open !== null && open.kind !== "tab" && (label ?? "").trim() === ""
+      if (unlabelled) {
+        out.push(rawLine)
+        chordsOnly = false
+        return
+      }
+      // The importer writes section ends for labelled sections.
+      return
+    }
+    // The importer writes the key from its argument; a key change later round-trips.
+    if (tags?.every((tag) => tag.name === "key" && index === 0)) return
+    // Every other directive line is kept as written.
+    if (tags && tags.length > 0 && !tags.some((tag) => tag.isSectionStart() || tag.isSectionEnd())) {
+      out.push(rawLine)
+      chordsOnly = false
+      return
+    }
 
     let chords = ""
     let lyrics = ""
@@ -368,16 +407,10 @@ function directiveLine(line: string): ReadonlyArray<Tag> | null {
  * writes as a `[Header]` line, and not the key, which the form carries as the
  * key the player chose. A phrase has no other form, so it is kept.
  */
-function keptTag(tag: Tag): boolean {
-  if (isPhraseStart(tag.name)) return true
-  if (tag.isSectionStart() || tag.isSectionEnd()) return false
-  return tag.name !== "key"
-}
-
 /** The directives of a line the form keeps as written, or null when it keeps no such line. */
 function keptDirectives(line: string): ReadonlyArray<Tag> | null {
   const tags = directiveLine(line)
-  return tags?.every(keptTag) ? tags : null
+  return tags && tags.length > 0 ? tags : null
 }
 
 function placeChords(lyrics: string, chords: ReadonlyArray<{ column: number; chord: string }>): string {
