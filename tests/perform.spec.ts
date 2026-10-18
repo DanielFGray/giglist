@@ -38,6 +38,15 @@ test.describe("performance mode", () => {
     await expect(getPw(page, "chord-shapes")).toHaveCount(0)
     await expect(getPw(page, "perform-title")).toHaveText("Beta")
 
+    // The stage's own Chord diagrams setting: Off makes a chord text that opens nothing.
+    await getPw(page, "perform-diagrams").selectOption("off")
+    await getPw(page, "chart-chord").filter({ hasText: /^Bb$/ }).first().click()
+    await expect(getPw(page, "chord-shapes")).toHaveCount(0)
+    await getPw(page, "perform-diagrams").selectOption("guitar")
+    await getPw(page, "chart-chord").filter({ hasText: /^Bb$/ }).first().click()
+    await expect(getPw(page, "chord-shapes")).toBeVisible()
+    await page.keyboard.press("Escape")
+
     // Button, then the list, then space and back.
     await getPw(page, "perform-next").click()
     await expect(getPw(page, "perform-title")).toHaveText("Gamma")

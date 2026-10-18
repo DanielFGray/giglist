@@ -312,6 +312,49 @@ test.describe("chord shapes", () => {
     await chord("C").click()
     await expect(panel).toHaveCount(0)
   })
+
+  test("with the diagrams set to off, a chord is plain text and opens no panel", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, songId } = await createSong(page)
+    const made = await page.request.post("/api/charts", {
+      data: { song_id: songId, name: "Shapes", written_key: "G", pasted: shapes },
+    })
+    expect(made.ok(), `create chart failed: ${await made.text()}`).toBe(true)
+
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    await expect(getPw(page, "chart")).toHaveCount(1, { timeout: 10000 })
+
+    await getPw(page, "chart-diagrams").selectOption("off")
+    const chord = getPw(page, "chart-chord").filter({ hasText: /^C$/ }).first()
+    // With no shapes, a chord is not a button: it carries no expanded state.
+    await expect(chord).not.toHaveAttribute("aria-expanded", /.*/)
+    await chord.click()
+    await expect(getPw(page, "chord-shapes")).toHaveCount(0)
+  })
+
+  test("the diagrams label every note they sound with its degree", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, songId } = await createSong(page)
+    const made = await page.request.post("/api/charts", {
+      data: { song_id: songId, name: "Shapes", written_key: "G", pasted: shapes },
+    })
+    expect(made.ok(), `create chart failed: ${await made.text()}`).toBe(true)
+
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    await expect(getPw(page, "chart")).toHaveCount(1, { timeout: 10000 })
+    await expect(getPw(page, "chart-diagrams")).toHaveValue("guitar")
+
+    // C in G is the IV, so the panel names the chord's numeral under its name.
+    await getPw(page, "chart-chord").filter({ hasText: /^C$/ }).first().click()
+    const panel = getPw(page, "chord-shapes")
+    await expect(panel).toBeVisible()
+    await expect(getPw(page, "shapes-numeral")).toHaveText("IV")
+
+    const first = getPw(page, "chord-diagram").first()
+    await expect(first).toHaveAttribute("data-frets", "x 3 2 0 1 0")
+    // The shape names every note it sounds, open strings included, low string to high.
+    await expect(first.locator("[data-pwid=chord-degree]")).toHaveText(["R", "3", "5", "R", "3"])
+  })
 })
 
 /** A chart of bare lyrics, the way a band starts one before it has any chords. */

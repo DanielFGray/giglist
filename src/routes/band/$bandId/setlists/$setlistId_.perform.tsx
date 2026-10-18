@@ -3,6 +3,7 @@ import { Link, createFileRoute, useRouter } from "@tanstack/react-router"
 import { charts, setlists, type ChartInfo } from "~/api/client"
 import { groupEntries, playOrder } from "~/components/arrangement"
 import type { NumeralDisplay } from "~/charts/numeral"
+import type { ChordDiagrams } from "~/components/ChordShapes"
 import { ClickTrack } from "~/components/ClickTrack"
 import { useSetlistLive } from "~/components/live"
 import { Viewers } from "~/components/Viewers"
@@ -50,6 +51,7 @@ function Perform() {
   const [sizeStep, setSizeStep] = useState(readSizeStep)
   const [speedStep, setSpeedStep] = useState(0)
   const [numeralDisplay, setNumeralDisplay] = useState<NumeralDisplay>("both")
+  const [diagrams, setDiagrams] = useState<ChordDiagrams>("guitar")
   const scroller = useRef<HTMLDivElement>(null)
   const touchStart = useRef<{ x: number; y: number } | null>(null)
 
@@ -159,6 +161,16 @@ function Perform() {
           <button data-pwid="perform-smaller" type="button" aria-label="Smaller text" onClick={() => resize(-1)} disabled={sizeStep === 0} className={button}>A−</button>
           <button data-pwid="perform-larger" type="button" aria-label="Larger text" onClick={() => resize(1)} disabled={sizeStep === TEXT_SIZES.length - 1} className={button}>A+</button>
           <select
+            data-pwid="perform-diagrams"
+            value={diagrams}
+            onChange={(e) => setDiagrams(e.target.value as ChordDiagrams)}
+            className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-sm text-zinc-200 cursor-pointer"
+            aria-label="Chord diagrams"
+          >
+            <option value="guitar">Guitar</option>
+            <option value="off">Off</option>
+          </select>
+          <select
             data-pwid="perform-numeral-display"
             value={numeralDisplay}
             onChange={(e) => setNumeralDisplay(e.target.value as NumeralDisplay)}
@@ -214,6 +226,7 @@ function Perform() {
               tempo={current.entry.tempo_bpm}
               size={size}
               numeralDisplay={numeralDisplay}
+              diagrams={diagrams}
             />
           </div>
 
@@ -261,7 +274,15 @@ function SongCharts({
   tempo,
   size,
   numeralDisplay,
-}: { songId: string; shownKey: string | null; tempo: number | null; size: number; numeralDisplay: NumeralDisplay }) {
+  diagrams,
+}: {
+  songId: string
+  shownKey: string | null
+  tempo: number | null
+  size: number
+  numeralDisplay: NumeralDisplay
+  diagrams: ChordDiagrams
+}) {
   const [list, setList] = useState<ReadonlyArray<ChartInfo> | null>(null)
   const [error, setError] = useState<string | null>(null)
   useEffect(() => {
@@ -282,7 +303,16 @@ function SongCharts({
     <div className="space-y-8">
       {list.map((chart) =>
         chart.source !== null ? (
-          <MarkedChart key={chart.id} chart={{ ...chart, source: chart.source }} shownKey={shownKey} tempo={tempo} toolbar={false} size={size} numeralDisplay={numeralDisplay} />
+          <MarkedChart
+            key={chart.id}
+            chart={{ ...chart, source: chart.source }}
+            shownKey={shownKey}
+            tempo={tempo}
+            toolbar={false}
+            size={size}
+            numeralDisplay={numeralDisplay}
+            diagrams={diagrams}
+          />
         ) : (
           <div key={chart.id} className="rounded-lg bg-white p-2">
             <Suspense fallback={<p className="text-zinc-500">Loading the score…</p>}>

@@ -14,6 +14,8 @@ export type Spelling = {
   readonly required: ReadonlyArray<PitchClass>
   /** Notes a shape may hold or leave out. Disjoint from required. */
   readonly optional: ReadonlyArray<PitchClass>
+  /** Chord degree -> semitones above the root, as the name spelled it. */
+  readonly tones: ReadonlyMap<number, number>
 }
 
 export function spell(name: string): Spelling | null {
@@ -51,7 +53,7 @@ export function spell(name: string): Spelling | null {
   // Two degrees can share a pitch class — the sus 4th is the natural 11th — so a
   // note no shape may leave out is not also one a shape may leave out.
   for (const pitchClass of may) if (must.has(pitchClass)) may.delete(pitchClass)
-  return { root: root.pitchClass, bass, required: ascending(must), optional: ascending(may) }
+  return { root: root.pitchClass, bass, required: ascending(must), optional: ascending(may), tones: chord.tones }
 }
 
 /** What the suffix of a name said: the tones it produced, and how to hold them. */

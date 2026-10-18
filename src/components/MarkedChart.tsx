@@ -4,6 +4,7 @@ import { boundsOf, inkPath, markResolver, near, type Box, type Stroke } from "~/
 import type { Resolution } from "~/charts/follow"
 import type { NumeralDisplay } from "~/charts/numeral"
 import { useAuth } from "./AuthContext"
+import type { ChordDiagrams } from "./ChordShapes"
 import { LyricsChart } from "./LyricsChart"
 import { errorMessage } from "./form"
 
@@ -39,6 +40,7 @@ export function MarkedChart({
   annotating = false,
   size,
   numeralDisplay = "both",
+  diagrams = "guitar",
 }: {
   chart: ChartInfo & { source: string }
   shownKey: string | null
@@ -52,6 +54,8 @@ export function MarkedChart({
   size?: number
   /** What to show for each chord: its name, its Roman numeral, or both. Default: both. */
   numeralDisplay?: NumeralDisplay
+  /** Which chords show a guitar diagram when tapped. Default: guitar. */
+  diagrams?: ChordDiagrams
 }) {
   const me = useAuth().user?.id
   const [data, setData] = useState<ChartMarksInfo>({ marks: [], revisions: [] })
@@ -404,7 +408,7 @@ export function MarkedChart({
             shownKey={shownKey}
             tempo={tempo}
             size={size}
-            chordShapes={tool === "read"}
+            chordShapes={tool === "read" && diagrams !== "off"}
             numeralDisplay={numeralDisplay}
           />
         </div>
