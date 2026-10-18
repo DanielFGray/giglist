@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { Schema as S } from "effect"
 import { ChartChange } from "../api/contracts"
 import { composeChanges, explains, isChangeSet, lengthAfter, type Change } from "./changes"
-import { mapRange, type Range } from "./follow"
+import { mapRange } from "./follow"
 
 /** Applies a change set to labelled units; fresh units are labelled "+", moved ones keep their label. */
 const apply = (units: ReadonlyArray<string>, changes: ReadonlyArray<Change>): Array<string> => {
