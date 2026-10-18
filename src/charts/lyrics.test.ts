@@ -214,7 +214,35 @@ describe("phrases", () => {
     expect(renderLyrics(stored)[2]![0]).not.toHaveProperty("writtenIn")
   })
 
-  test("copying a chart out writes a phrase's name, since the text has no form for notation", () => {
-    expect(exportChords(stored)).toBe("[Verse 1]\nG\nAmazing grace\n[Intro riff]\nC\nHow sweet")
+  test("copying a chart out writes the phrase's stored lines, so the notation travels with its name", () => {
+    expect(exportChords(stored)).toBe(
+      "[Verse 1]\nG\nAmazing grace\n{start_of_textblock: Intro riff}\n:8 0.6 3.6 5.5 3.5 |\n5.5 [3.5] {h}\n{end_of_textblock}\nC\nHow sweet",
+    )
+  })
+})
+
+describe("paste round trip", () => {
+  // One chart holding every form: a section, chords over words, a chord-only
+  // line, a comment, tab, and a phrase whose alphaTex opens with a brace.
+  const fixture = [
+    "{key: G}",
+    "{start_of_verse: Verse 1}",
+    "[G]Amazing grace",
+    "[Am]",
+    "{comment: Sing along}",
+    "{end_of_verse}",
+    "{start_of_tab: Intro}",
+    "e|--0--3--|",
+    "{end_of_tab}",
+    "{start_of_textblock: Intro riff}",
+    ":8 0.6 3.6 5.5 3.5 |",
+    "{h} 5.5 7.5",
+    "{end_of_textblock}",
+  ].join("\n")
+
+  test("pasting the export back gives the chart that was exported, anchor text and all", () => {
+    const back = importPasted(exportChords(fixture, "G"), "G")
+    expect(back).toBe(fixture)
+    expect(anchorText(parseDoc(back))).toBe(anchorText(parseDoc(fixture)))
   })
 })
