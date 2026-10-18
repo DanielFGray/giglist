@@ -72,6 +72,22 @@ test.describe("lyrics charts", () => {
     await expect(getPw(page, "chart-name")).toContainText("written in G")
   })
 
+  test("a line of chords with no lyrics keeps every chord on one row", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, songId } = await createSong(page)
+    const res = await page.request.post("/api/charts", {
+      data: { song_id: songId, name: "Intro", written_key: "G", pasted: "G    C    D    G\nG       C\nAmazing grace\n" },
+    })
+    expect(res.ok(), `create chart failed: ${await res.text()}`).toBe(true)
+
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    const intro = getPw(page, "chart-chord").filter({ hasText: /\S/ })
+    await expect(intro).toHaveCount(6, { timeout: 10000 })
+    // The last chord has no lyric after it; it still sits level with the others.
+    const tops = await Promise.all((await intro.all()).slice(0, 4).map(async (chord) => (await chord.boundingBox())!.y))
+    expect(new Set(tops).size).toBe(1)
+  })
+
   test("a setlist entry opens the chart in the entry's key", async ({ page, testing }) => {
     await testing.login()
     const { bandId, songId } = await createSong(page)
