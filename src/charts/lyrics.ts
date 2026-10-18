@@ -85,6 +85,23 @@ export function renderLyrics(source: string, shownKey?: string | null): Readonly
   return lines
 }
 
+/** The distinct chord names of a rendered chart, in the order each first appears. */
+export function chartChords(lines: ReadonlyArray<ChartLine>): ReadonlyArray<string> {
+  const seen = new Set<string>()
+  const result: Array<string> = []
+  for (const line of lines) {
+    for (const item of line) {
+      if (item.kind !== "pair") continue
+      const chord = item.chord.trim()
+      if (chord === "") continue
+      if (seen.has(chord)) continue
+      seen.add(chord)
+      result.push(chord)
+    }
+  }
+  return result
+}
+
 /** The text one item contributes to the anchor text. */
 function anchorSegment(item: unknown): string {
   if (item instanceof ChordLyricsPair) {

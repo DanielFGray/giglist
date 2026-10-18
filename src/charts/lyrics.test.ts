@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { readFileSync } from "node:fs"
 import { anchorText, parseDoc } from "./doc"
-import { exportChords, importPasted, isTabLine, renderLyrics, suggestedChords, type ChartItem } from "./lyrics"
+import { chartChords, exportChords, importPasted, isTabLine, renderLyrics, suggestedChords, type ChartItem } from "./lyrics"
 
 const pasted = readFileSync(new URL("../../tests/fixtures/amazing-grace.txt", import.meta.url), "utf8")
 
@@ -9,6 +9,18 @@ const pairs = (key?: string) =>
   renderLyrics(importPasted(pasted, "G"), key).flatMap((line) => line.filter((i): i is Extract<ChartItem, { kind: "pair" }> => i.kind === "pair"))
 
 const CHORD = /^[A-G][#b]?(m|maj|min|dim|aug|sus)?\d*(\/[A-G][#b]?)?$/
+
+describe("chartChords", () => {
+  test("lists distinct chords in first-seen order", () => {
+    const lines = renderLyrics("[C]a [G]a [C]a [Am]a")
+    expect(chartChords(lines)).toEqual(["C", "G", "Am"])
+  })
+
+  test("a chart with no chords gives an empty list", () => {
+    const lines = renderLyrics("Amazing grace, how sweet")
+    expect(chartChords(lines)).toEqual([])
+  })
+})
 
 describe("importPasted", () => {
   test("keeps every lyric line exactly", () => {
