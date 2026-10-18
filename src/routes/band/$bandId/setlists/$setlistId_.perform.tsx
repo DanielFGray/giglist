@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect, useRef, useState, type TouchEvent } from "re
 import { Link, createFileRoute, useRouter } from "@tanstack/react-router"
 import { charts, setlists, type ChartInfo } from "~/api/client"
 import { groupEntries, playOrder } from "~/components/arrangement"
+import type { NumeralDisplay } from "~/charts/numeral"
 import { ClickTrack } from "~/components/ClickTrack"
 import { useSetlistLive } from "~/components/live"
 import { Viewers } from "~/components/Viewers"
@@ -48,6 +49,7 @@ function Perform() {
 
   const [sizeStep, setSizeStep] = useState(readSizeStep)
   const [speedStep, setSpeedStep] = useState(0)
+  const [numeralDisplay, setNumeralDisplay] = useState<NumeralDisplay>("both")
   const scroller = useRef<HTMLDivElement>(null)
   const touchStart = useRef<{ x: number; y: number } | null>(null)
 
@@ -156,6 +158,17 @@ function Perform() {
         <div className="flex items-center gap-2">
           <button data-pwid="perform-smaller" type="button" aria-label="Smaller text" onClick={() => resize(-1)} disabled={sizeStep === 0} className={button}>A−</button>
           <button data-pwid="perform-larger" type="button" aria-label="Larger text" onClick={() => resize(1)} disabled={sizeStep === TEXT_SIZES.length - 1} className={button}>A+</button>
+          <select
+            data-pwid="perform-numeral-display"
+            value={numeralDisplay}
+            onChange={(e) => setNumeralDisplay(e.target.value as NumeralDisplay)}
+            className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-sm text-zinc-200 cursor-pointer"
+            aria-label="Chord display"
+          >
+            <option value="both">Names & numerals</option>
+            <option value="names">Names only</option>
+            <option value="numerals">Numerals only</option>
+          </select>
           {current?.entry.tempo_bpm != null && (
             <ClickTrack key={current.entry.id} bpm={current.entry.tempo_bpm} pwid="perform-click" className={button} />
           )}
@@ -200,6 +213,7 @@ function Perform() {
               shownKey={current.entry.key}
               tempo={current.entry.tempo_bpm}
               size={size}
+              numeralDisplay={numeralDisplay}
             />
           </div>
 
@@ -241,7 +255,13 @@ function Perform() {
 }
 
 /** The charts of one song, in the entry's key. A lyrics chart shows the player's own marks but cannot be marked up here. */
-function SongCharts({ songId, shownKey, tempo, size }: { songId: string; shownKey: string | null; tempo: number | null; size: number }) {
+function SongCharts({
+  songId,
+  shownKey,
+  tempo,
+  size,
+  numeralDisplay,
+}: { songId: string; shownKey: string | null; tempo: number | null; size: number; numeralDisplay: NumeralDisplay }) {
   const [list, setList] = useState<ReadonlyArray<ChartInfo> | null>(null)
   const [error, setError] = useState<string | null>(null)
   useEffect(() => {
@@ -262,7 +282,7 @@ function SongCharts({ songId, shownKey, tempo, size }: { songId: string; shownKe
     <div className="space-y-8">
       {list.map((chart) =>
         chart.source !== null ? (
-          <MarkedChart key={chart.id} chart={{ ...chart, source: chart.source }} shownKey={shownKey} tempo={tempo} toolbar={false} size={size} />
+          <MarkedChart key={chart.id} chart={{ ...chart, source: chart.source }} shownKey={shownKey} tempo={tempo} toolbar={false} size={size} numeralDisplay={numeralDisplay} />
         ) : (
           <div key={chart.id} className="rounded-lg bg-white p-2">
             <Suspense fallback={<p className="text-zinc-500">Loading the score…</p>}>

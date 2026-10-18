@@ -1,12 +1,19 @@
 import { Suspense, lazy, useEffect, useState } from "react"
 import { charts, type ChartInfo } from "~/api/client"
 import { exportChords } from "~/charts/lyrics"
+import type { NumeralDisplay } from "~/charts/numeral"
 import { MusicalKeys, type MusicalKeyType } from "~/api/contracts"
 import { AddScore } from "./AddScore"
 import { ChartEditor } from "./ChartEditor"
 import { MarkedChart } from "./MarkedChart"
 import { ReadChartFile } from "./ReadChartFile"
 import { SelectField, SubmitButton, TextAreaField, TextField, errorMessage } from "./form"
+
+const numeralDisplayOptions: ReadonlyArray<{ value: NumeralDisplay; label: string }> = [
+  { value: "both", label: "Names & numerals" },
+  { value: "names", label: "Names only" },
+  { value: "numerals", label: "Numerals only" },
+]
 
 // alphaTab is large and only score charts need it, so it loads on demand.
 const ScoreViewer = lazy(() => import("./ScoreViewer").then((m) => ({ default: m.ScoreViewer })))
@@ -44,6 +51,7 @@ export function SongCharts({
   // A chart made blank opens in the editor, the same view every chart is edited in.
   const [opened, setOpened] = useState<string | null>(null)
   const [blankError, setBlankError] = useState<string | null>(null)
+  const [numeralDisplay, setNumeralDisplay] = useState<NumeralDisplay>("both")
   const startBlank = async () => {
     setBlankError(null)
     try {
@@ -60,19 +68,31 @@ export function SongCharts({
     }
   }
   const keyChoices = keyOptions.map((o) => (o.value === "" ? { value: o.value, label: "As written" } : o))
+  const hasLyricsWithKey = list.some((chart) => chart.kind === "lyrics" && chart.written_key)
   return (
     <section data-pwid="song-charts" className="space-y-4">
       <div className="flex items-end justify-between gap-4">
         <h2 className="text-lg font-semibold">Charts</h2>
-        {list.some((chart) => chart.kind === "lyrics" && chart.written_key) && (
-          <div className="w-40">
-            <SelectField
-              label="Show in key"
-              pwid="chart-shown-key"
-              value={shownKey ?? ""}
-              onChange={(key) => onShownKeyChange(key === "" ? null : key)}
-              options={keyChoices}
-            />
+        {hasLyricsWithKey && (
+          <div className="flex gap-4">
+            <div className="w-40">
+              <SelectField
+                label="Show in key"
+                pwid="chart-shown-key"
+                value={shownKey ?? ""}
+                onChange={(key) => onShownKeyChange(key === "" ? null : key)}
+                options={keyChoices}
+              />
+            </div>
+            <div className="w-44">
+              <SelectField
+                label="Chord display"
+                pwid="chart-numeral-display"
+                value={numeralDisplay}
+                onChange={(v) => v && setNumeralDisplay(v)}
+                options={numeralDisplayOptions}
+              />
+            </div>
           </div>
         )}
       </div>
@@ -82,7 +102,15 @@ export function SongCharts({
         </p>
       )}
       {list.map((chart) => (
-        <ChartCard key={chart.id} chart={chart} startEditing={chart.id === opened} shownKey={shownKey} tempo={tempo} onChanged={onChanged} />
+        <ChartCard
+          key={chart.id}
+          chart={chart}
+          startEditing={chart.id === opened}
+          shownKey={shownKey}
+          tempo={tempo}
+          onChanged={onChanged}
+          numeralDisplay={numeralDisplay}
+        />
       ))}
       {adding ? (
         <AddLyricsChart
@@ -149,12 +177,14 @@ function ChartCard({
   shownKey,
   tempo,
   onChanged,
+  numeralDisplay,
 }: {
   chart: ChartInfo
   startEditing: boolean
   shownKey: MusicalKeyType | null
   tempo: number | null
   onChanged: () => Promise<void>
+  numeralDisplay: NumeralDisplay
 }) {
   const [error, setError] = useState<string | null>(null)
   const [editing, setEditing] = useState(startEditing && chart.source !== null)
@@ -261,7 +291,13 @@ function ChartCard({
           }}
         />
       ) : chart.source !== null ? (
-        <MarkedChart chart={{ ...chart, source: chart.source }} shownKey={shownKey} tempo={tempo} annotating={annotating} />
+        <MarkedChart
+          chart={{ ...chart, source: chart.source }}
+          shownKey={shownKey}
+          tempo={tempo}
+          annotating={annotating}
+          numeralDisplay={numeralDisplay}
+        />
       ) : (
         <Suspense fallback={<p className="text-sm text-zinc-500">Loading the score…</p>}>
           <ScoreViewer key={chart.revision_id} revisionId={chart.revision_id} />

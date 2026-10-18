@@ -1,5 +1,6 @@
 import { useEffect, useId, useMemo, useState, type CSSProperties } from "react"
 import { renderLyrics, type ChartItem, type ChartLine } from "~/charts/lyrics"
+import { numeral, type NumeralDisplay } from "~/charts/numeral"
 import { ChordShapes } from "./ChordShapes"
 import { Phrase } from "./Phrase"
 
@@ -18,6 +19,7 @@ export function LyricsChart({
   tempo = null,
   size = 0.875,
   chordShapes = false,
+  numeralDisplay = "both",
 }: {
   source: string
   shownKey: string | null
@@ -27,6 +29,8 @@ export function LyricsChart({
   size?: number
   /** False while another tool has the chart: a chord then draws no shapes. */
   chordShapes?: boolean
+  /** What to show for each chord: its name, its Roman numeral, or both. Default: both. */
+  numeralDisplay?: NumeralDisplay
 }) {
   const lines = useMemo(() => renderLyrics(source, shownKey), [source, shownKey])
   // The start of the item whose panel is open, or null when none is.
@@ -60,7 +64,17 @@ export function LyricsChart({
   return (
     <div data-pwid="lyrics-chart" style={{ fontSize: `${size}rem` }} className="font-mono leading-tight">
       {lines.map((line, index) => (
-        <Line key={index} line={line} tempo={tempo} chordShapes={chordShapes} open={open} setOpen={setOpen} anchor={anchor} />
+        <Line
+          key={index}
+          line={line}
+          tempo={tempo}
+          chordShapes={chordShapes}
+          open={open}
+          setOpen={setOpen}
+          anchor={anchor}
+          shownKey={shownKey}
+          numeralDisplay={numeralDisplay}
+        />
       ))}
     </div>
   )
@@ -73,6 +87,8 @@ function Line({
   open,
   setOpen,
   anchor,
+  shownKey,
+  numeralDisplay,
 }: {
   line: ChartLine
   tempo: number | null
@@ -80,6 +96,8 @@ function Line({
   open: number | null
   setOpen: (start: number | null) => void
   anchor: string
+  shownKey: string | null
+  numeralDisplay: NumeralDisplay
 }) {
   if (line.length === 0) return <div className="h-4" />
   const only = line.length === 1 ? line[0]! : null
@@ -105,7 +123,16 @@ function Line({
   return (
     <div className="flex flex-wrap items-end">
       {line.map((item, index) => (
-        <Item key={index} item={item} chordShapes={chordShapes} open={open} setOpen={setOpen} anchor={anchor} />
+        <Item
+          key={index}
+          item={item}
+          chordShapes={chordShapes}
+          open={open}
+          setOpen={setOpen}
+          anchor={anchor}
+          shownKey={shownKey}
+          numeralDisplay={numeralDisplay}
+        />
       ))}
     </div>
   )
@@ -117,12 +144,16 @@ function Item({
   open,
   setOpen,
   anchor,
+  shownKey,
+  numeralDisplay,
 }: {
   item: ChartItem
   chordShapes: boolean
   open: number | null
   setOpen: (start: number | null) => void
   anchor: string
+  shownKey: string | null
+  numeralDisplay: NumeralDisplay
 }) {
   switch (item.kind) {
     case "section":
@@ -142,6 +173,14 @@ function Item({
       // An empty slot is padding for the next word, not a chord to hold.
       const openable = chordShapes && item.chord !== ""
       const showing = openable && open === item.start
+      const chordNumeral = item.chord ? numeral(item.chord, shownKey) : null
+      // A chord with no numeral (no key, or a name that does not spell) keeps its name, even in numerals-only mode.
+      const showNumeral = chordNumeral !== null && numeralDisplay !== "names"
+      const showName = !showNumeral || numeralDisplay === "both"
+      // The name keeps its row when hidden, so the numeral sits where the name would.
+      const nameClass = showName ? chordClass : `${chordClass} invisible`
+
+      // The numeral is outside the chord element, so the chord element's text is the name alone.
       return (
         <span data-start={item.start} data-end={item.end} className={`inline-flex flex-col ${openable ? "relative" : ""}`}>
           {openable ? (
@@ -151,15 +190,16 @@ function Item({
               aria-expanded={showing}
               onClick={() => setOpen(showing ? null : item.start)}
               style={{ anchorName: `--chord-${anchor}-${item.start}` } as CSSProperties}
-              className={`${chordClass} cursor-pointer border-0 bg-transparent text-left`}
+              className={`${nameClass} cursor-pointer border-0 bg-transparent text-left`}
             >
               {item.chord}
             </button>
           ) : (
-            <span data-pwid="chart-chord" className={chordClass}>
+            <span data-pwid="chart-chord" className={nameClass}>
               {item.chord}
             </span>
           )}
+          {showNumeral && <span data-pwid="chart-numeral" className="text-xs leading-none text-zinc-500">{chordNumeral}</span>}
           <span data-pwid="chart-lyric" className="whitespace-pre">{item.lyric}</span>
           {showing && <ChordShapes name={item.chord} anchor={`--chord-${anchor}-${item.start}`} />}
         </span>
