@@ -9,6 +9,11 @@ import { isPhraseStart, isTabStart, suggestedChords } from "~/charts/lyrics"
 import { errorMessage } from "./form"
 import { Phrase } from "./Phrase"
 import { PhraseForm } from "./PhraseForm"
+import { EditorOutline } from "./proto/EditorOutline"
+import { EditorTap } from "./proto/EditorTap"
+import { EditorText } from "./proto/EditorText"
+import { PrototypeSwitcher, useVariant } from "./proto/PrototypeSwitcher"
+import type { ProtoEditorProps } from "./proto/props"
 
 /** A chord in hand: dragged or armed from the palette (no `from`), or picked up off the chart. */
 type Held = { chord: string; from?: { line: number; chord: number } }
@@ -24,7 +29,7 @@ const button =
  * revision, so a mark anchored in the chart follows it (docs/adr/0001).
  * The chart is edited in the key it is written in.
  */
-export function ChartEditor({
+function DragEditor({
   chart,
   tempo,
   onSaved,
@@ -511,4 +516,21 @@ function readDrag(event: DragEvent): Held | null {
   event.preventDefault()
   const raw = event.dataTransfer.getData(DRAG_TYPE)
   return raw ? (JSON.parse(raw) as Held) : null
+}
+
+// PROTOTYPE: throwaway switch between editing designs, chosen by `?editor=`.
+const VARIANTS = ["A", "B", "C", "D"] as const
+const VARIANT_NAMES = { A: "Drag (today)", B: "Text area with a toolbar", C: "Tap a word, pick a chord", D: "Sections as cards" }
+
+export function ChartEditor(props: ProtoEditorProps) {
+  const [variant, setVariant] = useVariant(VARIANTS)
+  return (
+    <>
+      {variant === "A" && <DragEditor {...props} />}
+      {variant === "B" && <EditorText {...props} />}
+      {variant === "C" && <EditorTap {...props} />}
+      {variant === "D" && <EditorOutline {...props} />}
+      <PrototypeSwitcher names={VARIANT_NAMES} current={variant} onChange={setVariant} />
+    </>
+  )
 }
