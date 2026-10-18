@@ -23,7 +23,9 @@ test("concurrent moves preserve different entries and last write wins for one en
     ])
     expect(concurrentResponses.every((response) => response.ok())).toBe(true)
     const afterConcurrent = await (await page.request.get(`/api/setlists/${setlist.id}/entries`)).json()
-    expect(afterConcurrent.map((entry: { id: string }) => entry.id)).toEqual([entries[2].id, entries[0].id, entries[1].id, entries[3].id])
+    // The second move names the first move's row as its anchor, so the result depends on which commits first; both orders are valid.
+    const [a, b, c, d] = entries.map((entry) => entry.id)
+    expect([[c, a, b, d], [b, c, a, d]]).toContainEqual(afterConcurrent.map((entry: { id: string }) => entry.id))
     const sameAnchor = await Promise.all([
       contexts[0]!.request.put(`/api/setlists/${setlist.id}/move`, { data: { kind: "entry", id: entries[0].id, section_id: null, previous: entries[2].id } }),
       contexts[1]!.request.put(`/api/setlists/${setlist.id}/move`, { data: { kind: "entry", id: entries[1].id, section_id: null, previous: entries[2].id } }),
