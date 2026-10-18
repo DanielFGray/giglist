@@ -227,7 +227,7 @@ function Item({
 }
 
 const chordClass = "h-5 whitespace-pre pr-3 font-semibold"
-const numeralClass = "h-3 text-xs leading-3 text-zinc-500"
+const numeralClass = "h-3 whitespace-pre pr-3 text-xs leading-3 text-zinc-500"
 
 /** The note on tab or notation shown in another key: it is drawn as written, in the written key. */
 function WrittenIn({ what, keyName, spaced }: { what: "tab" | "notation"; keyName: string; spaced: boolean }) {
