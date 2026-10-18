@@ -5,9 +5,13 @@ import { SongEditor } from "~/components/SongEditor"
 
 export const Route = createFileRoute("/band/$bandId/songs/$songId")({
   // `key` is the key to show the charts in, for example a setlist entry's key.
-  validateSearch: (search: Record<string, unknown>): { key?: MusicalKeyType } => {
+  // `edit` enables the metadata form; without it the song is read-only.
+  validateSearch: (search: Record<string, unknown>): { key?: MusicalKeyType; edit?: true } => {
     const key = MusicalKeys.find((k) => k === search.key)
-    return key ? { key } : {}
+    return {
+      ...(key ? { key } : {}),
+      ...(search.edit === true ? { edit: true as const } : {}),
+    }
   },
   loader: async ({ params }) => {
     const [song, songCharts] = await Promise.all([songs.byId(params.songId), charts.bySong(params.songId)])
@@ -30,7 +34,11 @@ function SongDetail() {
       song={song}
       songCharts={songCharts}
       shownKey={search.key ?? song.key}
-      onShownKeyChange={(key) => navigate({ search: key ? { key } : {}, replace: true })}
+      onShownKeyChange={(key) =>
+        navigate({ search: (prev) => ({ ...prev, key: key ?? undefined }), replace: true })
+      }
+      editing={search.edit === true}
+      onEditingChange={(editing) => navigate({ search: (prev) => ({ ...prev, edit: editing || undefined }) })}
     />
   )
 }

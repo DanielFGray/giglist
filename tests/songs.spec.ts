@@ -64,7 +64,7 @@ test.describe("songs", () => {
     await getPw(page, "song-notes").fill("Capo 2, strummed")
     await getPw(page, "song-submit").click()
 
-    // Saving returns to the list, which shows what the form collected.
+    // Saving leaves the song in read view; the list shows what the form collected.
     await page.goto(`/band/${bandId}/songs`)
     await expect(getPw(page, "song-row")).toHaveCount(1, { timeout: 10000 })
     await expect(getPw(page, "song-row-title")).toHaveText("Wonderwall")
@@ -90,6 +90,11 @@ test.describe("songs", () => {
     await getPw(page, "song-duration").fill("4:05")
     await getPw(page, "song-submit").click()
 
+    // Saving leaves the song in read view: the form is disabled behind one Edit button.
+    await expect(getPw(page, "song-submit")).toHaveCount(0, { timeout: 10000 })
+    await expect(getPw(page, "song-edit")).toBeVisible()
+
+    await page.goto(`/band/${bandId}/songs`)
     await expect(getPw(page, "song-row-meta")).toContainText("92 BPM", { timeout: 10000 })
     await expect(getPw(page, "song-row-meta")).toContainText("4:05")
 
@@ -97,6 +102,32 @@ test.describe("songs", () => {
     await expect(getPw(page, "song-edit-form")).toBeVisible({ timeout: 10000 })
     await getPw(page, "song-delete").click()
     await expect(getPw(page, "songs-empty")).toBeVisible({ timeout: 10000 })
+  })
+
+  test("a song opens read-only, and Edit or Cancel moves between the two modes", async ({ page, testing }) => {
+    await testing.login()
+    const bandId = await createBand(page, `test-songs-read-${Date.now()}`)
+    await createSong(page, bandId, { title: "Everlong", artist: "Foo Fighters", tempo_bpm: 158 })
+
+    await page.goto(`/band/${bandId}/songs`)
+    await expect(getPw(page, "song-row")).toHaveCount(1, { timeout: 10000 })
+    await getPw(page, "song-row-title").click()
+
+    await expect(getPw(page, "song-edit")).toBeVisible({ timeout: 10000 })
+    await expect(getPw(page, "song-title")).toBeDisabled()
+    await expect(getPw(page, "song-submit")).toHaveCount(0)
+    await expect(getPw(page, "song-delete")).toHaveCount(0)
+
+    await getPw(page, "song-edit").click()
+    await expect(page).toHaveURL(/edit=true/)
+    await expect(getPw(page, "song-title")).toBeEnabled()
+    await getPw(page, "song-title").fill("Changed")
+    await getPw(page, "song-cancel").click()
+
+    // Cancel drops the unsaved title and leaves the URL in read view.
+    await expect(getPw(page, "song-title")).toBeDisabled()
+    await expect(getPw(page, "song-title")).toHaveValue("Everlong")
+    await expect(page).not.toHaveURL(/edit=true/)
   })
 
   test("rejects a duration that is not mm:ss", async ({ page, testing }) => {
@@ -144,7 +175,10 @@ test.describe("songs", () => {
 
     await getPw(page, "song-title").fill("Named Later")
     await getPw(page, "song-submit").click()
-    await expect(getPw(page, "song-row-title")).toHaveText("Named Later", { timeout: 10000 })
+    await expect(getPw(page, "song-edit")).toBeVisible({ timeout: 10000 })
+
+    await page.goto(`/band/${bandId}/songs`)
+    await expect(getPw(page, "song-row-title")).toHaveText("Named Later")
   })
 
   test("sorts and searches the catalog", async ({ page, testing }) => {
