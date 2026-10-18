@@ -20,6 +20,9 @@ begin;
 select pg_temp.as_user('00000000-0000-0000-0000-0000000000b2');
 select pg_temp.check((select count(*) from app_public.setlist_entries_resolved) = 1, 'a bandmate reads the entry for the band''s own song');
 select pg_temp.check(not exists (select 1 from app_public.setlist_entries_resolved where title = 'Secret Song'), 'a song of another band does not come through the view');
+create temp table mixed_keys (position_key text collate "C");
+insert into mixed_keys values ('aB'), ('Ab');
+select pg_temp.check((select string_agg(position_key, ',' order by position_key) from mixed_keys) = 'Ab,aB', 'mixed-case position keys use JavaScript string order');
 rollback;
 
 begin;

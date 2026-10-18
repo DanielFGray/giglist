@@ -1,20 +1,15 @@
 /**
  * A setlist's arrangement: its sections in order, each holding its entries in
  * order. Entries that belong to no section form a group of their own that
- * always comes first. Every operation returns a new arrangement; the server
- * stores the result as a whole, so positions are never compared or patched.
+ * always comes first. Operations return a new arrangement for the UI; the
+ * page turns the changed row into a neighbour-based move for the server.
  */
 
-export type Slot = { readonly id: string; readonly section_id: string | null }
+type Slot = { readonly id: string; readonly section_id: string | null }
 export type Section = { readonly id: string; readonly name: string }
 export type Group<E extends Slot, S extends Section = Section> = {
   readonly section: S | null
   readonly entries: ReadonlyArray<E>
-}
-
-/** What `PUT /api/setlists/:id/arrangement` takes: the groups in order, null section first. */
-export type ArrangementPayload = {
-  readonly groups: ReadonlyArray<{ readonly section_id: string | null; readonly entries: ReadonlyArray<string> }>
 }
 
 /**
@@ -93,10 +88,6 @@ export function stepSection<E extends Slot, S extends Section>(
   const next = [...groups]
   ;[next[index], next[target]] = [next[target]!, next[index]!]
   return next
-}
-
-export function toPayload<E extends Slot, S extends Section>(groups: ReadonlyArray<Group<E, S>>): ArrangementPayload {
-  return { groups: groups.map((g) => ({ section_id: g.section?.id ?? null, entries: g.entries.map((e) => e.id) })) }
 }
 
 /** The entries in the order the band plays them, each with the name of its section (null when it has none). */

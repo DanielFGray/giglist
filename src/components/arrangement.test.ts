@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test"
-import { groupEntries, placeEntry, stepEntry, stepSection, toPayload, type Slot } from "./arrangement"
+import { groupEntries, placeEntry, stepEntry, stepSection } from "./arrangement"
+
+type Slot = { readonly id: string; readonly section_id: string | null }
 
 const sections = [{ id: "s1", name: "Set 1" }, { id: "s2", name: "Set 2" }]
 const entry = (id: string, section_id: string | null): Slot => ({ id, section_id })
@@ -61,19 +63,10 @@ describe("stepEntry", () => {
   })
 })
 
-describe("stepSection and toPayload", () => {
+describe("stepSection", () => {
   test("swaps sections but never moves one above the unsectioned group", () => {
     expect(shape(stepSection(base(), "s2", -1))).toBe("-:d s2:c s1:ab")
     expect(shape(stepSection(base(), "s1", -1))).toBe("-:d s1:ab s2:c")
   })
 
-  test("the payload lists groups and entry ids in order", () => {
-    expect(toPayload(placeEntry(base(), "a", "s2", null))).toEqual({
-      groups: [
-        { section_id: null, entries: ["d"] },
-        { section_id: "s1", entries: ["b"] },
-        { section_id: "s2", entries: ["c", "a"] },
-      ],
-    })
-  })
 })

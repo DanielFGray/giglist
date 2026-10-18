@@ -99,10 +99,10 @@ test.describe("lyrics charts", () => {
       })
     ).json()
     const entry = await (
-      await page.request.post(`/api/setlists/${setlist.id}/entries`, { data: { song_id: songId, position: 1 } })
+      await page.request.post(`/api/setlists/${setlist.id}/entries`, { data: { song_id: songId } })
     ).json()
     const updated = await page.request.put(`/api/setlists/${setlist.id}/entries/${entry.id}`, {
-      data: { position: 1, section_id: null, key_override: "Bb", tempo_override: null, notes_override: null },
+      data: { section_id: null, key_override: "Bb", tempo_override: null, notes_override: null },
     })
     expect(updated.ok(), `override failed: ${await updated.text()}`).toBe(true)
 

@@ -5,6 +5,7 @@ import { Kysely, withAuthContext } from "../db"
 import { SetlistHub } from "../services/setlist-hub"
 import * as Auth from "../services/auth"
 import { isBandMember } from "./scope"
+import { between, rebalance } from "../../components/position"
 import {
   SetListApi,
   CurrentSession,
@@ -23,8 +24,22 @@ const decodeEntryArray = S.decodeUnknownEffect(S.Array(SetlistEntry))
 const decodeSection = S.decodeUnknownEffect(SetlistSection)
 const decodeSectionArray = S.decodeUnknownEffect(S.Array(SetlistSection))
 
-/** Positions are renumbered in steps of this size whenever an arrangement is stored. */
-const POSITION_STEP = 1000
+
+type KeyedRow = { readonly id: string; readonly position_key: string }
+
+const placement = (
+  siblings: ReadonlyArray<KeyedRow>,
+  movedId: string,
+  previousId: string | null,
+  previousKey: string | null,
+) => {
+  const next = siblings.find((row) => previousKey === null || row.position_key > previousKey)
+  const position_key = between(previousKey, next?.position_key ?? null)
+  const ids = siblings.map((row) => row.id)
+  const index = previousId === null ? 0 : ids.indexOf(previousId) + 1
+  ids.splice(Math.max(0, index), 0, movedId)
+  return { position_key, ids }
+}
 
 /**
  * The setlist columns the wire shape needs. `gig_date` is cast to text so the
@@ -70,6 +85,15 @@ const asSession = <A, E>(query: (session: SessionData) => Effect.Effect<A, E, Ky
 const asWriter = <A, E>(setlistId: string, query: (session: SessionData) => Effect.Effect<A, E, Kysely>) =>
   asSession(query).pipe(Effect.tap(() => announceChange(setlistId)))
 
+const lockSetlist = Effect.fnUntraced(function*(db: Kysely["Service"], setlistId: string) {
+  yield* db
+    .selectFrom("app_public.setlists")
+    .select("id")
+    .where("id", "=", setlistId)
+    .forUpdate()
+    .pipe(Effect.head, Effect.orDie)
+})
+
 const announceChange = Effect.fnUntraced(function*(setlistId: string) {
   const hub = yield* SetlistHub
   const session = yield* CurrentSession
@@ -113,7 +137,8 @@ const entriesFor = Effect.fnUntraced(function*(setlistId: string) {
     .selectFrom("app_public.setlist_entries_resolved")
     .selectAll()
     .where("setlist_id", "=", setlistId)
-    .orderBy("position", "asc")
+    .orderBy("position_key", "asc")
+    .orderBy("id", "asc")
     .pipe(Effect.flatMap((rows) => decodeEntryArray(rows).pipe(Effect.orDie)))
 })
 
@@ -134,7 +159,7 @@ const entryOr404 = Effect.fnUntraced(function*(entryId: string, setlistId: strin
     )
 })
 
-const SECTION_COLUMNS = ["id", "setlist_id", "name", "position"] as const
+const SECTION_COLUMNS = ["id", "setlist_id", "name", "position_key"] as const
 
 /** One section, scoped to `setlistId` so the id alone cannot reach another band's setlist. */
 const sectionOr404 = Effect.fnUntraced(function*(sectionId: string, setlistId: string) {
@@ -236,6 +261,7 @@ export const setlistsHandlers = HttpApiBuilder.group(SetListApi, "setlists", (ha
       asWriter(id, (_session) =>
         Effect.gen(function* () {
           const db = yield* Kysely
+          yield* lockSetlist(db, id)
           const setlist = yield* setlistOr404(id)
 
           // The entry's song must be in the same band. RLS hides another band's
@@ -256,13 +282,24 @@ export const setlistsHandlers = HttpApiBuilder.group(SetListApi, "setlists", (ha
             return yield* new SetlistForbidden({ message: "That song is not in this band" })
           }
 
+          const sectionId = payload.section_id ?? null
+          let lastQuery = db
+            .selectFrom("app_public.setlist_entries")
+            .select("position_key")
+            .where("setlist_id", "=", id)
+            .orderBy("position_key", "desc")
+            .orderBy("id", "desc")
+          lastQuery = sectionId === null
+            ? lastQuery.where("section_id", "is", null)
+            : lastQuery.where("section_id", "=", sectionId)
+          const last = yield* lastQuery.pipe(Effect.head, Effect.map((row) => row.position_key), Effect.catchTag("NoSuchElementError", () => Effect.succeed(null)))
           const inserted = yield* db
             .insertInto("app_public.setlist_entries")
             .values({
               setlist_id: id,
               song_id: payload.song_id,
-              section_id: payload.section_id ?? null,
-              position: payload.position,
+              section_id: sectionId,
+              position_key: between(last, null),
             })
             .returning("id")
             .pipe(Effect.head, Effect.orDie)
@@ -275,11 +312,11 @@ export const setlistsHandlers = HttpApiBuilder.group(SetListApi, "setlists", (ha
       asWriter(id, (_session) =>
         Effect.gen(function* () {
           const db = yield* Kysely
+          yield* lockSetlist(db, id)
           yield* setlistOr404(id)
           yield* db
             .updateTable("app_public.setlist_entries")
             .set({
-              position: payload.position,
               section_id: payload.section_id,
               key_override: payload.key_override,
               tempo_override: payload.tempo_override,
@@ -325,7 +362,8 @@ export const setlistsHandlers = HttpApiBuilder.group(SetListApi, "setlists", (ha
             .selectFrom("app_public.setlist_sections")
             .select(SECTION_COLUMNS)
             .where("setlist_id", "=", id)
-            .orderBy("position", "asc")
+            .orderBy("position_key", "asc")
+            .orderBy("id", "asc")
             .pipe(Effect.flatMap((rows) => decodeSectionArray(rows).pipe(Effect.orDie)))
         }),
       ),
@@ -334,16 +372,19 @@ export const setlistsHandlers = HttpApiBuilder.group(SetListApi, "setlists", (ha
       asWriter(id, (_session) =>
         Effect.gen(function* () {
           const db = yield* Kysely
+          yield* lockSetlist(db, id)
           yield* setlistOr404(id)
           // A new section plays last.
           const last = yield* db
             .selectFrom("app_public.setlist_sections")
-            .select(sql<number>`coalesce(max(position), 0)`.as("position"))
+            .select("position_key")
             .where("setlist_id", "=", id)
-            .pipe(Effect.head, Effect.orDie)
+            .orderBy("position_key", "desc")
+            .orderBy("id", "desc")
+            .pipe(Effect.head, Effect.map((row) => row.position_key), Effect.catchTag("NoSuchElementError", () => Effect.succeed(null)))
           const inserted = yield* db
             .insertInto("app_public.setlist_sections")
-            .values({ setlist_id: id, name: payload.name, position: last.position + POSITION_STEP })
+            .values({ setlist_id: id, name: payload.name, position_key: between(last, null) })
             .returning("id")
             .pipe(Effect.head, Effect.orDie)
           return yield* sectionOr404(inserted.id, id)
@@ -381,52 +422,60 @@ export const setlistsHandlers = HttpApiBuilder.group(SetListApi, "setlists", (ha
         }),
       ),
     )
-    .handle("arrange", ({ params: { id }, payload }) =>
+    .handle("move", ({ params: { id }, payload }) =>
       asWriter(id, (_session) =>
         Effect.gen(function* () {
           const db = yield* Kysely
           yield* setlistOr404(id)
-
-          // Every id must belong to this setlist, or the write would reach another band's rows.
-          const sections = yield* db
-            .selectFrom("app_public.setlist_sections")
-            .select("id")
-            .where("setlist_id", "=", id)
-            .pipe(Effect.orDie)
-          const entries = yield* db
-            .selectFrom("app_public.setlist_entries")
-            .select("id")
-            .where("setlist_id", "=", id)
-            .pipe(Effect.orDie)
-          const sectionIds = new Set(sections.map((r) => r.id))
-          const entryIds = new Set(entries.map((r) => r.id))
-          const named = payload.groups.flatMap((g) => g.entries)
-          const sectionsNamed = payload.groups.flatMap((g) => (g.section_id === null ? [] : [g.section_id]))
-          const wellFormed =
-            named.every((e) => entryIds.has(e)) &&
-            new Set(named).size === named.length &&
-            sectionsNamed.every((s) => sectionIds.has(s)) &&
-            new Set(sectionsNamed).size === sectionsNamed.length
-          if (!wellFormed) {
-            return yield* new SetlistForbidden({ message: "That arrangement names a section or song that is not in this setlist" })
-          }
-
-          for (const [groupIndex, group] of payload.groups.entries()) {
-            if (group.section_id !== null) {
-              yield* db
-                .updateTable("app_public.setlist_sections")
-                .set({ position: (groupIndex + 1) * POSITION_STEP })
-                .where("id", "=", group.section_id)
-                .pipe(Effect.orDie)
+          yield* db.withTransaction(Effect.gen(function* () {
+            // Serialise all moves for one setlist before reading neighbour keys.
+            yield* lockSetlist(db, id)
+            if (payload.kind === "entry") {
+              const forbidden = () => new SetlistForbidden({ message: "That entry or neighbour is not in this setlist group" })
+              const sectionId = payload.section_id ?? null
+              const row = yield* db.selectFrom("app_public.setlist_entries").select(["id", "position_key"]).where("id", "=", payload.id).where("setlist_id", "=", id).pipe(Effect.head, Effect.catchTag("NoSuchElementError", () => Effect.fail(forbidden())))
+              if (sectionId !== null) {
+                yield* db.selectFrom("app_public.setlist_sections").select("id").where("id", "=", sectionId).where("setlist_id", "=", id).pipe(Effect.head, Effect.catchTag("NoSuchElementError", () => Effect.fail(forbidden())))
+              }
+              let previousKey: string | null = null
+              if (payload.previous !== null) {
+                const previous = yield* db.selectFrom("app_public.setlist_entries").select(["id", "position_key", "section_id"]).where("id", "=", payload.previous).where("setlist_id", "=", id).pipe(Effect.head, Effect.catchTag("NoSuchElementError", () => Effect.fail(forbidden())))
+                if (previous.id === row.id || previous.section_id !== sectionId) return yield* forbidden()
+                previousKey = previous.position_key
+              }
+              let siblingsQuery = db.selectFrom("app_public.setlist_entries").select(["id", "position_key"]).where("setlist_id", "=", id).where("id", "!=", row.id)
+              siblingsQuery = sectionId === null ? siblingsQuery.where("section_id", "is", null) : siblingsQuery.where("section_id", "=", sectionId)
+              const siblings = yield* siblingsQuery.orderBy("position_key", "asc").orderBy("id", "asc").pipe(Effect.orDie)
+              const located = placement(siblings, row.id, payload.previous, previousKey)
+              if (located.position_key.length <= 32) {
+                yield* db.updateTable("app_public.setlist_entries").set({ section_id: sectionId, position_key: located.position_key }).where("id", "=", row.id).pipe(Effect.orDie)
+              } else {
+                const keys = rebalance(located.ids.length)
+                for (const [index, entryId] of located.ids.entries()) {
+                  yield* db.updateTable("app_public.setlist_entries").set({ section_id: entryId === row.id ? sectionId : undefined, position_key: keys[index]! }).where("id", "=", entryId).pipe(Effect.orDie)
+                }
+              }
+            } else {
+              const forbidden = () => new SetlistForbidden({ message: "That section or neighbour is not in this setlist" })
+              const row = yield* db.selectFrom("app_public.setlist_sections").select(["id", "position_key"]).where("id", "=", payload.id).where("setlist_id", "=", id).pipe(Effect.head, Effect.catchTag("NoSuchElementError", () => Effect.fail(forbidden())))
+              let previousKey: string | null = null
+              if (payload.previous !== null) {
+                const previous = yield* db.selectFrom("app_public.setlist_sections").select(["id", "position_key"]).where("id", "=", payload.previous).where("setlist_id", "=", id).pipe(Effect.head, Effect.catchTag("NoSuchElementError", () => Effect.fail(forbidden())))
+                if (previous.id === row.id) return yield* forbidden()
+                previousKey = previous.position_key
+              }
+              const siblings = yield* db.selectFrom("app_public.setlist_sections").select(["id", "position_key"]).where("setlist_id", "=", id).where("id", "!=", row.id).orderBy("position_key", "asc").orderBy("id", "asc").pipe(Effect.orDie)
+              const located = placement(siblings, row.id, payload.previous, previousKey)
+              if (located.position_key.length <= 32) {
+                yield* db.updateTable("app_public.setlist_sections").set({ position_key: located.position_key }).where("id", "=", row.id).pipe(Effect.orDie)
+              } else {
+                const keys = rebalance(located.ids.length)
+                for (const [index, sectionId] of located.ids.entries()) {
+                  yield* db.updateTable("app_public.setlist_sections").set({ position_key: keys[index]! }).where("id", "=", sectionId).pipe(Effect.orDie)
+                }
+              }
             }
-            for (const [entryIndex, entryId] of group.entries.entries()) {
-              yield* db
-                .updateTable("app_public.setlist_entries")
-                .set({ section_id: group.section_id, position: (entryIndex + 1) * POSITION_STEP })
-                .where("id", "=", entryId)
-                .pipe(Effect.orDie)
-            }
-          }
+          }))
         }),
       ),
     )

@@ -507,7 +507,7 @@ export const SetlistEntry = S.Struct({
   setlist_id: S.String.check(S.isUUID()),
   section_id: S.NullOr(S.String.check(S.isUUID())),
   song_id: S.String.check(S.isUUID()),
-  position: S.Finite,
+  position_key: S.String,
   title: S.String,
   artist: S.NullOr(S.String),
   key: S.NullOr(musicalKey),
@@ -522,13 +522,11 @@ export const SetlistEntry = S.Struct({
 
 export const SetlistEntryInsert = S.Struct({
   song_id: S.String.check(S.isUUID()),
-  position: S.Finite,
   section_id: S.optional(S.NullOr(S.String.check(S.isUUID()))),
 })
 
 /** The whole entry is sent on update: a null override means "inherit". */
 export const SetlistEntryUpdate = S.Struct({
-  position: S.Finite,
   section_id: S.NullOr(S.String.check(S.isUUID())),
   key_override: S.NullOr(musicalKey),
   tempo_override: S.NullOr(
@@ -542,26 +540,19 @@ export const SetlistSection = S.Struct({
   id: S.String.check(S.isUUID()),
   setlist_id: S.String.check(S.isUUID()),
   name: S.String,
-  position: S.Finite,
+  position_key: S.String,
 })
 
 export const SetlistSectionName = S.Struct({
   name: S.String.pipe(S.check(S.isMinLength(1)), S.check(S.isMaxLength(200))),
 })
 
-/**
- * The whole play order in one value: sections in order, each with its entries
- * in order. A null `section_id` is the group of entries that belong to no
- * section. The server numbers the positions itself, so the client never
- * computes a position and gaps never run out.
- */
-export const SetlistArrangement = S.Struct({
-  groups: S.Array(
-    S.Struct({
-      section_id: S.NullOr(S.String.check(S.isUUID())),
-      entries: S.Array(S.String.check(S.isUUID())),
-    }),
-  ),
+/** One reorder. The server resolves the previous anchor to keys inside the write. */
+export const SetlistMove = S.Struct({
+  kind: S.Literals(["entry", "section"]),
+  id: S.String.check(S.isUUID()),
+  section_id: S.optional(S.NullOr(S.String.check(S.isUUID()))),
+  previous: S.NullOr(S.String.check(S.isUUID())),
 })
 
 /** Someone with a setlist open: reading it, or performing it from song number `at`. */
@@ -762,9 +753,9 @@ export const SetlistsApiGroup = HttpApiGroup.make("setlists")
     }),
   )
   .add(
-    HttpApiEndpoint.put("arrange", "/:id/arrangement", {
+    HttpApiEndpoint.put("move", "/:id/move", {
       params: { id: S.String.check(S.isUUID()) },
-      payload: SetlistArrangement,
+      payload: SetlistMove,
       error: [
         SetlistNotFound.pipe(HttpApiSchema.status(404)),
         SetlistForbidden.pipe(HttpApiSchema.status(403)),

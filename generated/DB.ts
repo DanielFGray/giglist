@@ -186,7 +186,7 @@ export interface AppPublicSetlistEntries {
   /**
    * Ordering position within the section (or setlist if no section). Uses gap-based integers for cheap reordering.
    */
-  position: Generated<number>;
+  position_key: Generated<string>;
   section_id: string | null;
   setlist_id: string;
   song_id: string;
@@ -207,7 +207,7 @@ export interface AppPublicSetlistEntriesResolved {
   key_overridden: boolean | null;
   notes: string | null;
   notes_overridden: boolean | null;
-  position: number | null;
+  position_key: string | null;
   section_id: string | null;
   setlist_id: string | null;
   song_id: string | null;
@@ -239,7 +239,7 @@ export interface AppPublicSetlistSections {
   created_at: Generated<Timestamp>;
   id: Generated<string>;
   name: string;
-  position: Generated<number>;
+  position_key: Generated<string>;
   setlist_id: string;
   updated_at: Generated<Timestamp>;
 }

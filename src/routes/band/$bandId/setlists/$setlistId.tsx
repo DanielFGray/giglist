@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import { Link, createFileRoute, useRouter } from "@tanstack/react-router"
 import { useForm } from "@tanstack/react-form"
 import { Schema as S } from "effect"
-import { setlists, songs, type SetlistEntryInfo, type SetlistSectionInfo, type SongInfo } from "~/api/client"
+import { setlists, songs, type SetlistEntryInfo, type SetlistSectionInfo, type SongInfo, type SetlistMoveData } from "~/api/client"
 import {
   MusicalKeys,
   SetlistEntryUpdate,
@@ -14,7 +14,7 @@ import { useAuth } from "~/components/AuthContext"
 import { formatDuration } from "~/components/duration"
 import { useSetlistLive } from "~/components/live"
 import { Viewers } from "~/components/Viewers"
-import { groupEntries, placeEntry, stepEntry, stepSection, toPayload, type Group } from "~/components/arrangement"
+import { groupEntries, placeEntry, stepEntry, stepSection, type Group } from "~/components/arrangement"
 
 export const Route = createFileRoute("/band/$bandId/setlists/$setlistId")({
   loader: async ({ params }) => {
@@ -42,11 +42,7 @@ const keyOptions: ReadonlyArray<{ value: MusicalKeyType | ""; label: string }> =
 
 /** The entry's own overrides, reconstructed from the resolved row. A null
  *  override means the entry inherits the song's value. */
-const updatePayload = (
-  entry: SetlistEntryInfo,
-  position: number,
-): (typeof SetlistEntryUpdate)["Encoded"] => ({
-  position,
+const updatePayload = (entry: SetlistEntryInfo): (typeof SetlistEntryUpdate)["Encoded"] => ({
   section_id: entry.section_id,
   key_override: entry.key_overridden ? entry.key : null,
   tempo_override: entry.tempo_overridden ? entry.tempo_bpm : null,
@@ -90,7 +86,36 @@ function SetlistEditor() {
     }
     await refresh()
   }
-  const arrange = (next: ReadonlyArray<EntryGroup>) => act(() => setlists.arrange(setlistId, toPayload(next)))
+  const arrange = (next: ReadonlyArray<EntryGroup>): Promise<void> => {
+    const currentSections = groups.flatMap((group) => group.section ? [group.section.id] : [])
+    const nextSections = next.flatMap((group) => group.section ? [group.section.id] : [])
+    const sectionIndex = nextSections.findIndex((section, index) => currentSections[index] !== section)
+    if (sectionIndex >= 0) {
+      const move: SetlistMoveData = {
+        kind: "section",
+        id: nextSections[sectionIndex]!,
+        previous: nextSections[sectionIndex - 1] ?? null,
+      }
+      return act(() => setlists.move(setlistId, move))
+    }
+    const currentEntries = groups.flatMap((group) => group.entries)
+    const nextEntries = next.flatMap((group) => group.entries)
+    const currentById = new Map(currentEntries.map((entry, index) => [entry.id, { entry, index }]))
+    const changed = nextEntries.find((entry) => currentById.get(entry.id)?.entry.section_id !== entry.section_id)
+      ?? nextEntries.find((entry, index) => currentById.get(entry.id)?.index !== index)
+    if (changed) {
+      const group = next.find((candidate) => candidate.entries.some((entry) => entry.id === changed.id))!
+      const index = group.entries.findIndex((entry) => entry.id === changed.id)
+      const move: SetlistMoveData = {
+        kind: "entry",
+        id: changed.id,
+        section_id: group.section?.id ?? null,
+        previous: group.entries[index - 1]?.id ?? null,
+      }
+      return act(() => setlists.move(setlistId, move))
+    }
+    return Promise.resolve()
+  }
 
   const drop = (sectionId: string | null, beforeId: string | null) => {
     const id = dragging.current
@@ -153,7 +178,6 @@ function SetlistEditor() {
         setlistId={setlistId}
         bandSongs={bandSongs}
         sectionId={sections.at(-1)?.id ?? null}
-        nextPosition={(entries.reduce((max, e) => Math.max(max, e.position), 0)) + 1000}
         onAdded={refresh}
       />
 
@@ -449,14 +473,12 @@ function SongPicker({
   setlistId,
   bandSongs,
   sectionId,
-  nextPosition,
   onAdded,
 }: {
   setlistId: string
   bandSongs: readonly SongInfo[]
   /** A new song joins this section; null when the setlist has none. */
   sectionId: string | null
-  nextPosition: number
   onAdded: () => Promise<void>
 }) {
   const [songId, setSongId] = useState("")
@@ -467,7 +489,7 @@ function SongPicker({
     const chosen = bandSongs.find((song) => song.id === songId)
     if (chosen === undefined) return
     try {
-      await setlists.addEntry(setlistId, { song_id: chosen.id, position: nextPosition, section_id: sectionId })
+      await setlists.addEntry(setlistId, { song_id: chosen.id, section_id: sectionId })
       setSongId("")
       await onAdded()
     } catch (e) {
@@ -653,7 +675,7 @@ function EntryOverrides({
   onSaved: () => Promise<void>
 }) {
   const [serverError, setServerError] = useState<string | null>(null)
-  const [initial] = useState(() => updatePayload(entry, entry.position))
+  const [initial] = useState(() => updatePayload(entry))
 
   const form = useForm({
     defaultValues: initial,

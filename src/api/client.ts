@@ -52,7 +52,7 @@ export type SetlistCreateData = Parameters<SetlistsClient["createSetlist"]>[0]["
 export type SetlistUpdateData = Parameters<SetlistsClient["updateSetlist"]>[0]["payload"]
 export type SetlistEntryCreateData = Parameters<SetlistsClient["addEntry"]>[0]["payload"]
 export type SetlistEntryUpdateData = Parameters<SetlistsClient["updateEntry"]>[0]["payload"]
-export type SetlistArrangementData = Parameters<SetlistsClient["arrange"]>[0]["payload"]
+export type SetlistMoveData = Parameters<SetlistsClient["move"]>[0]["payload"]
 export type SetlistPresenceData = Parameters<SetlistsClient["reportPresence"]>[0]["payload"]
 
 /** The auth payloads, likewise taken from the contract. The password is a
@@ -276,7 +276,7 @@ export const setlists = {
   reportPresence: (id: string, data: SetlistPresenceData) =>
     run(api.pipe(Effect.flatMap((c) => c.setlists.reportPresence({ params: { id }, payload: data })))),
 
-  /** Stores the whole play order; see `SetlistArrangement`. */
-  arrange: (id: string, arrangement: SetlistArrangementData) =>
-    run(api.pipe(Effect.flatMap((c) => c.setlists.arrange({ params: { id }, payload: arrangement })))),
+  /** Moves one row between its neighbours; the server computes its key. */
+  move: (id: string, move: SetlistMoveData) =>
+    run(api.pipe(Effect.flatMap((c) => c.setlists.move({ params: { id }, payload: move })))), 
 }

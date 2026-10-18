@@ -75,7 +75,6 @@ export const setlistEntryFindById =
         "setlist_id",
         "section_id",
         "song_id",
-        "position",
         "key_override",
         "tempo_override",
         "notes_override",
@@ -111,7 +110,6 @@ export const setlistEntryFindBySongId =
         "setlist_id",
         "section_id",
         "song_id",
-        "position",
         "key_override",
         "tempo_override",
         "notes_override",
@@ -125,7 +123,7 @@ export const setlistSectionFindById =
   ({ id }: Pick<Selectable<AppPublicSetlistSections>, "id">) =>
     db
       .selectFrom("app_public.setlist_sections")
-      .select(["id", "setlist_id", "name", "position", "created_at", "updated_at"])
+      .select(["id", "setlist_id", "name", "created_at", "updated_at"])
       .where("id", "=", id);
 
 export const setlistSectionCreate =

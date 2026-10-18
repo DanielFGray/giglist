@@ -91,23 +91,22 @@ export const createSetlist = async (page: Page) => {
   const setlist = await post("/api/setlists", { band_id: band.id, name: "Friday", description: null, gig_date: null, status: "draft" })
   const [one, encore] = [await post(`/api/setlists/${setlist.id}/sections`, { name: "Set 1" }), await post(`/api/setlists/${setlist.id}/sections`, { name: "Encore" })]
   const entries = []
-  for (const [i, s] of [alpha, beta, gamma].entries()) {
-    entries.push(await post(`/api/setlists/${setlist.id}/entries`, { song_id: s.id, position: (i + 1) * 1000 }))
+  for (const s of [alpha, beta, gamma]) {
+    entries.push(await post(`/api/setlists/${setlist.id}/entries`, { song_id: s.id }))
   }
   const betaEntry = entries[1]
   const override = await page.request.put(`/api/setlists/${setlist.id}/entries/${betaEntry.id}`, {
-    data: { position: 2000, section_id: null, key_override: "Bb", tempo_override: null, notes_override: null },
+    data: { section_id: null, key_override: "Bb", tempo_override: null, notes_override: null },
   })
   expect(override.ok(), await override.text()).toBe(true)
-  const arranged = await page.request.put(`/api/setlists/${setlist.id}/arrangement`, {
-    data: {
-      groups: [
-        { section_id: one.id, entries: [entries[0].id, entries[1].id] },
-        { section_id: encore.id, entries: [entries[2].id] },
-      ],
-    },
-  })
-  expect(arranged.ok(), await arranged.text()).toBe(true)
+  for (const move of [
+    { kind: "entry", id: entries[0].id, section_id: one.id, previous: null },
+    { kind: "entry", id: entries[1].id, section_id: one.id, previous: entries[0].id },
+    { kind: "entry", id: entries[2].id, section_id: encore.id, previous: null },
+  ] as const) {
+    const moved = await page.request.put(`/api/setlists/${setlist.id}/move`, { data: move })
+    expect(moved.ok(), await moved.text()).toBe(true)
+  }
   return { bandId: band.id as string, setlistId: setlist.id as string }
 }
 

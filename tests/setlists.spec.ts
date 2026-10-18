@@ -227,7 +227,7 @@ test.describe("setlist sections", () => {
     await expectLayout(page, [":Gamma", "Opening:Alpha"])
   })
 
-  test("refuses an arrangement that names another setlist's entry", async ({ page, testing }) => {
+  test("refuses a move that names another setlist's entry", async ({ page, testing }) => {
     const { bandId, setlistId } = await openSetlist(page, testing)
     const other = await (
       await page.request.post("/api/setlists", {
@@ -236,11 +236,11 @@ test.describe("setlist sections", () => {
     ).json()
     const songs = (await (await page.request.get(`/api/songs/band/${bandId}`)).json()) as Array<{ id: string }>
     const entry = await (
-      await page.request.post(`/api/setlists/${other.id}/entries`, { data: { song_id: songs[0]!.id, position: 1000 } })
+      await page.request.post(`/api/setlists/${other.id}/entries`, { data: { song_id: songs[0]!.id } })
     ).json()
 
-    const res = await page.request.put(`/api/setlists/${setlistId}/arrangement`, {
-      data: { groups: [{ section_id: null, entries: [entry.id] }] },
+    const res = await page.request.put(`/api/setlists/${setlistId}/move`, {
+      data: { kind: "entry", id: entry.id, section_id: null, previous: null },
     })
     expect(res.status()).toBe(403)
   })
