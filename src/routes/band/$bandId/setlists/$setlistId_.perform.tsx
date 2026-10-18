@@ -168,6 +168,7 @@ function Perform() {
             aria-label="Chord diagrams"
           >
             <option value="guitar">Guitar</option>
+            <option value="staff">Staff</option>
             <option value="off">Off</option>
           </select>
           <select

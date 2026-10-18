@@ -371,6 +371,26 @@ test.describe("chord shapes", () => {
     // The shape names every note it sounds, open strings included, low string to high.
     await expect(first.locator("[data-pwid=chord-degree]")).toHaveText(["R", "3", "5", "R", "3"])
   })
+
+  test("with the diagrams set to staff, a tapped chord shows its notes on a staff", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, songId } = await createSong(page)
+    const made = await page.request.post("/api/charts", {
+      data: { song_id: songId, name: "Shapes", written_key: "G", pasted: shapes },
+    })
+    expect(made.ok(), `create chart failed: ${await made.text()}`).toBe(true)
+
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    await expect(getPw(page, "chart")).toHaveCount(1, { timeout: 10000 })
+
+    await getPw(page, "chart-diagrams").selectOption("staff")
+    await getPw(page, "chart-chord").filter({ hasText: /^C$/ }).first().click()
+    const panel = getPw(page, "chord-shapes")
+    await expect(panel).toBeVisible()
+    await expect(getPw(page, "chord-staff")).toBeVisible()
+    await expect(getPw(page, "chord-staff-note")).toHaveCount(3)
+    await expect(getPw(page, "chord-diagram")).toHaveCount(0)
+  })
 })
 
 /** A chart of bare lyrics, the way a band starts one before it has any chords. */

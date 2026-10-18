@@ -10,6 +10,10 @@ export type Spelling = {
   readonly root: PitchClass
   /** The lowest note a shape must sound: the slash note, or the root. */
   readonly bass: PitchClass
+  /** The letter the root was written with: Eb gives E. */
+  readonly rootLetter: string
+  /** The letter the bass was written with: D/F# gives F. Without a slash it is the root letter. */
+  readonly bassLetter: string
   /** Notes every shape must hold. Includes root and bass. */
   readonly required: ReadonlyArray<PitchClass>
   /** Notes a shape may hold or leave out. Disjoint from required. */
@@ -53,7 +57,7 @@ export function spell(name: string): Spelling | null {
   // Two degrees can share a pitch class — the sus 4th is the natural 11th — so a
   // note no shape may leave out is not also one a shape may leave out.
   for (const pitchClass of may) if (must.has(pitchClass)) may.delete(pitchClass)
-  return { root: root.pitchClass, bass, required: ascending(must), optional: ascending(may), tones: chord.tones }
+  return { root: root.pitchClass, bass, rootLetter: root.letter, bassLetter: slash === null ? root.letter : slash.letter, required: ascending(must), optional: ascending(may), tones: chord.tones }
 }
 
 /** What the suffix of a name said: the tones it produced, and how to hold them. */
@@ -72,7 +76,8 @@ type Suffix = {
   readonly sus: boolean
 }
 
-const NATURALS: Readonly<Record<string, PitchClass>> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }
+/** Each letter's natural pitch class. */
+export const NATURALS: Readonly<Record<string, PitchClass>> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }
 
 /** Semitones above the root of each chord degree. A 6th is a 13th. */
 const DEGREE = { 2: 2, 4: 5, 5: 7, 7: 11, 9: 2, 11: 5, 13: 9 } as const
@@ -288,7 +293,7 @@ function readSuffix(suffix: string): Suffix | null {
 }
 
 /** Reads a letter A-G with an optional accidental, as a root or a slash bass. */
-function readNote(text: string, at: number): { pitchClass: PitchClass; end: number } | null {
+function readNote(text: string, at: number): { pitchClass: PitchClass; end: number; letter: string } | null {
   const natural = NATURALS[text[at]!]
   if (natural === undefined) return null
   let semitones = natural
@@ -297,7 +302,7 @@ function readNote(text: string, at: number): { pitchClass: PitchClass; end: numb
     semitones += text[end] === "#" || text[end] === "♯" ? 1 : -1
     end += 1
   }
-  return { pitchClass: ((semitones % 12) + 12) % 12, end }
+  return { pitchClass: ((semitones % 12) + 12) % 12, end, letter: text[at]! }
 }
 
 /**
@@ -305,11 +310,11 @@ function readNote(text: string, at: number): { pitchClass: PitchClass; end: numb
  * of `6/9` and the `/7` of `m6/7` name a tone, so only a note running to the end
  * of the name counts.
  */
-function findSlashBass(name: string, from: number): { pitchClass: PitchClass; at: number } | null {
+function findSlashBass(name: string, from: number): { pitchClass: PitchClass; at: number; letter: string } | null {
   for (let at = from; at < name.length; at += 1) {
     if (name[at] !== "/") continue
     const note = readNote(name, at + 1)
-    if (note !== null && note.end === name.length) return { pitchClass: note.pitchClass, at }
+    if (note !== null && note.end === name.length) return { pitchClass: note.pitchClass, at, letter: note.letter }
   }
   return null
 }
