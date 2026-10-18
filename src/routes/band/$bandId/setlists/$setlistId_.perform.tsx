@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect, useRef, useState, type TouchEvent } from "re
 import { Link, createFileRoute, useRouter } from "@tanstack/react-router"
 import { charts, setlists, type ChartInfo } from "~/api/client"
 import { groupEntries, playOrder } from "~/components/arrangement"
+import { hasLyricsChart } from "~/charts/lyrics"
 import type { NumeralDisplay } from "~/charts/numeral"
 import type { ChordDiagrams } from "~/components/ChordShapes"
 import { ClickTrack } from "~/components/ClickTrack"
@@ -47,6 +48,9 @@ function Perform() {
   const index = indexFromSearch(search.at, order.length)
   const current = order[index]
   const upcoming = order[index + 1]
+  const songCharts = useSongCharts(current?.entry.song_id ?? null)
+  // A score draws no chord names, so a song without a lyrics chart gets neither control.
+  const chordControls = songCharts.list !== null && hasLyricsChart(songCharts.list)
 
   const [sizeStep, setSizeStep] = useState(readSizeStep)
   const [speedStep, setSpeedStep] = useState(0)
@@ -161,27 +165,31 @@ function Perform() {
         <div className="flex items-center gap-2">
           <button data-pwid="perform-smaller" type="button" aria-label="Smaller text" onClick={() => resize(-1)} disabled={sizeStep === 0} className={button}>A−</button>
           <button data-pwid="perform-larger" type="button" aria-label="Larger text" onClick={() => resize(1)} disabled={sizeStep === TEXT_SIZES.length - 1} className={button}>A+</button>
-          <select
-            data-pwid="perform-diagrams"
-            value={diagrams}
-            onChange={(e) => setDiagrams(e.target.value as ChordDiagrams)}
-            className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-sm text-zinc-200 cursor-pointer"
-            aria-label="Chord diagrams"
-          >
-            <option value="guitar">Guitar</option>
-            <option value="staff">Staff</option>
-            <option value="off">Off</option>
-          </select>
-          <label className="flex items-center gap-1 text-sm text-zinc-200">
-            <input
-              data-pwid="perform-show-chords-above"
-              type="checkbox"
-              checked={showChordsAbove}
-              disabled={diagrams === "off"}
-              onChange={(e) => setShowChordsAbove(e.target.checked)}
-            />
-            Show chords above the chart
-          </label>
+          {chordControls && (
+            <>
+              <select
+                data-pwid="perform-diagrams"
+                value={diagrams}
+                onChange={(e) => setDiagrams(e.target.value as ChordDiagrams)}
+                className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-sm text-zinc-200 cursor-pointer"
+                aria-label="Chord diagrams"
+              >
+                <option value="guitar">Guitar</option>
+                <option value="staff">Staff</option>
+                <option value="off">Off</option>
+              </select>
+              <label className="flex items-center gap-1 text-sm text-zinc-200">
+                <input
+                  data-pwid="perform-show-chords-above"
+                  type="checkbox"
+                  checked={showChordsAbove}
+                  disabled={diagrams === "off"}
+                  onChange={(e) => setShowChordsAbove(e.target.checked)}
+                />
+                Show chords above the chart
+              </label>
+            </>
+          )}
           <select
             data-pwid="perform-numeral-display"
             value={numeralDisplay}
@@ -233,7 +241,8 @@ function Perform() {
             </div>
             <SongCharts
               key={current.entry.song_id}
-              songId={current.entry.song_id}
+              list={songCharts.list}
+              error={songCharts.error}
               shownKey={current.entry.key}
               tempo={current.entry.tempo_bpm}
               size={size}
@@ -280,9 +289,33 @@ function Perform() {
   )
 }
 
+/**
+ * The charts of the song on stage. The header's chord controls ask about the
+ * same list, so it is loaded once here and handed to both.
+ */
+function useSongCharts(songId: string | null) {
+  const [loaded, setLoaded] = useState<{ songId: string; list: ReadonlyArray<ChartInfo> } | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  useEffect(() => {
+    if (songId === null) return
+    let current = true
+    setError(null)
+    charts.bySong(songId).then(
+      (list) => current && setLoaded({ songId, list }),
+      (e) => current && setError(e instanceof Error ? e.message : String(e)),
+    )
+    return () => {
+      current = false
+    }
+  }, [songId])
+  // The list of the song being read, never the one left behind by another song.
+  return { list: loaded?.songId === songId ? loaded.list : null, error }
+}
+
 /** The charts of one song, in the entry's key. A lyrics chart shows the player's own marks but cannot be marked up here. */
 function SongCharts({
-  songId,
+  list,
+  error,
   shownKey,
   tempo,
   size,
@@ -290,7 +323,8 @@ function SongCharts({
   diagrams,
   showChordsAbove,
 }: {
-  songId: string
+  list: ReadonlyArray<ChartInfo> | null
+  error: string | null
   shownKey: string | null
   tempo: number | null
   size: number
@@ -298,19 +332,6 @@ function SongCharts({
   diagrams: ChordDiagrams
   showChordsAbove: boolean
 }) {
-  const [list, setList] = useState<ReadonlyArray<ChartInfo> | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  useEffect(() => {
-    let current = true
-    charts.bySong(songId).then(
-      (loaded) => current && setList(loaded),
-      (e) => current && setError(e instanceof Error ? e.message : String(e)),
-    )
-    return () => {
-      current = false
-    }
-  }, [songId])
-
   if (error) return <p data-pwid="perform-error" className="text-red-400">{error}</p>
   if (list === null) return <p className="text-zinc-500">Loading…</p>
   if (list.length === 0) return <p data-pwid="perform-no-chart" className="text-zinc-500">No chart for this song yet.</p>

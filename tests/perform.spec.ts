@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs"
 import type { Page } from "@playwright/test"
 import { test, expect, getPw, createSetlist } from "./helpers"
 
@@ -141,6 +142,38 @@ test.describe("performance mode", () => {
     await getPw(page, "perform-click").click()
     await expect(getPw(page, "perform-click")).toHaveText("Click")
     await expect(getPw(page, "perform-click")).not.toHaveAttribute("data-beat")
+  })
+
+  test("the chord strip checkbox draws the strip of chords above the chart", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, setlistId } = await createSetlist(page)
+    // The second song is the one with a lyrics chart.
+    await page.goto(`/band/${bandId}/setlists/${setlistId}/perform?at=2`)
+    await expect(getPw(page, "lyrics-chart")).toBeVisible({ timeout: 10000 })
+    await expect(getPw(page, "chord-strip")).toHaveCount(0)
+
+    await getPw(page, "perform-show-chords-above").check()
+    const strip = getPw(page, "chord-strip")
+    await expect(strip).toBeVisible()
+    await expect(strip.locator("[data-pwid=chord-strip-entry]")).not.toHaveCount(0)
+  })
+
+  test("a song with only a score shows neither chord control", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, setlistId } = await createSetlist(page)
+    // The first song has no chart; giving it a score makes it score-only.
+    const entries = (await (await page.request.get(`/api/setlists/${setlistId}/entries`)).json()) as Array<{ song_id: string }>
+    const scoreOnly = entries[0]!.song_id
+    const upload = await page.request.post(
+      `/api/scores?${new URLSearchParams({ song_id: scoreOnly, name: "Four tracks", file_name: "four-tracks.gp5" })}`,
+      { data: readFileSync(new URL("./fixtures/four-tracks.gp5", import.meta.url)), headers: { "content-type": "application/octet-stream" } },
+    )
+    expect(upload.ok(), await upload.text()).toBe(true)
+
+    await page.goto(`/band/${bandId}/setlists/${setlistId}/perform?at=1`)
+    await expect(getPw(page, "score-viewer")).toBeVisible({ timeout: 20000 })
+    await expect(getPw(page, "perform-diagrams")).toHaveCount(0)
+    await expect(getPw(page, "perform-show-chords-above")).toHaveCount(0)
   })
 
   test("auto-scroll moves a long chart down and stops when switched off", async ({ page, testing }) => {

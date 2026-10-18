@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect, useState } from "react"
 import { charts, type ChartInfo } from "~/api/client"
-import { exportChords } from "~/charts/lyrics"
+import { exportChords, hasLyricsChart } from "~/charts/lyrics"
 import type { NumeralDisplay } from "~/charts/numeral"
 import { MusicalKeys, type MusicalKeyType } from "~/api/contracts"
 import { AddScore } from "./AddScore"
@@ -78,7 +78,7 @@ export function SongCharts({
   }
   const keyChoices = keyOptions.map((o) => (o.value === "" ? { value: o.value, label: "As written" } : o))
   const hasLyricsWithKey = list.some((chart) => chart.kind === "lyrics" && chart.written_key)
-  const hasLyrics = list.some((chart) => chart.kind === "lyrics")
+  const hasLyrics = hasLyricsChart(list)
   return (
     <section data-pwid="song-charts" className="space-y-4">
       <div className="flex items-end justify-between gap-4">

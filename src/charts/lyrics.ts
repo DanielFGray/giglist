@@ -458,3 +458,10 @@ function escapeLyrics(text: string): string {
 
 const CHORD_TOKEN =
   /^(\(?[A-G][#b]?(m|maj|min|dim|aug|sus|add|M)?[0-9]*(sus[24]?|add[0-9]+|[#b][0-9]+)*(\/[A-G][#b]?)?\)?|\||\|\||-|\/|N\.?C\.?|\(?x\d+\)?)$/
+
+/**
+ * True when a song has a chart of chords over lyrics. A score draws no chord
+ * names, so the chord controls belong to a lyrics chart and to nothing else.
+ * Every place that shows them asks here, so they appear and go together.
+ */
+export const hasLyricsChart = (list: ReadonlyArray<{ readonly kind: string }>): boolean => list.some((chart) => chart.kind === "lyrics")
