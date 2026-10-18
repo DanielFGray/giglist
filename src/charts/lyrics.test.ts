@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { readFileSync } from "node:fs"
 import { addSection, anchorText, parseDoc, renameSection, serializeDoc } from "./doc"
-import { chartChords, exportChords, importPasted, isTabLine, renderLyrics, suggestedChords, type ChartItem } from "./lyrics"
+import { chartChords, exportChords, importPasted, isChordName, isTabLine, renderLyrics, suggestedChords, type ChartItem } from "./lyrics"
 
 const pasted = readFileSync(new URL("../../tests/fixtures/amazing-grace.txt", import.meta.url), "utf8")
 
@@ -297,5 +297,15 @@ describe("round trip from doc edits", () => {
     const source = "{key: G}\n[G]Amazing grace\n{key: D}\n[D]How sweet"
     const back = importPasted(exportChords(source, "G"), "G")
     expect(back).toBe(source)
+  })
+})
+
+describe("isChordName", () => {
+  test("accepts names ChordSheetJS reads as a chord", () => {
+    for (const name of ["F#m7", "C/E", "Bb", "Dsus4", "Am(add9)"]) expect(isChordName(name)).toBe(true)
+  })
+
+  test("refuses names that would change the line around them or are not chords", () => {
+    for (const name of ["", "A]B", "A B", "[C", "A\nB", "A\tB", "xyz!"]) expect(isChordName(name)).toBe(false)
   })
 })

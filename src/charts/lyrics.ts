@@ -9,7 +9,7 @@
  *
  * Pure and free of the DOM, so the server and the browser share it.
  */
-import { ChordLyricsPair, ChordProParser, Literal, Tag } from "chordsheetjs"
+import { Chord, ChordLyricsPair, ChordProParser, Literal, Tag } from "chordsheetjs"
 import { anchorLine, enclosingSection, inPhrase, parseDoc } from "./doc"
 
 /**
@@ -134,6 +134,16 @@ export function suggestedChords(key: string): ReadonlyArray<string> {
     .flatMap((item) => (item.kind === "pair" && item.chord ? [item.chord] : []))
 }
 
+
+/**
+ * Whether `name` can be written between `[` and `]` in a chart as one chord:
+ * no brackets, whitespace or control characters, which would change the line
+ * around it, and a name ChordSheetJS reads as a chord.
+ */
+export function isChordName(name: string): boolean {
+  if (name === "" || /[[\]\s\p{Cc}]/u.test(name)) return false
+  return Chord.parse(name) !== null
+}
 function toItem(item: unknown, start: number, end: number): ReadonlyArray<ChartItem> {
   if (item instanceof ChordLyricsPair) {
     const chord = item.chords.trim()

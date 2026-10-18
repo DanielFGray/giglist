@@ -6,8 +6,9 @@ import {
   insertLineAfter, moveBlock, moveBlockTo, moveChord, parseDoc, phraseAt, placeChord, removeChord, removeSection, renameSection, segments, serializeDoc,
   setPhrase, type DocLine, type Edit,
 } from "~/charts/doc"
-import { isPhraseStart, isTabStart, suggestedChords } from "~/charts/lyrics"
+import { isChordName, isPhraseStart, isTabStart, suggestedChords } from "~/charts/lyrics"
 import { BlockHandle, type Point } from "./BlockHandle"
+import { ChordSheet } from "./ChordSheet"
 import { slotUnder, type DropRow, type DropSlot } from "./drop-slot"
 import { errorMessage } from "./form"
 import { Phrase } from "./Phrase"
@@ -51,21 +52,58 @@ export function ChartEditor({
   const [held, setHeld] = useState<Held | null>(null)
   const [custom, setCustom] = useState("")
   const [editingLine, setEditingLine] = useState<number | null>(null)
+  const [sheet, setSheet] = useState<{ line: number; at: number } | null>(null)
+  /**
+   * Chords typed into the chord sheet that no chip had. They stay on the chips for
+   * this chart even after a replace or an undo drops their last use.
+   */
+  const [extra, setExtra] = useState<ReadonlyArray<string>>([])
   const [drag, setDrag] = useState<Drag | null>(null)
   const pointer = useRef<Point | null>(null)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const doc = steps.at(-1)?.doc ?? base
+  const customValid = isChordName(custom.trim())
+  const customInvalid = custom.trim() !== "" && !customValid
   const palette = useMemo(() => {
     const used = doc.flatMap((line) => (line.kind === "lyrics" ? line.chords.map((c) => c.chord) : []))
     const suggested = chart.written_key ? suggestedChords(chart.written_key) : []
-    return [...new Set([...suggested, ...used])]
-  }, [doc, chart.written_key])
+    return [...new Set([...suggested, ...used, ...extra])]
+  }, [doc, chart.written_key, extra])
+
+  // The chord sheet's word, read from the current chart.
+  const sheetLine = sheet ? doc[sheet.line] : undefined
+  const target =
+    sheet && sheetLine?.kind === "lyrics"
+      ? (() => {
+          const found = sheetLine.chords.findIndex((c) => c.at === sheet.at)
+          return {
+            ...sheet,
+            chordIndex: found >= 0 ? found : null,
+            current: found >= 0 ? sheetLine.chords[found]!.chord : null,
+            word: sheetLine.text.slice(sheet.at).trim().split(/\s+/)[0] || "the end of the line",
+          }
+        })()
+      : null
+
+  // On a phone the sheet covers the bottom of the window, so the word it edits is brought to the middle.
+  const sheetLineIndex = sheet?.line
+  const sheetColumn = sheet?.at
+  useEffect(() => {
+    if (sheetLineIndex === undefined) return
+    document.querySelector(`[data-line="${sheetLineIndex}"] [data-at="${sheetColumn}"]`)?.scrollIntoView({ block: "center" })
+  }, [sheetLineIndex, sheetColumn])
+
+  /** The one place the steps change. The chord sheet names a word by line and column, so any change to the chart closes it. */
+  const commit = (next: ReadonlyArray<Edit>) => {
+    setSheet(null)
+    setSteps(next)
+  }
 
   const apply = (edit: Edit) => {
-    if (edit.changes.length === 0) return
-    setSteps([...steps, edit])
+    if (edit.changes.length === 0) return setSheet(null)
+    commit([...steps, edit])
   }
 
   const dropOn = (line: number, at: number, dropped: Held) => {
@@ -135,13 +173,13 @@ export function ChartEditor({
     <div data-pwid="chart-editor" className="space-y-3">
       <div className="flex flex-wrap items-center gap-2" data-pwid="palette">
         {palette.map((chord) => (
-          <Chip key={chord} chord={chord} armed={held?.chord === chord && !held.from} onHold={setHeld} />
+          <Chip key={chord} chord={chord} armed={held?.chord === chord} onHold={setHeld} />
         ))}
         <form
           className="flex gap-1"
           onSubmit={(event) => {
             event.preventDefault()
-            if (custom.trim()) setHeld({ chord: custom.trim() })
+            if (customValid) setHeld({ chord: custom.trim() })
             setCustom("")
           }}
         >
@@ -151,25 +189,40 @@ export function ChartEditor({
             onChange={(e) => setCustom(e.target.value)}
             placeholder="Other chord"
             aria-label="Other chord"
+            aria-invalid={customInvalid}
             className="w-28 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] px-2 py-1 text-xs"
           />
-          <button data-pwid="palette-custom-add" type="submit" className={button}>
+          <button data-pwid="palette-custom-add" type="submit" disabled={!customValid} className={button}>
             Pick up
           </button>
         </form>
-        <RemoveZone
-          held={held?.from ? held : null}
-          onRemove={(from) => {
-            apply(removeChord(doc, from.line, from.chord))
-            setHeld(null)
-          }}
-        />
+        {customInvalid && (
+          <span data-pwid="palette-custom-error" role="alert" className="text-xs text-red-400">
+            Not a chord name: leave out brackets and spaces.
+          </span>
+        )}
+        <RemoveZone onRemove={(from) => apply(removeChord(doc, from.line, from.chord))} />
       </div>
       <p className="text-xs text-zinc-500">
         {held
           ? `Holding ${held.chord}. Click a word to put it there, or drag it.`
-          : `Drag a chord onto a word, or click a chord and then a word. Editing in ${chart.written_key ?? "the written key"}.`}
+          : `Tap a word to add a chord, or a chord to change it. Drag a chord to move it. Editing in ${chart.written_key ?? "the written key"}.`}
       </p>
+      {target && (
+        <ChordSheet
+          key={`${target.line}:${target.at}`}
+          chips={palette}
+          word={target.word}
+          current={target.current}
+          onPick={(chord) => apply(placeChord(doc, target.line, target.at, chord))}
+          onType={(chord) => {
+            if (!palette.includes(chord)) setExtra((all) => [...all, chord])
+            apply(placeChord(doc, target.line, target.at, chord))
+          }}
+          onRemove={target.chordIndex === null ? null : () => apply(removeChord(doc, target.line, target.chordIndex!))}
+          onClose={() => setSheet(null)}
+        />
+      )}
 
       <div className="font-mono text-sm leading-tight">
         {doc.map((line, index) => {
@@ -207,7 +260,7 @@ export function ChartEditor({
                 held={held}
                 editing={editingLine === index}
                 onDrop={dropOn}
-                onHold={setHeld}
+                onSheet={(line, at) => setSheet({ line, at })}
                 onEditStart={() => setEditingLine(index)}
                 onEditEnd={(text) => {
                   setEditingLine(null)
@@ -252,7 +305,7 @@ export function ChartEditor({
         <button
           data-pwid="editor-undo"
           type="button"
-          onClick={() => setSteps(steps.slice(0, -1))}
+          onClick={() => commit(steps.slice(0, -1))}
           disabled={steps.length === 0}
           className={button}
         >
@@ -286,13 +339,12 @@ function Chip({ chord, armed, onHold }: { chord: string; armed: boolean; onHold:
   )
 }
 
-/** Dropping a chord taken off the chart here removes it; so does clicking while holding one. */
-function RemoveZone({ held, onRemove }: { held: Held | null; onRemove: (from: { line: number; chord: number }) => void }) {
+/** Dropping a chord taken off the chart here removes it. */
+function RemoveZone({ onRemove }: { onRemove: (from: { line: number; chord: number }) => void }) {
   return (
     <button
       data-pwid="palette-remove"
       type="button"
-      onClick={() => held?.from && onRemove(held.from)}
       onDragOver={(event) => event.preventDefault()}
       onDrop={(event) => {
         const dropped = readDrag(event)
@@ -300,7 +352,7 @@ function RemoveZone({ held, onRemove }: { held: Held | null; onRemove: (from: { 
       }}
       className={button}
     >
-      {held ? `Remove ${held.chord}` : "Drop here to remove"}
+      Drop here to remove
     </button>
   )
 }
@@ -314,7 +366,8 @@ function Line(props: {
   held: Held | null
   editing: boolean
   onDrop: (line: number, at: number, dropped: Held) => void
-  onHold: (held: Held | null) => void
+  /** Opens the chord sheet on the word at column `at` of the line. */
+  onSheet: (line: number, at: number) => void
   onEditStart: () => void
   onEditEnd: (text: string | null) => void
   onInsertAfter: () => void
@@ -401,7 +454,8 @@ function LyricLine(props: Parameters<typeof Line>[0] & { onWritePhrase: () => vo
         <span
           key={segment.start}
           data-pwid="editor-segment"
-          onClick={() => props.held && props.onDrop(index, segment.start, props.held)}
+          data-at={segment.start}
+          onClick={() => (props.held ? props.onDrop(index, segment.start, props.held) : props.onSheet(index, segment.start))}
           onDragOver={(event) => event.preventDefault()}
           onDrop={(event) => {
             const dropped = readDrag(event)
@@ -412,7 +466,6 @@ function LyricLine(props: Parameters<typeof Line>[0] & { onWritePhrase: () => vo
           <span className="flex h-5 gap-1">
             {segment.chords.map((chordIndex) => {
               const chord = line.chords[chordIndex]!.chord
-              const picked = props.held?.from?.line === index && props.held.from.chord === chordIndex
               return (
                 <button
                   key={chordIndex}
@@ -422,9 +475,9 @@ function LyricLine(props: Parameters<typeof Line>[0] & { onWritePhrase: () => vo
                   onDragStart={(event) => startDrag(event, { chord, from: { line: index, chord: chordIndex } })}
                   onClick={(event) => {
                     event.stopPropagation()
-                    props.onHold(picked ? null : { chord, from: { line: index, chord: chordIndex } })
+                    props.onSheet(index, line.chords[chordIndex]!.at)
                   }}
-                  className={`font-semibold cursor-grab ${picked ? "bg-[var(--color-amber-accent)] text-zinc-950" : "text-[var(--color-amber-accent)]"}`}
+                  className="font-semibold cursor-grab text-[var(--color-amber-accent)]"
                 >
                   {chord}
                 </button>

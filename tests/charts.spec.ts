@@ -488,6 +488,110 @@ test.describe("chart editor", () => {
     expect(await shownLyrics(page)).toContain("Amazing grace, how sweet")
   })
 
+  for (const width of [390, 1280]) {
+    test(`replaces a chord in two taps and adds a typed chord from the chord sheet at ${width}px`, async ({ page, testing }) => {
+      await page.setViewportSize({ width, height: 900 })
+      await testing.login()
+      const { bandId, songId } = await createSong(page)
+      await createChart(page.request, songId)
+      await page.goto(`/band/${bandId}/songs/${songId}`)
+      await getPw(page, "chart-edit").click()
+
+      // Replace: tap the chord, tap a chip. The sheet closes and the chord count stays.
+      const before = await getPw(page, "placed-chord").count()
+      const first = getPw(page, "placed-chord").first()
+      await expect(first).toHaveText("G")
+      await first.click()
+      await expect(getPw(page, "chord-sheet")).toBeVisible()
+      await getPw(page, "sheet-chip").filter({ hasText: /^Em$/ }).click()
+      await expect(getPw(page, "chord-sheet")).toHaveCount(0)
+      await expect(getPw(page, "placed-chord").first()).toHaveText("Em")
+      await expect(getPw(page, "placed-chord")).toHaveCount(before)
+
+      // Add: tap a word with no chord, type a chord that is in no list, press Put.
+      const word = segment(page, "sweet")
+      await expect(word.locator("[data-pwid=placed-chord]")).toHaveCount(0)
+      await word.click()
+      await getPw(page, "sheet-input").fill("F#m7")
+      await getPw(page, "sheet-put").click()
+      await expect(word.locator("[data-pwid=placed-chord]")).toHaveText("F#m7")
+      await expect(getPw(page, "placed-chord")).toHaveCount(before + 1)
+
+      // The typed chord joins the chips. Replace it with Em: it has no use left on the chart, and stays a chip.
+      await word.locator("[data-pwid=placed-chord]").click()
+      await getPw(page, "sheet-chip").filter({ hasText: /^Em$/ }).click()
+      await expect(word.locator("[data-pwid=placed-chord]")).toHaveText("Em")
+      await segment(page, "saved").click()
+      await expect(getPw(page, "sheet-chip").filter({ hasText: /^F#m7$/ })).toHaveCount(1)
+      await getPw(page, "sheet-chip").filter({ hasText: /^F#m7$/ }).click()
+
+      await getPw(page, "editor-save").click()
+      await expect(getPw(page, "chart-editor")).toHaveCount(0, { timeout: 10000 })
+      await expect(getPw(page, "chart-chord").filter({ hasText: /^F#m7$/ })).toHaveCount(1)
+    })
+  }
+
+  test("the chord sheet closes on Escape right after a tap, on Close and on Undo, and refuses a name that is not a chord", async ({ page, testing }) => {
+    await page.setViewportSize({ width: 390, height: 900 })
+    await testing.login()
+    const { bandId, songId } = await createSong(page)
+    await createChart(page.request, songId)
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    await getPw(page, "chart-edit").click()
+    const sheet = getPw(page, "chord-sheet")
+
+    // Escape works with no tab in between, and focus goes back to the chord that was tapped.
+    const first = getPw(page, "placed-chord").first()
+    await first.click()
+    await expect(sheet).toBeFocused()
+    await page.keyboard.press("Escape")
+    await expect(sheet).toHaveCount(0)
+    await expect(first).toBeFocused()
+
+    // Touch targets on a phone are at least 44px.
+    await first.click()
+    for (const pwid of ["sheet-close", "sheet-input", "sheet-put"]) {
+      const box = (await getPw(page, pwid).boundingBox())!
+      expect(box.height, pwid).toBeGreaterThanOrEqual(44)
+    }
+    expect((await getPw(page, "sheet-chip").first().boundingBox())!.height).toBeGreaterThanOrEqual(44)
+    expect((await getPw(page, "sheet-remove").boundingBox())!.height).toBeGreaterThanOrEqual(44)
+
+    // A name with a bracket is refused with a reason; a real chord is not.
+    await getPw(page, "sheet-input").fill("A]B")
+    await expect(getPw(page, "sheet-put")).toBeDisabled()
+    await expect(getPw(page, "sheet-error")).toContainText("not a chord name")
+    await getPw(page, "sheet-input").fill("Cmaj7")
+    await expect(getPw(page, "sheet-put")).toBeEnabled()
+    await expect(getPw(page, "sheet-error")).toHaveCount(0)
+    await getPw(page, "sheet-close").click()
+    await expect(sheet).toHaveCount(0)
+
+    // Undo closes the sheet, so it cannot point at a line that has moved.
+    await first.click()
+    await getPw(page, "sheet-chip").filter({ hasText: /^Em$/ }).click()
+    await expect(first).toHaveText("Em")
+    await segment(page, "sweet").click()
+    await expect(sheet).toBeVisible()
+    await getPw(page, "editor-undo").evaluate((button: HTMLElement) => button.click())
+    await expect(sheet).toHaveCount(0)
+    await expect(first).toHaveText("G")
+  })
+
+  test("the palette's other-chord field refuses a name with a bracket", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, songId } = await createSong(page)
+    await createChart(page.request, songId)
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    await getPw(page, "chart-edit").click()
+    await getPw(page, "palette-custom").fill("A]B")
+    await expect(getPw(page, "palette-custom-add")).toBeDisabled()
+    await expect(getPw(page, "palette-custom-error")).toBeVisible()
+    await getPw(page, "palette-custom").fill("F#m7")
+    await expect(getPw(page, "palette-custom-add")).toBeEnabled()
+    await expect(getPw(page, "palette-custom-error")).toHaveCount(0)
+  })
+
   test("moves a chord to another word and removes one", async ({ page, testing }) => {
     await testing.login()
     const { bandId, songId } = await createSong(page)
