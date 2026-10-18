@@ -1,7 +1,7 @@
 import { useEffect, useId, useMemo, useState, type CSSProperties } from "react"
 import { renderLyrics, type ChartItem, type ChartLine } from "~/charts/lyrics"
 import { numeral, type NumeralDisplay } from "~/charts/numeral"
-import { ChordShapes } from "./ChordShapes"
+import { ChordShapes, type ChordDiagrams } from "./ChordShapes"
 import { Phrase } from "./Phrase"
 
 /**
@@ -19,6 +19,7 @@ export function LyricsChart({
   tempo = null,
   size = 0.875,
   chordShapes = false,
+  diagrams = "guitar",
   numeralDisplay = "both",
 }: {
   source: string
@@ -29,6 +30,8 @@ export function LyricsChart({
   size?: number
   /** False while another tool has the chart: a chord then draws no shapes. */
   chordShapes?: boolean
+  /** Guitar diagrams or a staff picture. Ignored unless chordShapes is true. */
+  diagrams?: ChordDiagrams
   /** What to show for each chord: its name, its Roman numeral, or both. Default: both. */
   numeralDisplay?: NumeralDisplay
 }) {
@@ -69,6 +72,7 @@ export function LyricsChart({
           line={line}
           tempo={tempo}
           chordShapes={chordShapes}
+          diagrams={diagrams}
           open={open}
           setOpen={setOpen}
           anchor={anchor}
@@ -84,6 +88,7 @@ function Line({
   line,
   tempo,
   chordShapes,
+  diagrams,
   open,
   setOpen,
   anchor,
@@ -93,6 +98,7 @@ function Line({
   line: ChartLine
   tempo: number | null
   chordShapes: boolean
+  diagrams: ChordDiagrams
   open: number | null
   setOpen: (start: number | null) => void
   anchor: string
@@ -127,6 +133,7 @@ function Line({
           key={index}
           item={item}
           chordShapes={chordShapes}
+          diagrams={diagrams}
           open={open}
           setOpen={setOpen}
           anchor={anchor}
@@ -141,6 +148,7 @@ function Line({
 function Item({
   item,
   chordShapes,
+  diagrams,
   open,
   setOpen,
   anchor,
@@ -149,6 +157,7 @@ function Item({
 }: {
   item: ChartItem
   chordShapes: boolean
+  diagrams: ChordDiagrams
   open: number | null
   setOpen: (start: number | null) => void
   anchor: string
@@ -210,7 +219,7 @@ function Item({
               <span className={numeralClass} />
             ))}
           <span data-pwid="chart-lyric" className="min-h-[1lh] whitespace-pre">{item.lyric}</span>
-          {showing && <ChordShapes name={item.chord} shownKey={shownKey} anchor={`--chord-${anchor}-${item.start}`} />}
+          {showing && <ChordShapes name={item.chord} shownKey={shownKey} anchor={`--chord-${anchor}-${item.start}`} diagrams={diagrams} />}
         </span>
       )
     }

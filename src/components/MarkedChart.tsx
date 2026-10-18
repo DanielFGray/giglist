@@ -54,7 +54,7 @@ export function MarkedChart({
   size?: number
   /** What to show for each chord: its name, its Roman numeral, or both. Default: both. */
   numeralDisplay?: NumeralDisplay
-  /** Which chords show a guitar diagram when tapped. Default: guitar. */
+  /** Which chords show a diagram when tapped. Default: guitar. */
   diagrams?: ChordDiagrams
 }) {
   const me = useAuth().user?.id
@@ -409,6 +409,7 @@ export function MarkedChart({
             tempo={tempo}
             size={size}
             chordShapes={tool === "read" && diagrams !== "off"}
+            diagrams={diagrams}
             numeralDisplay={numeralDisplay}
           />
         </div>

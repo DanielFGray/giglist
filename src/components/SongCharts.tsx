@@ -18,6 +18,7 @@ const numeralDisplayOptions: ReadonlyArray<{ value: NumeralDisplay; label: strin
 
 const diagramOptions: ReadonlyArray<{ value: ChordDiagrams; label: string }> = [
   { value: "guitar", label: "Guitar" },
+  { value: "staff", label: "Staff" },
   { value: "off", label: "Off" },
 ]
 

@@ -35,12 +35,12 @@ function nameTones(chord: Spelling): ReadonlyMap<PitchClass, string> {
   const tones = [...chord.tones].sort(([a], [b]) => a - b)
   for (const [degree, semitones] of tones) {
     const pitchClass = pitchClassOf(chord.root + semitones)
-    if (!names.has(pitchClass)) names.set(pitchClass, nameOf(degree, semitones))
+    if (!names.has(pitchClass)) names.set(pitchClass, degreeName(degree, semitones))
   }
   return names
 }
 
-function nameOf(degree: number, semitones: number): string {
+export function degreeName(degree: number, semitones: number): string {
   if (degree === 1) return "R"
   const plain = MAJOR[degree]
   if (plain === undefined) return String(degree)
