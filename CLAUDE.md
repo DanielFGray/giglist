@@ -43,6 +43,10 @@ Before writing any Effect code, first read `node_modules/effect/AGENTS.md`
 If you need to learn more about particular Effect apis and concepts that the
 guide doesn't cover, search through the source code in `node_modules/effect/src`.
 
+## Sources
+
+`ATTRIBUTIONS.md` lists every outside source with a link: adapted code, fitted data, served assets, followed research, and libraries licensed beyond MIT. A commit that brings in a source adds its entry, and the code comment that uses it names the source.
+
 ## Verification
 
 - `bun run typecheck` — patched `tsc` with Effect diagnostics (`TS377xxx`)
