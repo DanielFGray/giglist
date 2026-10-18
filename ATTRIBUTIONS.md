@@ -19,7 +19,12 @@ When a change brings in a source, add its entry in the same commit, with a link.
 
 ## Research
 
-No code follows a published paper yet.
+Read while planning key detection from chord symbols. No code uses them yet.
+
+- **Noland, K. and Sandler, M.** (2006). "Key Estimation Using a Hidden Markov Model." ISMIR 2006. A 24-state HMM over chord transitions; 91% correct on 110 Beatles songs. <https://archives.ismir.net/ismir2006/paper/000091.pdf>
+- **Lee, K.** (2007). "A Unified System for Chord Transcription and Key Extraction Using Hidden Markov Models." ISMIR 2007. One HMM per key. <https://archives.ismir.net/ismir2007/paper/000245.pdf>
+- **Temperley, D. and de Clercq, T.** (2013). "Statistical Analysis of Harmony and Melody in Rock Music." *Journal of New Music Research* 42(3): 187–204. Key finding from chord roots and metrical position. <https://doi.org/10.1080/09298215.2013.788039>. Author copy: <https://www.midside.com/publications/temperley_declercq_2013.pdf>
+- **Bunks, C. and Weyde, T.** (2022). "Jazz Contrafact Detection." arXiv:2208.00792. Picks the key signature whose diatonic chords hold the most beats. <https://arxiv.org/abs/2208.00792>
 
 ## Libraries with conditions beyond MIT
 
