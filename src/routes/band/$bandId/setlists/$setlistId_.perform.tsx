@@ -3,6 +3,7 @@ import { Link, createFileRoute, useRouter } from "@tanstack/react-router"
 import { charts, setlists, type ChartInfo } from "~/api/client"
 import { groupEntries, playOrder } from "~/components/arrangement"
 import { hasLyricsChart } from "~/charts/lyrics"
+import { scoreRevisionsOf } from "~/charts/score-link"
 import type { NumeralDisplay } from "~/charts/numeral"
 import type { ChordDiagrams } from "~/components/ChordShapes"
 import { ClickTrack } from "~/components/ClickTrack"
@@ -335,6 +336,7 @@ function SongCharts({
   if (error) return <p data-pwid="perform-error" className="text-red-400">{error}</p>
   if (list === null) return <p className="text-zinc-500">Loading…</p>
   if (list.length === 0) return <p data-pwid="perform-no-chart" className="text-zinc-500">No chart for this song yet.</p>
+  const scoreRevisions = scoreRevisionsOf(list)
   return (
     <div className="space-y-8">
       {list.map((chart) =>
@@ -349,6 +351,7 @@ function SongCharts({
             numeralDisplay={numeralDisplay}
             diagrams={diagrams}
             showChordsAbove={showChordsAbove}
+            scoreRevisions={scoreRevisions}
           />
         ) : (
           <div key={chart.id} className="rounded-lg bg-white p-2">

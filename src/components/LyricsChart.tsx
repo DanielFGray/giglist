@@ -3,6 +3,7 @@ import { renderLyrics, type ChartItem, type ChartLine } from "~/charts/lyrics"
 import { numeral, type NumeralDisplay } from "~/charts/numeral"
 import { ChordShapes, type ChordDiagrams } from "./ChordShapes"
 import { Phrase } from "./Phrase"
+import { ScoreLink } from "./ScoreLink"
 
 /**
  * A lyrics chart drawn in `shownKey`: each chord sits over the word it was placed on.
@@ -21,6 +22,7 @@ export function LyricsChart({
   chordShapes = false,
   diagrams = "guitar",
   numeralDisplay = "both",
+  scoreRevisions = new Map(),
 }: {
   source: string
   shownKey: string | null
@@ -34,6 +36,8 @@ export function LyricsChart({
   diagrams?: ChordDiagrams
   /** What to show for each chord: its name, its Roman numeral, or both. Default: both. */
   numeralDisplay?: NumeralDisplay
+  /** The latest revision of each score chart in the song, by the chart's id. Score links draw from it. */
+  scoreRevisions?: ReadonlyMap<string, string>
 }) {
   const lines = useMemo(() => renderLyrics(source, shownKey), [source, shownKey])
   // The start of the item whose panel is open, or null when none is.
@@ -78,6 +82,7 @@ export function LyricsChart({
           anchor={anchor}
           shownKey={shownKey}
           numeralDisplay={numeralDisplay}
+          scoreRevisions={scoreRevisions}
         />
       ))}
     </div>
@@ -94,6 +99,7 @@ function Line({
   anchor,
   shownKey,
   numeralDisplay,
+  scoreRevisions,
 }: {
   line: ChartLine
   tempo: number | null
@@ -104,6 +110,7 @@ function Line({
   anchor: string
   shownKey: string | null
   numeralDisplay: NumeralDisplay
+  scoreRevisions: ReadonlyMap<string, string>
 }) {
   if (line.length === 0) return <div className="h-4" />
   const only = line.length === 1 ? line[0]! : null
@@ -123,6 +130,14 @@ function Line({
           {only.writtenIn && <WrittenIn what="notation" keyName={only.writtenIn} spaced={only.name !== ""} />}
         </div>
         <Phrase tex={only.tex} tempo={tempo} />
+      </div>
+    )
+  }
+  if (only?.kind === "score") {
+    const revisionId = "link" in only.reading ? scoreRevisions.get(only.reading.link.chartId) : undefined
+    return (
+      <div data-pwid="chart-score-link" className="my-2">
+        <ScoreLink reading={only.reading} revisionId={revisionId} />
       </div>
     )
   }

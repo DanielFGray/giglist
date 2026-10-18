@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect, useState } from "react"
 import { charts, type ChartInfo } from "~/api/client"
 import { exportChords, hasLyricsChart } from "~/charts/lyrics"
 import type { NumeralDisplay } from "~/charts/numeral"
+import { scoreRevisionsOf } from "~/charts/score-link"
 import { MusicalKeys, type MusicalKeyType } from "~/api/contracts"
 import { AddScore } from "./AddScore"
 import { ChartEditor } from "./ChartEditor"
@@ -79,6 +80,7 @@ export function SongCharts({
   const keyChoices = keyOptions.map((o) => (o.value === "" ? { value: o.value, label: "As written" } : o))
   const hasLyricsWithKey = list.some((chart) => chart.kind === "lyrics" && chart.written_key)
   const hasLyrics = hasLyricsChart(list)
+  const scoreRevisions = scoreRevisionsOf(list)
   return (
     <section data-pwid="song-charts" className="space-y-4">
       <div className="flex items-end justify-between gap-4">
@@ -147,6 +149,7 @@ export function SongCharts({
           numeralDisplay={numeralDisplay}
           diagrams={diagrams}
           showChordsAbove={showChordsAbove}
+          scoreRevisions={scoreRevisions}
         />
       ))}
       {adding ? (
@@ -217,6 +220,7 @@ function ChartCard({
   numeralDisplay,
   diagrams,
   showChordsAbove,
+  scoreRevisions,
 }: {
   chart: ChartInfo
   startEditing: boolean
@@ -226,6 +230,7 @@ function ChartCard({
   numeralDisplay: NumeralDisplay
   diagrams: ChordDiagrams
   showChordsAbove: boolean
+  scoreRevisions: ReadonlyMap<string, string>
 }) {
   const [error, setError] = useState<string | null>(null)
   const [editing, setEditing] = useState(startEditing && chart.source !== null)
@@ -340,6 +345,7 @@ function ChartCard({
           numeralDisplay={numeralDisplay}
           diagrams={diagrams}
           showChordsAbove={showChordsAbove}
+          scoreRevisions={scoreRevisions}
         />
       ) : (
         <Suspense fallback={<p className="text-sm text-zinc-500">Loading the score…</p>}>

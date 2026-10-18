@@ -11,6 +11,7 @@
  */
 import { Chord, ChordLyricsPair, ChordProParser, Literal, Tag } from "chordsheetjs"
 import { anchorLine, enclosingSection, inPhrase, parseDoc } from "./doc"
+import { readScoreLink, type ScoreLinkReading } from "./score-link"
 
 /**
  * One drawable piece of a chart line. `start` and `end` are its range in the
@@ -30,6 +31,8 @@ export type ChartItem = { readonly start: number; readonly end: number } & (
    * drawn in another key, since the notation is drawn as written.
    */
   | { kind: "phrase"; name: string; tex: string; writtenIn?: string }
+  /** A score link (docs/adr/0004): the bars of a score chart, drawn in place. */
+  | { kind: "score"; reading: ScoreLinkReading }
 )
 
 /**
@@ -157,6 +160,7 @@ function toItem(item: unknown, start: number, end: number): ReadonlyArray<ChartI
   if (item instanceof Tag && item.isComment()) return [{ kind: "comment", text: item.value, start, end }]
   // ChordSheetJS keeps each line of a tab section as one literal, unparsed.
   if (item instanceof Literal) return [{ kind: "tab", text: item.string, start, end }]
+  if (item instanceof Tag && item.name === "score") return [{ kind: "score", reading: readScoreLink(item.value), start, end }]
   return []
 }
 
@@ -378,7 +382,7 @@ export function exportChords(source: string, shownKey?: string | null): string {
       } else if (item.kind === "tab") {
         if (chordsOnly) out.push("")
         out.push(item.text)
-      } else {
+      } else if (item.kind === "pair") {
         if (item.chord) {
           const gap = chords.length >= lyrics.length && chords !== "" ? " " : ""
           chords = chords.padEnd(lyrics.length, " ") + gap + item.chord

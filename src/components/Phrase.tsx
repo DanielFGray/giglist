@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react"
-import { AlphaTabApi, LayoutMode, model, NotationElement, PlayerMode, synth, type Settings } from "@coderline/alphatab"
+import { AlphaTabApi, LayoutMode, NotationElement, PlayerMode, synth } from "@coderline/alphatab"
 import { readPhrase, type PhraseProblem } from "~/charts/phrase"
-import { alphaTabAssets } from "./alphatab"
+import { alphaTabAssets, inkFrom } from "./alphatab"
 
 const SPEEDS = [0.5, 0.75, 0.9, 1] as const
 
@@ -152,29 +152,3 @@ const HIDDEN = [
   NotationElement.BarNumber,
 ]
 
-/** Draws in `css`, the text color around the phrase, with staff lines and bar lines fainter. */
-function inkFrom(settings: Settings, css: string) {
-  const [r, g, b] = rgbOf(css)
-  const ink = new model.Color(r, g, b)
-  const faint = new model.Color(r, g, b, 110)
-  const resources = settings.display.resources
-  resources.mainGlyphColor = ink
-  resources.scoreInfoColor = ink
-  resources.secondaryGlyphColor = faint
-  resources.barNumberColor = faint
-  resources.staffLineColor = faint
-  resources.barSeparatorColor = faint
-}
-
-/**
- * A CSS color as red, green and blue. The app's colors compute to `oklch()`,
- * which alphaTab cannot read, so the color is drawn and its pixel read back.
- */
-function rgbOf(css: string): readonly [number, number, number] {
-  const context = document.createElement("canvas").getContext("2d", { willReadFrequently: true })
-  if (!context) return [0, 0, 0]
-  context.fillStyle = css
-  context.fillRect(0, 0, 1, 1)
-  const [r = 0, g = 0, b = 0] = context.getImageData(0, 0, 1, 1).data
-  return [r, g, b]
-}

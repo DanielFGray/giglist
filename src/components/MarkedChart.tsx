@@ -44,6 +44,7 @@ export function MarkedChart({
   numeralDisplay = "both",
   diagrams = "guitar",
   showChordsAbove,
+  scoreRevisions,
 }: {
   chart: ChartInfo & { source: string }
   shownKey: string | null
@@ -61,6 +62,8 @@ export function MarkedChart({
   diagrams?: ChordDiagrams
   /** Whether the strip of every chord shows above the chart. */
   showChordsAbove: boolean
+  /** The latest revision of each score chart in the song, for score links. */
+  scoreRevisions?: ReadonlyMap<string, string>
 }) {
   const me = useAuth().user?.id
   const [data, setData] = useState<ChartMarksInfo>({ marks: [], revisions: [] })
@@ -424,6 +427,7 @@ export function MarkedChart({
             chordShapes={tool === "read" && diagrams !== "off"}
             diagrams={diagrams}
             numeralDisplay={numeralDisplay}
+            scoreRevisions={scoreRevisions}
           />
         </div>
         <div className="pointer-events-none absolute inset-0">
