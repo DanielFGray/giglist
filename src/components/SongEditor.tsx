@@ -131,6 +131,7 @@ export function SongEditor({
           onShownKeyChange={onShownKeyChange}
           list={songCharts}
           onChanged={() => router.invalidate()}
+          pageEditing={editing}
           onScoreRead={async (meta) => {
             const next = songFromScore(song, meta)
             if (next) await songs.update(song.id, next)

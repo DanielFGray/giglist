@@ -1,4 +1,6 @@
 import type { ReactNode } from "react"
+import type { Notation } from "~/charts/score-notation"
+import { MAX_ZOOM, MIN_ZOOM, stepZoom } from "~/charts/score-zoom"
 import { MAX_SPEED, MIN_SPEED, formatClock, type StepMode } from "~/charts/speed-trainer"
 import { SettingsPanel } from "./SettingsPanel"
 
@@ -28,6 +30,11 @@ export type ScorePlayerBarProps = {
   onTrack: (index: number) => void
   speed: number
   onSpeed: (speed: number) => void
+  notation: Notation
+  onNotation: (which: keyof Notation) => void
+  /** How large the notation is drawn, where 1 is 100%. */
+  zoom: number
+  onZoom: (zoom: number) => void
   volume: number
   onVolume: (volume: number) => void
   trainer: TrainerProps
@@ -91,6 +98,8 @@ export function ScorePlayerBar(props: ScorePlayerBarProps) {
         )}
         <SpeedInput speed={props.speed} onSpeed={props.onSpeed} />
         <Trainer {...props.trainer} speed={props.speed} />
+        <NotationToggles notation={props.notation} onNotation={props.onNotation} />
+        <Zoom zoom={props.zoom} onZoom={props.onZoom} />
         <label className="flex items-center gap-2">
           Volume
           <input
@@ -172,6 +181,54 @@ function SpeedInput({ speed, onSpeed }: { speed: number; onSpeed: (speed: number
       />
       ×
     </label>
+  )
+}
+
+/** Two toggles for the staves. Turning off the only one on turns the other on. */
+function NotationToggles({ notation, onNotation }: { notation: Notation; onNotation: (which: keyof Notation) => void }) {
+  const toggle = (which: keyof Notation, pwid: string, label: string) => (
+    <button
+      data-pwid={pwid}
+      type="button"
+      aria-pressed={notation[which]}
+      onClick={() => onNotation(which)}
+      className="rounded-md border border-[var(--color-border-subtle)] px-2 py-1 cursor-pointer aria-pressed:bg-[var(--color-amber-accent)] aria-pressed:text-zinc-950"
+    >
+      {label}
+    </button>
+  )
+  return (
+    <div className="flex items-center gap-1">
+      Show
+      {toggle("standard", "score-notation-standard", "Standard")}
+      {toggle("tab", "score-notation-tab", "Tab")}
+    </div>
+  )
+}
+
+/** Smaller and larger buttons around the zoom; tapping the percentage returns to 100%. */
+function Zoom({ zoom, onZoom }: { zoom: number; onZoom: (zoom: number) => void }) {
+  const step = "rounded-md border border-[var(--color-border-subtle)] px-2 py-1 leading-none text-zinc-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+  return (
+    <div className="flex items-center gap-1">
+      Zoom
+      <button data-pwid="score-zoom-out" type="button" aria-label="Zoom out" disabled={zoom <= MIN_ZOOM} onClick={() => onZoom(stepZoom(zoom, -1))} className={step}>
+        −
+      </button>
+      <button
+        data-pwid="score-zoom"
+        type="button"
+        aria-label="Reset zoom to 100%"
+        title="Reset zoom"
+        onClick={() => onZoom(1)}
+        className="w-12 rounded-md px-1 py-1 text-center tabular-nums text-zinc-200 cursor-pointer"
+      >
+        {Math.round(zoom * 100)}%
+      </button>
+      <button data-pwid="score-zoom-in" type="button" aria-label="Zoom in" disabled={zoom >= MAX_ZOOM} onClick={() => onZoom(stepZoom(zoom, 1))} className={step}>
+        +
+      </button>
+    </div>
   )
 }
 

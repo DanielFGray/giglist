@@ -137,7 +137,7 @@ test.describe("score links", () => {
     const [startX, startY] = at(0.1, 0.22)
     await page.mouse.move(startX, startY)
     await page.mouse.down()
-    for (const fx of [0.2, 0.3, 0.4, 0.5]) await page.mouse.move(...at(fx, 0.22), { steps: 4 })
+    for (const fx of [0.15, 0.2, 0.25, 0.3]) await page.mouse.move(...at(fx, 0.22), { steps: 4 })
     await page.mouse.up()
 
     await expect(view).toHaveAttribute("data-selection", "0-1")

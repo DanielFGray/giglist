@@ -152,7 +152,9 @@ test.describe("scores", () => {
 
     await expect(getPw(page, "score-error")).toContainText("cannot read this Guitar Pro file", { timeout: 15000 })
     await expect(getPw(page, "score-error")).toContainText("stored unchanged")
-    // The page still works: the chart can be deleted.
+    // The page still works: the chart can be deleted, but only in the page's edit mode.
+    await expect(getPw(page, "chart-delete")).toHaveCount(0)
+    await page.goto(`/band/${bandId}/songs/${songId}?edit=true`)
     await getPw(page, "chart-delete").click()
     await expect(getPw(page, "charts-empty")).toBeVisible({ timeout: 10000 })
   })

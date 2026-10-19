@@ -49,6 +49,7 @@ export function SongCharts({
   list,
   onChanged,
   onScoreRead,
+  pageEditing,
 }: {
   songId: string
   songKey: MusicalKeyType | null
@@ -60,6 +61,8 @@ export function SongCharts({
   onChanged: () => Promise<void>
   /** Called with a new score's title, artist and tempo, before `onChanged`. */
   onScoreRead?: (meta: ScoreMeta) => Promise<void>
+  /** True in the song page's edit mode, the only place a score offers Delete. */
+  pageEditing: boolean
 }) {
   const [adding, setAdding] = useState(false)
   // With both a chord sheet and a score, the page shows one of them, so a long song is not one long page.
@@ -156,6 +159,7 @@ export function SongCharts({
           diagrams={diagrams}
           showChordsAbove={showChordsAbove}
           scoreCharts={scoreCharts}
+          pageEditing={pageEditing}
         />
       ))}
       {adding ? (
@@ -221,6 +225,7 @@ const blankName = (list: ReadonlyArray<ChartInfo>): string =>
 function ChartCard({
   chart,
   startEditing,
+  pageEditing,
   shownKey,
   tempo,
   onChanged,
@@ -239,6 +244,7 @@ function ChartCard({
   showChordsAbove: boolean
   /** The song's score charts: a score link draws from one, and the editor's picker offers them. */
   scoreCharts: ReadonlyArray<ChartInfo>
+  pageEditing: boolean
 }) {
   const [error, setError] = useState<string | null>(null)
   const [editing, setEditing] = useState(startEditing && chart.source !== null)
@@ -321,8 +327,8 @@ function ChartCard({
               Close
             </button>
           )}
-          {/* A score has no Edit, so its Delete stays: it would have no other way out. */}
-          {(chart.source === null || editing) && (
+          {/* A score has no editor of its own, so its Delete waits for the page's edit mode. */}
+          {(chart.source === null ? pageEditing : editing) && (
             <button
               data-pwid="chart-delete"
               type="button"
@@ -358,7 +364,7 @@ function ChartCard({
         />
       ) : (
         <Suspense fallback={<p className="text-sm text-zinc-500">Loading the score…</p>}>
-          <ScoreViewer key={chart.revision_id} revisionId={chart.revision_id} />
+          <ScoreViewer key={chart.revision_id} revisionId={chart.revision_id} compact={pageEditing} />
         </Suspense>
       )}
       {error && <div data-pwid="chart-error" className="text-sm text-red-400">{error}</div>}

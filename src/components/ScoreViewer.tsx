@@ -3,6 +3,8 @@ import { AlphaTabApi, importer, synth, type model } from "@coderline/alphatab"
 import { scores } from "~/api/client"
 import { trackOptions } from "~/charts/score-tracks"
 import { clampSpeed, nextSpeed, type StepMode } from "~/charts/speed-trainer"
+import { BOTH_NOTATIONS, staffNotation, toggleNotation, type Notation } from "~/charts/score-notation"
+import { clampZoom } from "~/charts/score-zoom"
 import { alphaTabAssets, inkFrom } from "./alphatab"
 import { useThemeInk } from "./useThemeInk"
 import { errorMessage } from "./form"
@@ -20,9 +22,12 @@ type Status = "loading" | "ready" | "error"
  * beat positions are valid only after `postRenderFinished`; `data-rendered`
  * on the root says when that has happened. A beat is identified by its place in
  * its voice, never by `Beat.id`, which changes on every load (docs/adr/0001).
+ * `compact` shortens the score to 40% of the window height and scrolls inside
+ * it, so the page below a long score stays within reach.
  */
-export function ScoreViewer({ revisionId }: { revisionId: string }) {
+export function ScoreViewer({ revisionId, compact = false }: { revisionId: string; compact?: boolean }) {
   const host = useRef<HTMLDivElement>(null)
+  const page = useRef<HTMLDivElement>(null)
   const api = useRef<AlphaTabApi | null>(null)
   const score = useRef<model.Score | null>(null)
   const [status, setStatus] = useState<Status>("loading")
@@ -43,6 +48,11 @@ export function ScoreViewer({ revisionId }: { revisionId: string }) {
   const [loopCount, setLoopCount] = useState(2)
   const [stepMode, setStepMode] = useState<StepMode>("percent")
   const [stepValue, setStepValue] = useState(5)
+  const [zoom, setZoom] = useState(1)
+  const [notation, setNotation] = useState<Notation>(BOTH_NOTATIONS)
+  // The score loads after the effect starts, so it reads the choice from here.
+  const notationNow = useRef(notation)
+  notationNow.current = notation
   const [selection, setSelection] = useState<BarSpan | null>(null)
   // alphaTab's finish event outlives a render, so the trainer reads its settings from here.
   const trainer = useRef({ loop, loopCount, stepMode, stepValue, speed, tempo: null as number | null, finished: 0 })
@@ -59,11 +69,12 @@ export function ScoreViewer({ revisionId }: { revisionId: string }) {
     const { scriptFile, fontDirectory, soundFont } = alphaTabAssets()
     const view = new AlphaTabApi(element, {
       // alphaTab pads the notation by 35 by default; the card's padding is the only margin.
-      display: { padding: [0, 0] },
+      display: { padding: [0, 0], scale: storedZoom() },
       core: { engine: "svg", scriptFile, fontDirectory },
       player: { enablePlayer: true, enableCursor: true, soundFont },
     })
     api.current = view
+    setZoom(view.settings.display.scale)
     inkFrom(view.settings, getComputedStyle(element).color)
     view.updateSettings()
     view.metronomeVolume = metronomeOn.current ? 1 : 0
@@ -95,6 +106,7 @@ export function ScoreViewer({ revisionId }: { revisionId: string }) {
         const loaded = readScore(bytes, view)
         if (typeof loaded === "string") return fail(loaded)
         score.current = loaded
+        showNotation(loaded, notationNow.current)
         trainer.current.tempo = loaded.tempo
         setTracks(trackOptions(loaded.tracks))
         setTrack(0)
@@ -116,6 +128,14 @@ export function ScoreViewer({ revisionId }: { revisionId: string }) {
   }, [revisionId])
 
   useThemeInk(api, host)
+
+  // A compact score scrolls inside its own box, so playback must follow the cursor in that box and not in the window.
+  useEffect(() => {
+    const view = api.current
+    if (!view) return
+    view.settings.player.scrollElement = compact && page.current ? page.current : "html,body"
+    view.updateSettings()
+  }, [compact, revisionId])
 
   const showTrack = (index: number) => {
     const picked = score.current?.tracks[index]
@@ -147,6 +167,31 @@ export function ScoreViewer({ revisionId }: { revisionId: string }) {
     trainer.current.speed = clamped
     setSpeed(clamped)
     if (api.current) api.current.playbackSpeed = clamped
+  }
+
+  /** alphaTab redraws the score at the new scale; the choice is kept for the next score. */
+  const changeZoom = (next: number) => {
+    const clamped = clampZoom(next)
+    setZoom(clamped)
+    try {
+      localStorage.setItem(ZOOM_KEY, String(clamped))
+    } catch {
+      // Private windows and blocked site data refuse storage; the zoom then lasts for this page only.
+    }
+    const view = api.current
+    if (!view) return
+    view.settings.display.scale = clamped
+    view.updateSettings()
+    view.render()
+  }
+
+  const changeNotation = (which: keyof Notation) => {
+    const next = toggleNotation(notation, which)
+    setNotation(next)
+    const loaded = score.current
+    if (!loaded) return
+    showNotation(loaded, next)
+    api.current?.render()
   }
 
   const stop = () => {
@@ -191,6 +236,10 @@ export function ScoreViewer({ revisionId }: { revisionId: string }) {
         onTrack={showTrack}
         speed={speed}
         onSpeed={changeSpeed}
+        zoom={zoom}
+        onZoom={changeZoom}
+        notation={notation}
+        onNotation={changeNotation}
         volume={volumes[track] ?? 1}
         onVolume={changeVolume}
         trainer={{
@@ -217,11 +266,33 @@ export function ScoreViewer({ revisionId }: { revisionId: string }) {
       )}
       {status === "loading" && <p className="text-sm text-zinc-500">Loading the score…</p>}
       {/* alphaTab draws in the text color around it and redraws when the theme toggles. */}
-      <div data-pwid="score-page" className="rounded-md">
+      <div ref={page} data-pwid="score-page" className={`rounded-md ${compact ? "max-h-[40vh] overflow-y-auto" : ""}`}>
         <div ref={host} data-pwid="score-render" />
       </div>
     </div>
   )
+}
+
+const ZOOM_KEY = "setlist:score-zoom"
+
+/** The zoom the player last chose, or 100%. */
+function storedZoom(): number {
+  try {
+    return clampZoom(Number.parseFloat(localStorage.getItem(ZOOM_KEY) ?? "1"))
+  } catch {
+    return 1
+  }
+}
+
+/** Sets which staves every track draws; the next render uses it. */
+function showNotation(loaded: model.Score, choice: Notation) {
+  for (const track of loaded.tracks) {
+    for (const staff of track.staves) {
+      const shown = staffNotation(staff.isStringed && !staff.isPercussion, choice)
+      staff.showStandardNotation = shown.standard
+      staff.showTablature = shown.tab
+    }
+  }
 }
 
 /** The score in `bytes`, or a message for the player when alphaTab cannot read the file. */
