@@ -12,6 +12,7 @@ import {
   errorMessage,
   fieldError,
 } from "./form"
+import { UNTITLED_SONG } from "~/charts/score-meta"
 import { DURATION, formatDuration, parseDuration } from "./duration"
 
 /**
@@ -29,7 +30,7 @@ type SongFormValues = (typeof SongFormSchema)["Encoded"]
 
 /** What "Add song" saves: a song needs a title, and the player renames it once they know it. */
 export const BLANK_SONG: SongUpdateData = {
-  title: "Untitled song",
+  title: UNTITLED_SONG,
   artist: null,
   key: null,
   tempo_bpm: null,
@@ -58,7 +59,8 @@ const keyOptions: ReadonlyArray<{ value: MusicalKeyType | ""; label: string }> =
 /**
  * The form for a song's metadata. The caller supplies the initial values and
  * what to do with the built payload. Read-only, the fields are disabled and
- * no submit button is drawn; the children still render.
+ * no submit button is drawn; the children still render. On a narrow screen a
+ * read-only form is hidden: the page shows a summary and an Edit button instead.
  */
 export function SongForm({
   pwid,
@@ -105,10 +107,10 @@ export function SongForm({
         e.preventDefault()
         void form.handleSubmit()
       }}
-      className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] p-4 space-y-3"
+      className={`rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] p-4 space-y-3 ${readOnly ? "max-lg:hidden" : ""}`}
     >
       <fieldset disabled={readOnly} className="space-y-3 min-w-0">
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
           <form.Field name="title">
             {(field) => (
               <TextField

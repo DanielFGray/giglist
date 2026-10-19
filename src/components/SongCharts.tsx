@@ -3,12 +3,14 @@ import { charts, type ChartInfo } from "~/api/client"
 import { exportChords, hasLyricsChart } from "~/charts/lyrics"
 import type { NumeralDisplay } from "~/charts/numeral"
 import { MusicalKeys, type MusicalKeyType } from "~/api/contracts"
+import type { ScoreMeta } from "~/charts/score-meta"
 import { AddScore } from "./AddScore"
 import { ChartEditor } from "./ChartEditor"
 import { ChartViewToggle, chartsInView, type ChartView } from "./ChartViewToggle"
 import type { ChordDiagrams } from "./ChordShapes"
 import { MarkedChart } from "./MarkedChart"
 import { ReadChartFile } from "./ReadChartFile"
+import { SettingsPanel } from "./SettingsPanel"
 import { SelectField, SubmitButton, TextAreaField, TextField, errorMessage } from "./form"
 
 const numeralDisplayOptions: ReadonlyArray<{ value: NumeralDisplay; label: string }> = [
@@ -20,6 +22,7 @@ const numeralDisplayOptions: ReadonlyArray<{ value: NumeralDisplay; label: strin
 const diagramOptions: ReadonlyArray<{ value: ChordDiagrams; label: string }> = [
   { value: "guitar", label: "Guitar" },
   { value: "staff", label: "Staff" },
+  { value: "piano", label: "Piano" },
   { value: "off", label: "Off" },
 ]
 
@@ -44,6 +47,7 @@ export function SongCharts({
   onShownKeyChange,
   list,
   onChanged,
+  onScoreRead,
 }: {
   songId: string
   songKey: MusicalKeyType | null
@@ -53,6 +57,8 @@ export function SongCharts({
   onShownKeyChange: (key: MusicalKeyType | null) => void
   list: ReadonlyArray<ChartInfo>
   onChanged: () => Promise<void>
+  /** Called with a new score's title, artist and tempo, before `onChanged`. */
+  onScoreRead?: (meta: ScoreMeta) => Promise<void>
 }) {
   const [adding, setAdding] = useState(false)
   // With both a chord sheet and a score, the page shows one of them, so a long song is not one long page.
@@ -85,12 +91,12 @@ export function SongCharts({
   const scoreCharts = list.filter((chart) => chart.kind === "score")
   return (
     <section data-pwid="song-charts" className="space-y-4">
-      <div className="flex items-end justify-between gap-4">
+      <div className="flex items-center justify-between gap-4">
         <h2 className="text-lg font-semibold">Charts</h2>
-        <div className="flex flex-wrap justify-end gap-4">
-          {hasLyrics && (
-            <>
-              <div className="w-32">
+        {(hasLyrics || hasLyricsWithKey) && (
+          <SettingsPanel pwid="chart-settings" title="Chart settings">
+            {hasLyrics && (
+              <>
                 <SelectField
                   label="Chord diagrams"
                   pwid="chart-diagrams"
@@ -98,22 +104,20 @@ export function SongCharts({
                   onChange={(v) => v && setDiagrams(v)}
                   options={diagramOptions}
                 />
-              </div>
-              <label className="flex items-center gap-2 text-sm text-zinc-300 self-end pb-2">
-                <input
-                  data-pwid="chart-show-chords-above"
-                  type="checkbox"
-                  checked={showChordsAbove}
-                  disabled={diagrams === "off"}
-                  onChange={(e) => setShowChordsAbove(e.target.checked)}
-                />
-                Show chords above the chart
-              </label>
-            </>
-          )}
-          {hasLyricsWithKey && (
-            <>
-              <div className="w-40">
+                <label className="flex items-center gap-2 text-sm text-zinc-300">
+                  <input
+                    data-pwid="chart-show-chords-above"
+                    type="checkbox"
+                    checked={showChordsAbove}
+                    disabled={diagrams === "off"}
+                    onChange={(e) => setShowChordsAbove(e.target.checked)}
+                  />
+                  Show chords above the chart
+                </label>
+              </>
+            )}
+            {hasLyricsWithKey && (
+              <>
                 <SelectField
                   label="Show in key"
                   pwid="chart-shown-key"
@@ -121,8 +125,6 @@ export function SongCharts({
                   onChange={(key) => onShownKeyChange(key === "" ? null : key)}
                   options={keyChoices}
                 />
-              </div>
-              <div className="w-44">
                 <SelectField
                   label="Chord display"
                   pwid="chart-numeral-display"
@@ -130,10 +132,10 @@ export function SongCharts({
                   onChange={(v) => v && setNumeralDisplay(v)}
                   options={numeralDisplayOptions}
                 />
-              </div>
-            </>
-          )}
-        </div>
+              </>
+            )}
+          </SettingsPanel>
+        )}
       </div>
       <ChartViewToggle list={list} view={view} onChange={setView} />
       {list.length === 0 && !adding && !addingScore && (
@@ -168,6 +170,7 @@ export function SongCharts({
       ) : addingScore ? (
         <AddScore
           songId={songId}
+          onScoreRead={onScoreRead}
           onDone={async () => {
             setAddingScore(false)
             await onChanged()

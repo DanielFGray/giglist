@@ -41,6 +41,7 @@ const createSong = async (
     },
   })
   expect(res.ok(), `create song failed: ${await res.text()}`).toBe(true)
+  return (await res.json()).id as string
 }
 
 test.describe("songs", () => {
@@ -128,6 +129,54 @@ test.describe("songs", () => {
     await expect(getPw(page, "song-title")).toBeDisabled()
     await expect(getPw(page, "song-title")).toHaveValue("Everlong")
     await expect(page).not.toHaveURL(/edit=true/)
+  })
+
+  test("Hide details gives the charts the whole width, and Details brings the sidebar back", async ({ page, testing }) => {
+    await testing.login()
+    const bandId = await createBand(page, `test-songs-hide-${Date.now()}`)
+    const songId = await createSong(page, bandId, { title: "Everlong", artist: "Foo Fighters", tempo_bpm: 158 })
+
+    await page.setViewportSize({ width: 1280, height: 800 })
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    const charts = getPw(page, "song-charts")
+    await expect(getPw(page, "song-edit-form")).toBeVisible({ timeout: 10000 })
+    const narrow = (await charts.boundingBox())!.width
+
+    await getPw(page, "song-details-hide").click()
+    await expect(getPw(page, "song-edit-form")).toHaveCount(0)
+    await expect(getPw(page, "song-edit")).toHaveCount(0)
+    expect((await charts.boundingBox())!.width).toBeGreaterThan(narrow)
+
+    await getPw(page, "song-details-show").click()
+    await expect(getPw(page, "song-edit-form")).toBeVisible()
+    await expect(getPw(page, "song-edit")).toBeVisible()
+  })
+
+  test("a score uploaded to an untitled song names the song, and a titled song keeps its name", async ({ page, testing }) => {
+    await testing.login()
+    const bandId = await createBand(page, `test-songs-score-meta-${Date.now()}`)
+    const titled = new URL("./fixtures/titled.gp", import.meta.url).pathname
+    const upload = async (songId: string) => {
+      await page.goto(`/band/${bandId}/songs/${songId}`)
+      await getPw(page, "score-add").click()
+      await getPw(page, "score-form-file").setInputFiles(titled)
+      // The score's own title names the chart.
+      await expect(getPw(page, "score-form-name")).toHaveValue("Blackbird")
+      await getPw(page, "score-form-submit").click()
+      await expect(getPw(page, "score-viewer")).toBeVisible({ timeout: 10000 })
+    }
+
+    const untitled = await createSong(page, bandId, { title: "Untitled song", artist: null as unknown as string, tempo_bpm: null as unknown as number })
+    await upload(untitled)
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Blackbird")
+    await expect(getPw(page, "song-artist")).toHaveValue("The Beatles")
+    await expect(getPw(page, "song-tempo")).toHaveValue("94")
+
+    const named = await createSong(page, bandId, { title: "My Own Title", artist: "Me", tempo_bpm: 80 })
+    await upload(named)
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("My Own Title")
+    await expect(getPw(page, "song-artist")).toHaveValue("Me")
+    await expect(getPw(page, "song-tempo")).toHaveValue("80")
   })
 
   test("rejects a duration that is not mm:ss", async ({ page, testing }) => {

@@ -21,6 +21,13 @@ const createSong = async (page: Page, tempo: number | null = null) => {
   return { bandId, songId: (await songRes.json()).id as string }
 }
 
+/** The chart settings sit in a slideout; open it before using a setting. */
+const openSettings = async (page: Page) => {
+  const panel = getPw(page, "chart-settings")
+  if (!(await panel.isVisible())) await getPw(page, "chart-settings-open").click()
+  await expect(panel).toBeVisible()
+}
+
 const createChart = async (request: APIRequestContext, songId: string) => {
   const res = await request.post("/api/charts", {
     data: { song_id: songId, name: "Chords", written_key: "G", pasted },
@@ -61,6 +68,7 @@ test.describe("lyrics charts", () => {
     await expectChords(page, ["G", "C", "D", "Em"])
 
     // The song's own key is the default, so the chart opens in G, as written.
+    await openSettings(page)
     await getPw(page, "chart-shown-key").selectOption("A")
     await expectChords(page, ["A", "D", "E", "F#m"])
     expect(await shownLyrics(page)).toContain("Amazing grace, how sweet the sound")
@@ -68,6 +76,7 @@ test.describe("lyrics charts", () => {
 
     // Reloading keeps the key, and the stored chart is still the one written in G.
     await page.reload()
+    await openSettings(page)
     await expect(getPw(page, "chart-shown-key")).toHaveValue("A")
     await expect(getPw(page, "chart-name")).toContainText("written in G")
   })
@@ -108,6 +117,8 @@ test.describe("lyrics charts", () => {
 
     await page.goto(`/band/${bandId}/setlists/${setlist.id}`)
     await getPw(page, "entry-chart").click()
+
+    await openSettings(page)
 
     await expect(getPw(page, "chart-shown-key")).toHaveValue("Bb", { timeout: 10000 })
     await expectChords(page, ["Bb", "Eb", "F", "Gm"])
@@ -179,6 +190,8 @@ test.describe("lyrics charts", () => {
     const lyricHeight = (await getPw(page, "chart-lyric").first().boundingBox())!.height
     // One text row: no empty chord row above it, and no wrapping.
     expect(await height()).toBeLessThan(lyricHeight * 1.5)
+
+    await openSettings(page)
 
     await getPw(page, "chart-shown-key").selectOption("A")
     await expectChords(page, ["A", "D", "E"])
@@ -340,6 +353,8 @@ test.describe("chord shapes", () => {
     await page.goto(`/band/${bandId}/songs/${songId}`)
     await expect(getPw(page, "chart")).toHaveCount(1, { timeout: 10000 })
 
+    await openSettings(page)
+
     await getPw(page, "chart-diagrams").selectOption("off")
     const chord = getPw(page, "chart-chord").filter({ hasText: /^C$/ }).first()
     // With no shapes, a chord is not a button: it carries no expanded state.
@@ -358,6 +373,7 @@ test.describe("chord shapes", () => {
 
     await page.goto(`/band/${bandId}/songs/${songId}`)
     await expect(getPw(page, "chart")).toHaveCount(1, { timeout: 10000 })
+    await openSettings(page)
     await expect(getPw(page, "chart-diagrams")).toHaveValue("guitar")
 
     // C in G is the IV, so the panel names the chord's numeral under its name.
@@ -383,12 +399,37 @@ test.describe("chord shapes", () => {
     await page.goto(`/band/${bandId}/songs/${songId}`)
     await expect(getPw(page, "chart")).toHaveCount(1, { timeout: 10000 })
 
+    await openSettings(page)
+
     await getPw(page, "chart-diagrams").selectOption("staff")
     await getPw(page, "chart-chord").filter({ hasText: /^C$/ }).first().click()
     const panel = getPw(page, "chord-shapes")
     await expect(panel).toBeVisible()
     await expect(panel.locator("[data-pwid=chord-staff]")).toBeVisible()
     await expect(panel.locator("[data-pwid=chord-staff-note]")).toHaveCount(3)
+    await expect(panel.locator("[data-pwid=chord-diagram]")).toHaveCount(0)
+  })
+
+  test("the diagrams setting can show a tapped chord as keys on a piano", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, songId } = await createSong(page)
+    const made = await page.request.post("/api/charts", {
+      data: { song_id: songId, name: "Shapes", written_key: "G", pasted: shapes },
+    })
+    expect(made.ok(), `create chart failed: ${await made.text()}`).toBe(true)
+
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    await expect(getPw(page, "chart")).toHaveCount(1, { timeout: 10000 })
+
+    await openSettings(page)
+
+    await getPw(page, "chart-diagrams").selectOption("piano")
+    await getPw(page, "chart-chord").filter({ hasText: /^C$/ }).first().click()
+    const panel = getPw(page, "chord-shapes")
+    await expect(panel).toBeVisible()
+    await expect(panel.locator("[data-pwid=chord-piano]")).toBeVisible()
+    await expect(panel.locator("[data-pwid=chord-piano-name]")).toHaveText(["C", "E", "G"])
+    await expect(panel.locator("[data-pwid=chord-piano-degree]")).toHaveText(["R", "3", "5"])
     await expect(panel.locator("[data-pwid=chord-diagram]")).toHaveCount(0)
   })
 
@@ -403,6 +444,8 @@ test.describe("chord shapes", () => {
     await page.goto(`/band/${bandId}/songs/${songId}`)
     await expect(getPw(page, "chart")).toHaveCount(1, { timeout: 10000 })
 
+    await openSettings(page)
+
     const checkbox = getPw(page, "chart-show-chords-above")
     await expect(checkbox).toBeEnabled()
     await checkbox.check()
@@ -414,10 +457,12 @@ test.describe("chord shapes", () => {
     await expect(strip.locator("[data-pwid=chord-diagram]")).toHaveCount(2)
 
     // Staff: each entry holds a chord-staff.
+    await openSettings(page)
     await getPw(page, "chart-diagrams").selectOption("staff")
     await expect(strip.locator("[data-pwid=chord-staff]")).toHaveCount(2)
 
     // Off: checkbox disabled and no strip.
+    await openSettings(page)
     await getPw(page, "chart-diagrams").selectOption("off")
     await expect(checkbox).toBeDisabled()
     await expect(getPw(page, "chord-strip")).toHaveCount(0)
@@ -434,6 +479,8 @@ test.describe("chord shapes", () => {
     await page.setViewportSize({ width: 390, height: 844 })
     await page.goto(`/band/${bandId}/songs/${songId}`)
     await expect(getPw(page, "chart")).toHaveCount(1, { timeout: 10000 })
+
+    await openSettings(page)
 
     await getPw(page, "chart-show-chords-above").check()
     await expect(getPw(page, "chord-strip")).toBeVisible()
@@ -892,6 +939,8 @@ test.describe("phrases", () => {
     // The speeds are worked out from the song's tempo.
     await phrase.hover()
     await expect(phrase.locator("[data-pwid=phrase-speed] option").first()).toHaveText("50% (50 bpm)")
+
+    await openSettings(page)
 
     await getPw(page, "chart-shown-key").selectOption("A")
     await expect(getPw(page, "chart-written-in")).toHaveText("notation as written, in G")
