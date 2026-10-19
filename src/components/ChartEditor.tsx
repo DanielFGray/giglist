@@ -521,7 +521,7 @@ function LyricLine(props: Parameters<typeof Line>[0] & { onWritePhrase: () => vo
                     event.stopPropagation()
                     props.onSheet(index, line.chords[chordIndex]!.at)
                   }}
-                  className="font-semibold cursor-grab text-[var(--color-amber-accent)]"
+                  className="font-semibold cursor-grab"
                 >
                   {chord}
                 </button>

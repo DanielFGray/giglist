@@ -114,7 +114,7 @@ function ChordHead({ name, numeral, x }: { name?: string; numeral?: string; x: n
   return (
     <>
       {name !== undefined && (
-        <text x={x} y={NAME_Y} textAnchor="middle" fontSize={NAME_FONT} fill="currentColor">
+        <text x={x} y={NAME_Y} textAnchor="middle" fontSize={NAME_FONT} fontWeight="bold" fill="currentColor">
           {name}
         </text>
       )}
@@ -199,11 +199,11 @@ const BAR_HEIGHT = 7
 const NUT = 4.5
 const OPEN_ROW = 9 // the ○/× row's center
 const NUT_GAP = 7 // from the ○/× row to the nut line
-const NAME_SPACE = 17
+const NAME_SPACE = 20
 const NAME_Y = 13 // the name's text baseline
-const NAME_FONT = 14
-const NUMERAL_SPACE = 13
-const NUMERAL_FONT = 11
+const NAME_FONT = 18
+const NUMERAL_SPACE = 16
+const NUMERAL_FONT = 14
 const LABEL_FONT = 10
 const DEGREE_FONT = 8
 // A degree above a dot sits inside that cell, and one above an open string sits
