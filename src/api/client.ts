@@ -8,6 +8,7 @@ import {
   BandInfo as BandInfoSchema,
   BandMember as BandMemberSchema,
   BandInvitation as BandInvitationSchema,
+  PublicBandProfile as PublicBandProfileSchema,
   Setlist as SetlistSchema,
   SetlistEntry as SetlistEntrySchema,
   SetlistSection as SetlistSectionSchema,
@@ -30,6 +31,7 @@ export type UserEmailInfo = S.Schema.Type<typeof UserEmailSchema>
 export type BandInfo = S.Schema.Type<typeof BandInfoSchema>
 export type BandMember = S.Schema.Type<typeof BandMemberSchema>
 export type BandInvitationInfo = S.Schema.Type<typeof BandInvitationSchema>
+export type PublicBandProfileInfo = S.Schema.Type<typeof PublicBandProfileSchema>
 export type SetlistInfo = S.Schema.Type<typeof SetlistSchema>
 export type SetlistEntryInfo = S.Schema.Type<typeof SetlistEntrySchema>
 export type SetlistSectionInfo = S.Schema.Type<typeof SetlistSectionSchema>
@@ -122,6 +124,18 @@ export const auth = {
 
   verifyEmail: (data: { id: string; token: string }) =>
     run(api.pipe(Effect.flatMap((c) => c.auth.verifyEmail({ payload: data })))),
+
+  requestAccountDeletion: () =>
+    run(api.pipe(Effect.flatMap((c) => c.auth.requestAccountDeletion({})))),
+
+  confirmAccountDeletion: (token: string) =>
+    run(
+      api.pipe(
+        Effect.flatMap((c) =>
+          c.auth.confirmAccountDeletion({ payload: { token } }),
+        ),
+      ),
+    ),
 }
 
 // --- Bands ---
@@ -139,6 +153,48 @@ export const bands = {
 
   delete: (bandId: string) =>
     run(api.pipe(Effect.flatMap((c) => c.myBands.deleteBand({ params: { bandId } })))),
+
+  update: (
+    bandId: string,
+    data: {
+      description?: string | null
+      show_members_publicly?: boolean
+      show_gig_dates_publicly?: boolean
+    },
+  ) =>
+    run(
+      api.pipe(
+        Effect.flatMap((c) =>
+          c.myBands.updateBand({ params: { bandId }, payload: data }),
+        ),
+      ),
+    ),
+
+  publicProfile: (slug: string) =>
+    run(
+      api.pipe(Effect.flatMap((c) => c.publicBands.getPublicBand({ params: { slug } }))),
+    ),
+
+  leave: (bandId: string, data: { transfer_to?: string } = {}) =>
+    run(
+      api.pipe(
+        Effect.flatMap((c) =>
+          c.myBands.leaveBand({ params: { bandId }, payload: data }),
+        ),
+      ),
+    ),
+
+  transferOwnership: (bandId: string, userId: string) =>
+    run(
+      api.pipe(
+        Effect.flatMap((c) =>
+          c.myBands.transferOwnership({
+            params: { bandId },
+            payload: { user_id: userId },
+          }),
+        ),
+      ),
+    ),
 
   invitations: () => run(api.pipe(Effect.flatMap((c) => c.myBands.listInvitations({})))),
 

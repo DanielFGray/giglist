@@ -157,5 +157,31 @@ export const authHandlers = HttpApiBuilder.group(SetListApi, "auth", (handlers) 
         )
         return { ok: true as const }
       }),
+    )
+    .handle("requestAccountDeletion", Effect.fnUntraced(function*() {
+        const session = yield* requireSession()
+        yield* Auth.requestAccountDeletion().pipe(
+          withAuthContext(session.sessionId),
+          Effect.mapError((e) => new AuthError({ message: e.message })),
+        )
+        return { ok: true as const }
+      }),
+    )
+    .handle("confirmAccountDeletion", Effect.fnUntraced(function*({ payload }) {
+        const session = yield* requireSession()
+        yield* Auth.confirmAccountDeletion(payload.token).pipe(
+          withAuthContext(session.sessionId),
+          Effect.mapError((e) => new AuthError({ message: e.message })),
+        )
+        // The user row is gone; drop the cookie so the browser is signed out.
+        yield* HttpApiBuilder.securitySetCookie(sessionCookie, "", {
+          httpOnly: true,
+          sameSite: "lax",
+          secure: isSecure,
+          path: "/",
+          maxAge: "0 seconds",
+        })
+        return { ok: true as const }
+      }),
     ),
 )

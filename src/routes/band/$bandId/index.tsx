@@ -1,10 +1,16 @@
 import { useState } from "react"
-import { createFileRoute } from "@tanstack/react-router"
+import { Link, createFileRoute, useRouter } from "@tanstack/react-router"
 import { useForm } from "@tanstack/react-form"
 import { Schema as S } from "effect"
-import { bands, type BandMember } from "~/api/client"
+import { bands, type BandInfo, type BandMember } from "~/api/client"
 import { useAuth } from "~/components/AuthContext"
-import { SubmitButton, TextField, errorMessage, fieldError } from "~/components/form"
+import {
+  SubmitButton,
+  TextField,
+  TextAreaField,
+  errorMessage,
+  fieldError,
+} from "~/components/form"
 
 export const Route = createFileRoute("/band/$bandId/")({
   loader: async ({ params }) => ({ members: await bands.members(params.bandId) }),
@@ -14,19 +20,159 @@ export const Route = createFileRoute("/band/$bandId/")({
 function BandPage() {
   const { bandId } = Route.useParams()
   const { members } = Route.useLoaderData()
-  const { bands: myBands } = useAuth()
+  const { user, bands: myBands } = useAuth()
   const band = myBands.find((b) => b.id === bandId)
+  const isOwner =
+    user !== null && members.some((m) => m.user_id === user.id && m.is_owner)
 
   return (
     <div data-pwid="band-page" className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">{band?.name ?? "Band"}</h1>
-        <p className="text-sm text-zinc-500 mt-1">Band settings and members</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">{band?.name ?? "Band"}</h1>
+          <p className="text-sm text-zinc-500 mt-1">Band settings and members</p>
+        </div>
+        {band && (
+          <Link
+            to="/b/$slug"
+            params={{ slug: band.slug }}
+            data-pwid="band-public-profile-link"
+            className="text-sm text-[var(--color-amber-accent)] hover:underline"
+          >
+            Public profile
+          </Link>
+        )}
       </div>
 
+      {band && isOwner && <PublicProfileSettings band={band} />}
       <MembersList members={members} />
       <InviteForm bandId={bandId} />
     </div>
+  )
+}
+
+function PublicProfileSettings({ band }: { band: BandInfo }) {
+  const router = useRouter()
+  const [serverError, setServerError] = useState<string | null>(null)
+  const [saved, setSaved] = useState(false)
+
+  const form = useForm({
+    defaultValues: {
+      description: band.description ?? "",
+      show_members_publicly: band.show_members_publicly,
+      show_gig_dates_publicly: band.show_gig_dates_publicly,
+    },
+    onSubmit: async ({ value }) => {
+      setServerError(null)
+      setSaved(false)
+      try {
+        await bands.update(band.id, {
+          description: value.description.trim() === "" ? null : value.description.trim(),
+          show_members_publicly: value.show_members_publicly,
+          show_gig_dates_publicly: value.show_gig_dates_publicly,
+        })
+        await router.invalidate()
+        setSaved(true)
+      } catch (e) {
+        setServerError(errorMessage(e))
+      }
+    },
+  })
+
+  return (
+    <section
+      data-pwid="band-public-settings"
+      className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] p-4 space-y-4"
+    >
+      <div>
+        <h2 className="text-sm font-semibold text-zinc-300">Public profile</h2>
+        <p className="text-xs text-zinc-500 mt-1">
+          Anyone can open /b/{band.slug}. Name is always public; choose what else
+          to show.
+        </p>
+      </div>
+
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          void form.handleSubmit()
+        }}
+        className="space-y-4"
+      >
+        {serverError && (
+          <div
+            data-pwid="band-public-settings-error"
+            className="text-sm text-red-400"
+          >
+            {serverError}
+          </div>
+        )}
+        {saved && (
+          <div
+            data-pwid="band-public-settings-saved"
+            className="text-sm text-emerald-400"
+          >
+            Public profile saved
+          </div>
+        )}
+
+        <form.Field name="description">
+          {(field) => (
+            <TextAreaField
+              label="Description"
+              pwid="band-public-description"
+              value={field.state.value}
+              onChange={field.handleChange}
+              error={fieldError(field)}
+              placeholder="A short public blurb about the band"
+              rows={3}
+            />
+          )}
+        </form.Field>
+
+        <form.Field name="show_members_publicly">
+          {(field) => (
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input
+                data-pwid="band-public-show-members"
+                type="checkbox"
+                checked={field.state.value}
+                onChange={(e) => field.handleChange(e.target.checked)}
+                className="rounded border-[var(--color-border-subtle)]"
+              />
+              <span>Show members on the public page</span>
+            </label>
+          )}
+        </form.Field>
+
+        <form.Field name="show_gig_dates_publicly">
+          {(field) => (
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input
+                data-pwid="band-public-show-gigs"
+                type="checkbox"
+                checked={field.state.value}
+                onChange={(e) => field.handleChange(e.target.checked)}
+                className="rounded border-[var(--color-border-subtle)]"
+              />
+              <span>Show setlist gig dates on the public page</span>
+            </label>
+          )}
+        </form.Field>
+
+        <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
+          {([canSubmit, isSubmitting]) => (
+            <SubmitButton
+              pwid="band-public-settings-submit"
+              disabled={!canSubmit || isSubmitting}
+              pending={isSubmitting}
+              label="Save public profile"
+              pendingLabel="Saving…"
+            />
+          )}
+        </form.Subscribe>
+      </form>
+    </section>
   )
 }
 
@@ -56,11 +202,6 @@ function MembersList({ members }: { members: readonly BandMember[] }) {
   )
 }
 
-/**
- * The contract carries the invitee as two optional strings and states no rule
- * for either, so the field supplies the one an invite actually has: the invitee
- * must be named. The submit picks username or email from the `@`.
- */
 const Invitee = S.toStandardSchemaV1(S.NonEmptyString)
 
 function InviteForm({ bandId }: { bandId: string }) {

@@ -360,3 +360,83 @@ export const verifyEmail = Effect.fnUntraced(
     () => Effect.fail(new AccountError({ message: "Could not verify email" })),
   ),
 );
+
+/** Band owners must transfer or delete those bands before account deletion. */
+const requireNoOwnedBands = Effect.fnUntraced(function* () {
+  const db = yield* Kysely;
+  const owned = yield* db
+    .selectFrom("app_public.band_memberships")
+    .select(["band_id"])
+    .where("user_id", "=", sql<string>`app_public.current_user_id()`)
+    .where("is_owner", "=", true)
+    .limit(1);
+  if (owned.length > 0) {
+    return yield* new AccountError({
+      message: "Transfer ownership or delete every band you own before deleting your account",
+    });
+  }
+});
+
+export const requestAccountDeletion = Effect.fnUntraced(
+  function* () {
+    yield* requireNoOwnedBands();
+    const db = yield* Kysely;
+    const ok = yield* db
+      .selectFrom(sql<{ ok: boolean }>`app_public.request_account_deletion()`.as("ok"))
+      .selectAll()
+      .pipe(
+        Effect.head,
+        Effect.catchTag("NoSuchElementError", () =>
+          Effect.fail(new AccountError({ message: "Could not start account deletion" })),
+        ),
+      );
+    if (!ok.ok) {
+      return yield* new AccountError({ message: "Could not start account deletion" });
+    }
+  },
+  Effect.catch((e) => {
+    if (e._tag === "AccountError") return Effect.fail(e);
+    const msg = String(e);
+    if (msg.includes("LOGIN"))
+      return Effect.fail(new AccountError({ message: "You must be signed in" }));
+    return Effect.fail(new AccountError({ message: "Could not start account deletion" }));
+  }),
+);
+
+export const confirmAccountDeletion = Effect.fnUntraced(
+  function* (token: string) {
+    yield* requireNoOwnedBands();
+    const db = yield* Kysely;
+    const ok = yield* db
+      .selectFrom(
+        sql<{ ok: boolean }>`app_public.confirm_account_deletion(${token})`.as("ok"),
+      )
+      .selectAll()
+      .pipe(
+        Effect.head,
+        Effect.catchTag("NoSuchElementError", () =>
+          Effect.fail(new AccountError({ message: "Could not delete account" })),
+        ),
+      );
+    if (!ok.ok) {
+      return yield* new AccountError({ message: "Could not delete account" });
+    }
+  },
+  Effect.catch((e) => {
+    if (e._tag === "AccountError") return Effect.fail(e);
+    const msg = String(e);
+    if (msg.includes("LOGIN"))
+      return Effect.fail(new AccountError({ message: "You must be signed in" }));
+    if (msg.includes("OWNER"))
+      return Effect.fail(
+        new AccountError({
+          message: "Transfer ownership or delete every band you own before deleting your account",
+        }),
+      );
+    if (msg.includes("DNIED"))
+      return Effect.fail(
+        new AccountError({ message: "That confirmation code is wrong or has expired" }),
+      );
+    return Effect.fail(new AccountError({ message: "Could not delete account" }));
+  }),
+);

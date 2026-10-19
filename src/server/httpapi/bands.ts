@@ -35,6 +35,8 @@ export const bandsHandlers = HttpApiBuilder.group(SetListApi, "myBands", (handle
               slug: b.slug,
               name: b.name,
               description: b.description ?? null,
+              show_members_publicly: b.show_members_publicly,
+              show_gig_dates_publicly: b.show_gig_dates_publicly,
               created_at: String(b.created_at),
             })),
           ),
@@ -104,6 +106,8 @@ export const bandsHandlers = HttpApiBuilder.group(SetListApi, "myBands", (handle
             slug: band.slug,
             name: band.name,
             description: null,
+            show_members_publicly: false,
+            show_gig_dates_publicly: false,
             created_at: new Date().toISOString(),
           })),
           withAuthContext(session.sessionId),
@@ -115,9 +119,58 @@ export const bandsHandlers = HttpApiBuilder.group(SetListApi, "myBands", (handle
       "deleteBand",
       Effect.fnUntraced(function* ({ params: { bandId } }) {
         const session = yield* requireSession();
-        return yield* BandService.deleteBand(bandId).pipe(
+        yield* BandService.deleteBand(bandId).pipe(
           withAuthContext(session.sessionId),
+          Effect.mapError((e) => new BandError({ message: e.message })),
         );
+        return { ok: true as const };
+      }),
+    )
+    .handle(
+      "updateBand",
+      Effect.fnUntraced(function* ({ params: { bandId }, payload }) {
+        const session = yield* requireSession();
+        const band = yield* BandService.updateBand({ bandId, ...payload }).pipe(
+          withAuthContext(session.sessionId),
+          Effect.mapError((e) => new BandError({ message: e.message })),
+        );
+        return {
+          id: band.id,
+          slug: band.slug,
+          name: band.name,
+          description: band.description ?? null,
+          show_members_publicly: band.show_members_publicly,
+          show_gig_dates_publicly: band.show_gig_dates_publicly,
+          created_at: String(band.created_at),
+        };
+      }),
+    )
+    .handle(
+      "leaveBand",
+      Effect.fnUntraced(function* ({ params: { bandId }, payload }) {
+        const session = yield* requireSession();
+        yield* BandService.leaveBand({
+          bandId,
+          transferTo: payload.transfer_to,
+        }).pipe(
+          withAuthContext(session.sessionId),
+          Effect.mapError((e) => new BandError({ message: e.message })),
+        );
+        return { ok: true as const };
+      }),
+    )
+    .handle(
+      "transferOwnership",
+      Effect.fnUntraced(function* ({ params: { bandId }, payload }) {
+        const session = yield* requireSession();
+        yield* BandService.transferOwnership({
+          bandId,
+          userId: payload.user_id,
+        }).pipe(
+          withAuthContext(session.sessionId),
+          Effect.mapError((e) => new BandError({ message: e.message })),
+        );
+        return { ok: true as const };
       }),
     )
     .handle(

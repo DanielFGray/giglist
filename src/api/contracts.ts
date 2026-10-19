@@ -101,6 +101,10 @@ export const VerifyEmailPayload = S.Struct({
   token: S.String.pipe(S.check(S.isMinLength(1))),
 })
 
+export const ConfirmAccountDeletionPayload = S.Struct({
+  token: S.String.pipe(S.check(S.isMinLength(1))),
+})
+
 export const AuthSuccess = S.Struct({ ok: S.Literals([true]) })
 
 export class AuthError extends S.TaggedError<AuthError, { readonly brand: unique symbol }>()("AuthError", { message: S.String },) {}
@@ -188,6 +192,19 @@ export const AuthApiGroup = HttpApiGroup.make("auth")
       error: AuthError.pipe(HttpApiSchema.status(400)),
     }).middleware(SessionMiddleware),
   )
+  .add(
+    HttpApiEndpoint.post("requestAccountDeletion", "/account/delete-request", {
+      success: AuthSuccess,
+      error: AuthError.pipe(HttpApiSchema.status(400)),
+    }).middleware(SessionMiddleware),
+  )
+  .add(
+    HttpApiEndpoint.post("confirmAccountDeletion", "/account/delete", {
+      payload: ConfirmAccountDeletionPayload,
+      success: AuthSuccess,
+      error: AuthError.pipe(HttpApiSchema.status(400)),
+    }).middleware(SessionMiddleware),
+  )
   .prefix("/api/auth")
 
 // --- Bands schemas ---
@@ -197,6 +214,8 @@ export const BandInfo = S.Struct({
   slug: S.String,
   name: S.String,
   description: S.NullOr(S.String),
+  show_members_publicly: S.Boolean,
+  show_gig_dates_publicly: S.Boolean,
   created_at: S.String,
 })
 
@@ -222,10 +241,53 @@ export const CreateBandPayload = S.Struct({
   name: S.String,
 })
 
+export const UpdateBandPayload = S.Struct({
+  description: S.optional(S.NullOr(S.String.pipe(S.check(S.isMaxLength(4000))))),
+  show_members_publicly: S.optional(S.Boolean),
+  show_gig_dates_publicly: S.optional(S.Boolean),
+})
+
+export const PublicBandMember = S.Struct({
+  username: S.String,
+  name: S.NullOr(S.String),
+  avatar_url: S.NullOr(S.String),
+  is_owner: S.Boolean,
+})
+
+export const PublicBandGig = S.Struct({
+  name: S.String,
+  /** `YYYY-MM-DD` */
+  gig_date: S.String,
+})
+
+export const PublicBandProfile = S.Struct({
+  slug: S.String,
+  name: S.String,
+  description: S.NullOr(S.String),
+  show_members_publicly: S.Boolean,
+  show_gig_dates_publicly: S.Boolean,
+  members: S.Array(PublicBandMember),
+  gigs: S.Array(PublicBandGig),
+})
+
 export const InvitePayload = S.Struct({
   username: S.optional(S.String),
   email: S.optional(S.String),
 })
+
+/**
+ * Leave a band. Owners with other members must name a successor; the sole
+ * owner deletes the band instead (`DELETE /:bandId`).
+ */
+export const LeaveBandPayload = S.Struct({
+  transfer_to: S.optional(S.String.check(S.isUUID())),
+})
+
+export const TransferOwnershipPayload = S.Struct({
+  user_id: S.String.check(S.isUUID()),
+})
+
+export const BandSuccess = S.Struct({ ok: S.Literals([true]) })
 
 export class BandError extends S.TaggedError<BandError, { readonly brand: unique symbol }>()("BandError", { message: S.String },) {}
 
@@ -254,6 +316,31 @@ export const BandsApiGroup = HttpApiGroup.make("myBands")
   .add(
     HttpApiEndpoint.delete("deleteBand", "/:bandId", {
       params: { bandId: S.String.check(S.isUUID()) },
+      success: BandSuccess,
+      error: BandError.pipe(HttpApiSchema.status(400)),
+    }),
+  )
+  .add(
+    HttpApiEndpoint.put("updateBand", "/:bandId", {
+      params: { bandId: S.String.check(S.isUUID()) },
+      payload: UpdateBandPayload,
+      success: BandInfo,
+      error: BandError.pipe(HttpApiSchema.status(400)),
+    }),
+  )
+  .add(
+    HttpApiEndpoint.post("leaveBand", "/:bandId/leave", {
+      params: { bandId: S.String.check(S.isUUID()) },
+      payload: LeaveBandPayload,
+      success: BandSuccess,
+      error: BandError.pipe(HttpApiSchema.status(400)),
+    }),
+  )
+  .add(
+    HttpApiEndpoint.post("transferOwnership", "/:bandId/transfer", {
+      params: { bandId: S.String.check(S.isUUID()) },
+      payload: TransferOwnershipPayload,
+      success: BandSuccess,
       error: BandError.pipe(HttpApiSchema.status(400)),
     }),
   )
@@ -283,6 +370,21 @@ export const BandsApiGroup = HttpApiGroup.make("myBands")
   )
   .middleware(SessionMiddleware)
   .prefix("/api/my/bands")
+
+export class PublicBandNotFound extends S.TaggedError<
+  PublicBandNotFound,
+  { readonly brand: unique symbol }
+>()("PublicBandNotFound", { slug: S.String }) {}
+
+export const PublicBandsApiGroup = HttpApiGroup.make("publicBands")
+  .add(
+    HttpApiEndpoint.get("getPublicBand", "/:slug", {
+      params: { slug: S.String.pipe(S.check(S.isMinLength(1))) },
+      success: PublicBandProfile,
+      error: PublicBandNotFound.pipe(HttpApiSchema.status(404)),
+    }),
+  )
+  .prefix("/api/public/bands")
 
 // --- Testing schemas ---
 
@@ -1152,6 +1254,7 @@ export const ScoresApiGroup = HttpApiGroup.make("scores")
 export const SetListApi = HttpApi.make("SetListApi")
   .add(AuthApiGroup)
   .add(BandsApiGroup)
+  .add(PublicBandsApiGroup)
   .add(TestingApiGroup)
   .add(SongsApiGroup)
   .add(SetlistsApiGroup)

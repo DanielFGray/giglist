@@ -102,6 +102,14 @@ export interface AppPublicBands {
   description: string | null;
   id: Generated<string>;
   name: string;
+  /**
+   * When true, the public band page lists setlist gig dates (name + date only).
+   */
+  show_gig_dates_publicly: Generated<boolean>;
+  /**
+   * When true, the public band page lists members (username, name, avatar).
+   */
+  show_members_publicly: Generated<boolean>;
   slug: string;
 }
 
