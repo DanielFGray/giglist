@@ -508,7 +508,7 @@ function collectChords(text: string): Array<{ root: string; minor: boolean }> {
       return
     }
     if (chord === null || chord.root === null) return
-    const root = chord.root.toString().replace(/m$/, "")
+    const root = chord.root.note
     if (!(root in NOTE_INDEX)) return
     found.push({ root, minor: chord.isMinor() || /dim/i.test(cleaned) })
   }
@@ -524,33 +524,63 @@ function collectChords(text: string): Array<{ root: string; minor: boolean }> {
  * Guesses the key a chart was written in from its chords, for a chart saved
  * without one. Returns null when no chord can be read.
  */
+const MAJOR_PROFILE = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88]
+const MINOR_PROFILE = [6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17]
+
+function rotate(profile: ReadonlyArray<number>, tonic: number): ReadonlyArray<number> {
+  const out = new Array<number>(12)
+  for (let i = 0; i < 12; i++) out[i] = profile[(i - tonic + 12) % 12]!
+  return out
+}
+
+function pearson(xs: ReadonlyArray<number>, ys: ReadonlyArray<number>): number {
+  const n = xs.length
+  let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0
+  for (let i = 0; i < n; i++) {
+    sumX += xs[i]!
+    sumY += ys[i]!
+    sumXY += xs[i]! * ys[i]!
+    sumX2 += xs[i]! * xs[i]!
+    sumY2 += ys[i]! * ys[i]!
+  }
+  const num = n * sumXY - sumX * sumY
+  const den = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY))
+  if (den === 0) return 0
+  return num / den
+}
+
+/**
+ * Guesses the key a chart was written in from its chords, using the
+ * Krumhansl-Schmuckler key-finding algorithm: build a pitch-class histogram
+ * from the chords' roots, thirds and fifths, then pick the key whose
+ * Krumhansl key profile correlates best with it.
+ *
+ * Krumhansl, C. L. (1990). Cognitive Foundations of Musical Pitch.
+ * Oxford University Press.
+ */
 export function guessKey(text: string): MusicalKeyType | null {
   const chords = collectChords(text)
   if (chords.length === 0) return null
+  const histogram = new Array<number>(12).fill(0)
+  for (const chord of chords) {
+    const root = NOTE_INDEX[chord.root]
+    if (root === undefined) continue
+    const thirdInterval = chord.minor ? 3 : 4
+    const fifthInterval = 7
+    histogram[root]! += 3
+    histogram[(root + thirdInterval) % 12]! += 2
+    histogram[(root + fifthInterval) % 12]! += 2
+  }
   let best: { key: MusicalKeyType; score: number } | null = null
   for (const key of MusicalKeys) {
     const isMinor = key.endsWith("m")
     const root = isMinor ? key.slice(0, -1) : key
     const tonic = NOTE_INDEX[root]
     if (tonic === undefined) continue
-    const scale = isMinor ? MINOR_SCALE : MAJOR_SCALE
-    const degreeMinor = isMinor ? MINOR_DEGREE_MINOR : MAJOR_DEGREE_MINOR
-    const scaleNotes = new Set(scale.map((interval) => (tonic + interval) % 12))
-    let score = 0
-    for (const chord of chords) {
-      const chordIndex = NOTE_INDEX[chord.root]
-      if (chordIndex === undefined || !scaleNotes.has(chordIndex)) continue
-      const interval = (chordIndex - tonic + 12) % 12
-      const degree = scale.indexOf(interval)
-      if (degree < 0) continue
-      score += 1
-      if (chord.minor === degreeMinor[degree]) score += 1
-      if (degree === 0) score += 2
-    }
+    const profile = rotate(isMinor ? MINOR_PROFILE : MAJOR_PROFILE, tonic)
+    const score = pearson(histogram, profile)
     if (best === null || score > best.score) best = { key, score }
   }
-  if (best === null || best.score <= 0) return null
-  // debug: log top scores
-  // console.error("GUESS", text.replace(/\\n/g, " "), "->", best.key, best.score)
+  if (best === null) return null
   return best.key
 }
