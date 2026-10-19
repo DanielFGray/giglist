@@ -3,6 +3,7 @@ import { Link, createFileRoute, useRouter } from "@tanstack/react-router"
 import { charts, setlists, type ChartInfo } from "~/api/client"
 import { groupEntries, playOrder } from "~/components/arrangement"
 import { hasLyricsChart } from "~/charts/lyrics"
+import { ChartViewToggle, chartsInView, type ChartView } from "~/components/ChartViewToggle"
 import type { NumeralDisplay } from "~/charts/numeral"
 import type { ChordDiagrams } from "~/components/ChordShapes"
 import { ClickTrack } from "~/components/ClickTrack"
@@ -332,13 +333,15 @@ function SongCharts({
   diagrams: ChordDiagrams
   showChordsAbove: boolean
 }) {
+  const [view, setView] = useState<ChartView>("chords")
   if (error) return <p data-pwid="perform-error" className="text-red-400">{error}</p>
   if (list === null) return <p className="text-zinc-500">Loading…</p>
   if (list.length === 0) return <p data-pwid="perform-no-chart" className="text-zinc-500">No chart for this song yet.</p>
   const scoreCharts = list.filter((chart) => chart.kind === "score")
   return (
     <div className="space-y-8">
-      {list.map((chart) =>
+      <ChartViewToggle list={list} view={view} onChange={setView} />
+      {chartsInView(list, view).map((chart) =>
         chart.source !== null ? (
           <MarkedChart
             key={chart.id}

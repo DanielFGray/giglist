@@ -5,6 +5,7 @@ import type { NumeralDisplay } from "~/charts/numeral"
 import { MusicalKeys, type MusicalKeyType } from "~/api/contracts"
 import { AddScore } from "./AddScore"
 import { ChartEditor } from "./ChartEditor"
+import { ChartViewToggle, chartsInView, type ChartView } from "./ChartViewToggle"
 import type { ChordDiagrams } from "./ChordShapes"
 import { MarkedChart } from "./MarkedChart"
 import { ReadChartFile } from "./ReadChartFile"
@@ -54,6 +55,8 @@ export function SongCharts({
   onChanged: () => Promise<void>
 }) {
   const [adding, setAdding] = useState(false)
+  // With both a chord sheet and a score, the page shows one of them, so a long song is not one long page.
+  const [view, setView] = useState<ChartView>("chords")
   const [addingScore, setAddingScore] = useState(false)
   // A chart made blank opens in the editor, the same view every chart is edited in.
   const [opened, setOpened] = useState<string | null>(null)
@@ -132,12 +135,13 @@ export function SongCharts({
           )}
         </div>
       </div>
+      <ChartViewToggle list={list} view={view} onChange={setView} />
       {list.length === 0 && !adding && !addingScore && (
         <p data-pwid="charts-empty" className="text-sm text-zinc-500">
           No charts yet. Paste chords over lyrics, read them from a PDF or a photo, or upload a Guitar Pro file, to make one{songKey ? `; this song is in ${songKey}` : ""}.
         </p>
       )}
-      {list.map((chart) => (
+      {chartsInView(list, view).map((chart) => (
         <ChartCard
           key={chart.id}
           chart={chart}
