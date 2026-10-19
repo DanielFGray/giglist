@@ -1,22 +1,28 @@
 import { useState } from "react"
 import { scores } from "~/api/client"
 import { MAX_SCORE_BYTES, chartNameFromFile, scoreFormat } from "~/charts/score-file"
+import { scoreMeta, type ScoreMeta } from "~/charts/score-meta"
 import { SubmitButton, TextField, errorMessage } from "./form"
 
 /**
  * Upload a Guitar Pro file as a new score chart. The server stores the file's
- * bytes unchanged as the chart's first revision.
+ * bytes unchanged as the chart's first revision. The browser also reads the
+ * file's title, artist and tempo: the title names the chart, and `onScoreRead`
+ * lets the song take all three after the upload. A file alphaTab cannot read
+ * still uploads, with its file name for a title.
  */
 export function AddScore({
   songId,
+  onScoreRead,
   onDone,
   onCancel,
 }: {
   songId: string
+  onScoreRead?: (meta: ScoreMeta) => Promise<void>
   onDone: () => Promise<void>
   onCancel: () => void
 }) {
-  const [file, setFile] = useState<{ name: string; bytes: Uint8Array } | null>(null)
+  const [file, setFile] = useState<{ name: string; bytes: Uint8Array; meta: ScoreMeta | null } | null>(null)
   const [name, setName] = useState("")
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -28,8 +34,9 @@ export function AddScore({
     if (picked.size > MAX_SCORE_BYTES) return setError("That file is too large for a score")
     const bytes = new Uint8Array(await picked.arrayBuffer())
     if (scoreFormat(bytes) === null) return setError("That is not a Guitar Pro file (.gp, .gp3, .gp4, .gp5 or .gpx)")
-    setFile({ name: picked.name, bytes })
-    setName((current) => current || chartNameFromFile(picked.name))
+    const meta = await readMeta(bytes)
+    setFile({ name: picked.name, bytes, meta })
+    setName((current) => current || meta?.title || chartNameFromFile(picked.name))
   }
 
   const submit = async (event: React.FormEvent) => {
@@ -39,6 +46,8 @@ export function AddScore({
     setError(null)
     try {
       await scores.upload({ song_id: songId, name, file_name: file.name, bytes: file.bytes })
+      // The score is already saved, so a song that cannot take its details is not an upload error.
+      if (file.meta) await onScoreRead?.(file.meta).catch(() => undefined)
       await onDone()
     } catch (e) {
       setError(errorMessage(e))
@@ -83,4 +92,14 @@ export function AddScore({
       </div>
     </form>
   )
+}
+
+/** The file's title, artist and tempo, or null when alphaTab cannot read it. alphaTab is large, so it loads on demand. */
+async function readMeta(bytes: Uint8Array): Promise<ScoreMeta | null> {
+  try {
+    const { importer, Settings } = await import("@coderline/alphatab")
+    return scoreMeta(importer.ScoreLoader.loadScoreFromBytes(bytes, new Settings()))
+  } catch {
+    return null
+  }
 }

@@ -72,18 +72,76 @@ test.describe("scores", () => {
     // The play button waits for the sound font, a download of about 1 MB.
     const play = getPw(page, "score-play")
     await expect(play).toBeEnabled({ timeout: 30000 })
-    await expect(play).toHaveText("Play")
+    await expect(play).toHaveAttribute("aria-label", "Play")
     await play.click()
-    await expect(play).toHaveText("Pause")
-    // alphaTab throws if it is paused before its audio output has started.
+    await expect(play).toHaveAttribute("aria-label", "Pause")
+    // alphaTab's playerStateChanged event has changed the button to Pause, but its audio output needs this handoff before pausing.
     await page.waitForTimeout(500)
     await play.click()
-    await expect(play).toHaveText("Play")
+    await expect(play).toHaveAttribute("aria-label", "Play")
 
     const click = getPw(page, "score-metronome")
-    await expect(click).not.toBeChecked()
-    await click.check()
-    await expect(click).toBeChecked()
+    await expect(click).toHaveAttribute("aria-pressed", "false")
+    await click.click()
+    await expect(click).toHaveAttribute("aria-pressed", "true")
+  })
+
+  test("the player bar has count-in, a time readout, a speed and a speed trainer", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, songId } = await createSong(page)
+    expect((await uploadScore(page.request, songId, fixture)).status()).toBe(201)
+
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    await expect(getPw(page, "score-play")).toBeEnabled({ timeout: 30000 })
+
+    const countIn = getPw(page, "score-count-in")
+    await expect(countIn).toHaveAttribute("aria-pressed", "false")
+    await countIn.click()
+    await expect(countIn).toHaveAttribute("aria-pressed", "true")
+
+    // The seek bar spans the piece, so the readout names its length.
+    await expect(getPw(page, "score-time")).not.toHaveText("0:00 / 0:00")
+
+    // A typed speed is kept, and one past the limit stops at the limit.
+    const speed = getPw(page, "score-speed")
+    await speed.fill("0.5")
+    await speed.press("Enter")
+    await expect(speed).toHaveValue("0.5")
+    await speed.fill("9")
+    await speed.press("Enter")
+    await expect(speed).toHaveValue("3")
+
+    // The trainer's panel holds the loop switch and the speed-up step.
+    await getPw(page, "score-trainer-open").click()
+    await expect(getPw(page, "score-trainer")).toBeVisible()
+    await getPw(page, "score-loop").check()
+    await expect(getPw(page, "score-loop")).toBeChecked()
+    await getPw(page, "score-trainer-mode").selectOption("bpm")
+    await expect(getPw(page, "score-trainer-mode")).toHaveValue("bpm")
+  })
+
+  test("a score is redrawn in the new ink when the theme toggles", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, songId } = await createSong(page)
+    expect((await uploadScore(page.request, songId, fixture)).status()).toBe(201)
+
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    const viewer = getPw(page, "score-viewer")
+    await expect(viewer).toHaveAttribute("data-rendered", "true", { timeout: 30000 })
+
+    // The first staff line's stroke is the ink alphaTab drew with.
+    const ink = () => getPw(page, "score-render").locator("svg path, svg rect").first().evaluate((el) => el.getAttribute("fill") ?? el.getAttribute("stroke"))
+    const setTheme = (theme: "light" | "dark") =>
+      page.evaluate((t) => {
+        document.documentElement.classList.remove("light", "dark")
+        document.documentElement.classList.add(t)
+      }, theme)
+
+    await setTheme("light")
+    await expect(viewer).toHaveAttribute("data-rendered", "true")
+    const light = await ink()
+    await setTheme("dark")
+    await expect.poll(ink, { timeout: 15000 }).not.toBe(light)
   })
 
   test("shows an error, not a crash, when alphaTab cannot read the file", async ({ page, testing }) => {

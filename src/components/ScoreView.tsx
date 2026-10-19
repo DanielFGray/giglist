@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react"
 import { AlphaTabApi, importer, LayoutMode, model, PlayerMode, Settings, StaveProfile } from "@coderline/alphatab"
 import { alphaTabAssets, inkFrom } from "./alphatab"
+import { useThemeInk } from "./useThemeInk"
 import { PlayControls } from "./PlayControls"
 import { usePlayback } from "./playback"
 import { barsLabel, barTicksOf, sameBars, selectedBars, ticksOfBars, type BarSpan } from "./score-bars"
@@ -94,6 +95,8 @@ export function ScoreView({
       view.destroy()
     }
   }, [])
+
+  useThemeInk(viewRef, host)
 
   useEffect(() => {
     const view = viewRef.current

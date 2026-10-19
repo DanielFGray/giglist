@@ -2,15 +2,18 @@ import { useEffect, useRef, useState } from "react"
 import { AlphaTabApi, importer, synth, type model } from "@coderline/alphatab"
 import { scores } from "~/api/client"
 import { trackOptions } from "~/charts/score-tracks"
-import { alphaTabAssets } from "./alphatab"
+import { clampSpeed, nextSpeed, type StepMode } from "~/charts/speed-trainer"
+import { alphaTabAssets, inkFrom } from "./alphatab"
+import { useThemeInk } from "./useThemeInk"
 import { errorMessage } from "./form"
 import { barsLabel, barTicksOf, selectedBars, type BarSpan } from "./score-bars"
+import { ScorePlayerBar } from "./ScorePlayerBar"
 
 type Status = "loading" | "ready" | "error"
 
 /**
- * A Guitar Pro score drawn with alphaTab, with a track select, play/pause and a
- * metronome click. It fetches the stored file of `revisionId` (the same auth and
+ * A Guitar Pro score drawn with alphaTab, under a player bar (play, metronome,
+ * count-in, seek, track, speed, speed trainer, volume). It fetches the stored file of `revisionId` (the same auth and
  * row-level security as the rest of the API) and never changes it.
  *
  * alphaTab draws only the sections near the viewport and unloads the rest, so
@@ -32,8 +35,18 @@ export function ScoreViewer({ revisionId }: { revisionId: string }) {
   const [metronome, setMetronome] = useState(false)
   const metronomeOn = useRef(metronome)
   metronomeOn.current = metronome
+  const [countIn, setCountIn] = useState(false)
+  const [position, setPosition] = useState({ current: 0, end: 0 })
+  const [speed, setSpeed] = useState(1)
+  const [volumes, setVolumes] = useState<Readonly<Record<number, number>>>({})
   const [loop, setLoop] = useState(false)
+  const [loopCount, setLoopCount] = useState(2)
+  const [stepMode, setStepMode] = useState<StepMode>("percent")
+  const [stepValue, setStepValue] = useState(5)
   const [selection, setSelection] = useState<BarSpan | null>(null)
+  // alphaTab's finish event outlives a render, so the trainer reads its settings from here.
+  const trainer = useRef({ loop, loopCount, stepMode, stepValue, speed, tempo: null as number | null, finished: 0 })
+  trainer.current = { ...trainer.current, loop, loopCount, stepMode, stepValue, speed }
 
   useEffect(() => {
     const element = host.current
@@ -49,10 +62,22 @@ export function ScoreViewer({ revisionId }: { revisionId: string }) {
       player: { enablePlayer: true, enableCursor: true, soundFont },
     })
     api.current = view
+    inkFrom(view.settings, getComputedStyle(element).color)
+    view.updateSettings()
     view.metronomeVolume = metronomeOn.current ? 1 : 0
     view.renderStarted.on(() => setRendered(false))
     view.postRenderFinished.on(() => setRendered(true))
     view.playerReady.on(() => setPlayerReady(true))
+    view.playerPositionChanged.on((e) => setPosition({ current: e.currentTime, end: e.endTime }))
+    // A looped passage ends once per round; the trainer speeds the next round up after enough of them.
+    view.playerFinished.on(() => {
+      const t = trainer.current
+      if (!t.loop) return
+      t.finished += 1
+      if (t.finished < Math.max(1, t.loopCount)) return
+      t.finished = 0
+      changeSpeed(nextSpeed(t.speed, t.stepMode, t.stepValue, t.tempo), false)
+    })
     view.playerStateChanged.on((event) => setPlaying(event.state === synth.PlayerState.Playing))
     view.error.on((e) => fail(`The score viewer failed: ${e.message}`))
     // A drag across the bars sets the playback range; the bars it covers are what Loop repeats.
@@ -68,6 +93,7 @@ export function ScoreViewer({ revisionId }: { revisionId: string }) {
         const loaded = readScore(bytes, view)
         if (typeof loaded === "string") return fail(loaded)
         score.current = loaded
+        trainer.current.tempo = loaded.tempo
         setTracks(trackOptions(loaded.tracks))
         setTrack(0)
         setStatus("ready")
@@ -82,9 +108,12 @@ export function ScoreViewer({ revisionId }: { revisionId: string }) {
       setRendered(false)
       setPlayerReady(false)
       setPlaying(false)
+      setPosition({ current: 0, end: 0 })
       view.destroy()
     }
   }, [revisionId])
+
+  useThemeInk(api, host)
 
   const showTrack = (index: number) => {
     const picked = score.current?.tracks[index]
@@ -98,9 +127,36 @@ export function ScoreViewer({ revisionId }: { revisionId: string }) {
     if (api.current) api.current.metronomeVolume = on ? 1 : 0
   }
 
+  const toggleCountIn = (on: boolean) => {
+    setCountIn(on)
+    if (api.current) api.current.countInVolume = on ? 1 : 0
+  }
+
   const toggleLoop = (on: boolean) => {
+    trainer.current.finished = 0
     setLoop(on)
     if (api.current) api.current.isLooping = on
+  }
+
+  /** A speed the player chose restarts the trainer's count; one the trainer chose does not. */
+  function changeSpeed(next: number, byPlayer = true) {
+    const clamped = clampSpeed(next)
+    if (byPlayer) trainer.current.finished = 0
+    trainer.current.speed = clamped
+    setSpeed(clamped)
+    if (api.current) api.current.playbackSpeed = clamped
+  }
+
+  const stop = () => {
+    trainer.current.finished = 0
+    api.current?.stop()
+  }
+
+  const changeVolume = (volume: number) => {
+    const picked = score.current?.tracks[track]
+    if (!picked) return
+    setVolumes((current) => ({ ...current, [track]: volume }))
+    api.current?.changeTrackVolume([picked], volume)
   }
 
   // Clearing returns the playback range to the whole score. The range setter needs the player, so it waits for it.
@@ -113,62 +169,53 @@ export function ScoreViewer({ revisionId }: { revisionId: string }) {
 
   return (
     <div data-pwid="score-viewer" data-status={status} data-rendered={rendered} className="space-y-3">
-      <div className="flex flex-wrap items-center gap-3">
-        <label className="flex items-center gap-2 text-xs text-zinc-400">
-          Track
-          <select
-            data-pwid="score-track"
-            value={track}
-            disabled={status !== "ready"}
-            onChange={(e) => showTrack(Number(e.target.value))}
-            className="rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] px-2 py-1 text-xs text-zinc-200"
-          >
-            {tracks.map((t) => (
-              <option key={t.index} value={t.index}>
-                {t.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button
-          data-pwid="score-play"
-          type="button"
-          disabled={!playerReady}
-          onClick={() => api.current?.playPause()}
-          className="px-3 py-1.5 rounded-md border border-[var(--color-border-subtle)] text-xs text-zinc-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          {playing ? "Pause" : "Play"}
-        </button>
-        <label className="flex items-center gap-2 text-xs text-zinc-400">
-          <input
-            data-pwid="score-metronome"
-            type="checkbox"
-            checked={metronome}
-            onChange={(e) => toggleMetronome(e.target.checked)}
-          />
-          Metronome click
-        </label>
-        <label className="flex items-center gap-2 text-xs text-zinc-400">
-          <input data-pwid="score-loop" type="checkbox" checked={loop} onChange={(e) => toggleLoop(e.target.checked)} />
-          Loop
-        </label>
-        {selection && (
-          <span data-pwid="score-selection" className="flex items-center gap-2 text-xs text-zinc-300">
-            {barsLabel(selection)}
-            <button data-pwid="score-clear" type="button" onClick={clearSelection} className="underline cursor-pointer">
-              Clear
-            </button>
-          </span>
-        )}
-      </div>
+      <ScorePlayerBar
+        ready={playerReady}
+        playing={playing}
+        onPlayPause={() => api.current?.playPause()}
+        onStop={stop}
+        metronome={metronome}
+        onMetronome={toggleMetronome}
+        countIn={countIn}
+        onCountIn={toggleCountIn}
+        positionMs={position.current}
+        endMs={position.end}
+        onSeek={(ms) => {
+          if (api.current) api.current.timePosition = ms
+        }}
+        tracks={tracks}
+        track={track}
+        trackDisabled={status !== "ready"}
+        onTrack={showTrack}
+        speed={speed}
+        onSpeed={changeSpeed}
+        volume={volumes[track] ?? 1}
+        onVolume={changeVolume}
+        trainer={{
+          loop,
+          onLoop: toggleLoop,
+          loopCount,
+          onLoopCount: (count) => {
+            trainer.current.finished = 0
+            setLoopCount(Math.max(1, Math.round(count) || 1))
+          },
+          stepMode,
+          onStepMode: setStepMode,
+          stepValue,
+          onStepValue: (value) => setStepValue(Math.max(0, Math.round(value * 10) / 10 || 0)),
+          tempo: score.current?.tempo ?? null,
+          selection: selection ? barsLabel(selection) : null,
+          onClearSelection: clearSelection,
+        }}
+      />
       {error && (
         <div data-pwid="score-error" role="alert" className="text-sm text-red-400">
           {error}
         </div>
       )}
       {status === "loading" && <p className="text-sm text-zinc-500">Loading the score…</p>}
-      {/* Printed-page look: alphaTab draws black glyphs, which need a light background. */}
-      <div data-pwid="score-page" className="rounded-md bg-white p-2 text-black">
+      {/* alphaTab draws in the text color around it and redraws when the theme toggles. */}
+      <div data-pwid="score-page" className="rounded-md p-2">
         <div ref={host} data-pwid="score-render" />
       </div>
     </div>

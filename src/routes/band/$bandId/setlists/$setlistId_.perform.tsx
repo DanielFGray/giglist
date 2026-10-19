@@ -357,7 +357,7 @@ function SongCharts({
             scoreCharts={scoreCharts}
           />
         ) : (
-          <div key={chart.id} className="rounded-lg bg-white p-2">
+          <div key={chart.id} className="rounded-lg p-2">
             <Suspense fallback={<p className="text-zinc-500">Loading the score…</p>}>
               <ScoreViewer revisionId={chart.revision_id} />
             </Suspense>

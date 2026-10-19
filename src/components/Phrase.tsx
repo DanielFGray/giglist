@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import { AlphaTabApi, LayoutMode, NotationElement, PlayerMode } from "@coderline/alphatab"
 import { readPhrase, type PhraseProblem } from "~/charts/phrase"
 import { alphaTabAssets, inkFrom } from "./alphatab"
+import { useThemeInk } from "./useThemeInk"
 import { PlayControls } from "./PlayControls"
 import { usePlayback } from "./playback"
 import { stretchForWidth } from "./stretch"
@@ -60,21 +61,7 @@ export function Phrase({ tex, tempo }: { tex: string; tempo: number | null }) {
     view.renderScore(read.score)
   }, [tex, tempo])
 
-  // Re-ink the notation when the global theme toggles, so it follows the page.
-  useEffect(() => {
-    const root = document.documentElement
-    const apply = () => {
-      const view = api.current
-      const element = host.current
-      if (!view || !element) return
-      inkFrom(view.settings, getComputedStyle(element).color)
-      view.updateSettings()
-      view.render()
-    }
-    const observer = new MutationObserver(apply)
-    observer.observe(root, { attributes: true, attributeFilter: ["class"] })
-    return () => observer.disconnect()
-  }, [])
+  useThemeInk(api, host)
 
   return (
     <div data-pwid="phrase" data-rendered={rendered} className="group relative space-y-1">
