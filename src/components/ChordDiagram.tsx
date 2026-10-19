@@ -18,11 +18,13 @@ export function ChordDiagram({
   name,
   numeral,
   labels,
+  onClick,
 }: {
   frets: Voicing["frets"]
   name?: string
   numeral?: string
   labels?: ReadonlyArray<string | null>
+  onClick?: () => void
 }) {
   const view = fretWindow(frets)
   const barre = barreOf(frets)
@@ -39,11 +41,23 @@ export function ChordDiagram({
     <svg
       data-pwid="chord-diagram"
       data-frets={writeFrets(frets)}
-      role="img"
-      aria-label={`${name ?? "Chord shape"}: ${writeFrets(frets)}`}
+      role={onClick ? "button" : "img"}
+      tabIndex={onClick ? 0 : undefined}
+      aria-label={`${name ?? "Chord shape"}: ${writeFrets(frets)}${onClick ? ", play" : ""}`}
       viewBox={`0 0 ${widthOf(strings)} ${bottom + FOOT}`}
       width={`${widthOf(strings) / EM}em`}
-      className="block overflow-visible"
+      className={`block overflow-visible ${onClick ? "cursor-pointer" : ""}`}
+      onClick={onClick}
+      onKeyDown={
+        onClick
+          ? (event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault()
+                onClick()
+              }
+            }
+          : undefined
+      }
     >
       <ChordHead name={name} numeral={numeral} x={(column(0) + column(strings - 1)) / 2} />
 

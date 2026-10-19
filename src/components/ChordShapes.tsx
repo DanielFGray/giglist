@@ -1,4 +1,4 @@
-import { useMemo, type CSSProperties } from "react"
+import { useEffect, useMemo, type CSSProperties } from "react"
 import { degrees } from "~/charts/degrees"
 import { numeral } from "~/charts/numeral"
 import { spell } from "~/charts/spelling"
@@ -6,6 +6,7 @@ import { voicings } from "~/charts/voicing"
 import { writeFrets } from "~/charts/fretting"
 import { ChordDiagram } from "./ChordDiagram"
 import { ChordStaffBlock } from "./ChordStaff"
+import { playChord, preloadChordPlayer } from "~/audio/chord"
 
 /** Which chords of a chart show a diagram when tapped: guitar, staff, or none. */
 export type ChordDiagrams = "guitar" | "staff" | "off"
@@ -45,6 +46,9 @@ export function ChordShapes({
   }, [name, diagrams])
   const chordNumeral = numeral(name, shownKey)
   const label = diagrams === "staff" ? `${name} on staff` : `${name} on guitar`
+  useEffect(() => {
+    preloadChordPlayer()
+  }, [])
 
   return (
     <div
@@ -71,6 +75,7 @@ export function ChordShapes({
               name={index === 0 ? name : undefined}
               numeral={index === 0 ? (chordNumeral ?? undefined) : undefined}
               labels={degrees(chord.spelled, shape)}
+              onClick={() => void playChord(shape.frets)}
             />
           ))}
         </div>

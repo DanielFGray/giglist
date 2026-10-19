@@ -2,7 +2,9 @@ import { degrees } from "~/charts/degrees"
 import { numeral } from "~/charts/numeral"
 import { spell } from "~/charts/spelling"
 import { voicings } from "~/charts/voicing"
+import { useEffect } from "react"
 import { ChordDiagram } from "./ChordDiagram"
+import { playChord, preloadChordPlayer } from "~/audio/chord"
 import type { ChordDiagrams } from "./ChordShapes"
 import { ChordStaffBlock } from "./ChordStaff"
 
@@ -22,6 +24,9 @@ export function ChordStrip({
   shownKey: string | null
   diagrams: Exclude<ChordDiagrams, "off">
 }) {
+  useEffect(() => {
+    preloadChordPlayer()
+  }, [])
   return (
     <div data-pwid="chord-strip" className="flex flex-nowrap gap-3 overflow-x-auto py-2 sm:flex-wrap sm:overflow-visible">
       {chords.map((name) => (
@@ -42,7 +47,7 @@ function Entry({ name, shownKey, diagrams }: { name: string; shownKey: string | 
       case "guitar": {
         const best = voicings(spelling)[0]
         if (best === undefined) break
-        return <ChordDiagram frets={best.frets} name={name} numeral={numeral(name, shownKey) ?? undefined} labels={degrees(spelling, best)} />
+        return <ChordDiagram frets={best.frets} name={name} numeral={numeral(name, shownKey) ?? undefined} labels={degrees(spelling, best)} onClick={() => void playChord(best.frets)} />
       }
     }
   }

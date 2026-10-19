@@ -3,6 +3,7 @@ import type { ChartInfo } from "~/api/client"
 import { renderLyrics, type ChartItem, type ChartLine } from "~/charts/lyrics"
 import { numeral, type NumeralDisplay } from "~/charts/numeral"
 import { ChordShapes, type ChordDiagrams } from "./ChordShapes"
+import { preloadChordPlayer } from "~/audio/chord"
 import { Phrase } from "./Phrase"
 import { ScoreLink } from "./ScoreLink"
 
@@ -43,6 +44,10 @@ export function LyricsChart({
   const lines = useMemo(() => renderLyrics(source, shownKey), [source, shownKey])
   // The start of the item whose panel is open, or null when none is.
   const [open, setOpen] = useState<number | null>(null)
+  useEffect(() => {
+    if (chordShapes === false || diagrams === "off") return
+    preloadChordPlayer()
+  }, [chordShapes, diagrams])
   // Anchor names are shared by the whole page, so each chart names its chords with its own prefix.
   const anchor = useId().replace(/\W/g, "")
 

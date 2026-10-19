@@ -299,14 +299,14 @@ test.describe("chord shapes", () => {
     const beforeY = (await chord("C").boundingBox())!.y
     await chord("C").click()
     await expect(panel).toBeVisible()
-    await expect(panel.getByRole("img").first()).toHaveAttribute("data-frets", "x 3 2 0 1 0")
+    await expect(panel.locator("[data-pwid=chord-diagram]").first()).toHaveAttribute("data-frets", "x 3 2 0 1 0")
     await expect(panel).toHaveAttribute("aria-label", "C on guitar")
     expect((await chord("C").boundingBox())!.y).toBe(beforeY)
 
     // One panel at a time: tapping another chord replaces it.
     await chord("F#m7add11").click()
     await expect(panel).toHaveAttribute("aria-label", "F#m7add11 on guitar")
-    await expect(panel.getByRole("img").first()).toBeVisible()
+    await expect(panel.locator("[data-pwid=chord-diagram]").first()).toBeVisible()
     expect((await chord("C").boundingBox())!.y).toBe(beforeY)
 
     // Escape, and a tap on the same chord again, close it.
@@ -890,6 +890,7 @@ test.describe("phrases", () => {
     // The phrase sits between the line it was written under and the rest of the verse.
     await expect.poll(() => shownLyrics(page)).toBe("Amazing grace, how sweetThe sound")
     // The speeds are worked out from the song's tempo.
+    await phrase.hover()
     await expect(phrase.locator("[data-pwid=phrase-speed] option").first()).toHaveText("50% (50 bpm)")
 
     await getPw(page, "chart-shown-key").selectOption("A")
@@ -914,6 +915,7 @@ test.describe("phrases", () => {
     await getPw(page, "editor-save").click()
     await expect(getPw(page, "chart-editor")).toHaveCount(0, { timeout: 10000 })
 
+    await getPw(page, "chart-phrase").hover()
     await getPw(page, "phrase-loop").check()
     const play = getPw(page, "phrase-play")
     await play.click()

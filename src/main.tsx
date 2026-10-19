@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client"
 import { RouterProvider, createRouter } from "@tanstack/react-router"
 import { routeTree } from "./routeTree.gen"
 import "./styles/app.css"
+import { preloadChordPlayer } from "~/audio/chord"
 
 const router = createRouter({ routeTree })
 
@@ -17,3 +18,6 @@ createRoot(document.getElementById("root")!).render(
     <RouterProvider router={router} />
   </StrictMode>,
 )
+
+// Start loading the guitar sound font in the background so chord clicks are instant.
+preloadChordPlayer()

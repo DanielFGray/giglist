@@ -30,7 +30,7 @@ export function PhraseForm({
   const button =
     "px-3 py-1.5 rounded-md border border-[var(--color-border-subtle)] text-xs text-zinc-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
   return (
-    <div data-pwid="phrase-form" className="my-2 space-y-2 rounded-md border border-[var(--color-amber-accent)]/40 p-3 font-sans">
+    <div data-pwid="phrase-form" className="my-2 space-y-2 font-sans">
       <label className="block space-y-1 text-xs text-zinc-400">
         <span>Name</span>
         <input data-pwid="phrase-name" autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Intro riff" className={field} />

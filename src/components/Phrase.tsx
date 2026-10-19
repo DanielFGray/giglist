@@ -91,9 +91,36 @@ export function Phrase({ tex, tempo }: { tex: string; tempo: number | null }) {
 
   const control = "rounded-md border border-[var(--color-border-subtle)] px-2 py-0.5 text-xs cursor-pointer disabled:opacity-40"
   return (
-    <div data-pwid="phrase" data-rendered={rendered} className="space-y-1">
-      <div className="overflow-x-auto">
+    <div data-pwid="phrase" data-rendered={rendered} className="group relative space-y-1">
+      <div className="relative overflow-x-auto">
         <div ref={host} data-pwid="phrase-render" />
+        <div className="pointer-events-none absolute top-0 right-0 z-10 flex flex-wrap items-center gap-3 rounded-md bg-[var(--color-surface)]/80 px-2 py-1 font-sans text-xs text-zinc-500 opacity-0 backdrop-blur-sm transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100">
+          <button data-pwid="phrase-play" type="button" disabled={problems.length > 0 || player === "loading"} onClick={playOrStop} className={control}>
+            {playing ? "Stop" : player === "loading" ? "Loading…" : "Play"}
+          </button>
+          <label className="flex items-center gap-1">
+            <input data-pwid="phrase-loop" type="checkbox" checked={loop} onChange={(e) => setLoop(e.target.checked)} />
+            Loop
+          </label>
+          <label className="flex items-center gap-1">
+            <input data-pwid="phrase-count-in" type="checkbox" checked={countIn} onChange={(e) => setCountIn(e.target.checked)} />
+            Count in
+          </label>
+          <select
+            data-pwid="phrase-speed"
+            aria-label="Speed"
+            value={speed}
+            onChange={(e) => setSpeed(Number(e.target.value))}
+            className="rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] px-1 py-0.5"
+          >
+            {SPEEDS.map((s) => (
+              <option key={s} value={s}>
+                {s === 1 ? "Full speed" : `${s * 100}%`}
+                {tempo ? ` (${Math.round(tempo * s)} bpm)` : ""}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
       {problems.length > 0 && (
         <ul data-pwid="phrase-problems" role="alert" className="font-sans text-xs text-red-400">
@@ -104,33 +131,6 @@ export function Phrase({ tex, tempo }: { tex: string; tempo: number | null }) {
           ))}
         </ul>
       )}
-      <div className="flex flex-wrap items-center gap-3 font-sans text-xs text-zinc-500">
-        <button data-pwid="phrase-play" type="button" disabled={problems.length > 0 || player === "loading"} onClick={playOrStop} className={control}>
-          {playing ? "Stop" : player === "loading" ? "Loading…" : "Play"}
-        </button>
-        <label className="flex items-center gap-1">
-          <input data-pwid="phrase-loop" type="checkbox" checked={loop} onChange={(e) => setLoop(e.target.checked)} />
-          Loop
-        </label>
-        <label className="flex items-center gap-1">
-          <input data-pwid="phrase-count-in" type="checkbox" checked={countIn} onChange={(e) => setCountIn(e.target.checked)} />
-          Count in
-        </label>
-        <select
-          data-pwid="phrase-speed"
-          aria-label="Speed"
-          value={speed}
-          onChange={(e) => setSpeed(Number(e.target.value))}
-          className="rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] px-1 py-0.5"
-        >
-          {SPEEDS.map((s) => (
-            <option key={s} value={s}>
-              {s === 1 ? "Full speed" : `${s * 100}%`}
-              {tempo ? ` (${Math.round(tempo * s)} bpm)` : ""}
-            </option>
-          ))}
-        </select>
-      </div>
     </div>
   )
 }
