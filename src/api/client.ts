@@ -4,6 +4,7 @@ import { HttpApiClient } from "effect/http-api"
 import {
   SetListApi,
   AuthUser as AuthUserSchema,
+  UserEmail as UserEmailSchema,
   BandInfo as BandInfoSchema,
   BandMember as BandMemberSchema,
   BandInvitation as BandInvitationSchema,
@@ -25,6 +26,7 @@ export type MarkInfo = S.Schema.Type<typeof MarkSchema>
 export type ChartMarksInfo = S.Schema.Type<typeof ChartMarksSchema>
 export type StampInfo = S.Schema.Type<typeof StampSchema>
 export type AuthUser = S.Schema.Type<typeof AuthUserSchema>
+export type UserEmailInfo = S.Schema.Type<typeof UserEmailSchema>
 export type BandInfo = S.Schema.Type<typeof BandInfoSchema>
 export type BandMember = S.Schema.Type<typeof BandMemberSchema>
 export type BandInvitationInfo = S.Schema.Type<typeof BandInvitationSchema>
@@ -60,6 +62,9 @@ export type SetlistPresenceData = Parameters<SetlistsClient["reportPresence"]>[0
 type AuthClient = Effect.Success<SetListApiClient>["auth"]
 export type LoginData = Parameters<AuthClient["login"]>[0]["payload"]
 export type RegisterData = Parameters<AuthClient["register"]>[0]["payload"]
+export type UpdateProfileData = Parameters<AuthClient["updateMe"]>[0]["payload"]
+export type ChangePasswordData = Parameters<AuthClient["changePassword"]>[0]["payload"]
+export type AddEmailData = Parameters<AuthClient["addEmail"]>[0]["payload"]
 
 // --- Client runtime ---
 
@@ -92,6 +97,31 @@ export const auth = {
     run(api.pipe(Effect.flatMap((c) => c.auth.register({ payload: data })))),
 
   logout: () => run(api.pipe(Effect.flatMap((c) => c.auth.logout({})))),
+
+  updateMe: (data: UpdateProfileData) =>
+    run(api.pipe(Effect.flatMap((c) => c.auth.updateMe({ payload: data })))),
+
+  changePassword: (data: ChangePasswordData) =>
+    run(api.pipe(Effect.flatMap((c) => c.auth.changePassword({ payload: data })))),
+
+  listEmails: () => run(api.pipe(Effect.flatMap((c) => c.auth.listEmails({})))),
+
+  addEmail: (data: AddEmailData) =>
+    run(api.pipe(Effect.flatMap((c) => c.auth.addEmail({ payload: data })))),
+
+  removeEmail: (id: string) =>
+    run(api.pipe(Effect.flatMap((c) => c.auth.removeEmail({ params: { id } })))),
+
+  makeEmailPrimary: (id: string) =>
+    run(api.pipe(Effect.flatMap((c) => c.auth.makeEmailPrimary({ params: { id } })))),
+
+  resendEmailVerification: (id: string) =>
+    run(
+      api.pipe(Effect.flatMap((c) => c.auth.resendEmailVerification({ params: { id } }))),
+    ),
+
+  verifyEmail: (data: { id: string; token: string }) =>
+    run(api.pipe(Effect.flatMap((c) => c.auth.verifyEmail({ payload: data })))),
 }
 
 // --- Bands ---

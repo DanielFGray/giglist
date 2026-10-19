@@ -50,13 +50,55 @@ export const RegisterPayload = S.Struct({
   password: S.RedactedFromValue(S.String),
 })
 
+/** Matches `app_public.username`: 2–64 chars, letter then letters/digits/_/-. */
+const Username = S.String.pipe(
+  S.check(S.isMinLength(2)),
+  S.check(S.isMaxLength(64)),
+  S.check(S.isPattern(/^[a-zA-Z][a-zA-Z0-9_-]+$/)),
+)
+
+/** Matches `app_public.url`, or null when the user clears the field. */
+const AvatarUrl = S.NullOr(
+  S.String.pipe(S.check(S.isPattern(/^https?:\/\/\S+$/))),
+)
+
 export const AuthUser = S.Struct({
   id: S.String.check(S.isUUID()),
   username: S.String,
   name: S.NullOr(S.String),
+  bio: S.NullOr(S.String),
   avatar_url: S.NullOr(S.String),
   role: S.String,
   is_verified: S.Boolean,
+})
+
+export const UpdateProfilePayload = S.Struct({
+  username: Username,
+  name: S.NullOr(S.String.pipe(S.check(S.isMaxLength(200)))),
+  bio: S.NullOr(S.String.pipe(S.check(S.isMaxLength(4000)))),
+  avatar_url: AvatarUrl,
+})
+
+export const ChangePasswordPayload = S.Struct({
+  old_password: S.RedactedFromValue(S.String),
+  new_password: S.RedactedFromValue(S.String.pipe(S.check(S.isMinLength(8)))),
+})
+
+export const UserEmail = S.Struct({
+  id: S.String.check(S.isUUID()),
+  email: S.String,
+  is_verified: S.Boolean,
+  is_primary: S.Boolean,
+  created_at: S.String,
+})
+
+export const AddEmailPayload = S.Struct({
+  email: S.String.pipe(S.check(S.isPattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/))),
+})
+
+export const VerifyEmailPayload = S.Struct({
+  id: S.String.check(S.isUUID()),
+  token: S.String.pipe(S.check(S.isMinLength(1))),
 })
 
 export const AuthSuccess = S.Struct({ ok: S.Literals([true]) })
@@ -90,6 +132,61 @@ export const AuthApiGroup = HttpApiGroup.make("auth")
     HttpApiEndpoint.get("me", "/me", { success: S.NullOr(AuthUser) }).middleware(
       SessionMiddleware,
     ),
+  )
+  .add(
+    HttpApiEndpoint.put("updateMe", "/me", {
+      payload: UpdateProfilePayload,
+      success: AuthUser,
+      error: AuthError.pipe(HttpApiSchema.status(400)),
+    }).middleware(SessionMiddleware),
+  )
+  .add(
+    HttpApiEndpoint.post("changePassword", "/password", {
+      payload: ChangePasswordPayload,
+      success: AuthSuccess,
+      error: AuthError.pipe(HttpApiSchema.status(400)),
+    }).middleware(SessionMiddleware),
+  )
+  .add(
+    HttpApiEndpoint.get("listEmails", "/emails", {
+      success: S.Array(UserEmail),
+      error: AuthError.pipe(HttpApiSchema.status(400)),
+    }).middleware(SessionMiddleware),
+  )
+  .add(
+    HttpApiEndpoint.post("addEmail", "/emails", {
+      payload: AddEmailPayload,
+      success: UserEmail.pipe(HttpApiSchema.status(201)),
+      error: AuthError.pipe(HttpApiSchema.status(400)),
+    }).middleware(SessionMiddleware),
+  )
+  .add(
+    HttpApiEndpoint.post("verifyEmail", "/emails/verify", {
+      payload: VerifyEmailPayload,
+      success: AuthSuccess,
+      error: AuthError.pipe(HttpApiSchema.status(400)),
+    }),
+  )
+  .add(
+    HttpApiEndpoint.delete("removeEmail", "/emails/:id", {
+      params: { id: S.String.check(S.isUUID()) },
+      success: AuthSuccess,
+      error: AuthError.pipe(HttpApiSchema.status(400)),
+    }).middleware(SessionMiddleware),
+  )
+  .add(
+    HttpApiEndpoint.post("makeEmailPrimary", "/emails/:id/primary", {
+      params: { id: S.String.check(S.isUUID()) },
+      success: UserEmail,
+      error: AuthError.pipe(HttpApiSchema.status(400)),
+    }).middleware(SessionMiddleware),
+  )
+  .add(
+    HttpApiEndpoint.post("resendEmailVerification", "/emails/:id/resend", {
+      params: { id: S.String.check(S.isUUID()) },
+      success: AuthSuccess,
+      error: AuthError.pipe(HttpApiSchema.status(400)),
+    }).middleware(SessionMiddleware),
   )
   .prefix("/api/auth")
 

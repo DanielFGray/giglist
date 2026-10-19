@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useHideOnScroll } from "./useHideOnScroll"
 import {
   Link,
@@ -86,6 +86,26 @@ function NavLinks({
 function UserMenu() {
   const { user } = useAuth()
   const router = useRouter()
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onPointer = (event: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
+        setOpen(false)
+      }
+    }
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false)
+    }
+    document.addEventListener("mousedown", onPointer)
+    document.addEventListener("keydown", onKey)
+    return () => {
+      document.removeEventListener("mousedown", onPointer)
+      document.removeEventListener("keydown", onKey)
+    }
+  }, [open])
 
   if (!user) {
     return (
@@ -99,15 +119,56 @@ function UserMenu() {
     )
   }
 
+  const initial = (user.name?.trim() || user.username)[0]?.toUpperCase() ?? "?"
+
   return (
-    <button
-      data-pwid="nav-user-avatar"
-      onClick={() => auth.logout().then(() => router.invalidate())}
-      className="size-8 rounded-full bg-[var(--color-amber-accent)] flex items-center justify-center text-xs font-bold text-zinc-950 hover:brightness-110 transition cursor-pointer ml-1"
-      title={user.username}
-    >
-      {user.username[0]?.toUpperCase()}
-    </button>
+    <div ref={rootRef} className="relative ml-1">
+      <button
+        type="button"
+        data-pwid="nav-user-avatar"
+        onClick={() => setOpen((value) => !value)}
+        className="size-8 rounded-full bg-[var(--color-amber-accent)] flex items-center justify-center text-xs font-bold text-zinc-950 hover:brightness-110 transition cursor-pointer"
+        title={user.username}
+        aria-expanded={open}
+        aria-haspopup="true"
+      >
+        {user.avatar_url ? (
+          <img
+            src={user.avatar_url}
+            alt=""
+            className="size-8 rounded-full object-cover"
+          />
+        ) : (
+          initial
+        )}
+      </button>
+      {open && (
+        <div
+          data-pwid="nav-user-menu"
+          className="absolute right-0 mt-2 w-44 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface)] py-1 shadow-lg z-50"
+        >
+          <Link
+            to="/settings"
+            data-pwid="nav-settings"
+            onClick={() => setOpen(false)}
+            className="block px-3 py-2 text-sm text-zinc-300 hover:bg-[var(--color-surface-hover)] hover:text-zinc-100"
+          >
+            Settings
+          </Link>
+          <button
+            type="button"
+            data-pwid="nav-signout"
+            className="w-full text-left px-3 py-2 text-sm text-zinc-300 hover:bg-[var(--color-surface-hover)] hover:text-zinc-100 cursor-pointer"
+            onClick={() => {
+              setOpen(false)
+              void auth.logout().then(() => router.invalidate())
+            }}
+          >
+            Sign out
+          </button>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -116,6 +177,7 @@ export function Nav() {
   const bandId = useActiveBandId()
   const [mobileOpen, setMobileOpen] = useState(false)
   const slidOut = useHideOnScroll(mobileOpen)
+  const router = useRouter()
 
   return (
     <>
@@ -175,9 +237,30 @@ export function Nav() {
               <div className="space-y-1">
                 <NavLinks bandId={bandId} onNavigate={() => setMobileOpen(false)} />
               </div>
-              <div className="pt-2 border-t border-[var(--color-border-subtle)] mt-2">
-                <BandSwitcher />
-              </div>
+              {user && (
+                <div className="pt-2 border-t border-[var(--color-border-subtle)] mt-2 space-y-1">
+                  <BandSwitcher />
+                  <Link
+                    to="/settings"
+                    data-pwid="nav-mobile-settings"
+                    onClick={() => setMobileOpen(false)}
+                    className="block px-3 py-1.5 rounded-md text-sm font-medium text-zinc-400 hover:text-zinc-200 hover:bg-[var(--color-surface-hover)]"
+                  >
+                    Settings
+                  </Link>
+                  <button
+                    type="button"
+                    data-pwid="nav-mobile-signout"
+                    className="w-full text-left px-3 py-1.5 rounded-md text-sm font-medium text-zinc-400 hover:text-zinc-200 hover:bg-[var(--color-surface-hover)] cursor-pointer"
+                    onClick={() => {
+                      setMobileOpen(false)
+                      void auth.logout().then(() => router.invalidate())
+                    }}
+                  >
+                    Sign out
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}

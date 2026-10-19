@@ -68,6 +68,7 @@ test.describe("auth", () => {
 
     await expect(getPw(page, "nav-links")).toBeVisible({ timeout: 5000 })
     await getPw(page, "nav-user-avatar").click()
+    await getPw(page, "nav-signout").click()
     await expect(getPw(page, "nav-signin")).toBeVisible({ timeout: 5000 })
   })
 
