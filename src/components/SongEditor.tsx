@@ -39,6 +39,8 @@ export function SongEditor({
   // Hiding the details gives the charts the whole width. Editing needs the form, so it always shows them.
   const [detailsHidden, setDetailsHidden] = useState(false)
   const showDetails = editing || !detailsHidden
+  // Wide lets the page use the whole window; `main` in the root layout reads the marker below.
+  const [wide, setWide] = useState(false)
 
   const save = async (payload: SongUpdateData) => {
     await songs.update(song.id, payload)
@@ -60,7 +62,7 @@ export function SongEditor({
   const summary = songSummary(song)
   return (
     // Desktop: charts beside a sticky info sidebar. Mobile: a compact header, with the fields behind Edit.
-    <div className={`max-w-3xl lg:max-w-6xl flex flex-col gap-4 lg:grid ${showDetails ? "lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-x-8" : ""}`}>
+    <div data-wide={wide ? "" : undefined} className={`flex flex-col gap-4 lg:grid ${showDetails ? "lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-x-8" : ""}`}>
       <header className="lg:col-span-full lg:mb-2 space-y-1">
         <div className="flex items-center justify-between gap-2">
           <h1 className="text-2xl font-bold tracking-tight">{song.title}</h1>
@@ -71,6 +73,15 @@ export function SongEditor({
                 className="px-3 py-1.5 rounded-md border border-[var(--color-border-subtle)] text-sm text-zinc-300 cursor-pointer"
               />
             )}
+            <button
+              type="button"
+              data-pwid="song-wide"
+              aria-pressed={wide}
+              onClick={() => setWide(!wide)}
+              className="max-lg:hidden px-3 py-1.5 rounded-md border border-[var(--color-border-subtle)] text-sm text-zinc-300 cursor-pointer aria-pressed:bg-[var(--color-surface-raised)]"
+            >
+              {wide ? "Fit width" : "Full width"}
+            </button>
             {!editing && showDetails && (
               <>
                 <button

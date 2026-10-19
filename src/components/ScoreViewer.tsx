@@ -58,6 +58,8 @@ export function ScoreViewer({ revisionId }: { revisionId: string }) {
     }
     const { scriptFile, fontDirectory, soundFont } = alphaTabAssets()
     const view = new AlphaTabApi(element, {
+      // alphaTab pads the notation by 35 by default; the card's padding is the only margin.
+      display: { padding: [0, 0] },
       core: { engine: "svg", scriptFile, fontDirectory },
       player: { enablePlayer: true, enableCursor: true, soundFont },
     })
@@ -215,7 +217,7 @@ export function ScoreViewer({ revisionId }: { revisionId: string }) {
       )}
       {status === "loading" && <p className="text-sm text-zinc-500">Loading the score…</p>}
       {/* alphaTab draws in the text color around it and redraws when the theme toggles. */}
-      <div data-pwid="score-page" className="rounded-md p-2">
+      <div data-pwid="score-page" className="rounded-md">
         <div ref={host} data-pwid="score-render" />
       </div>
     </div>

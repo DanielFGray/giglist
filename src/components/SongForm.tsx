@@ -14,6 +14,7 @@ import {
 } from "./form"
 import { UNTITLED_SONG } from "~/charts/score-meta"
 import { DURATION, formatDuration, parseDuration } from "./duration"
+import { HANGING_CARD } from "./card"
 
 /**
  * The song form's values: the contract's update payload with the duration held
@@ -107,7 +108,7 @@ export function SongForm({
         e.preventDefault()
         void form.handleSubmit()
       }}
-      className={`rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] p-4 space-y-3 ${readOnly ? "max-lg:hidden" : ""}`}
+      className={`${HANGING_CARD} bg-[var(--color-surface-raised)] space-y-3 ${readOnly ? "max-lg:hidden" : ""}`}
     >
       <fieldset disabled={readOnly} className="space-y-3 min-w-0">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">

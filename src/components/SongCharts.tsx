@@ -12,6 +12,7 @@ import { MarkedChart } from "./MarkedChart"
 import { ReadChartFile } from "./ReadChartFile"
 import { SettingsPanel } from "./SettingsPanel"
 import { SelectField, SubmitButton, TextAreaField, TextField, errorMessage } from "./form"
+import { HANGING_CARD } from "./card"
 
 const numeralDisplayOptions: ReadonlyArray<{ value: NumeralDisplay; label: string }> = [
   { value: "both", label: "Names & numerals" },
@@ -265,7 +266,7 @@ function ChartCard({
   return (
     <article
       data-pwid="chart"
-      className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] p-4 space-y-3"
+      className={`${HANGING_CARD} bg-[var(--color-surface-raised)] space-y-3`}
     >
       <header className="flex items-center justify-between gap-4">
         <h3 data-pwid="chart-name" className="font-medium">
@@ -405,7 +406,7 @@ function AddLyricsChart({
     <form
       data-pwid="chart-form"
       onSubmit={submit}
-      className="rounded-lg border border-[var(--color-border-subtle)] p-4 space-y-3"
+      className={`${HANGING_CARD} space-y-3`}
     >
       <TextField label="Name" pwid="chart-form-name" value={name} onChange={setName} />
       <SelectField

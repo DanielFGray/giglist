@@ -72,7 +72,7 @@ export function ScoreView({
     const { scriptFile, fontDirectory, soundFont } = alphaTabAssets()
     const view = new AlphaTabApi(element, {
       core: { engine: "svg", useWorkers: false, scriptFile, fontDirectory },
-      display: { layoutMode: LayoutMode.Page, scale: 0.8, staveProfile: StaveProfile.ScoreTab, stretchForce: stretchForWidth(element.clientWidth) },
+      display: { padding: [0, 0], layoutMode: LayoutMode.Page, scale: 0.8, staveProfile: StaveProfile.ScoreTab, stretchForce: stretchForWidth(element.clientWidth) },
       player: { playerMode: PlayerMode.EnabledExternalMedia, enableCursor: true, soundFont },
     })
     viewRef.current = view
