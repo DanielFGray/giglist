@@ -10,6 +10,7 @@
  * Pure and free of the DOM, so the server and the browser share it.
  */
 import { Chord, ChordLyricsPair, ChordProParser, Literal, Tag } from "chordsheetjs"
+import { MusicalKeys, type MusicalKeyType } from "~/api/contracts"
 import { anchorLine, enclosingSection, inPhrase, parseDoc } from "./doc"
 import { readScoreLink, type ScoreLinkReading } from "./score-link"
 
@@ -482,3 +483,74 @@ const CHORD_TOKEN =
  * Every place that shows them asks here, so they appear and go together.
  */
 export const hasLyricsChart = (list: ReadonlyArray<{ readonly kind: string }>): boolean => list.some((chart) => chart.kind === "lyrics")
+
+const NOTE_INDEX: Record<string, number> = {
+  C: 0, "C#": 1, Db: 1, D: 2, "D#": 3, Eb: 3, E: 4, F: 5, "F#": 6, Gb: 6,
+  G: 7, "G#": 8, Ab: 8, A: 9, "A#": 10, Bb: 10, B: 11,
+}
+
+const MAJOR_SCALE = [0, 2, 4, 5, 7, 9, 11]
+const MINOR_SCALE = [0, 2, 3, 5, 7, 8, 10]
+// Whether each scale degree's diatonic chord is minor (or diminished), major key then minor key.
+const MAJOR_DEGREE_MINOR = [false, true, true, false, false, true, true]
+const MINOR_DEGREE_MINOR = [true, true, false, true, true, false, false]
+
+/** Collects the chord names written in `text`, from `[G]` brackets and chord lines. */
+function collectChords(text: string): Array<{ root: string; minor: boolean }> {
+  const found: Array<{ root: string; minor: boolean }> = []
+  const add = (token: string) => {
+    const cleaned = token.replace(/^\(+/, "").replace(/\)+$/, "")
+    if (!CHORD_TOKEN.test(cleaned) || /^N\.?C\.?$/i.test(cleaned)) return
+    let chord: InstanceType<typeof Chord> | null
+    try {
+      chord = Chord.parse(cleaned)
+    } catch {
+      return
+    }
+    if (chord === null || chord.root === null) return
+    const root = chord.root.toString().replace(/m$/, "")
+    if (!(root in NOTE_INDEX)) return
+    found.push({ root, minor: chord.isMinor() || /dim/i.test(cleaned) })
+  }
+  for (const match of text.matchAll(/\[([^\]]+)\]/g)) add(match[1]!.trim())
+  for (const line of text.split(/\n/)) {
+    if (!isChordLine(line)) continue
+    for (const token of line.trim().split(/\s+/)) add(token)
+  }
+  return found
+}
+
+/**
+ * Guesses the key a chart was written in from its chords, for a chart saved
+ * without one. Returns null when no chord can be read.
+ */
+export function guessKey(text: string): MusicalKeyType | null {
+  const chords = collectChords(text)
+  if (chords.length === 0) return null
+  let best: { key: MusicalKeyType; score: number } | null = null
+  for (const key of MusicalKeys) {
+    const isMinor = key.endsWith("m")
+    const root = isMinor ? key.slice(0, -1) : key
+    const tonic = NOTE_INDEX[root]
+    if (tonic === undefined) continue
+    const scale = isMinor ? MINOR_SCALE : MAJOR_SCALE
+    const degreeMinor = isMinor ? MINOR_DEGREE_MINOR : MAJOR_DEGREE_MINOR
+    const scaleNotes = new Set(scale.map((interval) => (tonic + interval) % 12))
+    let score = 0
+    for (const chord of chords) {
+      const chordIndex = NOTE_INDEX[chord.root]
+      if (chordIndex === undefined || !scaleNotes.has(chordIndex)) continue
+      const interval = (chordIndex - tonic + 12) % 12
+      const degree = scale.indexOf(interval)
+      if (degree < 0) continue
+      score += 1
+      if (chord.minor === degreeMinor[degree]) score += 1
+      if (degree === 0) score += 2
+    }
+    if (best === null || score > best.score) best = { key, score }
+  }
+  if (best === null || best.score <= 0) return null
+  // debug: log top scores
+  // console.error("GUESS", text.replace(/\\n/g, " "), "->", best.key, best.score)
+  return best.key
+}

@@ -3,7 +3,7 @@ import { HttpApiBuilder } from "effect/http-api"
 import { Kysely, withAuthContext } from "../db"
 import { explains } from "../../charts/changes"
 import { anchorText, parseDoc } from "../../charts/doc"
-import { importPasted } from "../../charts/lyrics"
+import { guessKey, importPasted } from "../../charts/lyrics"
 import { ChartReader } from "../services/chart-reader"
 import { Chart, ChartConflict, ChartForbidden, ChartInvalid, CurrentSession, SetListApi, type SessionData } from "../../api/contracts"
 
@@ -104,19 +104,20 @@ export const chartsHandlers = HttpApiBuilder.group(SetListApi, "charts", (handle
           const db = yield* Kysely
           yield* assertSongVisible(payload.song_id)
           // Both inserts share the request's transaction, so a failed revision leaves no chart.
+          const writtenKey = payload.written_key ?? guessKey(payload.pasted)
           const chart = yield* db
             .insertInto("app_public.charts")
             .values({
               song_id: payload.song_id,
               kind: "lyrics",
               name: payload.name,
-              written_key: payload.written_key,
+              written_key: writtenKey,
             })
             .returning(["id", "song_id", "kind", "name", "written_key", "created_at"])
             .pipe(Effect.head, Effect.orDie)
           yield* db
             .insertInto("app_public.chart_revisions")
-            .values({ chart_id: chart.id, source: importPasted(payload.pasted, payload.written_key) })
+            .values({ chart_id: chart.id, source: importPasted(payload.pasted, writtenKey) })
             .pipe(Effect.orDie)
           const [created] = yield* withNewestRevision([chart])
           return yield* decodeChart(created).pipe(Effect.orDie)
