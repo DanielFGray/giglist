@@ -177,6 +177,7 @@ function Perform() {
               >
                 <option value="guitar">Guitar</option>
                 <option value="staff">Staff</option>
+                <option value="piano">Piano</option>
                 <option value="off">Off</option>
               </select>
               <label className="flex items-center gap-1 text-sm text-zinc-200">

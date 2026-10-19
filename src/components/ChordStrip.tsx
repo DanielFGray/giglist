@@ -7,12 +7,13 @@ import { ChordDiagram } from "./ChordDiagram"
 import { playChord, preloadChordPlayer } from "~/audio/chord"
 import type { ChordDiagrams } from "./ChordShapes"
 import { ChordStaffBlock } from "./ChordStaff"
+import { ChordPianoBlock } from "./PianoDiagram"
 
 /**
  * A row of every chord in a chart: one entry per distinct chord, in first-seen
  * order, drawn in the key the chart is shown in. Each entry is the same picture
  * as the panel's first shape: for Guitar, the best shape with degree labels; for
- * Staff, the name, numeral and stacked notes. A chord with no shape or no
+ * Staff, the name, numeral and stacked notes; for Piano, the name, numeral and pressed keys. A chord with no shape or no
  * spelling shows its name alone.
  */
 export function ChordStrip({
@@ -44,6 +45,8 @@ function Entry({ name, shownKey, diagrams }: { name: string; shownKey: string | 
     switch (diagrams) {
       case "staff":
         return <ChordStaffBlock name={name} spelling={spelling} shownKey={shownKey} />
+      case "piano":
+        return <ChordPianoBlock name={name} spelling={spelling} shownKey={shownKey} />
       case "guitar": {
         const best = voicings(spelling)[0]
         if (best === undefined) break

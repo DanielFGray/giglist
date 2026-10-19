@@ -1,8 +1,9 @@
 import { STANDARD_TUNING } from "~/charts/voicing"
 
 /**
- * Plays a guitar chord from its voicing. The sound is synthesized with a
- * Karplus-Strong pluck so it starts instantly, without loading a sound font.
+ * Plays a chord from a guitar voicing or from piano pitches. Both sounds are synthesized, with a
+ * Karplus-Strong pluck for guitar and summed harmonics for piano, so they start instantly
+ * without loading a sound font.
  */
 
 let audioContext: AudioContext | null = null
@@ -47,19 +48,57 @@ export const preloadChordPlayer = (): void => {
 }
 
 export const playChord = (frets: ReadonlyArray<number | null>): Promise<void> => {
-  const context = getContext()
   const pitches = frets.flatMap((fret, i) => (fret === null ? [] : [STANDARD_TUNING[i]! + fret]))
-  if (pitches.length === 0) return Promise.resolve()
-  const now = context.currentTime
-  const gain = context.createGain()
-  gain.gain.value = 1 / Math.max(1, pitches.length)
-  gain.connect(context.destination)
-  for (const midi of pitches) {
-    const frequency = 440 * Math.pow(2, (midi - 69) / 12)
+  return strike(pitches, (context, midi, output) => {
     const source = context.createBufferSource()
-    source.buffer = pluckBuffer(context, frequency)
-    source.connect(gain)
-    source.start(now)
-  }
+    source.buffer = pluckBuffer(context, frequencyOf(midi))
+    source.connect(output)
+    source.start(context.currentTime)
+  })
+}
+
+/**
+ * Plays a piano chord from its MIDI pitches, all at once. Each note is a few
+ * harmonics with a quick attack and an exponential decay: a soft electric-piano
+ * sound that needs no sample files, like the guitar pluck.
+ */
+export const playPianoChord = (pitches: ReadonlyArray<number>): Promise<void> =>
+  strike(pitches, (context, midi, output) => pianoNote(context, frequencyOf(midi), output))
+
+const frequencyOf = (midi: number): number => 440 * Math.pow(2, (midi - 69) / 12)
+
+/** Sounds every pitch at the same moment through one gain, shared so a big chord does not clip. */
+const strike = (
+  pitches: ReadonlyArray<number>,
+  voice: (context: AudioContext, midi: number, output: AudioNode) => void,
+): Promise<void> => {
+  if (pitches.length === 0) return Promise.resolve()
+  const context = getContext()
+  const gain = context.createGain()
+  gain.gain.value = 1 / pitches.length
+  gain.connect(context.destination)
+  for (const midi of pitches) voice(context, midi, gain)
   return Promise.resolve()
+}
+
+/** Each harmonic's level; the first is the note itself. */
+const HARMONICS: ReadonlyArray<number> = [1, 0.5, 0.25, 0.12, 0.06]
+const PIANO_SECONDS = 1.8
+
+const pianoNote = (context: AudioContext, frequency: number, output: AudioNode): void => {
+  const now = context.currentTime
+  const envelope = context.createGain()
+  envelope.gain.setValueAtTime(0, now)
+  envelope.gain.linearRampToValueAtTime(1, now + 0.005)
+  envelope.gain.exponentialRampToValueAtTime(0.001, now + PIANO_SECONDS)
+  envelope.connect(output)
+  HARMONICS.forEach((level, i) => {
+    const partial = context.createOscillator()
+    partial.frequency.value = frequency * (i + 1)
+    const partialGain = context.createGain()
+    partialGain.gain.value = level
+    partial.connect(partialGain).connect(envelope)
+    partial.start(now)
+    partial.stop(now + PIANO_SECONDS)
+  })
 }

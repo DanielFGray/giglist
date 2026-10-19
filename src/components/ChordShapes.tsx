@@ -6,20 +6,21 @@ import { voicings } from "~/charts/voicing"
 import { writeFrets } from "~/charts/fretting"
 import { ChordDiagram } from "./ChordDiagram"
 import { ChordStaffBlock } from "./ChordStaff"
+import { ChordPianoBlock } from "./PianoDiagram"
 import { playChord, preloadChordPlayer } from "~/audio/chord"
 
-/** Which chords of a chart show a diagram when tapped: guitar, staff, or none. */
-export type ChordDiagrams = "guitar" | "staff" | "off"
+/** Which chords of a chart show a diagram when tapped: guitar, staff, piano, or none. */
+export type ChordDiagrams = "guitar" | "staff" | "piano" | "off"
 
 /**
  * The shapes for one chord name: guitar diagrams, or the same chord as stacked
- * notes on a staff.
+ * notes on a staff, or as pressed keys on a piano.
  *
  * A name the player cannot read, or one no hand can hold, has no shape: the
  * panel says so instead of showing nothing. Each guitar shape names the degree
  * of every note it sounds, open strings included, and the chord's Roman numeral
- * sits under its name when the chart is shown in a known key. With staff, the
- * panel draws the chord's tones in place of the guitar diagrams; the name and
+ * sits under its name when the chart is shown in a known key. With staff or
+ * piano, the panel draws the chord's tones in place of the guitar diagrams; the name and
  * numeral lines stay. The row scrolls sideways when it is wider than the
  * screen, so a chord near the right edge still shows every shape. The panel is
  * drawn over the chart by the caller, and the diagrams take the chart's text
@@ -45,7 +46,7 @@ export function ChordShapes({
     return { spelled, shapes: diagrams === "guitar" ? voicings(spelled) : null }
   }, [name, diagrams])
   const chordNumeral = numeral(name, shownKey)
-  const label = diagrams === "staff" ? `${name} on staff` : `${name} on guitar`
+  const label = `${name} on ${diagrams === "off" ? "guitar" : diagrams}`
   useEffect(() => {
     preloadChordPlayer()
   }, [])
@@ -58,11 +59,13 @@ export function ChordShapes({
       style={placement(anchor)}
       className="z-10 w-max rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] p-2 shadow-lg"
     >
-      {diagrams === "staff" ? (
+      {diagrams === "staff" || diagrams === "piano" ? (
         chord === null ? (
           <div data-pwid="chord-shapes-none" className="text-xs">{`No notes for ${name}`}</div>
-        ) : (
+        ) : diagrams === "staff" ? (
           <ChordStaffBlock name={name} spelling={chord.spelled} shownKey={shownKey} />
+        ) : (
+          <ChordPianoBlock name={name} spelling={chord.spelled} shownKey={shownKey} />
         )
       ) : chord === null || chord.shapes === null || chord.shapes.length === 0 ? (
         <div data-pwid="chord-shapes-none" className="text-xs">{`No guitar shape for ${name}`}</div>
