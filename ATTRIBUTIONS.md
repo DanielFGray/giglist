@@ -4,10 +4,6 @@ This file lists every outside source SetList uses: code we adapted, data we fitt
 
 When a change brings in a source, add its entry in the same commit, with a link. The code comment that uses the source names it, so a reader can find the entry here.
 
-## Rule
-
-Borrow a known solution and cite it instead of reinventing one. A change that brings in an outside source adds its entry here in the same commit, and the code comment that uses it names the source.
-
 ## Code adapted
 
 - **graphile-starter**: the user, session, email and organization migrations in `migrations/`, the three-schema layout, and the email jobs and templates in `worker/` follow it. MIT License, Copyright © 2020 Graphile Ltd. <https://github.com/graphile/starter>. License text: <https://github.com/graphile/starter/blob/main/GRAPHILE_STARTER_LICENSE.md>
