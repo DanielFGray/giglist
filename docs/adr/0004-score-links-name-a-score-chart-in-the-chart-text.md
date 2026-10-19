@@ -17,4 +17,6 @@ A link names a section by its marker, so two sections with the same marker canno
 
 To draw only the range, the app clips the score before rendering. alphaTab draws a range with `display.startBar` and `display.barCount`. A repeat sign whose partner lies outside the range is cleared, since it would otherwise tell the player to repeat to a point the excerpt does not show. The tempo in effect at the first bar is written on that bar, because alphaTab stores a tempo change on the bar that makes it. The staff profile is set on every link, since the score's own profile can hide the tab.
 
-Playback is not part of the first slice. A range that cuts a repeat plays wrongly.
+Score links and the picker support playback of the drawn track and bars. A mouse drag uses alphaTab's built-in selection and reports the selected bars to the owner. The picker's From and To inputs edit that same selection. Playback uses the selection when present, otherwise the drawn range. The controls can loop playback. In the picker, Clear resets From and To to the whole score.
+
+The shared score view starts alphaTab 1.8.4 in external-media mode for its cursors and built-in drag selection. This mode loads neither the synthesizer nor the sound font. Play switches to the synthesizer and reapplies the owner's selected passage when the audio player is ready, before starting playback. The synthesizer and sound font load only when playback is requested. Shift+click is outside this scope.

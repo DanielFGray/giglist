@@ -1,12 +1,11 @@
-import { useEffect, useRef, useState } from "react"
-import { AlphaTabApi, importer, LayoutMode, model, PlayerMode, StaveProfile } from "@coderline/alphatab"
+import { useEffect, useState } from "react"
+import { model } from "@coderline/alphatab"
 import { scores } from "~/api/client"
 import { drawnRange, excerpt, type ScoreLinkReading, type ScoreOutline } from "~/charts/score-link"
 import { trackOptions } from "~/charts/score-tracks"
-import { alphaTabAssets, inkFrom } from "./alphatab"
 import { errorMessage } from "./form"
-
-type Status = "loading" | "ready" | "problem"
+import { readScore, ScoreView } from "./ScoreView"
+import type { BarSpan } from "./score-bars"
 
 /** A loaded score's tracks, section markers and bar count: what a link is checked against. */
 export function outlineOf(score: model.Score): ScoreOutline {
@@ -23,62 +22,45 @@ export function outlineOf(score: model.Score): ScoreOutline {
  * so a re-upload changes these bars and nothing in the lyrics text.
  *
  * `revisionId` is undefined when the directive names a chart that is not in
- * this song; the link then says so and draws nothing. The staff profile is set
- * on every link: the score's own profile can hide the tab.
+ * this song; the link then says so and draws nothing.
  */
 export function ScoreLink({ reading, revisionId }: { reading: ScoreLinkReading; revisionId: string | undefined }) {
-  const host = useRef<HTMLDivElement>(null)
-  const [status, setStatus] = useState<Status>("loading")
+  const [drawn, setDrawn] = useState<{ score: model.Score; track: number; span: BarSpan } | null>(null)
   const [problem, setProblem] = useState<string | null>(null)
+  // A passage the reader drags across the drawn bars. It plays and loops; null plays the drawn bars.
+  const [selected, setSelected] = useState<BarSpan | null>(null)
 
   useEffect(() => {
-    const element = host.current
-    if (!element) return
     if ("problem" in reading) return fail(reading.problem)
     if (revisionId === undefined) return fail("This score is not in this song")
     const link = reading.link
     let disposed = false
-    const { scriptFile, fontDirectory } = alphaTabAssets()
-    const view = new AlphaTabApi(element, {
-      core: { engine: "svg", useWorkers: false, scriptFile, fontDirectory },
-      player: { playerMode: PlayerMode.Disabled },
-    })
-    inkFrom(view.settings, getComputedStyle(element).color)
-    view.settings.display.staveProfile = StaveProfile.ScoreTab
-    // One row that scrolls sideways, as a phrase draws, so a long section stays short on a phone.
-    view.settings.display.layoutMode = LayoutMode.Horizontal
-    view.settings.display.scale = 0.8
-    view.updateSettings()
-    view.error.on((e) => !disposed && fail(`The score cannot be drawn: ${e.message}`))
-
+    setDrawn(null)
+    setProblem(null)
+    setSelected(null)
     scores
       .file(revisionId)
       .then((bytes) => {
         if (disposed) return
-        const score = importer.ScoreLoader.loadScoreFromBytes(bytes, view.settings)
-        const drawn = drawnRange(link, outlineOf(score))
-        if ("problem" in drawn) return fail(drawn.problem)
-        excerpt(score.masterBars, drawn.first, drawn.last)
-        view.settings.display.startBar = drawn.first + 1
-        view.settings.display.barCount = drawn.last - drawn.first + 1
-        view.updateSettings()
-        view.renderScore(score, [drawn.track])
-        setProblem(null)
-        setStatus("ready")
+        const score = readScore(bytes)
+        const span = drawnRange(link, outlineOf(score))
+        if ("problem" in span) return fail(span.problem)
+        excerpt(score.masterBars, span.first, span.last)
+        setDrawn({ score, track: span.track, span: { first: span.first, last: span.last } })
       })
       .catch((e) => !disposed && fail(errorMessage(e)))
 
     function fail(message: string) {
       setProblem(message)
-      setStatus("problem")
+      setDrawn(null)
     }
 
     return () => {
       disposed = true
-      view.destroy()
     }
   }, [reading, revisionId])
 
+  const status = problem !== null ? "problem" : drawn ? "ready" : "loading"
   return (
     <div data-pwid="score-link" data-status={status} className="space-y-1">
       {problem !== null && (
@@ -86,10 +68,23 @@ export function ScoreLink({ reading, revisionId }: { reading: ScoreLinkReading; 
           {problem}
         </div>
       )}
-      {/* Reserved while the score loads, so the chart below does not move when the bars arrive. */}
-      <div className="overflow-x-auto">
-        <div ref={host} data-pwid="score-link-render" className={status === "loading" ? "min-h-40" : undefined} />
-      </div>
+      {drawn ? (
+        <ScoreView
+          score={drawn.score}
+          track={drawn.track}
+          range={drawn.span}
+          selected={selected}
+          onSelect={setSelected}
+          pwid="score-link"
+          onError={(message) => {
+            setProblem(`The score cannot be drawn: ${message}`)
+            setDrawn(null)
+          }}
+        />
+      ) : (
+        // Reserved while the score loads, so the chart below does not move when the bars arrive.
+        status === "loading" && <div className="min-h-40" />
+      )}
     </div>
   )
 }

@@ -98,4 +98,101 @@ test.describe("score links", () => {
     const lyrics = listed.find((chart) => chart.kind === "lyrics")
     expect(lyrics?.source).toContain(`{score: chart=${scoreId} track="Lead Gtr" section="Chorus"}`)
   })
+
+  test("the editor deletes a score link, and the saved chart loses it", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, songId, scoreId } = await setUp(page)
+    await addLyricsChart(page.request, songId, [`{score: chart=${scoreId} track="Lead Gtr" bars=1-2}`, "Amazing grace"])
+
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    await getPw(page, "chart-edit").first().click()
+    await getPw(page, "editor-score-link").locator("[data-pwid=line-delete]").click()
+    await expect(getPw(page, "editor-score-link")).toHaveCount(0)
+    await getPw(page, "editor-save").click()
+    await expect(getPw(page, "chart-editor")).toHaveCount(0, { timeout: 10000 })
+    await expect(getPw(page, "chart-score-link")).toHaveCount(0)
+
+    const listed = (await (await page.request.get(`/api/charts/song/${songId}`)).json()) as Array<{ kind: string; source: string | null }>
+    const lyrics = listed.find((chart) => chart.kind === "lyrics")
+    expect(lyrics?.source).not.toContain("{score:")
+    expect(lyrics?.source).toContain("Amazing grace")
+  })
+
+  test("dragging immediately after the score draws fills in the bar inputs, and typed bars move the selection", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, songId } = await setUp(page)
+    await addLyricsChart(page.request, songId, ["[Verse]", "Amazing grace"])
+
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    await getPw(page, "chart-edit").first().click()
+    await getPw(page, "line-score").first().click()
+    const view = getPw(page, "score-picker-score-render")
+    await expect(view.locator("svg").first()).toBeVisible({ timeout: 15000 })
+    await view.scrollIntoViewIfNeeded()
+    const box = await view.boundingBox()
+    expect(box).not.toBeNull()
+    const at = (fx: number, fy: number) => [box!.x + box!.width * fx, box!.y + box!.height * fy] as const
+
+    // The first system holds bars 1 and 2, so the drag covers them.
+    const [startX, startY] = at(0.1, 0.22)
+    await page.mouse.move(startX, startY)
+    await page.mouse.down()
+    for (const fx of [0.2, 0.3, 0.4, 0.5]) await page.mouse.move(...at(fx, 0.22), { steps: 4 })
+    await page.mouse.up()
+
+    await expect(view).toHaveAttribute("data-selection", "0-1")
+    await expect(getPw(page, "score-picker-from")).toHaveValue("1")
+    await expect(getPw(page, "score-picker-to")).toHaveValue("2")
+
+    await getPw(page, "score-picker-to").fill("3")
+    await expect(view).toHaveAttribute("data-selection", "0-2")
+    await expect(view.locator(".at-selection > div").first()).toBeVisible()
+
+    await getPw(page, "score-picker-score-loop").check()
+    await expect(getPw(page, "score-picker-score-loop")).toBeChecked()
+    const play = getPw(page, "score-picker-score-play")
+    await play.click()
+    await expect(play).toHaveText("Stop", { timeout: 15000 })
+    await expect(view).toHaveAttribute("data-selection", "0-2")
+    await play.click()
+    await expect(play).toHaveText("Play")
+  })
+
+  test("a score link loads no sound font until Play", async ({ page, testing }) => {
+    const soundFonts: string[] = []
+    page.on("request", (request) => {
+      if (new URL(request.url()).pathname.endsWith(".sf2")) soundFonts.push(request.url())
+    })
+    await testing.login()
+    const { bandId, songId, scoreId } = await setUp(page)
+    await addLyricsChart(page.request, songId, [`{score: chart=${scoreId} track="Lead Gtr" bars=1-2}`])
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    const view = getPw(page, "score-link-render")
+    await expect(view.locator("svg").first()).toBeVisible({ timeout: 15000 })
+    await view.hover()
+    await page.waitForLoadState("networkidle")
+    expect(soundFonts).toEqual([])
+
+    await getPw(page, "score-link-play").click()
+    await expect.poll(() => soundFonts.length).toBe(1)
+    await expect(getPw(page, "score-link-play")).toHaveText("Stop", { timeout: 15000 })
+  })
+
+  test("a song with a chord sheet and a score shows one of them at a time", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, songId } = await setUp(page)
+    await addLyricsChart(page.request, songId, ["[Verse]", "Amazing grace"])
+
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    await expect(getPw(page, "chart-view-chords")).toHaveAttribute("aria-pressed", "true")
+    await expect(page.getByText("Amazing grace")).toBeVisible()
+    await expect(getPw(page, "score-viewer")).toHaveCount(0)
+
+    await getPw(page, "chart-view-score").click()
+    await expect(getPw(page, "score-viewer")).toHaveCount(1, { timeout: 15000 })
+    await expect(page.getByText("Amazing grace")).toHaveCount(0)
+
+    await getPw(page, "chart-view-chords").click()
+    await expect(page.getByText("Amazing grace")).toBeVisible()
+  })
 })

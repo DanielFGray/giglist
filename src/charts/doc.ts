@@ -200,9 +200,14 @@ export function insertLineAfter(doc: ChartDoc, lineIndex: number): Edit {
     : { doc: next, changes: [{ from: at, to: at, insert: 1 }] }
 }
 
-/** Deletes a lyric or literal line with the newline that separates it from its neighbour. */
+/**
+ * Deletes a lyric, literal or score link line with the newline that separates it from its neighbour.
+ * A section start is not one line: it goes with its section through deleteBlock.
+ */
 export function deleteLine(doc: ChartDoc, lineIndex: number): Edit {
-  if (doc[lineIndex]?.kind !== "literal") lyricsLine(doc, lineIndex)
+  const line = doc[lineIndex]
+  const oneLine = line !== undefined && (line.kind === "literal" || line.kind === "lyrics" || directiveName(line) === "score")
+  if (!oneLine) throw new Error(`line ${lineIndex} is not a lyric, literal or score link line`)
   return removeLineAt(doc, lineIndex)
 }
 

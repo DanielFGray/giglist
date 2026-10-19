@@ -77,6 +77,13 @@ describe("edits", () => {
     expectExact(doc, edit)
   })
 
+  test("deleting a score link removes its line and nothing else", () => {
+    const linked = addScoreLink(doc, i, `chart=abc track="Lead Gtr" bars=1-2`).doc
+    const edit = deleteLine(linked, i + 1)
+    expect(serializeDoc(edit.doc)).toBe(serializeDoc(doc))
+    expectExact(linked, edit)
+  })
+
   test("placing the same chord changes nothing", () => {
     expect(placeChord(doc, i, 0, "G").changes).toEqual([])
   })

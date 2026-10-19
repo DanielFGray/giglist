@@ -4,6 +4,7 @@ import { scores } from "~/api/client"
 import { trackOptions } from "~/charts/score-tracks"
 import { alphaTabAssets } from "./alphatab"
 import { errorMessage } from "./form"
+import { barsLabel, barTicksOf, selectedBars, type BarSpan } from "./score-bars"
 
 type Status = "loading" | "ready" | "error"
 
@@ -31,6 +32,8 @@ export function ScoreViewer({ revisionId }: { revisionId: string }) {
   const [metronome, setMetronome] = useState(false)
   const metronomeOn = useRef(metronome)
   metronomeOn.current = metronome
+  const [loop, setLoop] = useState(false)
+  const [selection, setSelection] = useState<BarSpan | null>(null)
 
   useEffect(() => {
     const element = host.current
@@ -52,6 +55,11 @@ export function ScoreViewer({ revisionId }: { revisionId: string }) {
     view.playerReady.on(() => setPlayerReady(true))
     view.playerStateChanged.on((event) => setPlaying(event.state === synth.PlayerState.Playing))
     view.error.on((e) => fail(`The score viewer failed: ${e.message}`))
+    // A drag across the bars sets the playback range; the bars it covers are what Loop repeats.
+    view.playbackRangeChanged.on((e) => {
+      const loaded = score.current
+      setSelection(loaded ? selectedBars(barTicksOf(loaded.masterBars), e.playbackRange, null) : null)
+    })
 
     scores
       .file(revisionId)
@@ -88,6 +96,19 @@ export function ScoreViewer({ revisionId }: { revisionId: string }) {
   const toggleMetronome = (on: boolean) => {
     setMetronome(on)
     if (api.current) api.current.metronomeVolume = on ? 1 : 0
+  }
+
+  const toggleLoop = (on: boolean) => {
+    setLoop(on)
+    if (api.current) api.current.isLooping = on
+  }
+
+  // Clearing returns the playback range to the whole score. The range setter needs the player, so it waits for it.
+  const clearSelection = () => {
+    const view = api.current
+    if (!view || !playerReady) return
+    view.clearPlaybackRangeHighlight()
+    view.playbackRange = null
   }
 
   return (
@@ -127,6 +148,18 @@ export function ScoreViewer({ revisionId }: { revisionId: string }) {
           />
           Metronome click
         </label>
+        <label className="flex items-center gap-2 text-xs text-zinc-400">
+          <input data-pwid="score-loop" type="checkbox" checked={loop} onChange={(e) => toggleLoop(e.target.checked)} />
+          Loop
+        </label>
+        {selection && (
+          <span data-pwid="score-selection" className="flex items-center gap-2 text-xs text-zinc-300">
+            {barsLabel(selection)}
+            <button data-pwid="score-clear" type="button" onClick={clearSelection} className="underline cursor-pointer">
+              Clear
+            </button>
+          </span>
+        )}
       </div>
       {error && (
         <div data-pwid="score-error" role="alert" className="text-sm text-red-400">
