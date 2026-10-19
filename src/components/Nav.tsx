@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useHideOnScroll } from "./useHideOnScroll"
 import {
   Link,
   useRouter,
@@ -114,10 +115,11 @@ export function Nav() {
   const { user } = useAuth()
   const bandId = useActiveBandId()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const slidOut = useHideOnScroll(mobileOpen)
 
   return (
     <>
-      <nav data-pwid="nav" className="sticky top-0 z-40 border-b border-[var(--color-border-subtle)] bg-[var(--color-surface)]/80 backdrop-blur-xl">
+      <nav data-pwid="nav" className={`sticky top-0 z-40 transition-transform duration-300 ${slidOut ? "-translate-y-full" : ""} border-b border-[var(--color-border-subtle)] bg-[var(--color-surface)]/80 backdrop-blur-xl`}>
         <div className="mx-auto max-w-6xl px-4 h-14 flex items-center gap-1">
           <Link
             to="/"

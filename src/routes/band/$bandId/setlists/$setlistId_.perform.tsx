@@ -157,7 +157,7 @@ function Perform() {
     "px-3 py-2 rounded-md border border-zinc-700 text-sm text-zinc-200 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
 
   return (
-    <div data-pwid="perform" className="fixed inset-0 z-50 flex flex-col bg-zinc-950 text-zinc-100">
+    <div data-pwid="perform" className="[--stick-top:0px] fixed inset-0 z-50 flex flex-col bg-zinc-950 text-zinc-100">
       <header className="flex items-center justify-between gap-3 border-b border-zinc-800 px-4 py-2">
         <div className="flex min-w-0 items-center gap-3">
           <span data-pwid="perform-setlist" className="truncate text-sm text-zinc-500">{setlist.name}</span>

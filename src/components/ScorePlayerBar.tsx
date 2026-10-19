@@ -53,7 +53,7 @@ export function ScorePlayerBar(props: ScorePlayerBarProps) {
   return (
     <div
       data-pwid="score-bar"
-      className="sticky top-0 z-20 -mx-1 flex flex-col gap-2 border-b border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] px-1 py-2"
+      className="sticky top-[var(--stick-top,0px)] z-20 transition-[top] duration-300 -mx-1 flex flex-col gap-2 border-b border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] px-1 py-2"
     >
       <div className="flex items-center gap-2">
         <IconButton pwid="score-play" label={props.playing ? "Pause" : "Play"} disabled={!props.ready} onClick={props.onPlayPause}>

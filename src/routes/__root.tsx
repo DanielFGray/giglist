@@ -40,7 +40,7 @@ function RootComponent() {
     <div className="bg-[var(--color-surface)] text-zinc-100 antialiased min-h-screen [.light_&]:text-zinc-900">
       <AuthProvider user={user} bands={bands}>
         <Nav />
-        <main className="mx-auto max-w-6xl px-4 py-6">
+        <main className="mx-auto max-w-6xl lg:has-[[data-wide]]:max-w-none px-4 py-6 [--stick-top:calc(3.5rem+1px)] [html[data-nav=hidden]_&]:[--stick-top:0px]">
           <Outlet />
         </main>
       </AuthProvider>
