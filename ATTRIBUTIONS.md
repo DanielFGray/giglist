@@ -4,6 +4,10 @@ This file lists every outside source SetList uses: code we adapted, data we fitt
 
 When a change brings in a source, add its entry in the same commit, with a link. The code comment that uses the source names it, so a reader can find the entry here.
 
+## Rule
+
+Borrow a known solution and cite it instead of reinventing one. A change that brings in an outside source adds its entry here in the same commit, and the code comment that uses it names the source.
+
 ## Code adapted
 
 - **graphile-starter**: the user, session, email and organization migrations in `migrations/`, the three-schema layout, and the email jobs and templates in `worker/` follow it. MIT License, Copyright © 2020 Graphile Ltd. <https://github.com/graphile/starter>. License text: <https://github.com/graphile/starter/blob/main/GRAPHILE_STARTER_LICENSE.md>
@@ -19,7 +23,9 @@ When a change brings in a source, add its entry in the same commit, with a link.
 
 ## Research
 
-Read while planning key detection from chord symbols. No code uses them yet.
+Read while planning key detection from chord symbols. `guessKey` in `src/charts/lyrics.ts` uses Krumhansl (1990).
+
+- **Krumhansl, C. L.** (1990). *Cognitive Foundations of Musical Pitch*. Oxford University Press. The key profiles and the correlation method in `src/charts/lyrics.ts` (`guessKey`). <https://global.oup.com/academic/product/cognitive-foundations-of-musical-pitch-9780195054663>
 
 - **Noland, K. and Sandler, M.** (2006). "Key Estimation Using a Hidden Markov Model." ISMIR 2006. A 24-state HMM over chord transitions; 91% correct on 110 Beatles songs. <https://archives.ismir.net/ismir2006/paper/000091.pdf>
 - **Lee, K.** (2007). "A Unified System for Chord Transcription and Key Extraction Using Hidden Markov Models." ISMIR 2007. One HMM per key. <https://archives.ismir.net/ismir2007/paper/000245.pdf>
