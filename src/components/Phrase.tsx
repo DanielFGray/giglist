@@ -77,6 +77,22 @@ export function Phrase({ tex, tempo }: { tex: string; tempo: number | null }) {
     view.playbackSpeed = speed
   }, [loop, countIn, speed])
 
+  // Re-ink the notation when the global theme toggles, so it follows the page.
+  useEffect(() => {
+    const root = document.documentElement
+    const apply = () => {
+      const view = api.current
+      const element = host.current
+      if (!view || !element) return
+      inkFrom(view.settings, getComputedStyle(element).color)
+      view.updateSettings()
+      view.render()
+    }
+    const observer = new MutationObserver(apply)
+    observer.observe(root, { attributes: true, attributeFilter: ["class"] })
+    return () => observer.disconnect()
+  }, [])
+
   const playOrStop = () => {
     const view = api.current
     if (!view) return
