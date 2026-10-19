@@ -156,7 +156,8 @@ function StringMarks({
 
 /**
  * Each sounding string's degree, in string order: an open string's on the ○ row
- * in the ○'s place, a fretted one above its dot (the barre's strings included).
+ * in the ○'s place, a fretted one on its dot or on the barre, in the page's surface
+ * color so it contrasts with the dot.
  */
 function DegreeLabels({
   frets,
@@ -176,9 +177,19 @@ function DegreeLabels({
       {frets.map((fret, i) => {
         const label = labels[i] ?? null
         if (fret === null || label === null) return null
-        const y = fret === 0 ? openY + LABEL_LIFT : cellMid(fret) - LABEL_LIFT
+        const open = fret === 0
         return (
-          <text key={i} data-pwid="chord-degree" x={column(i)} y={y} textAnchor="middle" fontSize={DEGREE_FONT} fill="currentColor">
+          <text
+            key={i}
+            data-pwid="chord-degree"
+            x={column(i)}
+            y={open ? openY + LABEL_LIFT : cellMid(fret)}
+            textAnchor="middle"
+            dominantBaseline={open ? undefined : "central"}
+            fontSize={DEGREE_FONT}
+            fontWeight={open ? undefined : "bold"}
+            fill={open ? "currentColor" : "var(--color-surface)"}
+          >
             {label}
           </text>
         )
@@ -194,8 +205,8 @@ const GAP = 12
 const LEFT = 24 // the lowest-pitched string's column
 const OVERHANG = 4 // fret lines run past the outer strings
 const ROW = 18
-const R = 3.4 // dot radius, and the barre's rounding
-const BAR_HEIGHT = 7
+const R = 5 // dot radius, and the barre's rounding; big enough to hold a degree label
+const BAR_HEIGHT = 10
 const NUT = 4.5
 const OPEN_ROW = 9 // the ○/× row's center
 const NUT_GAP = 7 // from the ○/× row to the nut line
@@ -205,10 +216,9 @@ const NAME_FONT = 18
 const NUMERAL_SPACE = 16
 const NUMERAL_FONT = 14
 const LABEL_FONT = 10
-const DEGREE_FONT = 8
-// A degree above a dot sits inside that cell, and one above an open string sits
-// on the ○/× row; the lift keeps both off the fret lines.
-const LABEL_LIFT = 5.5
+const DEGREE_FONT = 7
+// An open string's degree sits on the ○/× row; the lift sets its baseline clear of the nut line below.
+const LABEL_LIFT = 3
 const FOOT = 3
 
 const widthOf = (strings: number) => LEFT + (strings - 1) * GAP + OVERHANG + 2
