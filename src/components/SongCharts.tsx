@@ -2,7 +2,7 @@ import { Suspense, lazy, useEffect, useState } from "react"
 import { charts, type ChartInfo } from "~/api/client"
 import { exportChords, hasLyricsChart } from "~/charts/lyrics"
 import type { NumeralDisplay } from "~/charts/numeral"
-import { MusicalKeys, type MusicalKeyType } from "~/api/contracts"
+import type { MusicalKeyType } from "~/api/contracts"
 import type { ScoreMeta } from "~/charts/score-meta"
 import { AddScore } from "./AddScore"
 import { ChartEditor } from "./ChartEditor"
@@ -13,6 +13,7 @@ import { ReadChartFile } from "./ReadChartFile"
 import { SettingsPanel } from "./SettingsPanel"
 import { SelectField, SubmitButton, TextAreaField, TextField, errorMessage } from "./form"
 import { HANGING_CARD } from "./card"
+import { keyOptions } from "./key-options"
 
 const numeralDisplayOptions: ReadonlyArray<{ value: NumeralDisplay; label: string }> = [
   { value: "both", label: "Names & numerals" },
@@ -29,11 +30,6 @@ const diagramOptions: ReadonlyArray<{ value: ChordDiagrams; label: string }> = [
 
 // alphaTab is large and only score charts need it, so it loads on demand.
 const ScoreViewer = lazy(() => import("./ScoreViewer").then((m) => ({ default: m.ScoreViewer })))
-
-const keyOptions: ReadonlyArray<{ value: MusicalKeyType | ""; label: string }> = [
-  { value: "", label: "Not set" },
-  ...MusicalKeys.map((key) => ({ value: key, label: key })),
-]
 
 /**
  * The charts of one song. Every chart is drawn in `shownKey`, the key the

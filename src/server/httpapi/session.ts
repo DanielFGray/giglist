@@ -1,4 +1,5 @@
 import { Effect, Layer, Redacted } from "effect"
+import { sql } from "kysely"
 import { Db } from "../db"
 import {
   CurrentSession,
@@ -22,10 +23,34 @@ export const SessionMiddlewareLive = Layer.effect(
           return Effect.provideService(effect, CurrentSession, noSession)
         }
 
+        // One statement: `candidate` is the session only while it is live,
+        // and `refreshed` slides its window only when it is over an hour
+        // old, so an accepted session writes at most once an hour. The
+        // 30-day interval matches the session cookie's `maxAge: "30 days"`
+        // in src/server/httpapi/auth.ts (setSessionCookie); keep them equal.
         return db
-          .selectFrom("app_private.sessions")
+          .with("candidate", (qb) =>
+            qb
+              .selectFrom("app_private.sessions")
+              .select(["uuid", "user_id", "last_active"])
+              .where("uuid", "=", token)
+              .where("last_active", ">", sql<Date>`now() - interval '30 days'`),
+          )
+          .with("refreshed", (qb) =>
+            qb
+              .updateTable("app_private.sessions")
+              .set({ last_active: sql<Date>`now()` })
+              .where("uuid", "=", token)
+              .where(
+                "last_active",
+                "<",
+                sql<Date>`now() - interval '1 hour'`,
+              )
+              .where("last_active", ">", sql<Date>`now() - interval '30 days'`)
+              .returning("uuid"),
+          )
+          .selectFrom("candidate")
           .select(["uuid", "user_id"])
-          .where("uuid", "=", token)
           .pipe(
             Effect.head,
             Effect.map((row) => ({

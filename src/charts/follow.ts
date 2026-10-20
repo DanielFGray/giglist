@@ -53,7 +53,7 @@ function followStep(range: Range, step: Step): Resolution {
  * via diff-match-patch). A diff aligns the entire text, so repeated choruses
  * confuse it far less than a search around the old position.
  */
-export function changesBetween(before: string, after: string): Array<Change> {
+function changesBetween(before: string, after: string): Array<Change> {
   const changes: Array<{ from: number; to: number; insert: number }> = []
   let offset = 0
   for (const [op, text] of new DiffMatchPatch().diff_main(before, after, false)) {

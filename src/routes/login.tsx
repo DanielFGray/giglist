@@ -37,7 +37,7 @@ function Login() {
         <div className="text-center">
           <h1 className="text-2xl font-bold tracking-tight">Sign in</h1>
           <p className="text-sm text-zinc-500 mt-1">
-            Welcome back to SetList
+            Welcome back to GigList
           </p>
         </div>
 
@@ -98,6 +98,12 @@ function Login() {
             )}
           </form.Subscribe>
         </form>
+
+        <p className="text-center text-sm">
+          <Link data-pwid="login-forgot-password" to="/forgot" className="text-[var(--color-amber-accent)] hover:underline">
+            Forgot password?
+          </Link>
+        </p>
 
         <p className="text-center text-sm text-zinc-500">
           Don't have an account?{" "}

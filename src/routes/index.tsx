@@ -55,11 +55,11 @@ function Home() {
     <div data-pwid="dashboard" className="space-y-6">
       <Invitations invitations={invitations} />
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Setlists</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{band === undefined ? "Welcome" : band.name}</h1>
         <p className="text-sm text-zinc-500 mt-1">
           {band === undefined
-            ? "Your band's setlists will appear here."
-            : `${band.name} — running orders for gigs and rehearsals.`}
+            ? "Your band's gigs, setlists and songs will appear here."
+            : "Gigs, the setlists they play, and the songs in them."}
         </p>
       </div>
 
@@ -75,7 +75,18 @@ function Home() {
           </Link>
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Link
+            to="/band/$bandId/gigs"
+            params={{ bandId }}
+            data-pwid="dashboard-gigs"
+            className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] p-6 hover:border-[var(--color-amber-accent)]/40 transition-colors"
+          >
+            <div className="font-semibold">Gigs</div>
+            <div className="text-sm text-zinc-500 mt-1">
+              Where and when you play, and the setlists for each show.
+            </div>
+          </Link>
           <Link
             to="/band/$bandId/setlists"
             params={{ bandId }}
@@ -84,7 +95,7 @@ function Home() {
           >
             <div className="font-semibold">Setlists</div>
             <div className="text-sm text-zinc-500 mt-1">
-              Build a running order and add songs from the catalog.
+              Running orders of songs. One setlist can serve many gigs.
             </div>
           </Link>
           <Link

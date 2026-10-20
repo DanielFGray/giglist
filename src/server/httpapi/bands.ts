@@ -2,7 +2,7 @@ import { Effect } from "effect";
 import { HttpApiBuilder } from "effect/http-api";
 import * as BandService from "../services/band";
 import { withAuthContext } from "../db";
-import { SetListApi, BandError, CurrentSession } from "../../api/contracts";
+import { GigListApi, BandError, CurrentSession } from "../../api/contracts";
 
 /**
  * A band mutation needs a user. Without one the visitor role resolves no user,
@@ -18,7 +18,13 @@ const requireSession = Effect.fnUntraced(function* () {
   return session;
 });
 
-export const bandsHandlers = HttpApiBuilder.group(SetListApi, "myBands", (handlers) =>
+/** A band row as `BandInfo`, with nullable text as undefined-free nulls. */
+const toBandInfo = <B extends { description: string | null }>(band: B) => ({
+  ...band,
+  description: band.description ?? null,
+});
+
+export const bandsHandlers = HttpApiBuilder.group(GigListApi, "myBands", (handlers) =>
   handlers
     .handle(
       "listBands",
@@ -29,17 +35,7 @@ export const bandsHandlers = HttpApiBuilder.group(SetListApi, "myBands", (handle
         if (!session.sessionId || !session.userId) return [];
 
         return yield* BandService.getUserBands().pipe(
-          Effect.map((rows) =>
-            rows.map((b) => ({
-              id: b.id,
-              slug: b.slug,
-              name: b.name,
-              description: b.description ?? null,
-              show_members_publicly: b.show_members_publicly,
-              show_gig_dates_publicly: b.show_gig_dates_publicly,
-              created_at: String(b.created_at),
-            })),
-          ),
+          Effect.map((rows) => rows.map(toBandInfo)),
           withAuthContext(session.sessionId),
         );
       }),
@@ -86,7 +82,7 @@ export const bandsHandlers = HttpApiBuilder.group(SetListApi, "myBands", (handle
               id: m.id,
               user_id: m.user_id,
               is_owner: m.is_owner,
-              created_at: String(m.created_at),
+              created_at: m.created_at,
               username: m.username,
               name: m.name ?? null,
               avatar_url: m.avatar_url ?? null,
@@ -101,15 +97,7 @@ export const bandsHandlers = HttpApiBuilder.group(SetListApi, "myBands", (handle
       Effect.fnUntraced(function* ({ payload }) {
         const session = yield* requireSession();
         return yield* BandService.createBand(payload).pipe(
-          Effect.map((band) => ({
-            id: band.id,
-            slug: band.slug,
-            name: band.name,
-            description: null,
-            show_members_publicly: false,
-            show_gig_dates_publicly: false,
-            created_at: new Date().toISOString(),
-          })),
+          Effect.map(toBandInfo),
           withAuthContext(session.sessionId),
           Effect.mapError((e) => new BandError({ message: e.message })),
         );
@@ -130,19 +118,11 @@ export const bandsHandlers = HttpApiBuilder.group(SetListApi, "myBands", (handle
       "updateBand",
       Effect.fnUntraced(function* ({ params: { bandId }, payload }) {
         const session = yield* requireSession();
-        const band = yield* BandService.updateBand({ bandId, ...payload }).pipe(
+        return yield* BandService.updateBand({ bandId, ...payload }).pipe(
+          Effect.map(toBandInfo),
           withAuthContext(session.sessionId),
           Effect.mapError((e) => new BandError({ message: e.message })),
         );
-        return {
-          id: band.id,
-          slug: band.slug,
-          name: band.name,
-          description: band.description ?? null,
-          show_members_publicly: band.show_members_publicly,
-          show_gig_dates_publicly: band.show_gig_dates_publicly,
-          created_at: String(band.created_at),
-        };
       }),
     )
     .handle(

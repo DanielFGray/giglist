@@ -143,7 +143,7 @@ export function SongEditor({
         <aside className="space-y-6 max-lg:order-1 lg:row-start-2 lg:col-start-2 lg:sticky lg:top-4 lg:self-start">
           {/* Keyed on the mode and the save time so Cancel, and a change made elsewhere on the page (a score filling in the title), start a fresh form from the saved song. */}
           <SongForm
-            key={`${editing ? "editing" : "reading"}-${song.updated_at}`}
+            key={`${editing ? "editing" : "reading"}-${song.updated_at.getTime()}`}
             pwid="song-edit-form"
             defaults={songValues(song)}
             readOnly={!editing}

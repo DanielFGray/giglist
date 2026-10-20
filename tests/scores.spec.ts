@@ -159,6 +159,35 @@ test.describe("scores", () => {
     await expect(getPw(page, "charts-empty")).toBeVisible({ timeout: 10000 })
   })
 
+  test("reads chords over lyrics from the score, which the player corrects and adds beside it", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, songId } = await createSong(page)
+
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    await getPw(page, "score-add").click()
+    await getPw(page, "score-form-file").setInputFiles(new URL("./fixtures/amazing-grace.gp", import.meta.url).pathname)
+
+    // The file has lyrics, so the chart is offered ticked; it names no chords, so the form says they were worked out.
+    await expect(getPw(page, "score-form-chart")).toBeChecked()
+    await expect(getPw(page, "score-form-chart-inferred")).toBeVisible()
+    await expect(getPw(page, "score-form-chart-key")).toHaveValue("G")
+    const text = getPw(page, "score-form-chart-text")
+    await expect(text).toHaveValue("G       C         D         G\nAmazing grace how sweet the sound")
+
+    await text.fill("G       C         D7        G\nAmazing grace how sweet the sound")
+    await getPw(page, "score-form-submit").click()
+    // With both kinds of chart, the page opens on the chord sheets.
+    await expect(getPw(page, "chart").filter({ hasText: "written in G" })).toContainText("Amazing", { timeout: 10000 })
+    await getPw(page, "chart-view-score").click()
+    await expect(getPw(page, "score-viewer")).toBeVisible({ timeout: 10000 })
+
+    const charts = (await (await page.request.get(`/api/charts/song/${songId}`)).json()) as Array<{ kind: string; name: string; written_key: string | null; source: string | null }>
+    const lyrics = charts.find((c) => c.kind === "lyrics")
+    expect(charts.map((c) => c.kind).toSorted()).toEqual(["lyrics", "score"])
+    expect(lyrics).toMatchObject({ name: "Chords", written_key: "G" })
+    expect(lyrics!.source).toContain("[D7]sweet")
+  })
+
   test("refuses a file that is not Guitar Pro", async ({ page, testing }) => {
     await testing.login()
     const { bandId, songId } = await createSong(page)

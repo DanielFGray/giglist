@@ -1,73 +1,49 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import { Link, createFileRoute, useRouter } from "@tanstack/react-router"
-import { useForm } from "@tanstack/react-form"
-import { Schema as S } from "effect"
-import { setlists, songs, type SetlistEntryInfo, type SetlistSectionInfo, type SongInfo, type SetlistMoveData } from "~/api/client"
-import {
-  MusicalKeys,
-  SetlistEntryUpdate,
-  SetlistUpdate,
-  type MusicalKeyType,
-} from "~/api/contracts"
-import { SelectField, SubmitButton, TextAreaField, TextField, NumberField, errorMessage, fieldError } from "~/components/form"
+import { Option, Schema as S } from "effect"
+import { gigs, setlists, songs, type GigInfo, type SetlistEntryInfo, type SetlistEntryUpdateData } from "~/api/client"
+import { MusicalKeys, SetlistStatus } from "~/api/contracts"
+import { errorMessage } from "~/components/form"
 import { useAuth } from "~/components/AuthContext"
 import { formatDuration } from "~/components/duration"
-import { useSetlistLive } from "~/components/live"
+import { gigLabel, localToday, splitGigs } from "~/components/gig-label"
+import { useLive } from "~/components/live"
 import { Viewers } from "~/components/Viewers"
-import { groupEntries, placeEntry, stepEntry, stepSection, type Group } from "~/components/arrangement"
+import { moveTo, stepMove } from "~/components/arrangement"
+import { Grid, type GridColumn } from "~/components/Grid"
+import { matchKeys } from "~/components/key-options"
+import { matchSongs } from "~/components/song-match"
+import { NameForm, StatusBadge, listLength } from "~/components/SetlistSummary"
 
 export const Route = createFileRoute("/band/$bandId/setlists/$setlistId")({
   loader: async ({ params }) => {
-    const [setlist, entries, sections, bandSongs] = await Promise.all([
+    const [setlist, entries, bandSongs, bandGigs] = await Promise.all([
       setlists.get(params.setlistId),
       setlists.entries(params.setlistId),
-      setlists.sections(params.setlistId),
       songs.byBand(params.bandId),
+      gigs.byBand(params.bandId),
     ])
-    return { setlist, entries, sections, bandSongs }
+    return { setlist, entries, bandSongs, bandGigs }
   },
-  component: SetlistEditor,
+  component: SetlistPage,
 })
 
-const statusOptions = [
-  { value: "draft" as const, label: "Draft" },
-  { value: "rehearsal" as const, label: "Rehearsal" },
-  { value: "final" as const, label: "Final" },
-]
+/** An inherited value, shown grey so a player can tell it from this list's own. */
+const inherited = (value: string | number | null) =>
+  value === null ? null : <span className="text-zinc-500">{value}</span>
 
-const keyOptions: ReadonlyArray<{ value: MusicalKeyType | ""; label: string }> = [
-  { value: "", label: "Inherit" },
-  ...MusicalKeys.map((key) => ({ value: key, label: key })),
-]
-
-/** The entry's own overrides, reconstructed from the resolved row. A null
- *  override means the entry inherits the song's value. */
-const updatePayload = (entry: SetlistEntryInfo): (typeof SetlistEntryUpdate)["Encoded"] => ({
-  section_id: entry.section_id,
-  key_override: entry.key_overridden ? entry.key : null,
-  tempo_override: entry.tempo_overridden ? entry.tempo_bpm : null,
-  notes_override: entry.notes_overridden ? entry.notes : null,
-})
-
-type EntryGroup = Group<SetlistEntryInfo, SetlistSectionInfo>
-
-function SetlistEditor() {
+function SetlistPage() {
   const { bandId, setlistId } = Route.useParams()
-  const { setlist, entries, sections, bandSongs } = Route.useLoaderData()
+  const { setlist, entries, bandSongs, bandGigs } = Route.useLoaderData()
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
-  // The entry being dragged. Drag state is only read in drop handlers, so it does not need to trigger a render.
-  const dragging = useRef<string | null>(null)
-
-  const groups = groupEntries(sections, entries)
-  const totalSeconds = entries.reduce((sum, entry) => sum + (entry.duration_seconds ?? 0), 0)
   const refresh = () => router.invalidate()
 
   // Someone else writing the setlist reloads it here and says who did.
   const me = useAuth().user?.username
   const [changedBy, setChangedBy] = useState<string | null>(null)
-  const { client, viewers } = useSetlistLive(setlistId, { mode: "viewing", at: null }, (by) => {
-    void router.invalidate()
+  const { client, viewers } = useLive({ kind: "setlist", id: setlistId }, { mode: "viewing", at: null }, (by) => {
+    void refresh()
     if (by !== null && by !== me) setChangedBy(by)
   })
   useEffect(() => {
@@ -86,56 +62,151 @@ function SetlistEditor() {
     }
     await refresh()
   }
-  const arrange = (next: ReadonlyArray<EntryGroup>): Promise<void> => {
-    const currentSections = groups.flatMap((group) => group.section ? [group.section.id] : [])
-    const nextSections = next.flatMap((group) => group.section ? [group.section.id] : [])
-    const sectionIndex = nextSections.findIndex((section, index) => currentSections[index] !== section)
-    if (sectionIndex >= 0) {
-      const move: SetlistMoveData = {
-        kind: "section",
-        id: nextSections[sectionIndex]!,
-        previous: nextSections[sectionIndex - 1] ?? null,
-      }
-      return act(() => setlists.move(setlistId, move))
-    }
-    const currentEntries = groups.flatMap((group) => group.entries)
-    const nextEntries = next.flatMap((group) => group.entries)
-    const currentById = new Map(currentEntries.map((entry, index) => [entry.id, { entry, index }]))
-    const changed = nextEntries.find((entry) => currentById.get(entry.id)?.entry.section_id !== entry.section_id)
-      ?? nextEntries.find((entry, index) => currentById.get(entry.id)?.index !== index)
-    if (changed) {
-      const group = next.find((candidate) => candidate.entries.some((entry) => entry.id === changed.id))!
-      const index = group.entries.findIndex((entry) => entry.id === changed.id)
-      const move: SetlistMoveData = {
-        kind: "entry",
-        id: changed.id,
-        section_id: group.section?.id ?? null,
-        previous: group.entries[index - 1]?.id ?? null,
-      }
-      return act(() => setlists.move(setlistId, move))
-    }
-    return Promise.resolve()
+
+  const ids = entries.map((entry) => entry.id)
+  const move = (found: Option.Option<{ id: string; previous: string | null }>) =>
+    Option.match(found, {
+      onNone: () => undefined,
+      onSome: (step) => void act(() => setlists.move(setlistId, step)),
+    })
+
+  const update = async (entry: SetlistEntryInfo, data: SetlistEntryUpdateData) => {
+    await setlists.updateEntry(setlistId, entry.id, data)
+    await refresh()
   }
 
-  const drop = (sectionId: string | null, beforeId: string | null) => {
-    const id = dragging.current
-    dragging.current = null
-    if (id !== null) void arrange(placeEntry(groups, id, sectionId, beforeId))
-  }
+  const songChoices = (query: string) =>
+    matchSongs(bandSongs, query)
+      .slice(0, 20)
+      .map((song) => ({ value: song.id, label: song.title, hint: song.artist ?? undefined }))
 
-  let number = 0
+  const columns: ReadonlyArray<GridColumn<SetlistEntryInfo>> = [
+    {
+      key: "number",
+      label: "#",
+      width: "3rem",
+      align: "right",
+      view: (entry) => <span className="text-zinc-500">{ids.indexOf(entry.id) + 1}</span>,
+    },
+    {
+      key: "title",
+      label: "Song",
+      width: "28%",
+      view: (entry) => entry.title,
+      edit: {
+        kind: "choice",
+        text: () => "",
+        choices: songChoices,
+        save: (entry, songId) => {
+          if (songId === "") return Promise.reject(new Error("Ctrl+Delete removes a song from the list"))
+          return update(entry, { song_id: songId })
+        },
+      },
+    },
+    { key: "artist", label: "Artist", width: "20%", view: (entry) => <span className="text-zinc-400">{entry.artist}</span> },
+    {
+      key: "key",
+      label: "Key",
+      width: "6rem",
+      view: (entry) => (entry.key_overridden ? entry.key : inherited(entry.key)),
+      edit: {
+        kind: "choice",
+        text: (entry) => (entry.key_overridden ? (entry.key ?? "") : ""),
+        choices: (query) => matchKeys(query).map((key) => ({ value: key, label: key })),
+        save: (entry, value) => update(entry, { key_override: MusicalKeys.find((key) => key === value) ?? null }),
+      },
+    },
+    {
+      key: "tempo",
+      label: "BPM",
+      width: "5rem",
+      align: "right",
+      view: (entry) => (entry.tempo_overridden ? entry.tempo_bpm : inherited(entry.tempo_bpm)),
+      edit: {
+        kind: "text",
+        inputMode: "numeric",
+        text: (entry) => (entry.tempo_overridden && entry.tempo_bpm !== null ? String(entry.tempo_bpm) : ""),
+        save: (entry, value) => update(entry, { tempo_override: tempo(value) }),
+      },
+    },
+    {
+      key: "duration",
+      label: "Length",
+      width: "5.5rem",
+      align: "right",
+      view: (entry) => <span className="text-zinc-400">{formatDuration(entry.duration_seconds)}</span>,
+    },
+    {
+      key: "notes",
+      label: "Notes",
+      view: (entry) => (
+        <span className="block max-w-72 truncate">{entry.notes_overridden ? entry.notes : inherited(entry.notes)}</span>
+      ),
+      edit: {
+        kind: "text",
+        text: (entry) => (entry.notes_overridden ? (entry.notes ?? "") : ""),
+        save: (entry, value) => update(entry, { notes_override: value || null }),
+      },
+    },
+  ]
+
+  const button = "px-2 py-1 rounded-md border border-[var(--color-border-subtle)] text-xs text-zinc-300 cursor-pointer"
+
   return (
-    <div className="space-y-6 max-w-3xl">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{setlist.name}</h1>
-          <p className="text-sm text-zinc-500 mt-1">
-            {setlist.gig_date ?? "No date"} · {entries.length}{" "}
-            {entries.length === 1 ? "song" : "songs"}
-            {totalSeconds > 0 && <> · {formatDuration(totalSeconds)}</>}
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <SetlistName key={setlist.name} name={setlist.name} onRename={(name) => act(() => setlists.update(setlistId, { name }))} />
+          <p data-pwid="setlist-summary" className="text-sm text-zinc-500 mt-1 flex items-center gap-2">
+            <StatusBadge status={setlist.status} />
+            {listLength(setlist)}
           </p>
+          <p data-pwid="setlist-gigs" className="text-sm text-zinc-500 mt-1">
+            {setlist.gigs.length === 0 ? (
+              "No gig plays this list yet."
+            ) : (
+              <>
+                Played at{" "}
+                {setlist.gigs.map((gig, index) => (
+                  <span key={gig.id}>
+                    {index > 0 && ", "}
+                    <Link
+                      to="/band/$bandId/gigs/$gigId"
+                      params={{ bandId, gigId: gig.id }}
+                      data-pwid="setlist-gig"
+                      className="text-zinc-300 underline decoration-zinc-600 hover:decoration-[var(--color-amber-accent)]"
+                    >
+                      {gigLabel(gig)}
+                    </Link>
+                  </span>
+                ))}
+                {setlist.gigs.length > 1 && ". A change here reaches every one of them; to change it for one gig, use Copy for this gig on that gig's page."}
+              </>
+            )}
+          </p>
+          <AddToGig
+            gigs={bandGigs.filter((gig) => !setlist.gigs.some((playing) => playing.id === gig.id))}
+            onAdd={(gigId) => act(() => gigs.addSetlist(gigId, setlistId))}
+          />
         </div>
         <div className="flex gap-2 shrink-0">
+          <label className="text-xs text-zinc-400 flex items-center gap-1.5">
+            Status
+            <select
+              data-pwid="setlist-status"
+              value={setlist.status}
+              onChange={(e) => {
+                Option.map(S.decodeUnknownOption(SetlistStatus)(e.target.value), (status) =>
+                  act(() => setlists.update(setlistId, { status })),
+                )
+              }}
+              className="rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] px-2 py-1 text-xs"
+            >
+              {SetlistStatus.literals.map((status) => (
+                <option key={status} value={status}>{status}</option>
+              ))}
+            </select>
+          </label>
           <Link
             to="/band/$bandId/setlists/$setlistId/perform"
             params={{ bandId, setlistId }}
@@ -162,601 +233,177 @@ function SetlistEditor() {
         </div>
       )}
 
-      <SetlistDetails
-        setlistId={setlistId}
-        bandId={bandId}
-        defaults={{
-          name: setlist.name,
-          description: setlist.description,
-          gig_date: setlist.gig_date,
-          status: setlist.status,
+      {bandSongs.length === 0 && (
+        <p data-pwid="setlist-no-songs" className="text-sm text-zinc-500">
+          The band has no songs yet.{" "}
+          <Link to="/band/$bandId/songs" params={{ bandId }} className="text-zinc-300 underline">Add songs to the catalog</Link>{" "}
+          to put them in a setlist.
+        </p>
+      )}
+
+      <Grid
+        label={`Songs in ${setlist.name}`}
+        pwid="setlist-grid"
+        rows={entries}
+        rowKey={(entry) => entry.id}
+        columns={columns}
+        newRow={{
+          column: "title",
+          placeholder: entries.length === 0 ? "Type a song title to add it" : "Add a song…",
+          create: async (songId) => {
+            const created = await setlists.addEntry(setlistId, { song_id: songId })
+            await refresh()
+            return created.id
+          },
         }}
-        onSaved={refresh}
+        onMoveRow={(id, index) => move(moveTo(ids, id, index))}
+        onDeleteRow={(id) => void act(() => setlists.removeEntry(setlistId, id))}
+        actions={(entry) => (
+          <span className="inline-flex gap-1">
+            <button type="button" tabIndex={-1} data-pwid="entry-up" aria-label={`Move ${entry.title} up`} onClick={() => move(stepMove(ids, entry.id, -1))} className={button}>↑</button>
+            <button type="button" tabIndex={-1} data-pwid="entry-down" aria-label={`Move ${entry.title} down`} onClick={() => move(stepMove(ids, entry.id, 1))} className={button}>↓</button>
+            <Link
+              data-pwid="entry-chart"
+              tabIndex={-1}
+              to="/band/$bandId/songs/$songId"
+              params={{ bandId, songId: entry.song_id }}
+              search={entry.key ? { key: entry.key } : {}}
+              className={button}
+            >
+              Chart
+            </Link>
+            <button
+              type="button"
+              tabIndex={-1}
+              data-pwid="entry-remove"
+              aria-label={`Remove ${entry.title}`}
+              onClick={() => void act(() => setlists.removeEntry(setlistId, entry.id))}
+              className={`${button} !border-red-500/20 !text-red-400`}
+            >
+              Remove
+            </button>
+          </span>
+        )}
       />
-
-      <SongPicker
-        setlistId={setlistId}
-        bandSongs={bandSongs}
-        sectionId={sections.at(-1)?.id ?? null}
-        onAdded={refresh}
-      />
-
-      <SectionAdder setlistId={setlistId} onAdded={refresh} />
-
       {error && <div data-pwid="setlist-error" className="text-sm text-red-400">{error}</div>}
+      <p className="text-xs text-zinc-500">
+        Key, BPM and notes here change this list only; clear one to use the song's own (grey). Alt+↑/↓ moves a song,
+        Ctrl+Delete removes it.
+      </p>
 
-      {entries.length === 0 && sections.length === 0 ? (
-        <div data-pwid="setlist-entries-empty" className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] p-8 text-center">
-          <p className="text-zinc-500 text-sm">No songs in this setlist yet.</p>
-        </div>
-      ) : (
-        <div data-pwid="setlist-entries" className="space-y-5">
-          {groups.map((group) => {
-            const sectionId = group.section?.id ?? null
-            const seconds = group.entries.reduce((sum, e) => sum + (e.duration_seconds ?? 0), 0)
-            return (
-              <section key={sectionId ?? "none"} data-pwid="setlist-group" data-section={group.section?.name ?? ""} className="space-y-2">
-                {group.section ? (
-                  <SectionHeader
-                    section={group.section}
-                    setlistId={setlistId}
-                    seconds={seconds}
-                    onUp={() => arrange(stepSection(groups, group.section!.id, -1))}
-                    onDown={() => arrange(stepSection(groups, group.section!.id, 1))}
-                    act={act}
-                  />
-                ) : (
-                  sections.length > 0 && <h2 className="text-sm font-semibold text-zinc-500">No section</h2>
-                )}
-                <ol
-                  data-pwid="group-entries"
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => {
-                    e.preventDefault()
-                    drop(sectionId, null)
-                  }}
-                  className="space-y-2 min-h-10 rounded-lg"
-                >
-                  {group.entries.map((entry) => {
-                    number += 1
-                    return (
-                      <EntryRow
-                        key={entry.id}
-                        entry={entry}
-                        position={number}
-                        onDragStart={() => {
-                          dragging.current = entry.id
-                        }}
-                        onDropBefore={() => drop(sectionId, entry.id)}
-                        onMoveUp={() => arrange(stepEntry(groups, entry.id, -1))}
-                        onMoveDown={() => arrange(stepEntry(groups, entry.id, 1))}
-                        onChanged={refresh}
-                      />
-                    )
-                  })}
-                  {/* The end of the group: the only place to drop a song last, and the only one in an empty group. */}
-                  <li
-                    data-pwid="group-end"
-                    className={`rounded-lg text-center text-xs text-zinc-500 ${
-                      group.entries.length === 0 ? "border border-dashed border-[var(--color-border-subtle)] p-3" : "h-4"
-                    }`}
-                  >
-                    {group.entries.length === 0 && "Drop a song here"}
-                  </li>
-                </ol>
-              </section>
-            )
-          })}
-        </div>
-      )}
+      <SetlistActions bandId={bandId} setlistId={setlistId} name={setlist.name} gigCount={setlist.gigs.length} />
     </div>
   )
 }
 
-/** A section's name (edited in place), its duration and its controls. */
-function SectionHeader({
-  section,
-  setlistId,
-  seconds,
-  onUp,
-  onDown,
-  act,
-}: {
-  section: SetlistSectionInfo
-  setlistId: string
-  seconds: number
-  onUp: () => Promise<void>
-  onDown: () => Promise<void>
-  act: (write: () => Promise<unknown>) => Promise<void>
-}) {
-  const [name, setName] = useState(section.name)
-  const commit = () => {
-    const trimmed = name.trim()
-    if (trimmed === "") setName(section.name)
-    else if (trimmed !== section.name) void act(() => setlists.renameSection(setlistId, section.id, trimmed))
-  }
-  const button =
-    "px-2 py-1 rounded-md border border-[var(--color-border-subtle)] text-xs text-zinc-300 cursor-pointer"
+/**
+ * Adds this setlist to one more gig, after the setlists that gig already
+ * plays. Upcoming gigs come first, soonest first.
+ */
+function AddToGig({ gigs: offered, onAdd }: { gigs: ReadonlyArray<GigInfo>; onAdd: (gigId: string) => Promise<void> }) {
+  if (offered.length === 0) return null
+  const { upcoming, past } = splitGigs(offered, localToday())
+  const options = (list: ReadonlyArray<GigInfo>) =>
+    list.map((gig) => (
+      <option key={gig.id} value={gig.id}>{gigLabel(gig)}</option>
+    ))
   return (
-    <header data-pwid="section-header" className="flex items-center gap-2">
-      <input
-        data-pwid="section-name"
-        aria-label="Section name"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        onBlur={commit}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") e.currentTarget.blur()
-        }}
-        className="min-w-0 flex-1 bg-transparent text-lg font-semibold focus:outline-none focus:border-b focus:border-[var(--color-amber-accent)]"
-      />
-      <span data-pwid="section-duration" className="text-xs text-zinc-500 shrink-0">
-        {seconds > 0 ? formatDuration(seconds) : ""}
-      </span>
-      <button data-pwid="section-up" type="button" onClick={onUp} aria-label="Move section up" className={button}>↑</button>
-      <button data-pwid="section-down" type="button" onClick={onDown} aria-label="Move section down" className={button}>↓</button>
-      <button
-        data-pwid="section-delete"
-        type="button"
-        onClick={() => act(() => setlists.removeSection(setlistId, section.id))}
-        className={`${button} !border-red-500/20 !text-red-400`}
-      >
-        Delete section
-      </button>
-    </header>
-  )
-}
-
-function SectionAdder({ setlistId, onAdded }: { setlistId: string; onAdded: () => Promise<void> }) {
-  const [name, setName] = useState("")
-  const [error, setError] = useState<string | null>(null)
-  const add = async () => {
-    if (name.trim() === "") return
-    setError(null)
-    try {
-      await setlists.addSection(setlistId, name.trim())
-      setName("")
-      await onAdded()
-    } catch (e) {
-      setError(errorMessage(e))
-    }
-  }
-  return (
-    <div className="flex items-center gap-2">
-      <input
-        data-pwid="section-add-name"
-        aria-label="New section name"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") void add()
-        }}
-        placeholder="New section (Set 1, Encore…)"
-        className="flex-1 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-amber-accent)] transition-colors"
-      />
-      <button
-        data-pwid="section-add"
-        type="button"
-        onClick={add}
-        disabled={name.trim() === ""}
-        className="px-4 py-2 rounded-md border border-[var(--color-border-subtle)] text-sm text-zinc-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        Add section
-      </button>
-      {error && <span data-pwid="section-add-error" className="text-sm text-red-400">{error}</span>}
-    </div>
-  )
-}
-
-function SetlistDetails({
-  setlistId,
-  bandId,
-  defaults,
-  onSaved,
-}: {
-  setlistId: string
-  bandId: string
-  defaults: (typeof SetlistUpdate)["Encoded"]
-  onSaved: () => Promise<void>
-}) {
-  const router = useRouter()
-  const [serverError, setServerError] = useState<string | null>(null)
-  const [initial] = useState(defaults)
-
-  const form = useForm({
-    defaultValues: initial,
-    validators: { onChange: S.toStandardSchemaV1(SetlistUpdate) },
-    onSubmit: async ({ value }) => {
-      setServerError(null)
-      try {
-        await setlists.update(setlistId, value)
-        await onSaved()
-      } catch (e) {
-        setServerError(errorMessage(e))
-      }
-    },
-  })
-
-  const remove = async () => {
-    setServerError(null)
-    try {
-      await setlists.remove(setlistId)
-      await router.invalidate()
-      await router.navigate({ to: "/band/$bandId/setlists", params: { bandId } })
-    } catch (e) {
-      setServerError(errorMessage(e))
-    }
-  }
-
-  return (
-    <form
-      data-pwid="setlist-details"
-      onSubmit={(e) => {
-        e.preventDefault()
-        void form.handleSubmit()
-      }}
-      className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] p-4 space-y-3"
+    <select
+      data-pwid="setlist-add-gig"
+      aria-label="Add this setlist to a gig"
+      value=""
+      onChange={(e) => void onAdd(e.target.value)}
+      className="mt-2 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] px-2 py-1 text-xs text-zinc-300"
     >
-      <div className="grid gap-3 sm:grid-cols-3">
-        <form.Field name="name">
-          {(field) => (
-            <TextField
-              label="Name"
-              pwid="setlist-name"
-              value={field.state.value}
-              onChange={field.handleChange}
-              error={fieldError(field)}
-              required
-            />
-          )}
-        </form.Field>
+      <option value="" disabled>Add to a gig…</option>
+      {upcoming.length > 0 && <optgroup label="Upcoming">{options(upcoming)}</optgroup>}
+      {past.length > 0 && <optgroup label="Past">{options(past)}</optgroup>}
+    </select>
+  )
+}
 
-        <form.Field name="gig_date">
-          {(field) => (
-            <TextField
-              label="Gig date"
-              pwid="setlist-date"
-              type="date"
-              value={field.state.value ?? ""}
-              onChange={(value) => field.handleChange(value === "" ? null : value)}
-              error={fieldError(field)}
-            />
-          )}
-        </form.Field>
+/** A tempo override typed into a cell, or null to inherit the song's. */
+function tempo(text: string): number | null {
+  if (text === "") return null
+  const value = Number(text)
+  if (!Number.isInteger(value) || value < 1 || value > 999) throw new Error("Tempo is a whole number from 1 to 999")
+  return value
+}
 
-        <form.Field name="status">
-          {(field) => (
-            <SelectField
-              label="Status"
-              pwid="setlist-status"
-              value={field.state.value}
-              onChange={(value) => {
-                if (value !== null) field.handleChange(value)
-              }}
-              options={statusOptions}
-              error={fieldError(field)}
-            />
-          )}
-        </form.Field>
+/** The heading, edited in place: Enter or leaving the field saves it, Escape puts it back. */
+function SetlistName({ name, onRename }: { name: string; onRename: (name: string) => Promise<void> }) {
+  const [text, setText] = useState(name)
+  const commit = () => {
+    const trimmed = text.trim()
+    if (trimmed === "") setText(name)
+    else if (trimmed !== name) void onRename(trimmed)
+  }
+  return (
+    <input
+      data-pwid="setlist-label"
+      aria-label="Setlist name"
+      value={text}
+      maxLength={200}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") e.currentTarget.blur()
+        if (e.key === "Escape") {
+          setText(name)
+          e.currentTarget.blur()
+        }
+      }}
+      className="w-full bg-transparent text-2xl font-bold tracking-tight focus:outline-none border-b border-transparent focus:border-[var(--color-amber-accent)]"
+    />
+  )
+}
+
+/** Copy the list for one gig, or delete it. */
+function SetlistActions({ bandId, setlistId, name, gigCount }: { bandId: string; setlistId: string; name: string; gigCount: number }) {
+  const router = useRouter()
+  const [error, setError] = useState<string | null>(null)
+  return (
+    <div className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] p-4 space-y-4">
+      <div className="space-y-1">
+        <h2 className="text-sm font-semibold text-zinc-300">Copy this setlist</h2>
+        <p className="text-xs text-zinc-500">The copy has the same songs and changes, and plays in no gig until you add it to one.</p>
+        <NameForm
+          key={name}
+          pwid="setlist-copy"
+          label="Name of the copy"
+          placeholder="Name of the copy"
+          submitLabel="Copy"
+          initial={`${name} (copy)`}
+          onSubmit={async (copyName) => {
+            const copy = await setlists.copy(setlistId, copyName)
+            await router.navigate({ to: "/band/$bandId/setlists/$setlistId", params: { bandId, setlistId: copy.id } })
+          }}
+        />
       </div>
-
-      {serverError && (
-        <div data-pwid="setlist-details-error" className="text-sm text-red-400">{serverError}</div>
-      )}
-
-      <div className="flex gap-2">
-        <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
-          {([canSubmit, isSubmitting]) => (
-            <SubmitButton
-              pwid="setlist-save"
-              disabled={!canSubmit || isSubmitting}
-              pending={isSubmitting}
-              label="Save details"
-              pendingLabel="Saving…"
-            />
-          )}
-        </form.Subscribe>
+      <div className="flex items-center gap-3">
         <button
-          data-pwid="setlist-delete"
           type="button"
-          onClick={remove}
-          className="px-4 py-2 rounded-md border border-red-500/20 text-sm text-red-400 cursor-pointer"
+          data-pwid="setlist-delete"
+          onClick={async () => {
+            setError(null)
+            try {
+              await setlists.remove(setlistId)
+              await router.navigate({ to: "/band/$bandId/setlists", params: { bandId } })
+            } catch (e) {
+              setError(errorMessage(e))
+            }
+          }}
+          className="px-3 py-1.5 rounded-md border border-red-500/20 text-xs text-red-400 cursor-pointer"
         >
           Delete setlist
         </button>
+        {gigCount > 0 && (
+          <span className="text-xs text-zinc-500">
+            {gigCount === 1 ? "The gig that plays it" : `The ${gigCount} gigs that play it`} will no longer play it.
+          </span>
+        )}
+        {error && <span data-pwid="setlist-delete-error" className="text-xs text-red-400">{error}</span>}
       </div>
-    </form>
-  )
-}
-
-function SongPicker({
-  setlistId,
-  bandSongs,
-  sectionId,
-  onAdded,
-}: {
-  setlistId: string
-  bandSongs: readonly SongInfo[]
-  /** A new song joins this section; null when the setlist has none. */
-  sectionId: string | null
-  onAdded: () => Promise<void>
-}) {
-  const [songId, setSongId] = useState("")
-  const [error, setError] = useState<string | null>(null)
-
-  const add = async () => {
-    setError(null)
-    const chosen = bandSongs.find((song) => song.id === songId)
-    if (chosen === undefined) return
-    try {
-      await setlists.addEntry(setlistId, { song_id: chosen.id, section_id: sectionId })
-      setSongId("")
-      await onAdded()
-    } catch (e) {
-      setError(errorMessage(e))
-    }
-  }
-
-  if (bandSongs.length === 0) {
-    return (
-      <p className="text-sm text-zinc-500">
-        This band has no songs yet — add some to its catalog first.
-      </p>
-    )
-  }
-
-  return (
-    <div className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] p-4 space-y-2">
-      <h2 className="text-sm font-semibold text-zinc-300">Add a song</h2>
-      <div className="flex gap-2">
-        <select
-          data-pwid="song-picker"
-          value={songId}
-          onChange={(e) => setSongId(e.target.value)}
-          className="flex-1 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-amber-accent)] transition-colors"
-        >
-          <option value="">Choose a song…</option>
-          {bandSongs.map((song) => (
-            <option key={song.id} value={song.id}>
-              {song.title}
-              {song.artist === null ? "" : ` — ${song.artist}`}
-            </option>
-          ))}
-        </select>
-        <button
-          data-pwid="song-picker-add"
-          type="button"
-          onClick={add}
-          disabled={songId === ""}
-          className="px-4 py-2 rounded-md bg-[var(--color-amber-accent)] text-zinc-950 text-sm font-semibold hover:brightness-110 transition disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
-        >
-          Add
-        </button>
-      </div>
-      {error && <div data-pwid="song-picker-error" className="text-sm text-red-400">{error}</div>}
     </div>
-  )
-}
-
-function EntryRow({
-  entry,
-  position,
-  onDragStart,
-  onDropBefore,
-  onMoveUp,
-  onMoveDown,
-  onChanged,
-}: {
-  entry: SetlistEntryInfo
-  position: number
-  onDragStart: () => void
-  onDropBefore: () => void
-  onMoveUp: () => Promise<void>
-  onMoveDown: () => Promise<void>
-  onChanged: () => Promise<void>
-}) {
-  const { bandId, setlistId } = Route.useParams()
-  const [editing, setEditing] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const remove = async () => {
-    setError(null)
-    try {
-      await setlists.removeEntry(setlistId, entry.id)
-      await onChanged()
-    } catch (e) {
-      setError(errorMessage(e))
-    }
-  }
-
-  const meta = [
-    entry.key,
-    entry.tempo_bpm === null ? null : `${entry.tempo_bpm} BPM`,
-    entry.duration_seconds === null ? null : formatDuration(entry.duration_seconds),
-  ].flatMap((part) => (part == null ? [] : [part]))
-
-  return (
-    <li
-      data-pwid="setlist-entry"
-      draggable
-      onDragStart={(e) => {
-        e.dataTransfer.effectAllowed = "move"
-        e.dataTransfer.setData("text/plain", entry.id)
-        onDragStart()
-      }}
-      onDragOver={(e) => e.preventDefault()}
-      onDrop={(e) => {
-        e.preventDefault()
-        e.stopPropagation()
-        onDropBefore()
-      }}
-      className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] p-4 cursor-grab"
-    >
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3 min-w-0">
-          <span data-pwid="entry-position" className="text-xs text-zinc-500 w-5 pt-1 shrink-0">{position}</span>
-          <div className="min-w-0">
-            <div data-pwid="entry-title" className="font-medium truncate">{entry.title}</div>
-            <div className="text-sm text-zinc-500 mt-0.5">
-              {meta.length > 0 ? meta.join(" · ") : "no details"}
-              {entry.key_overridden && " (overridden)"}
-            </div>
-          </div>
-        </div>
-        <div className="flex gap-1 shrink-0">
-          <button
-            data-pwid="entry-up"
-            type="button"
-            onClick={onMoveUp}
-            aria-label="Move up"
-            className="px-2 py-1.5 rounded-md border border-[var(--color-border-subtle)] text-xs text-zinc-300 cursor-pointer"
-          >
-            ↑
-          </button>
-          <button
-            data-pwid="entry-down"
-            type="button"
-            onClick={onMoveDown}
-            aria-label="Move down"
-            className="px-2 py-1.5 rounded-md border border-[var(--color-border-subtle)] text-xs text-zinc-300 cursor-pointer"
-          >
-            ↓
-          </button>
-          <Link
-            data-pwid="entry-chart"
-            to="/band/$bandId/songs/$songId"
-            params={{ bandId, songId: entry.song_id }}
-            search={entry.key ? { key: entry.key } : {}}
-            className="px-3 py-1.5 rounded-md border border-[var(--color-border-subtle)] text-xs text-zinc-300 cursor-pointer"
-          >
-            Chart
-          </Link>
-          <button
-            data-pwid="entry-edit"
-            type="button"
-            onClick={() => setEditing(!editing)}
-            className="px-3 py-1.5 rounded-md border border-[var(--color-border-subtle)] text-xs text-zinc-300 cursor-pointer"
-          >
-            Overrides
-          </button>
-          <button
-            data-pwid="entry-remove"
-            type="button"
-            onClick={remove}
-            className="px-3 py-1.5 rounded-md border border-red-500/20 text-xs text-red-400 cursor-pointer"
-          >
-            Remove
-          </button>
-        </div>
-      </div>
-
-      {editing && (
-        <EntryOverrides
-          entry={entry}
-          setlistId={setlistId}
-          onSaved={async () => {
-            setEditing(false)
-            await onChanged()
-          }}
-        />
-      )}
-      {error && <div data-pwid="entry-error" className="mt-2 text-xs text-red-400">{error}</div>}
-    </li>
-  )
-}
-
-function EntryOverrides({
-  entry,
-  setlistId,
-  onSaved,
-}: {
-  entry: SetlistEntryInfo
-  setlistId: string
-  onSaved: () => Promise<void>
-}) {
-  const [serverError, setServerError] = useState<string | null>(null)
-  const [initial] = useState(() => updatePayload(entry))
-
-  const form = useForm({
-    defaultValues: initial,
-    validators: { onChange: S.toStandardSchemaV1(SetlistEntryUpdate) },
-    onSubmit: async ({ value }) => {
-      setServerError(null)
-      try {
-        await setlists.updateEntry(setlistId, entry.id, value)
-        await onSaved()
-      } catch (e) {
-        setServerError(errorMessage(e))
-      }
-    },
-  })
-
-  return (
-    <form
-      data-pwid="entry-overrides"
-      onSubmit={(e) => {
-        e.preventDefault()
-        void form.handleSubmit()
-      }}
-      className="mt-3 pt-3 border-t border-[var(--color-border-subtle)] grid gap-3 sm:grid-cols-3"
-    >
-      <form.Field name="key_override">
-        {(field) => (
-          <SelectField
-            label="Key"
-            pwid="override-key"
-            value={field.state.value}
-            onChange={(value) => field.handleChange(value === "" ? null : value)}
-            options={keyOptions}
-            error={fieldError(field)}
-          />
-        )}
-      </form.Field>
-
-      <form.Field name="tempo_override">
-        {(field) => (
-          <NumberField
-            label="Tempo (BPM)"
-            pwid="override-tempo"
-            value={field.state.value}
-            onChange={field.handleChange}
-            error={fieldError(field)}
-            min={1}
-            max={999}
-          />
-        )}
-      </form.Field>
-
-      <form.Field name="notes_override">
-        {(field) => (
-          <TextAreaField
-            label="Notes"
-            pwid="override-notes"
-            rows={2}
-            value={field.state.value ?? ""}
-            onChange={(value) => field.handleChange(value === "" ? null : value)}
-            error={fieldError(field)}
-          />
-        )}
-      </form.Field>
-
-      {serverError && (
-        <div data-pwid="entry-overrides-error" className="sm:col-span-3 text-sm text-red-400">{serverError}</div>
-      )}
-
-      <div className="sm:col-span-3">
-        <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
-          {([canSubmit, isSubmitting]) => (
-            <SubmitButton
-              pwid="override-save"
-              disabled={!canSubmit || isSubmitting}
-              pending={isSubmitting}
-              label="Save overrides"
-              pendingLabel="Saving…"
-            />
-          )}
-        </form.Subscribe>
-      </div>
-    </form>
   )
 }

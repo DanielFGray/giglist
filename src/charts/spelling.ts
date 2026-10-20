@@ -79,6 +79,31 @@ type Suffix = {
 /** Each letter's natural pitch class. */
 export const NATURALS: Readonly<Record<string, PitchClass>> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }
 
+const LETTERS = ["C", "D", "E", "F", "G", "A", "B"]
+const SHARPS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+const FLATS = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"]
+
+/**
+ * The note at `pitch`, spelled on the scale step `step` letters above the tonic's
+ * letter: bVI in G is Eb, not D#. A spelling players do not write (Cb, Fb, B#, E#,
+ * or a double accidental) gives way to the plain name on the key's side.
+ */
+export function spellNote(pitch: PitchClass, step: number, key: string): string {
+  const letter = LETTERS[(LETTERS.indexOf(key[0]!) + step) % 7]!
+  let shift = (pitch - NATURALS[letter]! + 12) % 12
+  if (shift > 6) shift -= 12
+  const name = letter + (shift > 0 ? "#".repeat(shift) : "b".repeat(-shift))
+  if (Math.abs(shift) <= 1 && !["Cb", "Fb", "B#", "E#"].includes(name)) return name
+  return (flatSide(key) ? FLATS : SHARPS)[pitch]!
+}
+
+/** True for a key whose signature has flats: a flat tonic, F major, or D, G, C or F minor. */
+function flatSide(key: string): boolean {
+  const minor = key.endsWith("m")
+  const tonic = minor ? key.slice(0, -1) : key
+  return tonic.includes("b") || (minor ? ["D", "G", "C", "F"].includes(tonic) : tonic === "F")
+}
+
 /** Semitones above the root of each chord degree. A 6th is a 13th. */
 const DEGREE = { 2: 2, 4: 5, 5: 7, 7: 11, 9: 2, 11: 5, 13: 9 } as const
 

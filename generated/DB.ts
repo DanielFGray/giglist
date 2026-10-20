@@ -101,15 +101,32 @@ export interface AppPublicBands {
   created_at: Generated<Timestamp>;
   description: string | null;
   id: Generated<string>;
+  /**
+   * When true, anyone can open the band's public page; when false, /b/:slug answers not found.
+   */
+  is_public: Generated<boolean>;
   name: string;
   /**
-   * When true, the public band page lists setlist gig dates (name + date only).
+   * Values for the options the theme declares, keyed like "color:Accent"; an option with no value uses the theme's default.
+   * Written as JSON text; the driver reads it back as an object.
+   */
+  page_options: Generated<ColumnType<Record<string, string>, string, string>>;
+  /**
+   * The public page's theme: an HTML document with theme tags. Null means the built-in Classic theme.
+   */
+  page_theme: string | null;
+  /**
+   * When true, the public band page lists upcoming gigs (venue + date only).
    */
   show_gig_dates_publicly: Generated<boolean>;
   /**
    * When true, the public band page lists members (username, name, avatar).
    */
   show_members_publicly: Generated<boolean>;
+  /**
+   * When true, the public band page lists the band's songs (title + artist only).
+   */
+  show_songs_publicly: Generated<boolean>;
   slug: string;
 }
 
@@ -180,6 +197,42 @@ export interface AppPublicScoreFiles {
   revision_id: string;
 }
 
+export interface AppPublicGigs {
+  /**
+   * The venue address, as the band would paste into a map.
+   */
+  address: string | null;
+  band_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  gig_date: Timestamp | null;
+  id: Generated<string>;
+  /**
+   * When the band must arrive and load in, as a wall-clock time at the venue on the gig date.
+   */
+  load_in_time: string | null;
+  /**
+   * Notes for the band only.
+   */
+  notes: string | null;
+  /**
+   * When the performance starts, as a wall-clock time at the venue on the gig date.
+   */
+  performance_time: string | null;
+  updated_at: Generated<Timestamp>;
+  /**
+   * Where the gig is; the gig's label, and public with the date.
+   */
+  venue: string | null;
+}
+
+export interface AppPublicGigSetlists {
+  band_id: string;
+  gig_id: string;
+  position_key: string;
+  setlist_id: string;
+}
+
 export interface AppPublicSetlistEntries {
   created_at: Generated<Timestamp>;
   id: Generated<string>;
@@ -192,10 +245,9 @@ export interface AppPublicSetlistEntries {
    */
   notes_override: string | null;
   /**
-   * Ordering position within the section (or setlist if no section). Uses gap-based integers for cheap reordering.
+   * Sortable key for the entry's place in the setlist; read in order of (position_key, id).
    */
-  position_key: Generated<string>;
-  section_id: string | null;
+  position_key: string;
   setlist_id: string;
   song_id: string;
   /**
@@ -216,7 +268,6 @@ export interface AppPublicSetlistEntriesResolved {
   notes: string | null;
   notes_overridden: boolean | null;
   position_key: string | null;
-  section_id: string | null;
   setlist_id: string | null;
   song_id: string | null;
   tempo_bpm: number | null;
@@ -229,26 +280,12 @@ export interface AppPublicSetlists {
   band_id: string;
   created_at: Generated<Timestamp>;
   created_by: string | null;
-  description: string | null;
-  /**
-   * The date of the gig/event this setlist is for.
-   */
-  gig_date: Timestamp | null;
   id: Generated<string>;
   name: string;
   /**
    * Workflow status: draft → rehearsal → final.
    */
   status: Generated<AppPublicSetlistStatus>;
-  updated_at: Generated<Timestamp>;
-}
-
-export interface AppPublicSetlistSections {
-  created_at: Generated<Timestamp>;
-  id: Generated<string>;
-  name: string;
-  position_key: Generated<string>;
-  setlist_id: string;
   updated_at: Generated<Timestamp>;
 }
 
@@ -328,11 +365,14 @@ export interface AppPublicUsers {
    * Unique identifier for the user.
    */
   id: Generated<string>;
+  is_public: Generated<boolean>;
   is_verified: Generated<boolean>;
   /**
    * Public-facing name (or pseudonym) of the user.
    */
   name: string | null;
+  page_options: Generated<ColumnType<Record<string, string>, string, string>>;
+  page_theme: string | null;
   role: Generated<AppPublicUserRole>;
   updated_at: Generated<Timestamp>;
   /**
@@ -355,9 +395,10 @@ export interface DB {
   "app_public.charts": AppPublicCharts;
   "app_public.marks": AppPublicMarks;
   "app_public.score_files": AppPublicScoreFiles;
+  "app_public.gig_setlists": AppPublicGigSetlists;
+  "app_public.gigs": AppPublicGigs;
   "app_public.setlist_entries": AppPublicSetlistEntries;
   "app_public.setlist_entries_resolved": AppPublicSetlistEntriesResolved;
-  "app_public.setlist_sections": AppPublicSetlistSections;
   "app_public.setlists": AppPublicSetlists;
   "app_public.songs": AppPublicSongs;
   "app_public.stamps": AppPublicStamps;

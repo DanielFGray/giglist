@@ -5,7 +5,7 @@
  * `beatsBetween` is pure so the audio code can ask for the beats that fall in
  * the next stretch of time and schedule exactly those.
  */
-export const BEATS_PER_BAR = 4
+const BEATS_PER_BAR = 4
 
 /** The clicks that count the band in before the track settles: one bar. */
 export const COUNT_IN_BEATS = BEATS_PER_BAR

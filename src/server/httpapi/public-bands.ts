@@ -2,14 +2,14 @@ import { Effect } from "effect"
 import { HttpApiBuilder } from "effect/http-api"
 import * as BandService from "../services/band"
 import { withAuthContext } from "../db"
-import { SetListApi, PublicBandNotFound } from "../../api/contracts"
+import { GigListApi, PublicBandNotFound } from "../../api/contracts"
 
 /**
- * Signed-out visitors still run as the visitor role so `select_public` on bands
- * and the security-definer helpers apply. No session id is set.
+ * Signed-out visitors still run as the visitor role, with no session id, so the
+ * page reads exactly what the `public_band*` functions grant the visitor.
  */
 export const publicBandsHandlers = HttpApiBuilder.group(
-  SetListApi,
+  GigListApi,
   "publicBands",
   (handlers) =>
     handlers.handle(
@@ -17,12 +17,7 @@ export const publicBandsHandlers = HttpApiBuilder.group(
       Effect.fnUntraced(function* ({ params: { slug } }) {
         return yield* BandService.getPublicBandProfile(slug).pipe(
           withAuthContext(undefined),
-          Effect.mapError((e) => {
-            if (e._tag === "PublicBandMissing") {
-              return new PublicBandNotFound({ slug: e.slug })
-            }
-            return new PublicBandNotFound({ slug })
-          }),
+          Effect.catchTag("PublicBandMissing", (e) => Effect.fail(new PublicBandNotFound({ slug: e.slug }))),
         )
       }),
     ),

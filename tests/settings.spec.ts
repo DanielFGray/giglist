@@ -29,7 +29,7 @@ test.describe("account settings", () => {
   }) => {
     const username = "test_settings_pw"
     const nextPassword = "new_password_456!"
-    await testing.login({ username })
+    const me = await testing.login({ username })
     await page.goto("/settings")
     await expect(getPw(page, "settings-page")).toBeVisible({ timeout: 5000 })
 
@@ -43,7 +43,7 @@ test.describe("account settings", () => {
     await getPw(page, "nav-signout").click()
     await expect(getPw(page, "nav-signin")).toBeVisible({ timeout: 5000 })
 
-    await loginViaUi(page, username, nextPassword)
+    await loginViaUi(page, me.username, nextPassword)
   })
 
   test("adds a second email, verifies it, and makes it primary", async ({
@@ -51,8 +51,8 @@ test.describe("account settings", () => {
     testing,
   }) => {
     const username = "test_settings_email"
-    const firstEmail = `${username}@test.local`
-    await testing.login({ username })
+    const me = await testing.login({ username })
+    const firstEmail = me.email
 
     // Seed a primary by verifying the signup address first; otherwise
     // verifying the second address would auto-promote it and hide Make primary.
@@ -72,7 +72,7 @@ test.describe("account settings", () => {
     await page.goto("/settings")
     await expect(getPw(page, "settings-page")).toBeVisible({ timeout: 5000 })
 
-    const secondEmail = "test_settings_email_2@test.local"
+    const secondEmail = `${me.username}_2@test.local`
     await getPw(page, "settings-add-email").fill(secondEmail)
     await getPw(page, "settings-add-email-submit").click()
     await expect(getPw(page, "settings-email-list")).toContainText(secondEmail)

@@ -32,7 +32,7 @@ export class LiveHub extends Context.Service<LiveHub, {
     update: Pick<Viewer, "client" | "mode" | "at">,
   ) => Effect.Effect<boolean>
 }>()("LiveHub") {
-  static Live = Layer.sync(this, makeHub)
+  static Live = Layer.effect(this, makeHub())
 }
 
 type Room = {
@@ -41,63 +41,66 @@ type Room = {
 }
 
 function makeHub() {
-  const rooms = new Map<string, Room>()
+  return Effect.gen(function* () {
+    const rooms = new Map<string, Room>()
 
-  const presence = (room: Room): LiveEventData => ({
-    kind: "presence",
-    viewers: [...room.viewers.values()].map((v) => v.viewer),
-  })
+    const presence = (room: Room): LiveEventData => ({
+      kind: "presence",
+      viewers: [...room.viewers.values()].map((v) => v.viewer),
+    })
 
-  const announce = (room: Room) => PubSub.publish(room.events, presence(room))
+    const announce = (room: Room) => PubSub.publish(room.events, presence(room))
 
-  const roomFor = (roomId: string): Room => {
-    let room = rooms.get(roomId)
-    if (!room) {
-      room = { events: Effect.runSync(PubSub.sliding<LiveEventData>(64)), viewers: new Map() }
-      rooms.set(roomId, room)
-    }
-    return room
-  }
+    const ensureRoom = (roomId: string): Effect.Effect<Room> =>
+      Effect.gen(function* () {
+        const existing = rooms.get(roomId)
+        if (existing) return existing
+        const events = yield* PubSub.sliding<LiveEventData>(64)
+        const room = { events, viewers: new Map() }
+        rooms.set(roomId, room)
+        return room
+      })
 
-  return LiveHub.of({
-    changed: (roomId, by) => {
-      const room = rooms.get(roomId)
-      return room ? PubSub.publish(room.events, { kind: "changed", by }).pipe(Effect.asVoid) : Effect.void
-    },
-
-    watch: (roomId, { userId, viewer }) =>
-      Stream.unwrap(
-        Effect.gen(function* () {
-          const room = roomFor(roomId)
-          room.viewers.set(viewer.client, { userId, viewer })
-          yield* announce(room)
-          // The announcement above went out before this connection listened, so it starts from the list itself.
-          const live = Stream.merge(
-            Stream.fromPubSub(room.events),
-            Stream.tick(PING_EVERY).pipe(Stream.map((): LiveEventData => ({ kind: "ping" }))),
-          )
-          return Stream.concat(Stream.make(presence(room)), live).pipe(
-            Stream.ensuring(
-              Effect.suspend(() => {
-                room.viewers.delete(viewer.client)
-                if (room.viewers.size === 0) {
-                  rooms.delete(roomId)
-                  return Effect.void
-                }
-                return announce(room).pipe(Effect.asVoid)
-              }),
-            ),
-          )
-        }),
-      ),
-
-    report: (roomId, userId, update) =>
-      Effect.suspend(() => {
+    return LiveHub.of({
+      changed: (roomId, by) => {
         const room = rooms.get(roomId)
-        const entry = room?.viewers.get(update.client)
-        if (!room || !entry || entry.userId !== userId) return Effect.succeed(false)
-        entry.viewer = { ...entry.viewer, mode: update.mode, at: update.at }
-        return announce(room).pipe(Effect.as(true))
-      }),
+        return room ? PubSub.publish(room.events, { kind: "changed", by }).pipe(Effect.asVoid) : Effect.void
+      },
+
+      watch: (roomId, { userId, viewer }) =>
+        Stream.unwrap(
+          Effect.gen(function* () {
+            const room = yield* ensureRoom(roomId)
+            room.viewers.set(viewer.client, { userId, viewer })
+            yield* announce(room)
+            // The announcement above went out before this connection listened, so it starts from the list itself.
+            const live = Stream.merge(
+              Stream.fromPubSub(room.events),
+              Stream.tick(PING_EVERY).pipe(Stream.map((): LiveEventData => ({ kind: "ping" }))),
+            )
+            return Stream.concat(Stream.make(presence(room)), live).pipe(
+              Stream.ensuring(
+                Effect.suspend(() => {
+                  room.viewers.delete(viewer.client)
+                  if (room.viewers.size === 0) {
+                    rooms.delete(roomId)
+                    return Effect.void
+                  }
+                  return announce(room).pipe(Effect.asVoid)
+                }),
+              ),
+            )
+          }),
+        ),
+
+      report: (roomId, userId, update) =>
+        Effect.suspend(() => {
+          const room = rooms.get(roomId)
+          const entry = room?.viewers.get(update.client)
+          if (!room || !entry || entry.userId !== userId) return Effect.succeed(false)
+          entry.viewer = { ...entry.viewer, mode: update.mode, at: update.at }
+          return announce(room).pipe(Effect.as(true))
+        }),
+    })
   })
 }

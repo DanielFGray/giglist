@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-router"
 import { BandSwitcher } from "./BandSwitcher"
 import { ThemeToggle } from "./ThemeToggle"
+import { Avatar } from "./Avatar"
 import { useActiveBandId, useAuth } from "./AuthContext"
 import { auth } from "~/api/client"
 
@@ -55,6 +56,14 @@ function NavLinks({
   return (
     <>
       <NavItem to="/" label="Home" pwid="nav-home" active={pathname === "/"} onNavigate={onNavigate} />
+      <NavItem
+        to="/band/$bandId/gigs"
+        params={{ bandId }}
+        label="Gigs"
+        pwid="nav-gigs"
+        active={pathname.startsWith(`/band/${bandId}/gigs`)}
+        onNavigate={onNavigate}
+      />
       <NavItem
         to="/band/$bandId/setlists"
         params={{ bandId }}
@@ -119,28 +128,24 @@ function UserMenu() {
     )
   }
 
-  const initial = (user.name?.trim() || user.username)[0]?.toUpperCase() ?? "?"
-
   return (
     <div ref={rootRef} className="relative ml-1">
       <button
         type="button"
         data-pwid="nav-user-avatar"
         onClick={() => setOpen((value) => !value)}
-        className="size-8 rounded-full bg-[var(--color-amber-accent)] flex items-center justify-center text-xs font-bold text-zinc-950 hover:brightness-110 transition cursor-pointer"
+        className="size-8 rounded-full overflow-hidden hover:brightness-110 transition cursor-pointer"
         title={user.username}
         aria-expanded={open}
         aria-haspopup="true"
       >
-        {user.avatar_url ? (
-          <img
-            src={user.avatar_url}
-            alt=""
-            className="size-8 rounded-full object-cover"
-          />
-        ) : (
-          initial
-        )}
+        <Avatar
+          avatarUrl={user.avatar_url}
+          name={user.name}
+          username={user.username}
+          className="size-8 rounded-full"
+          fallbackClassName="bg-[var(--color-amber-accent)] text-xs font-bold text-zinc-950"
+        />
       </button>
       {open && (
         <div
@@ -189,7 +194,7 @@ export function Nav() {
             className="flex items-center gap-2 mr-4 shrink-0"
           >
             <span className="text-[var(--color-amber-accent)] font-bold text-lg tracking-tight">
-              SetList
+              GigList
             </span>
           </Link>
 

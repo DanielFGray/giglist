@@ -1,5 +1,5 @@
 import packageJson from '../../package.json' with { type: 'json' }
-/** @typedef { import("./send_email").SendEmailPayload } SendEmailPayload */
+/** @typedef { import("../email/send-email").QueuedEmail } SendEmailPayload */
 /** @typedef { import("graphile-worker").Task } Task */
 /** @typedef {
 | 'linked_account'

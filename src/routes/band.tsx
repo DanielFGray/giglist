@@ -18,7 +18,7 @@ function BandLayout() {
 
 /** A loader failure reaches here, inside the root layout, so the nav stays put
  *  while the band's page reports what went wrong. */
-function BandError({ error, reset }: { error: Error; reset: () => void }) {
+function BandError({ error, reset }: { error: unknown; reset: () => void }) {
   return (
     <div data-pwid="band-error" className="min-h-[40vh] flex flex-col items-center justify-center gap-4 text-center">
       <h1 className="text-2xl font-bold tracking-tight">Could not load this band</h1>

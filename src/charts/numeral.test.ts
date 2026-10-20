@@ -1,137 +1,77 @@
 import { describe, expect, it } from "bun:test"
-import { numeral } from "./numeral"
+import { chordNumerals, numeral } from "./numeral"
+
+// Expected labels were checked against music21's romanNumeralFromChord. It agrees
+// on every row except where a comment gives the app's own rule.
+const cases: ReadonlyArray<[chord: string, key: string, next: string | null, expected: string]> = [
+  // Degree, case and quality
+  ["C", "C", null, "I"],
+  ["Am7", "C", null, "vi7"],
+  ["Fmaj7", "C", null, "IVmaj7"], // music21: IV7. The app keeps maj7 apart from a dominant 7th.
+  ["G9", "C", null, "V9"],
+  ["Csus4", "C", null, "Isus4"],
+  ["Cmadd9", "C", null, "iadd9"],
+  ["C-7", "C", null, "i7"],
+  ["Bdim", "C", null, "vii°"],
+  ["Bdim7", "C", null, "vii°7"],
+  ["Bm7b5", "C", null, "viiø7"],
+  ["Gaug", "C", null, "V+"],
+  ["F#m7add11", "C", null, "#iv7add11"],
+  ["Gb", "C", null, "#IV"],
+  ["A#", "C", null, "bVII"],
+  // Minor keys count from the tonic against the major scale, as the rock corpus does.
+  ["E", "Am", null, "V"],
+  ["C", "Am", null, "bIII"], // music21: III
+  ["G", "Am", null, "bVII"],
+  // Inversions
+  ["D/F#", "G", null, "V6"],
+  ["D/A", "G", null, "V64"],
+  ["G7/B", "C", null, "V65"],
+  ["G7/D", "C", null, "V43"],
+  ["G7/F", "C", null, "V42"],
+  ["Dm7/C", "C", null, "ii42"],
+  ["Cmaj7/E", "C", null, "Imaj65"],
+  // A bass that is not a chord tone reads as its key degree. music21: Iadd9 is I763, F/G is IV742, Am/G is vi42.
+  ["Cadd9/E", "C", null, "Iadd9/3"],
+  ["F/G", "C", null, "IV/5"],
+  ["Am/G", "C", null, "vi/5"],
+  // Applied chords need the resolution. music21 reads every chromatic dominant as applied, even with no next chord.
+  ["A7", "G", "D", "V7/V"],
+  ["A7", "G", "C", "II7"],
+  ["E", "C", "F", "III"],
+  ["E7", "C", "Am", "V7/vi"],
+  ["C7", "C", "F", "V7/IV"],
+  ["D7/F#", "C", "G", "V65/V"],
+  ["D7/F#", "G", "G", "V65"],
+  ["A", "Am", "Dm", "V/iv"],
+  ["B7", "Am", "E", "V7/V"], // music21: V7/v
+  ["E7", "Am", "Am", "V7"],
+  ["C#dim7", "C", "Dm", "vii°7/ii"], // music21: #io7
+  ["F#m7b5", "C", "G", "viiø7/V"],
+  // A chain of dominants counts each by its target's root.
+  ["A7", "C", "D7", "V7/ii"],
+  ["D7", "C", "G7", "V7/V"],
+  // The cadential 6-4 works as V.
+  ["F#dim7", "C", "C/G", "vii°7/V"],
+  // A borrowed chord moving to another borrowed chord is not applied.
+  ["Eb", "C", "Ab", "bIII"],
+  ["Bb7", "C", "Eb", "bVII7"],
+]
 
 describe("numeral", () => {
-  // Key C major tests
-  describe("key C", () => {
-    it("C -> I", () => {
-      expect(numeral("C", "C")).toBe("I")
-    })
-    it("G7 -> V7", () => {
-      expect(numeral("G7", "C")).toBe("V7")
-    })
-    it("Am -> vi", () => {
-      expect(numeral("Am", "C")).toBe("vi")
-    })
-    it("Am7 -> vi7", () => {
-      expect(numeral("Am7", "C")).toBe("vi7")
-    })
-    it("Bb -> bVII", () => {
-      expect(numeral("Bb", "C")).toBe("bVII")
-    })
-    it("F#m -> #iv", () => {
-      expect(numeral("F#m", "C")).toBe("#iv")
-    })
-    it("Bdim -> viidim", () => {
-      expect(numeral("Bdim", "C")).toBe("viidim")
-    })
-    it("Fmaj7 -> IVmaj7", () => {
-      expect(numeral("Fmaj7", "C")).toBe("IVmaj7")
-    })
-    it("D/F# -> II (slash bass dropped)", () => {
-      expect(numeral("D/F#", "C")).toBe("II")
-    })
+  it.each(cases)("%s in %s before %s reads %s", (chord, key, next, expected) => {
+    expect(numeral(chord, key, next)).toBe(expected)
   })
 
-  // Key A minor tests
-  describe("key Am", () => {
-    it("Am -> i", () => {
-      expect(numeral("Am", "Am")).toBe("i")
-    })
-    it("E -> V", () => {
-      expect(numeral("E", "Am")).toBe("V")
-    })
-  })
-
-  // Null key returns null
-  it("key null -> null", () => {
+  it("is null without a key, or for a name it cannot read", () => {
     expect(numeral("C", null)).toBeNull()
-  })
-
-  // Invalid chord returns null
-  it('"H" -> null', () => {
     expect(numeral("H", "C")).toBeNull()
+    expect(numeral("N.C.", "C")).toBeNull()
   })
+})
 
-  // Additional cases for quality and suffix handling
-  describe("quality and suffix handling", () => {
-    it("Em -> iii (minor quality, lowercase)", () => {
-      expect(numeral("Em", "C")).toBe("iii")
-    })
-    it("F -> IV (major quality, uppercase)", () => {
-      expect(numeral("F", "C")).toBe("IV")
-    })
-    it("Dm7 -> ii7 (minor with extension)", () => {
-      expect(numeral("Dm7", "C")).toBe("ii7")
-    })
-    it("G9 -> V9 (dominant with extension)", () => {
-      expect(numeral("G9", "C")).toBe("V9")
-    })
-    it("Cmaj7 -> Imaj7 (major 7th suffix kept)", () => {
-      expect(numeral("Cmaj7", "C")).toBe("Imaj7")
-    })
-    it("Bb7 -> bVII7 (flat degree with extension)", () => {
-      expect(numeral("Bb7", "C")).toBe("bVII7")
-    })
-    it("F#m7add11 -> #iv7add11 (complex suffix)", () => {
-      expect(numeral("F#m7add11", "C")).toBe("#iv7add11")
-    })
-    it("Gdim -> vdim (diminished suffix on V)", () => {
-      expect(numeral("Gdim", "C")).toBe("vdim")
-    })
-    it("Gaug -> Vaug (augmented suffix on V)", () => {
-      expect(numeral("Gaug", "C")).toBe("Vaug")
-    })
-    it("Csus4 -> Isus4 (sus suffix)", () => {
-      expect(numeral("Csus4", "C")).toBe("Isus4")
-    })
-    it("Cadd9 -> Iadd9 (add suffix)", () => {
-      expect(numeral("Cadd9", "C")).toBe("Iadd9")
-    })
-  })
-
-  // Borrowed/secondary chords shown by plain degree
-  describe("borrowed and secondary chords", () => {
-    it("D in key C -> II (V/V shown as plain degree)", () => {
-      expect(numeral("D", "C")).toBe("II")
-    })
-    it("A in key C -> VI (V/ii shown as plain degree)", () => {
-      expect(numeral("A", "C")).toBe("VI")
-    })
-    it("Eb in key C -> bIII (borrowed bIII)", () => {
-      expect(numeral("Eb", "C")).toBe("bIII")
-    })
-  })
-
-  // Sharp/flat root handling
-  describe("sharp and flat roots", () => {
-    it("F# in key C -> #IV", () => {
-      expect(numeral("F#", "C")).toBe("#IV")
-    })
-    it("Gb in key C -> #IV (six semitones above C, written with a sharp)", () => {
-      expect(numeral("Gb", "C")).toBe("#IV")
-    })
-    it("Bb in key C -> bVII", () => {
-      expect(numeral("Bb", "C")).toBe("bVII")
-    })
-    it("A# in key C -> bVII (ten semitones above C, written with a flat)", () => {
-      expect(numeral("A#", "C")).toBe("bVII")
-    })
-  })
-
-  // Minor key handling
-  describe("minor keys", () => {
-    it("Dm in key Am -> iv", () => {
-      expect(numeral("Dm", "Am")).toBe("iv")
-    })
-    it("F in key Am -> bVI", () => {
-      expect(numeral("F", "Am")).toBe("bVI")
-    })
-    it("G in key Am -> bVII", () => {
-      expect(numeral("G", "Am")).toBe("bVII")
-    })
-    it("C in key Am -> bIII", () => {
-      expect(numeral("C", "Am")).toBe("bIII")
-    })
+describe("chordNumerals", () => {
+  it("reads each chord against the next chord with another name", () => {
+    expect(chordNumerals(["A7", "A7", "D", "G", "E7", "Am"], "G")).toEqual(["V7/V", "V7/V", "V", "I", "V7/ii", "ii"])
   })
 })

@@ -6,7 +6,7 @@ test.describe("delete account", () => {
   test("hides deletion while the user owns a band", async ({ page, testing }) => {
     await testing.login({ username: "test_del_owner" })
     const created = await page.request.post("/api/my/bands", {
-      data: { slug: "test-del-owned", name: "Still Owned" },
+      data: { slug: `test-del-owned-${Date.now()}`, name: "Still Owned" },
     })
     expect(created.ok(), await created.text()).toBe(true)
 
@@ -21,19 +21,18 @@ test.describe("delete account", () => {
     page,
     testing,
   }) => {
-    const username = "test_del_free"
-    await testing.login({ username })
+    const user = await testing.login({ username: "test_del_free" })
     await page.goto("/settings")
     await expect(getPw(page, "settings-delete-account")).toBeVisible({
       timeout: 5000,
     })
 
-    await getPw(page, "settings-delete-username").fill(username)
+    await getPw(page, "settings-delete-username").fill(user.username)
     await getPw(page, "settings-delete-request").click()
     await expect(getPw(page, "settings-delete-requested")).toBeVisible()
 
     const secrets = await page.request.get(
-      `/api/testing/user-secrets?username=${encodeURIComponent(username)}`,
+      `/api/testing/user-secrets?username=${encodeURIComponent(user.username)}`,
     )
     expect(secrets.ok(), await secrets.text()).toBe(true)
     const body = (await secrets.json()) as { delete_account_token: string | null }

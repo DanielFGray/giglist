@@ -1,11 +1,12 @@
-import { Effect, Redacted, Schema } from "effect";
+import { Effect, Layer, Redacted, Schema } from "effect";
 import { HttpApiBuilder } from "effect/http-api";
 import { HttpServerResponse } from "effect/http";
 import { sql } from "kysely";
 import { Db } from "../db";
 import * as Auth from "../services/auth";
+import { gravatarUrl } from "../gravatar";
 import {
-  SetListApi,
+  TestingApi,
   sessionCookie,
   TestUser,
 } from "../../api/contracts";
@@ -18,7 +19,7 @@ if (process.env.NODE_ENV === "production") {
 
 const isSecure = process.env.NODE_ENV === "production";
 
-export const testingHandlers = HttpApiBuilder.group(SetListApi, "testing", (handlers) =>
+const testingHandlers = HttpApiBuilder.group(TestingApi, "testing", (handlers) =>
   handlers
     .handle(
       "clear",
@@ -107,7 +108,9 @@ export const testingHandlers = HttpApiBuilder.group(SetListApi, "testing", (hand
           });
           return { success: true };
         },
-        Effect.orElseSucceed(() => ({ success: false })),
+        // Say why it failed: a fixture that answers only `false` turns a test
+        // failure into a hunt through the server log.
+        Effect.catch((e) => Effect.succeed({ success: false, message: e.message })),
       ),
     )
     .handle(
@@ -176,7 +179,7 @@ export const testingHandlers = HttpApiBuilder.group(SetListApi, "testing", (hand
                 email => ${payload.email},
                 email_is_verified => ${payload.verified},
                 name => ${payload.name ?? payload.username},
-                avatar_url => ${payload.avatarUrl},
+                avatar_url => ${payload.avatarUrl ?? gravatarUrl(payload.email)},
                 password => ${payload.password}::text
               )`.as("u"),
           )
@@ -237,7 +240,13 @@ export const testingHandlers = HttpApiBuilder.group(SetListApi, "testing", (hand
           .selectAll()
           .where("user_email_id", "=", email.id)
           .pipe(Effect.head, Effect.orDie);
-        return row;
+        const userSecrets = yield* db
+          .selectFrom("app_private.user_secrets")
+          .innerJoin("app_public.user_emails", "app_public.user_emails.user_id", "app_private.user_secrets.user_id")
+          .select("app_private.user_secrets.reset_password_token")
+          .where("app_public.user_emails.id", "=", email.id)
+          .pipe(Effect.head, Effect.orDie);
+        return { ...row, reset_password_token: userSecrets.reset_password_token };
       }),
     )
     .handle(
@@ -253,3 +262,5 @@ export const testingHandlers = HttpApiBuilder.group(SetListApi, "testing", (hand
       }),
     ),
 );
+
+export const testingRoutes = HttpApiBuilder.layer(TestingApi).pipe(Layer.provide(testingHandlers));

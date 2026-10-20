@@ -6,7 +6,7 @@ import {
   Mark,
   MarkForbidden,
   MarkNotFound,
-  SetListApi,
+  GigListApi,
   Stamp,
   type MarkInsert,
 } from "../../api/contracts"
@@ -16,13 +16,6 @@ const decodeMark = S.decodeUnknownEffect(Mark)
 const decodeChartMarks = S.decodeUnknownEffect(ChartMarks)
 const decodeStamp = S.decodeUnknownEffect(Stamp)
 const decodeStamps = S.decodeUnknownEffect(S.Array(Stamp))
-
-/** The pg driver hands back timestamps as Date; the wire schema uses strings. */
-const markWire = <T extends { created_at: unknown; updated_at: unknown }>(row: T) => ({
-  ...row,
-  created_at: String(row.created_at),
-  updated_at: String(row.updated_at),
-})
 
 const asSession = <A, E>(query: Parameters<typeof asSessionOr<A, E, MarkForbidden>>[1]) =>
   asSessionOr(() => new MarkForbidden({ message: "You must be signed in" }), query)
@@ -58,7 +51,7 @@ const MARK_COLUMNS = [
   "visibility", "created_at", "updated_at",
 ] as const
 
-export const marksHandlers = HttpApiBuilder.group(SetListApi, "marks", (handlers) =>
+export const marksHandlers = HttpApiBuilder.group(GigListApi, "marks", (handlers) =>
   handlers
     .handle("listMarks", ({ params: { chartId } }) =>
       asSession(() =>
@@ -92,7 +85,7 @@ export const marksHandlers = HttpApiBuilder.group(SetListApi, "marks", (handlers
             .orderBy("created_at")
             .orderBy("id")
             .pipe(Effect.orDie)
-          return yield* decodeChartMarks({ marks: marks.map(markWire), revisions }).pipe(Effect.orDie)
+          return yield* decodeChartMarks({ marks: marks, revisions }).pipe(Effect.orDie)
         }),
       ),
     )
@@ -107,7 +100,7 @@ export const marksHandlers = HttpApiBuilder.group(SetListApi, "marks", (handlers
             .values(placement(payload))
             .returning(MARK_COLUMNS)
             .pipe(Effect.head, Effect.orDie)
-          return yield* decodeMark(markWire(row)).pipe(Effect.orDie)
+          return yield* decodeMark(row).pipe(Effect.orDie)
         }),
       ),
     )
@@ -124,7 +117,7 @@ export const marksHandlers = HttpApiBuilder.group(SetListApi, "marks", (handlers
             .returning(MARK_COLUMNS)
             .pipe(Effect.orDie)
           if (!row) return yield* new MarkNotFound({ id })
-          return yield* decodeMark(markWire(row)).pipe(Effect.orDie)
+          return yield* decodeMark(row).pipe(Effect.orDie)
         }),
       ),
     )
@@ -139,7 +132,7 @@ export const marksHandlers = HttpApiBuilder.group(SetListApi, "marks", (handlers
     ),
 )
 
-export const stampsHandlers = HttpApiBuilder.group(SetListApi, "stamps", (handlers) =>
+export const stampsHandlers = HttpApiBuilder.group(GigListApi, "stamps", (handlers) =>
   handlers
     .handle("listStamps", () =>
       asSession(() =>
@@ -150,7 +143,7 @@ export const stampsHandlers = HttpApiBuilder.group(SetListApi, "stamps", (handle
             .select(["id", "name", "body", "created_at"])
             .orderBy("created_at")
             .pipe(Effect.orDie)
-          return yield* decodeStamps(rows.map((r) => ({ ...r, created_at: String(r.created_at) }))).pipe(Effect.orDie)
+          return yield* decodeStamps(rows).pipe(Effect.orDie)
         }),
       ),
     )
@@ -163,7 +156,7 @@ export const stampsHandlers = HttpApiBuilder.group(SetListApi, "stamps", (handle
             .values({ name: payload.name, body: JSON.stringify(payload.body) })
             .returning(["id", "name", "body", "created_at"])
             .pipe(Effect.head, Effect.orDie)
-          return yield* decodeStamp({ ...row, created_at: String(row.created_at) }).pipe(Effect.orDie)
+          return yield* decodeStamp(row).pipe(Effect.orDie)
         }),
       ),
     )

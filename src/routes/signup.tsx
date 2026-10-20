@@ -37,7 +37,7 @@ function Signup() {
         <div className="text-center">
           <h1 className="text-2xl font-bold tracking-tight">Create account</h1>
           <p className="text-sm text-zinc-500 mt-1">
-            Get your band on SetList
+            Get your band on GigList
           </p>
         </div>
 

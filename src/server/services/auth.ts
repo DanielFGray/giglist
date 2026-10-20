@@ -1,6 +1,7 @@
 import { Effect, Redacted, Schema as S } from "effect";
 import { sql } from "kysely";
 import { Db, Kysely } from "../db";
+import { gravatarUrl } from "../gravatar";
 
 export class InvalidCredentials extends S.TaggedError<InvalidCredentials, { readonly brand: unique symbol }>()("InvalidCredentials", {
   message: S.String,
@@ -33,7 +34,7 @@ export type AuthError =
   | WeakPassword
   | RegistrationFailed;
 
-export const register = Effect.fnUntraced(
+export const register = Effect.fn("Auth.register")(
   function* (args: { username: string; email: string; password: Redacted.Redacted<string> }) {
     const db = yield* Db;
 
@@ -44,7 +45,7 @@ export const register = Effect.fnUntraced(
           email => ${args.email},
           email_is_verified => false,
           name => ${null},
-          avatar_url => ${null},
+          avatar_url => ${gravatarUrl(args.email)},
           password => ${Redacted.value(args.password)}::text
         )`.as("u"),
       )
@@ -80,7 +81,7 @@ export const register = Effect.fnUntraced(
   }),
 );
 
-export const login = Effect.fnUntraced(
+export const login = Effect.fn("Auth.login")(
   function* (args: { id: string; password: Redacted.Redacted<string> }) {
     const db = yield* Db;
 
@@ -109,20 +110,43 @@ export const login = Effect.fnUntraced(
   }),
 );
 
-export const logout = Effect.fnUntraced(function* (sessionId: string) {
+export const forgotPassword = Effect.fn("Auth.forgotPassword")(function* (email: string) {
   const db = yield* Db;
-  yield* db
-    .selectNoFrom([
-      sql<string>`(DELETE FROM app_private.sessions WHERE uuid = ${sessionId}::uuid)`.as("_"),
-    ])
-    .pipe(Effect.ignore);
+  yield* db.selectNoFrom([
+    sql<void>`app_public.forgot_password(${email}::citext)`.as("forgot_password"),
+  ]);
 });
 
-export const getMe = Effect.fnUntraced(function* (sessionId: string) {
+export const resetPassword = Effect.fn("Auth.resetPassword")(
+  function* (args: { userId: string; token: string; password: Redacted.Redacted<string> }) {
+    const db = yield* Db;
+    const rows = yield* db.selectFrom(
+      sql<{ uuid: string; user_id: string }>`app_private.reset_password(
+        ${args.userId}::uuid,
+        ${args.token},
+        ${Redacted.value(args.password)}::text
+      )`.as("s"),
+    ).selectAll();
+    const session = rows.find((row) => row.uuid != null);
+    if (!session) return yield* new AccountError({ message: "This reset link is invalid or expired" });
+    return { sessionId: session.uuid, userId: session.user_id };
+  },
+  Effect.mapError((error): AccountError => {
+    if (error._tag === "AccountError") return error;
+    return new AccountError({ message: "This reset link is invalid or expired" });
+  }),
+);
+
+export const logout = Effect.fn("Auth.logout")(function* (sessionId: string) {
+  const db = yield* Db;
+  yield* db.deleteFrom("app_private.sessions").where("uuid", "=", sessionId);
+});
+
+export const getMe = Effect.fn("Auth.getMe")(function* (sessionId: string) {
   const db = yield* Db;
   return yield* db
     .selectFrom("app_public.users")
-    .select(["id", "username", "name", "bio", "avatar_url", "role", "is_verified"])
+    .select(["id", "username", "name", "bio", "avatar_url", "is_public", "page_theme", "page_options", "role", "is_verified"])
     .where(
       "id",
       "=",
@@ -140,12 +164,15 @@ const emptyToNull = (value: string | null) => {
   return trimmed.length === 0 ? null : trimmed;
 };
 
-export const updateProfile = Effect.fnUntraced(
+export const updateProfile = Effect.fn("Auth.updateProfile")(
   function* (args: {
     username: string;
     name: string | null;
     bio: string | null;
     avatar_url: string | null;
+    is_public?: boolean;
+    page_theme?: string | null;
+    page_options?: Record<string, string>;
   }) {
     const db = yield* Kysely;
     return yield* db
@@ -155,9 +182,13 @@ export const updateProfile = Effect.fnUntraced(
         name: emptyToNull(args.name),
         bio: emptyToNull(args.bio),
         avatar_url: emptyToNull(args.avatar_url),
+        // An absent switch or theme keeps the profile as it was.
+        ...(args.is_public === undefined ? {} : { is_public: args.is_public }),
+        ...(args.page_theme === undefined ? {} : { page_theme: args.page_theme }),
+        ...(args.page_options === undefined ? {} : { page_options: JSON.stringify(args.page_options) }),
       })
       .where("id", "=", sql<string>`app_public.current_user_id()`)
-      .returning(["id", "username", "name", "bio", "avatar_url", "role", "is_verified"])
+      .returning(["id", "username", "name", "bio", "avatar_url", "is_public", "page_theme", "page_options", "role", "is_verified"])
       .pipe(
         Effect.head,
         Effect.catchTag("NoSuchElementError", () =>
@@ -181,7 +212,7 @@ export const updateProfile = Effect.fnUntraced(
   }),
 );
 
-export const changePassword = Effect.fnUntraced(
+export const changePassword = Effect.fn("Auth.changePassword")(
   function* (args: {
     oldPassword: Redacted.Redacted<string>;
     newPassword: Redacted.Redacted<string>;
@@ -219,7 +250,7 @@ export const changePassword = Effect.fnUntraced(
   }),
 );
 
-export const listEmails = Effect.fnUntraced(function* () {
+export const listEmails = Effect.fn("Auth.listEmails")(function* () {
   const db = yield* Kysely;
   return yield* db
     .selectFrom("app_public.user_emails")
@@ -228,7 +259,7 @@ export const listEmails = Effect.fnUntraced(function* () {
     .orderBy("created_at", "asc");
 });
 
-export const addEmail = Effect.fnUntraced(
+export const addEmail = Effect.fn("Auth.addEmail")(
   function* (email: string) {
     const db = yield* Kysely;
     return yield* db
@@ -251,7 +282,7 @@ export const addEmail = Effect.fnUntraced(
   }),
 );
 
-export const removeEmail = Effect.fnUntraced(
+export const removeEmail = Effect.fn("Auth.removeEmail")(
   function* (emailId: string) {
     const db = yield* Kysely;
     const deleted = yield* db
@@ -273,7 +304,7 @@ export const removeEmail = Effect.fnUntraced(
   }),
 );
 
-export const makeEmailPrimary = Effect.fnUntraced(
+export const makeEmailPrimary = Effect.fn("Auth.makeEmailPrimary")(
   function* (emailId: string) {
     const db = yield* Kysely;
     return yield* db
@@ -307,7 +338,7 @@ export const makeEmailPrimary = Effect.fnUntraced(
   }),
 );
 
-export const resendEmailVerification = Effect.fnUntraced(
+export const resendEmailVerification = Effect.fn("Auth.resendEmailVerification")(
   function* (emailId: string) {
     const db = yield* Kysely;
     const ok = yield* db
@@ -334,7 +365,7 @@ export const resendEmailVerification = Effect.fnUntraced(
 );
 
 /** Token-gated; runs as the table owner because no session is required. */
-export const verifyEmail = Effect.fnUntraced(
+export const verifyEmail = Effect.fn("Auth.verifyEmail")(
   function* (args: { id: string; token: string }) {
     const db = yield* Db;
     const ok = yield* db
@@ -362,7 +393,7 @@ export const verifyEmail = Effect.fnUntraced(
 );
 
 /** Band owners must transfer or delete those bands before account deletion. */
-const requireNoOwnedBands = Effect.fnUntraced(function* () {
+const requireNoOwnedBands = Effect.fn("Auth.requireNoOwnedBands")(function* () {
   const db = yield* Kysely;
   const owned = yield* db
     .selectFrom("app_public.band_memberships")
@@ -377,7 +408,7 @@ const requireNoOwnedBands = Effect.fnUntraced(function* () {
   }
 });
 
-export const requestAccountDeletion = Effect.fnUntraced(
+export const requestAccountDeletion = Effect.fn("Auth.requestAccountDeletion")(
   function* () {
     yield* requireNoOwnedBands();
     const db = yield* Kysely;
@@ -403,7 +434,7 @@ export const requestAccountDeletion = Effect.fnUntraced(
   }),
 );
 
-export const confirmAccountDeletion = Effect.fnUntraced(
+export const confirmAccountDeletion = Effect.fn("Auth.confirmAccountDeletion")(
   function* (token: string) {
     yield* requireNoOwnedBands();
     const db = yield* Kysely;

@@ -8,7 +8,7 @@
 export type Voicing = { readonly frets: ReadonlyArray<number | null> }
 
 /** One finger laid across several strings at one fret. */
-export type Barre = { readonly fret: number; readonly from: number; readonly to: number }
+type Barre = { readonly fret: number; readonly from: number; readonly to: number }
 
 /**
  * The barre of a shape, or null when it needs none.

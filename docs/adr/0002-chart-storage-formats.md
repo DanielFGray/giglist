@@ -17,5 +17,5 @@ Pasted text goes through our own importer, not ChordSheetJS's chords-over-words 
 
 ## Consequences
 
-- Editing a score in the app needs its own storage decision. The two choices are to keep the bytes and store edits as a separate layer, or to accept a lossy export.
+- An edited score is stored as described in docs/adr/0008: edits patch a Guitar Pro 7 file's score.gpif in place, and an uploaded Guitar Pro 3, 4 or 5 file is converted once, with loss, on its first edit.
 - The bug in ChordSheetJS's Ultimate Guitar parser is not yet reported upstream.

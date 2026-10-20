@@ -171,7 +171,7 @@ const makeSqlCommit = (client: SqlClient.SqlClient) => {
 };
 
 /** @internal */
-export const effectifyWithSql = <T>(
+const effectifyWithSql = <T>(
   obj: T,
   client: SqlClient.SqlClient,
   whitelist: Array<string> = [],
@@ -182,7 +182,7 @@ export const effectifyWithSql = <T>(
  * Create a Kysely instance whose builders are Effects, executed through the
  * `SqlClient` in context. The dialect is a dummy driver, so Kysely only compiles.
  */
-export const makeWithSql = <DB>(config: KyselyConfig) =>
+const makeWithSql = <DB>(config: KyselyConfig) =>
   Effect.gen(function* () {
     const client = yield* SqlClient.SqlClient;
 

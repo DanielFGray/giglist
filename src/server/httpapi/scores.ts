@@ -2,11 +2,11 @@ import { createHash } from "node:crypto"
 import { Effect } from "effect"
 import { HttpApiBuilder } from "effect/http-api"
 import { Kysely } from "../db"
-import { ChartForbidden, ChartInvalid, SetListApi } from "../../api/contracts"
+import { ChartForbidden, ChartInvalid, GigListApi } from "../../api/contracts"
 import { MAX_SCORE_BYTES, scoreFormat } from "../../charts/score-file"
 import { asSession, assertSongVisible, decodeChart, withNewestRevision } from "./charts"
 
-export const scoresHandlers = HttpApiBuilder.group(SetListApi, "scores", (handlers) =>
+export const scoresHandlers = HttpApiBuilder.group(GigListApi, "scores", (handlers) =>
   handlers
     .handle("uploadScore", ({ query, payload }) =>
       asSession(() =>

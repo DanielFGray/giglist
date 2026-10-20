@@ -5,7 +5,7 @@ import { explains } from "../../charts/changes"
 import { anchorText, parseDoc } from "../../charts/doc"
 import { guessKey, importPasted } from "../../charts/lyrics"
 import { ChartReader } from "../services/chart-reader"
-import { Chart, ChartConflict, ChartForbidden, ChartInvalid, CurrentSession, SetListApi, type SessionData } from "../../api/contracts"
+import { Chart, ChartConflict, ChartForbidden, ChartInvalid, CurrentSession, GigListApi, type SessionData } from "../../api/contracts"
 
 export const decodeChart = S.decodeUnknownEffect(Chart)
 const decodeCharts = S.decodeUnknownEffect(S.Array(Chart))
@@ -51,7 +51,7 @@ export const assertSongVisible = Effect.fnUntraced(function* (songId: string) {
 })
 
 /** Joins each chart to the text of its newest revision, in the wire shape. */
-export const withNewestRevision = Effect.fnUntraced(function* (charts: ReadonlyArray<ChartRow>) {
+export const withNewestRevision = Effect.fn("Charts.withNewestRevision")(function* (charts: ReadonlyArray<ChartRow>) {
   if (charts.length === 0) return []
   const db = yield* Kysely
   const revisions = yield* db
@@ -67,12 +67,12 @@ export const withNewestRevision = Effect.fnUntraced(function* (charts: ReadonlyA
     const revision = newest.get(chart.id)
     // A chart always has a revision; one without is not shown.
     return revision
-      ? [{ ...chart, created_at: String(chart.created_at), revision_id: revision.id, source: revision.source }]
+      ? [{ ...chart, revision_id: revision.id, source: revision.source }]
       : []
   })
 })
 
-export const chartsHandlers = HttpApiBuilder.group(SetListApi, "charts", (handlers) =>
+export const chartsHandlers = HttpApiBuilder.group(GigListApi, "charts", (handlers) =>
   handlers
     .handle("listCharts", ({ params: { songId } }) =>
       asSession(() =>

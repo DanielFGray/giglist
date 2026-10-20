@@ -10,7 +10,7 @@
  * Pure and free of the DOM, so the server and the browser share it.
  */
 import { Chord, ChordLyricsPair, ChordProParser, Literal, Tag } from "chordsheetjs"
-import { MusicalKeys, type MusicalKeyType } from "~/api/contracts"
+import type { MusicalKeyType } from "~/api/contracts"
 import { anchorLine, enclosingSection, inPhrase, parseDoc } from "./doc"
 import { readScoreLink, type ScoreLinkReading } from "./score-link"
 
@@ -489,12 +489,6 @@ const NOTE_INDEX: Record<string, number> = {
   G: 7, "G#": 8, Ab: 8, A: 9, "A#": 10, Bb: 10, B: 11,
 }
 
-const MAJOR_SCALE = [0, 2, 4, 5, 7, 9, 11]
-const MINOR_SCALE = [0, 2, 3, 5, 7, 8, 10]
-// Whether each scale degree's diatonic chord is minor (or diminished), major key then minor key.
-const MAJOR_DEGREE_MINOR = [false, true, true, false, false, true, true]
-const MINOR_DEGREE_MINOR = [true, true, false, true, true, false, false]
-
 /** Collects the chord names written in `text`, from `[G]` brackets and chord lines. */
 function collectChords(text: string): Array<{ root: string; minor: boolean }> {
   const found: Array<{ root: string; minor: boolean }> = []
@@ -521,16 +515,20 @@ function collectChords(text: string): Array<{ root: string; minor: boolean }> {
 }
 
 /**
- * Guesses the key a chart was written in from its chords, for a chart saved
- * without one. Returns null when no chord can be read.
+ * One name per key, the one with fewer accidentals: Db, not C#, and C#m, not Dbm.
+ * F# and Ebm, which tie, take the usual name. `MusicalKeys` holds both names, and
+ * scoring it would return whichever enharmonic comes first.
  */
+const KEY_NAMES: ReadonlyArray<MusicalKeyType> = [
+  "C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B",
+  "Cm", "C#m", "Dm", "Ebm", "Em", "Fm", "F#m", "Gm", "G#m", "Am", "Bbm", "Bm",
+]
+
 const MAJOR_PROFILE = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88]
 const MINOR_PROFILE = [6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17]
 
 function rotate(profile: ReadonlyArray<number>, tonic: number): ReadonlyArray<number> {
-  const out = new Array<number>(12)
-  for (let i = 0; i < 12; i++) out[i] = profile[(i - tonic + 12) % 12]!
-  return out
+  return Array.from({ length: 12 }, (_, i) => profile[(i - tonic + 12) % 12]!)
 }
 
 function pearson(xs: ReadonlyArray<number>, ys: ReadonlyArray<number>): number {
@@ -550,21 +548,28 @@ function pearson(xs: ReadonlyArray<number>, ys: ReadonlyArray<number>): number {
 }
 
 /**
- * Guesses the key a chart was written in from its chords, using the
- * Krumhansl-Schmuckler key-finding algorithm: build a pitch-class histogram
- * from the chords' roots, thirds and fifths, then pick the key whose
- * Krumhansl key profile correlates best with it.
+ * Guesses the key a chart was written in from its chords, for a chart saved
+ * without one; null when no chord can be read. It uses the Krumhansl-Schmuckler
+ * key-finding algorithm: build a pitch-class histogram from the chords' roots,
+ * thirds and fifths, then pick the key whose Krumhansl key profile correlates
+ * best with it.
  *
  * Krumhansl, C. L. (1990). Cognitive Foundations of Musical Pitch.
  * Oxford University Press.
  */
 export function guessKey(text: string): MusicalKeyType | null {
-  const chords = collectChords(text)
+  return keyOfChords(collectChords(text).map((chord) => ({ root: NOTE_INDEX[chord.root]!, minor: chord.minor })))
+}
+
+/**
+ * The key `guessKey` finds for chords given as root pitch classes, named as
+ * players write it (`KEY_NAMES`): Ab, not G#.
+ */
+export function keyOfChords(chords: ReadonlyArray<{ readonly root: number; readonly minor: boolean }>): MusicalKeyType | null {
   if (chords.length === 0) return null
-  const histogram = new Array<number>(12).fill(0)
+  const histogram = Array.from({ length: 12 }, () => 0)
   for (const chord of chords) {
-    const root = NOTE_INDEX[chord.root]
-    if (root === undefined) continue
+    const root = chord.root
     const thirdInterval = chord.minor ? 3 : 4
     const fifthInterval = 7
     histogram[root]! += 3
@@ -572,7 +577,7 @@ export function guessKey(text: string): MusicalKeyType | null {
     histogram[(root + fifthInterval) % 12]! += 2
   }
   let best: { key: MusicalKeyType; score: number } | null = null
-  for (const key of MusicalKeys) {
+  for (const key of KEY_NAMES) {
     const isMinor = key.endsWith("m")
     const root = isMinor ? key.slice(0, -1) : key
     const tonic = NOTE_INDEX[root]

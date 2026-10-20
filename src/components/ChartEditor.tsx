@@ -1,15 +1,16 @@
-import { useEffect, useMemo, useRef, useState, type DragEvent } from "react"
+import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type DragEvent } from "react"
 import { charts, type ChartInfo } from "~/api/client"
 import { composeChanges } from "~/charts/changes"
 import {
   addPhrase, addScoreLink, addSection, anchorLine, blockRange, canMoveBlockTo, deleteBlock, deleteLine, directiveName, dropSlots, duplicateBlock, editLine, hasHandle, inPhrase,
   insertLineAfter, moveBlock, moveBlockTo, moveChord, parseDoc, phraseAt, placeChord, removeChord, removeSection, renameSection, segments, serializeDoc,
-  setPhrase, type DocLine, type Edit,
+  setPhrase, type ChartDoc, type DocLine, type Edit,
 } from "~/charts/doc"
 import { isChordName, isPhraseStart, isTabStart, suggestedChords } from "~/charts/lyrics"
 import { readScoreLink } from "~/charts/score-link"
+import { chartSlot, suggest, type Suggestion } from "~/charts/suggest"
 import { BlockHandle, type Point } from "./BlockHandle"
-import { ChordSheet } from "./ChordSheet"
+import { ChordInput, type ChordEntry } from "./ChordInput"
 import { slotUnder, type DropRow, type DropSlot } from "./drop-slot"
 import { errorMessage } from "./form"
 import { Phrase } from "./Phrase"
@@ -21,6 +22,20 @@ import { ScorePicker } from "./ScorePicker"
 type Held = { chord: string; from?: { line: number; chord: number } }
 
 const DRAG_TYPE = "application/x-setlist-chord"
+
+/** A word of the chart: its lyric line, and the column it starts at. */
+type Place = { readonly line: number; readonly at: number }
+
+/** The open chord field, as a line draws it on its word at column `at`. */
+type EntryView = {
+  readonly at: number
+  readonly anchor: string
+  readonly likely: ReadonlyArray<Suggestion>
+  readonly fresh: ReadonlyArray<Suggestion>
+  readonly onDone: (result: ChordEntry, step: -1 | 0 | 1) => void
+}
+
+const NO_SUGGESTIONS = { likely: [], fresh: [] } as const
 
 /** A block lifted by its handle, and the slot the pointer is over, if the block may go there. */
 type Drag = { block: number; over: DropSlot | null }
@@ -58,10 +73,11 @@ export function ChartEditor({
   const [held, setHeld] = useState<Held | null>(null)
   const [custom, setCustom] = useState("")
   const [editingLine, setEditingLine] = useState<number | null>(null)
-  const [sheet, setSheet] = useState<{ line: number; at: number } | null>(null)
+  /** The word whose chord is being typed: its line, and the column it starts at. */
+  const [entry, setEntry] = useState<Place | null>(null)
   /**
-   * Chords typed into the chord sheet that no chip had. They stay on the chips for
-   * this chart even after a replace or an undo drops their last use.
+   * Chords typed over a word that no chip had. They stay on the chips for this
+   * chart even after a replace or an undo drops their last use.
    */
   const [extra, setExtra] = useState<ReadonlyArray<string>>([])
   const [drag, setDrag] = useState<Drag | null>(null)
@@ -78,38 +94,43 @@ export function ChartEditor({
     return [...new Set([...suggested, ...used, ...extra])]
   }, [doc, chart.written_key, extra])
 
-  // The chord sheet's word, read from the current chart.
-  const sheetLine = sheet ? doc[sheet.line] : undefined
-  const target =
-    sheet && sheetLine?.kind === "lyrics"
-      ? (() => {
-          const found = sheetLine.chords.findIndex((c) => c.at === sheet.at)
-          return {
-            ...sheet,
-            chordIndex: found >= 0 ? found : null,
-            current: found >= 0 ? sheetLine.chords[found]!.chord : null,
-            word: sheetLine.text.slice(sheet.at).trim().split(/\s+/)[0] || "the end of the line",
-          }
-        })()
-      : null
+  // The chords offered for the word being typed over, from the chart's key and its own chords.
+  const offered = useMemo(
+    () => (entry && chart.written_key ? suggest(chartSlot(doc, chart.written_key, entry.line, entry.at)) : NO_SUGGESTIONS),
+    [entry, doc, chart.written_key],
+  )
+  const entryAnchor = `--entry-${useId().replace(/\W/g, "")}`
 
-  // On a phone the sheet covers the bottom of the window, so the word it edits is brought to the middle.
-  const sheetLineIndex = sheet?.line
-  const sheetColumn = sheet?.at
+  // On a phone the keyboard covers the bottom of the window, so the word being typed over is brought to the middle.
+  const entryLine = entry?.line
+  const entryColumn = entry?.at
   useEffect(() => {
-    if (sheetLineIndex === undefined) return
-    document.querySelector(`[data-line="${sheetLineIndex}"] [data-at="${sheetColumn}"]`)?.scrollIntoView({ block: "center" })
-  }, [sheetLineIndex, sheetColumn])
+    if (entryLine === undefined) return
+    document.querySelector(`[data-line="${entryLine}"] [data-at="${entryColumn}"]`)?.scrollIntoView({ block: "center" })
+  }, [entryLine, entryColumn])
 
-  /** The one place the steps change. The chord sheet names a word by line and column, so any change to the chart closes it. */
+  /** The one place the steps change. The chord field names a word by line and column, so any change to the chart closes it. */
   const commit = (next: ReadonlyArray<Edit>) => {
-    setSheet(null)
+    setEntry(null)
     setSteps(next)
   }
 
   const apply = (edit: Edit) => {
-    if (edit.changes.length === 0) return setSheet(null)
+    if (edit.changes.length === 0) return setEntry(null)
     commit([...steps, edit])
+  }
+
+  /** Puts or removes the typed chord, then opens the field on the word `step` words along, if any. */
+  const endEntry = (place: Place, result: ChordEntry, step: -1 | 0 | 1) => {
+    const line = doc[place.line]
+    const chordIndex = line?.kind === "lyrics" ? line.chords.findIndex((chord) => chord.at === place.at) : -1
+    if (result && "put" in result) {
+      if (!palette.includes(result.put)) setExtra((all) => [...all, result.put])
+      apply(placeChord(doc, place.line, place.at, result.put))
+    } else if (result && chordIndex >= 0) apply(removeChord(doc, place.line, chordIndex))
+    else setEntry(null)
+    // A chord edit moves no word, so the next word's column holds in the edited chart too.
+    if (step !== 0) setEntry(wordAlong(doc, place, step))
   }
 
   const dropOn = (line: number, at: number, dropped: Held) => {
@@ -212,23 +233,8 @@ export function ChartEditor({
       <p className="text-xs text-zinc-500">
         {held
           ? `Holding ${held.chord}. Click a word to put it there, or drag it.`
-          : `Tap a word to add a chord, or a chord to change it. Drag a chord to move it. Editing in ${chart.written_key ?? "the written key"}.`}
+          : `Tap a word and type its chord; Tab goes on to the next word. Drag a chord to move it. Editing in ${chart.written_key ?? "the written key"}.`}
       </p>
-      {target && (
-        <ChordSheet
-          key={`${target.line}:${target.at}`}
-          chips={palette}
-          word={target.word}
-          current={target.current}
-          onPick={(chord) => apply(placeChord(doc, target.line, target.at, chord))}
-          onType={(chord) => {
-            if (!palette.includes(chord)) setExtra((all) => [...all, chord])
-            apply(placeChord(doc, target.line, target.at, chord))
-          }}
-          onRemove={target.chordIndex === null ? null : () => apply(removeChord(doc, target.line, target.chordIndex!))}
-          onClose={() => setSheet(null)}
-        />
-      )}
 
       <div className="font-mono text-sm leading-tight">
         {doc.map((line, index) => {
@@ -267,7 +273,12 @@ export function ChartEditor({
                 held={held}
                 editing={editingLine === index}
                 onDrop={dropOn}
-                onSheet={(line, at) => setSheet({ line, at })}
+                onEntry={(line, at) => setEntry({ line, at })}
+                entry={
+                  entry?.line === index
+                    ? { at: entry.at, anchor: entryAnchor, ...offered, onDone: (result, step) => endEntry(entry, result, step) }
+                    : null
+                }
                 onEditStart={() => setEditingLine(index)}
                 onEditEnd={(text) => {
                   setEditingLine(null)
@@ -375,8 +386,10 @@ function Line(props: {
   held: Held | null
   editing: boolean
   onDrop: (line: number, at: number, dropped: Held) => void
-  /** Opens the chord sheet on the word at column `at` of the line. */
-  onSheet: (line: number, at: number) => void
+  /** Opens the chord field on the word at column `at` of the line. */
+  onEntry: (line: number, at: number) => void
+  /** The chord field, when it is open on a word of this line. */
+  entry: EntryView | null
   onEditStart: () => void
   onEditEnd: (text: string | null) => void
   onInsertAfter: () => void
@@ -494,45 +507,58 @@ function LyricLine(props: Parameters<typeof Line>[0] & { onWritePhrase: () => vo
   if (line.kind !== "lyrics") return null
   return (
     <div data-pwid="editor-line" className="group flex flex-wrap items-end">
-      {segments(line).map((segment) => (
-        <span
-          key={segment.start}
-          data-pwid="editor-segment"
-          data-at={segment.start}
-          onClick={() => (props.held ? props.onDrop(index, segment.start, props.held) : props.onSheet(index, segment.start))}
-          onDragOver={(event) => event.preventDefault()}
-          onDrop={(event) => {
-            const dropped = readDrag(event)
-            if (dropped) props.onDrop(index, segment.start, dropped)
-          }}
-          className={`inline-flex flex-col rounded-sm ${props.held ? "cursor-copy hover:bg-[var(--color-amber-accent)]/20" : ""}`}
-        >
-          <span className="flex h-5 gap-1">
-            {segment.chords.map((chordIndex) => {
-              const chord = line.chords[chordIndex]!.chord
-              return (
-                <button
-                  key={chordIndex}
-                  data-pwid="placed-chord"
-                  type="button"
-                  draggable
-                  onDragStart={(event) => startDrag(event, { chord, from: { line: index, chord: chordIndex } })}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    props.onSheet(index, line.chords[chordIndex]!.at)
-                  }}
-                  className="font-semibold cursor-grab"
-                >
-                  {chord}
-                </button>
-              )
-            })}
+      {segments(line).map((segment) => {
+        const open = props.entry?.at === segment.start ? props.entry : null
+        return (
+          <span
+            key={segment.start}
+            data-pwid="editor-segment"
+            data-at={segment.start}
+            onClick={() => (props.held ? props.onDrop(index, segment.start, props.held) : props.onEntry(index, segment.start))}
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={(event) => {
+              const dropped = readDrag(event)
+              if (dropped) props.onDrop(index, segment.start, dropped)
+            }}
+            style={open ? ({ anchorName: open.anchor } as CSSProperties) : undefined}
+            className={`relative inline-flex flex-col rounded-sm ${props.held ? "cursor-copy hover:bg-[var(--color-amber-accent)]/20" : "cursor-text"}`}
+          >
+            <span className="flex h-5 gap-1">
+              {segment.chords.map((chordIndex) => {
+                const chord = line.chords[chordIndex]!.chord
+                return (
+                  <button
+                    key={chordIndex}
+                    data-pwid="placed-chord"
+                    type="button"
+                    draggable
+                    onDragStart={(event) => startDrag(event, { chord, from: { line: index, chord: chordIndex } })}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      props.onEntry(index, line.chords[chordIndex]!.at)
+                    }}
+                    className="font-semibold cursor-grab"
+                  >
+                    {chord}
+                  </button>
+                )
+              })}
+            </span>
+            <span data-pwid="editor-lyric" className="whitespace-pre min-w-[1ch]">
+              {line.text.slice(segment.start, segment.end) || " "}
+            </span>
+            {open && (
+              <ChordInput
+                current={line.chords.find((chord) => chord.at === segment.start)?.chord ?? null}
+                likely={open.likely}
+                fresh={open.fresh}
+                anchor={open.anchor}
+                onDone={open.onDone}
+              />
+            )}
           </span>
-          <span data-pwid="editor-lyric" className="whitespace-pre min-w-[1ch]">
-            {line.text.slice(segment.start, segment.end) || " "}
-          </span>
-        </span>
-      ))}
+        )
+      })}
       <span className="ml-2 flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
         <button data-pwid="line-edit" type="button" onClick={props.onEditStart} aria-label="Edit words" className={button}>
           Edit words
@@ -673,6 +699,13 @@ function LyricInput({ text, pwid = "line-input", onDone }: { text: string; pwid?
       className="w-full rounded-md border border-[var(--color-amber-accent)] bg-[var(--color-surface-raised)] px-2 py-1 font-mono text-sm"
     />
   )
+}
+
+/** The word `step` words along from `place`, over line ends, or null past either end of the chart. */
+function wordAlong(doc: ChartDoc, place: Place, step: -1 | 1): Place | null {
+  const words = doc.flatMap((line, index) => (line.kind === "lyrics" ? segments(line).map((segment) => ({ line: index, at: segment.start })) : []))
+  const here = words.findIndex((word) => word.line === place.line && word.at === place.at)
+  return here < 0 ? null : (words[here + step] ?? null)
 }
 
 function startDrag(event: DragEvent, held: Held) {

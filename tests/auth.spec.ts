@@ -33,6 +33,18 @@ test.describe("auth", () => {
     await expect(page).not.toHaveURL(/\/api\/testing\//)
   })
 
+  test("logging out ends the session on the server, not only in the browser", async ({ page, testing }) => {
+    const me = await testing.login({ username: "test_logout" })
+    const cookies = await page.context().cookies()
+    expect(await (await page.request.get("/api/auth/me")).json()).toMatchObject({ username: me.username })
+
+    const out = await page.request.post("/api/auth/logout")
+    expect(out.ok(), await out.text()).toBe(true)
+    // A copy of the old cookie no longer signs anyone in.
+    await page.context().addCookies(cookies)
+    expect(await (await page.request.get("/api/auth/me")).json()).toBeNull()
+  })
+
   test("can navigate between login and signup", async ({ page }) => {
     await page.goto("/login")
     await expect(getPw(page, "login-page")).toBeVisible()
@@ -42,10 +54,11 @@ test.describe("auth", () => {
     await expect(getPw(page, "login-page")).toBeVisible()
   })
 
-  test("can register via UI", async ({ page }) => {
+  test("can register via UI", async ({ page, testing }) => {
+    const username = testing.username("test_newuser")
     await page.goto("/signup")
-    await getPw(page, "signup-username").fill("test_newuser")
-    await getPw(page, "signup-email").fill("test_newuser@test.local")
+    await getPw(page, "signup-username").fill(username)
+    await getPw(page, "signup-email").fill(`${username}@test.local`)
     await getPw(page, "signup-password").fill("testpassword123")
     await getPw(page, "signup-submit").click()
 
@@ -55,10 +68,10 @@ test.describe("auth", () => {
 
   test("can login via UI", async ({ page, testing }) => {
     // Create user via testing API (don't need the session — will login via UI)
-    await testing.login({ username: "test_loginui" })
+    const me = await testing.login({ username: "test_loginui" })
     await page.context().clearCookies()
 
-    await loginViaUi(page, "test_loginui", TEST_PASSWORD)
+    await loginViaUi(page, me.username, TEST_PASSWORD)
   })
 
   test("can log out", async ({ page, testing }) => {
@@ -72,16 +85,17 @@ test.describe("auth", () => {
     await expect(getPw(page, "nav-signin")).toBeVisible({ timeout: 5000 })
   })
 
-  test("shows error for wrong password", async ({ page }) => {
+  test("shows error for wrong password", async ({ page, testing }) => {
+    const username = testing.username("test_wrongpw")
     // Create user without keeping the session cookie in the browser
     await fetch(`${BASE_URL}/api/testing/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: "test_wrongpw" }),
+      body: JSON.stringify({ username }),
     })
 
     await page.goto("/login")
-    await getPw(page, "login-id").fill("test_wrongpw")
+    await getPw(page, "login-id").fill(username)
     await getPw(page, "login-password").fill("wrongpassword")
     await getPw(page, "login-submit").click()
 
@@ -92,12 +106,12 @@ test.describe("auth", () => {
     page,
     testing,
   }) => {
-    await testing.login({ username: "test_dupe" })
+    const me = await testing.login({ username: "test_dupe" })
     await page.context().clearCookies()
 
     await page.goto("/signup")
-    await getPw(page, "signup-username").fill("test_dupe")
-    await getPw(page, "signup-email").fill("test_dupe_new@test.local")
+    await getPw(page, "signup-username").fill(me.username)
+    await getPw(page, "signup-email").fill(`other_${me.email}`)
     await getPw(page, "signup-password").fill("testpassword123")
     await getPw(page, "signup-submit").click()
 

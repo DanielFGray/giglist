@@ -1,10 +1,10 @@
-import { Effect, Schema as S } from "effect"
+import { Effect, Schema as S, Struct } from "effect"
 import { HttpApiBuilder } from "effect/http-api"
 import { Kysely, withAuthContext } from "../db"
 import { isBandMember } from "./scope"
 import {
   Song,
-  SetListApi,
+  GigListApi,
   CurrentSession,
   SongForbidden,
   type SessionData,
@@ -17,15 +17,6 @@ import {
 } from "../../../generated/queries.js"
 
 const decodeSong = S.decodeUnknownEffect(Song)
-
-/** The pg driver hands back timestamps as Date; the wire schema uses strings. */
-const toWire = <T extends { created_at: unknown; updated_at: unknown }>(
-  row: T,
-) => ({
-  ...row,
-  created_at: String(row.created_at),
-  updated_at: String(row.updated_at),
-})
 
 /**
  * Require that the session is a member of `bandId`.
@@ -71,13 +62,13 @@ const songRow = Effect.fnUntraced(function*(id: string) {
     )
   })
 
-export const songsHandlers = HttpApiBuilder.group(SetListApi, "songs", (handlers) =>
+export const songsHandlers = HttpApiBuilder.group(GigListApi, "songs", (handlers) =>
   handlers
     .handle("songFindById", ({ params: { id } }) =>
       asSession((_session) =>
         Effect.gen(function* () {
           const row = yield* songRow(id)
-          return yield* decodeSong(toWire(row)).pipe(Effect.orDie)
+          return yield* decodeSong(row).pipe(Effect.orDie)
         }),
       ),
     )
@@ -87,7 +78,6 @@ export const songsHandlers = HttpApiBuilder.group(SetListApi, "songs", (handlers
           const db = yield* Kysely
           yield* assertBandMember(bandId)
           return yield* songFindByBandId(db)({ band_id: bandId }).pipe(
-            Effect.map((rows) => rows.map(toWire)),
             Effect.andThen(S.decodeUnknownEffect(S.Array(Song))),
             Effect.orDie,
           )
@@ -105,7 +95,6 @@ export const songsHandlers = HttpApiBuilder.group(SetListApi, "songs", (handlers
             created_by: session.userId,
           }).pipe(
             Effect.head,
-            Effect.map(toWire),
             Effect.andThen(decodeSong),
             Effect.orDie,
           )
@@ -121,22 +110,15 @@ export const songsHandlers = HttpApiBuilder.group(SetListApi, "songs", (handlers
           // Not the generated songUpdate: it also writes band_id and
           // created_by, and the visitor role may update only the song's own
           // fields. The where clause plus the update policy do the scoping.
+          // An empty SET is not valid SQL, and an empty payload changes nothing.
+          if (Struct.keys(payload).length === 0) return yield* decodeSong(existing).pipe(Effect.orDie)
           return yield* db
             .updateTable("app_public.songs")
-            .set({
-              title: payload.title,
-              artist: payload.artist,
-              key: payload.key,
-              tempo_bpm: payload.tempo_bpm,
-              duration_seconds: payload.duration_seconds,
-              capo: payload.capo,
-              notes: payload.notes,
-            })
+            .set(payload)
             .where("id", "=", id)
             .returningAll()
             .pipe(
               Effect.head,
-              Effect.map(toWire),
               Effect.andThen(decodeSong),
               Effect.orDie,
             )

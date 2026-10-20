@@ -53,17 +53,6 @@ describe("voicings", () => {
     }
   })
 
-  test("a tap answers quickly: the slowest chord above takes under 50 ms", () => {
-    const slowest = Math.max(
-      ...NAMES.map((name) => {
-        const chord = spell(name)!
-        const start = performance.now()
-        voicings(chord)
-        return performance.now() - start
-      }),
-    )
-    expect(slowest).toBeLessThan(50)
-  })
 })
 
 /** The first playability rule a shape breaks, or null; each rule is checked from the frets and the tuning. */

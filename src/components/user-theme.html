@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{DisplayName}</title>
+<meta name="color:Background" content="#18181b">
+<meta name="color:Text" content="#f4f4f5">
+<meta name="color:Accent" content="#f59e0b">
+<meta name="image:Banner" content="">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap">
+<style>
+  :root {
+    --bg: {color:Background};
+    --ink: {color:Text};
+    --accent: {color:Accent};
+    --muted: color-mix(in srgb, var(--ink) 62%, var(--bg));
+    --rule: color-mix(in srgb, var(--ink) 15%, transparent);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.5 "DM Sans", system-ui, sans-serif;
+  }
+  .banner { display: block; width: 100%; max-height: 32vh; object-fit: cover; }
+  main { max-width: 42rem; margin: 0 auto; padding: 2.5rem 1.25rem; }
+  .head { display: flex; align-items: center; gap: 1rem; }
+  .avatar {
+    width: 5rem; height: 5rem; border-radius: 50%; object-fit: cover; flex: none;
+    display: grid; place-items: center; background: var(--accent); color: var(--bg); font-weight: 700; font-size: 2rem;
+  }
+  h1 { font-size: clamp(1.75rem, 6vw, 2.5rem); line-height: 1.1; letter-spacing: -0.02em; margin: 0; overflow-wrap: anywhere; }
+  .username { color: var(--muted); margin: 0.25rem 0 0; }
+  .bio { color: var(--muted); margin: 1.5rem 0 0; }
+  .bio > :first-child { margin-top: 0; }
+  .bio > :last-child { margin-bottom: 0; }
+  .bio p { margin: 0 0 0.75rem; }
+  .bio a { color: var(--accent); }
+  .bio img { max-width: 100%; }
+  .bio ul, .bio ol { padding-left: 1.25rem; margin: 0 0 0.75rem; }
+  .bio blockquote { border-left: 3px solid var(--accent); margin: 0 0 0.75rem; padding-left: 1rem; }
+  .bio .embed { margin: 1rem 0; }
+  .embed iframe { display: block; width: 100%; border: 0; }
+  .embed-youtube iframe, .embed-vimeo iframe { aspect-ratio: 16 / 9; height: auto; }
+  .embed-tiktok iframe { max-width: 325px; height: 740px; margin: 0 auto; }
+  .embed-instagram iframe { max-width: 540px; height: 480px; margin: 0 auto; }
+  section { margin-top: 2.5rem; }
+  h2 {
+    font-size: 0.75rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--accent); margin: 0 0 0.75rem;
+  }
+  .bands { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+  .bands a {
+    display: block; border: 1px solid var(--rule); border-radius: 0.5rem;
+    padding: 0.75rem 1rem; color: var(--ink); text-decoration: none;
+  }
+  .bands a:hover { border-color: var(--accent); }
+  footer { text-align: center; font-size: 0.75rem; color: var(--muted); padding: 2rem 0; }
+  footer a { color: inherit; text-decoration-color: var(--accent); }
+</style>
+</head>
+<body>
+<block:IfBannerImage><img class="banner" src="{image:Banner}" alt=""></block:IfBannerImage>
+<main>
+  <div class="head">
+    <block:AvatarURL><object class="avatar" data="{AvatarURL}" aria-hidden="true"><span class="avatar">{Initial}</span></object></block:AvatarURL>
+    <block:NotAvatarURL><span class="avatar" aria-hidden="true">{Initial}</span></block:NotAvatarURL>
+    <div>
+      <h1>{DisplayName}</h1>
+      <p class="username">@{Username}</p>
+    </div>
+  </div>
+
+  <block:Bio><div class="bio">{BioHTML}</div></block:Bio>
+
+  <block:Bands>
+  <section>
+    <h2>Bands</h2>
+    <ul class="bands">
+      <block:Band><li><a href="{BandURL}">{BandName}</a></li></block:Band>
+    </ul>
+  </section>
+  </block:Bands>
+</main>
+<footer>Made with <a href="/" target="_top">GigList</a></footer>
+</body>
+</html>

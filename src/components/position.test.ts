@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
-import { between, rebalance } from "./position"
+import { Option } from "effect"
+import { between, placeAfter, rebalance } from "./position"
 
 describe("position keys", () => {
   test("creates a key between open and bounded neighbours", () => {
@@ -39,5 +40,32 @@ describe("position keys", () => {
     expect(key.length).toBeGreaterThan(32)
     const keys = rebalance(3)
     expect(keys.every((value) => value.length <= 32)).toBe(true)
+  })
+})
+
+describe("placeAfter", () => {
+  const rows = [
+    { id: "a", position_key: "A" },
+    { id: "b", position_key: "B" },
+  ]
+
+  test("writes one key between the new neighbours", () => {
+    expect(placeAfter(rows, "m", null)).toEqual(Option.some([{ id: "m", position_key: between(null, "A") }]))
+    expect(placeAfter(rows, "m", "a")).toEqual(Option.some([{ id: "m", position_key: between("A", "B") }]))
+    expect(placeAfter(rows, "m", "b")).toEqual(Option.some([{ id: "m", position_key: between("B", null) }]))
+  })
+
+  test("refuses a neighbour outside the group", () => {
+    expect(placeAfter(rows, "m", "elsewhere")).toEqual(Option.none())
+  })
+
+  test("renumbers the whole group, in the new order, when the key would grow too long", () => {
+    const crowded = [
+      { id: "a", position_key: "A" },
+      { id: "b", position_key: `A${"0".repeat(40)}1` },
+    ]
+    const writes = Option.getOrThrow(placeAfter(crowded, "m", "a"))
+    expect(writes.map((row) => row.id)).toEqual(["a", "m", "b"])
+    expect(writes.map((row) => row.position_key)).toEqual(rebalance(3))
   })
 })

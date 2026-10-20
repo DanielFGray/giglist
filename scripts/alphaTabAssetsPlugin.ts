@@ -21,6 +21,16 @@ export const ALPHATAB_BASE = "/alphatab/"
 const SCRIPTS = ["alphaTab.js"]
 const DIRECTORIES = ["font", "soundfont"]
 
+/**
+ * Files the bundle loads by a URL relative to alphaTab's own module, which the
+ * bundler cannot follow: alphaTab starts its render worker with
+ * `new Worker(new URL("./alphaTab.worker.mjs", import.meta.url))`, and the
+ * worker and the audio worklet both `import("./alphaTab.core.mjs")`. In a build
+ * those URLs point into the assets folder, so the three files are emitted
+ * there, unhashed and under the names alphaTab asks for.
+ */
+const RELATIVE = ["alphaTab.worker.mjs", "alphaTab.core.mjs", "alphaTab.worklet.mjs"]
+
 const CONTENT_TYPES: Record<string, string> = {
   ".js": "text/javascript; charset=utf-8",
   ".woff2": "font/woff2",
@@ -35,9 +45,13 @@ export function alphaTabAssetsPlugin(): Plugin {
   const dist = path.dirname(createRequire(import.meta.url).resolve("@coderline/alphatab"))
   let assets: Promise<Map<string, string>> | undefined
   const list = () => (assets ??= collect(dist))
+  let assetsDir = "assets"
 
   return {
     name: "alphatab-assets",
+    configResolved(config) {
+      assetsDir = config.build.assetsDir
+    },
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
         const url = (req.url ?? "").split("?", 1)[0] ?? ""
@@ -51,6 +65,9 @@ export function alphaTabAssetsPlugin(): Plugin {
     async generateBundle() {
       for (const [name, source] of await list()) {
         this.emitFile({ type: "asset", fileName: `alphatab/${name}`, source: await readFile(source) })
+      }
+      for (const name of RELATIVE) {
+        this.emitFile({ type: "asset", fileName: `${assetsDir}/${name}`, source: await readFile(path.join(dist, name)) })
       }
     },
   }

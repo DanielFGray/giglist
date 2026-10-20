@@ -1,0 +1,42 @@
+diff --git a/dist/alphaTab.core.mjs b/dist/alphaTab.core.mjs
+index dfa2244db66667b885929c9d71e45554873e75f4..86dfa893f1b3ebd4880d23380a2159f132749de4 100644
+--- a/dist/alphaTab.core.mjs
++++ b/dist/alphaTab.core.mjs
+@@ -12901,7 +12901,7 @@ class Track {
+ 			if (lyric.startBar >= 0 && lyric.startBar < staff.bars.length) {
+ 				let beat = staff.bars[lyric.startBar].voices[0].beats[0];
+ 				for (let ci = 0; ci < lyric.chunks.length && beat; ci++) {
+-					while (beat && (beat.isEmpty || beat.isRest)) beat = beat.nextBeat;
++					while (beat && (beat.isEmpty || beat.isRest || beat.notes.length > 0 && beat.notes.every((n) => n.isTieDestination))) beat = beat.nextBeat;
+ 					if (beat) {
+ 						if (!beat.lyrics) {
+ 							beat.lyrics = new Array(lyrics.length);
+@@ -18760,6 +18760,7 @@ class Gp3To5Importer extends ScoreImporter {
+ 			const midi = Gp3To5Importer._gp5PercussionInstrumentMap.has(newNote.fret) ? Gp3To5Importer._gp5PercussionInstrumentMap.get(newNote.fret) : newNote.fret;
+ 			const knownArticulation = PercussionMapper.getArticulationById(midi);
+ 			if (knownArticulation !== null) newNote.percussionArticulation = bar.staff.track.getOrRegisterPercussionArticulation(knownArticulation);
++			else newNote.percussionArticulation = midi;
+ 			newNote.fret = NaN;
+ 		}
+ 		if (swapAccidentals) {
+diff --git a/dist/alphaTab.js b/dist/alphaTab.js
+index da95311941487f7d9b624f1dbed9652ae27d5f9c..712f1955c25faaf141a154a5c154374830be03c6 100644
+--- a/dist/alphaTab.js
++++ b/dist/alphaTab.js
+@@ -12905,7 +12905,7 @@
+ 				if (lyric.startBar >= 0 && lyric.startBar < staff.bars.length) {
+ 					let beat = staff.bars[lyric.startBar].voices[0].beats[0];
+ 					for (let ci = 0; ci < lyric.chunks.length && beat; ci++) {
+-						while (beat && (beat.isEmpty || beat.isRest)) beat = beat.nextBeat;
++						while (beat && (beat.isEmpty || beat.isRest || beat.notes.length > 0 && beat.notes.every((n) => n.isTieDestination))) beat = beat.nextBeat;
+ 						if (beat) {
+ 							if (!beat.lyrics) {
+ 								beat.lyrics = new Array(lyrics.length);
+@@ -18764,6 +18764,7 @@
+ 				const midi = Gp3To5Importer._gp5PercussionInstrumentMap.has(newNote.fret) ? Gp3To5Importer._gp5PercussionInstrumentMap.get(newNote.fret) : newNote.fret;
+ 				const knownArticulation = PercussionMapper.getArticulationById(midi);
+ 				if (knownArticulation !== null) newNote.percussionArticulation = bar.staff.track.getOrRegisterPercussionArticulation(knownArticulation);
++				else newNote.percussionArticulation = midi;
+ 				newNote.fret = NaN;
+ 			}
+ 			if (swapAccidentals) {

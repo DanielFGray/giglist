@@ -9,7 +9,7 @@ test.describe("settings bands", () => {
   }) => {
     await testing.login({ username: "test_settings_sole" })
     const created = await page.request.post("/api/my/bands", {
-      data: { slug: "test-settings-sole", name: "Solo Delete Band" },
+      data: { slug: `test-settings-sole-${Date.now()}`, name: "Solo Delete Band" },
     })
     expect(created.ok(), await created.text()).toBe(true)
     const band = (await created.json()) as { id: string; name: string }
@@ -33,18 +33,19 @@ test.describe("settings bands", () => {
   test("owner transfers ownership and leaves", async ({ page, testing }) => {
     await testing.login({ username: "test_settings_owner" })
     const created = await page.request.post("/api/my/bands", {
-      data: { slug: "test-settings-xfer", name: "Transfer Band" },
+      data: { slug: `test-settings-xfer-${Date.now()}`, name: "Transfer Band" },
     })
     expect(created.ok(), await created.text()).toBe(true)
     const band = (await created.json()) as { id: string }
 
     // Register the mate (sets the cookie to them), add them to the band, then
     // restore the owner for the settings UI.
+    const mateName = testing.username("test_settings_mate")
     await page.request.post("/api/testing/login", {
-      data: { username: "test_settings_mate", password: TEST_PASSWORD },
+      data: { username: mateName, password: TEST_PASSWORD },
     })
     const added = await page.request.post("/api/testing/band-member", {
-      data: { band_id: band.id, username: "test_settings_mate" },
+      data: { band_id: band.id, username: mateName },
     })
     expect(added.ok(), await added.text()).toBe(true)
     await testing.login({ username: "test_settings_owner" })
@@ -61,7 +62,7 @@ test.describe("settings bands", () => {
       username: string
       is_owner: boolean
     }>
-    const mate = rows.find((m) => m.username === "test_settings_mate")
+    const mate = rows.find((m) => m.username === mateName)
     expect(mate).toBeTruthy()
 
     await getPw(page, `settings-band-successor-${band.id}`).selectOption(
@@ -78,23 +79,24 @@ test.describe("settings bands", () => {
       is_owner: boolean
     }>
     expect(afterRows).toHaveLength(1)
-    expect(afterRows[0]?.username).toBe("test_settings_mate")
+    expect(afterRows[0]?.username).toBe(mateName)
     expect(afterRows[0]?.is_owner).toBe(true)
   })
 
   test("non-owner leaves without transferring", async ({ page, testing }) => {
     await testing.login({ username: "test_settings_host" })
     const created = await page.request.post("/api/my/bands", {
-      data: { slug: "test-settings-leave", name: "Leave Band" },
+      data: { slug: `test-settings-leave-${Date.now()}`, name: "Leave Band" },
     })
     expect(created.ok(), await created.text()).toBe(true)
     const band = (await created.json()) as { id: string }
 
+    const guestName = testing.username("test_settings_guest")
     await page.request.post("/api/testing/login", {
-      data: { username: "test_settings_guest", password: TEST_PASSWORD },
+      data: { username: guestName, password: TEST_PASSWORD },
     })
     const added = await page.request.post("/api/testing/band-member", {
-      data: { band_id: band.id, username: "test_settings_guest" },
+      data: { band_id: band.id, username: guestName },
     })
     expect(added.ok(), await added.text()).toBe(true)
 

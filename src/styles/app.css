@@ -64,6 +64,36 @@
   color: var(--color-zinc-600);
 }
 
+/*
+ * Markdown prose in the app (a user's bio: Markdown.tsx). Themes style the
+ * same markup under `.description`; this is the app's own version of it.
+ */
+@layer components {
+  .markdown { overflow-wrap: break-word; }
+  .markdown > :first-child { margin-top: 0; }
+  .markdown > :last-child { margin-bottom: 0; }
+  .markdown p { margin: 0 0 0.75rem; }
+  .markdown h1, .markdown h2, .markdown h3 { font-weight: 700; line-height: 1.25; margin: 1.25rem 0 0.5rem; }
+  .markdown h1 { font-size: 1.5rem; }
+  .markdown h2 { font-size: 1.25rem; }
+  .markdown h3 { font-size: 1.1rem; }
+  .markdown a { color: var(--color-amber-accent); text-decoration: underline; text-underline-offset: 2px; }
+  .markdown img { max-width: 100%; border-radius: 0.375rem; }
+  .markdown ul, .markdown ol { padding-left: 1.25rem; margin: 0 0 0.75rem; }
+  .markdown ul { list-style: disc; }
+  .markdown ol { list-style: decimal; }
+  .markdown blockquote { border-left: 3px solid var(--color-amber-accent); padding-left: 1rem; margin: 0 0 0.75rem; opacity: 0.85; }
+  .markdown code { font-family: var(--font-mono); font-size: 0.85em; background: var(--color-surface-hover); padding: 0.1em 0.3em; border-radius: 0.25rem; }
+  .markdown pre { background: var(--color-surface-hover); padding: 0.75rem; border-radius: 0.375rem; overflow-x: auto; margin: 0 0 0.75rem; }
+  .markdown pre code { background: none; padding: 0; }
+  .markdown hr { border: none; border-top: 1px solid var(--color-border-subtle); margin: 1rem 0; }
+  .markdown .embed { margin: 1rem 0; }
+  .markdown .embed iframe { display: block; width: 100%; border: 0; border-radius: 0.375rem; }
+  .markdown .embed-youtube iframe, .markdown .embed-vimeo iframe { aspect-ratio: 16 / 9; height: auto; }
+  .markdown .embed-tiktok iframe { max-width: 325px; height: 740px; margin: 0 auto; }
+  .markdown .embed-instagram iframe { max-width: 540px; height: 480px; margin: 0 auto; }
+}
+
 /* alphaTab's play cursor, in phrases and scores: the bar and the beat being played. */
 @layer components {
   .at-cursor-bar {

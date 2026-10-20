@@ -1,7 +1,7 @@
 import { useEffect, useId, useMemo, useState, type CSSProperties } from "react"
 import type { ChartInfo } from "~/api/client"
 import { renderLyrics, type ChartItem, type ChartLine } from "~/charts/lyrics"
-import { numeral, type NumeralDisplay } from "~/charts/numeral"
+import { chordNumerals, type NumeralDisplay } from "~/charts/numeral"
 import { ChordShapes, type ChordDiagrams } from "./ChordShapes"
 import { preloadChordPlayer } from "~/audio/chord"
 import { Phrase } from "./Phrase"
@@ -42,6 +42,12 @@ export function LyricsChart({
   scoreCharts: ReadonlyArray<ChartInfo>
 }) {
   const lines = useMemo(() => renderLyrics(source, shownKey), [source, shownKey])
+  // Each chord's numeral, by the start of its item. They are read in one pass over the chart, since a chord's numeral depends on the chord after it.
+  const numerals = useMemo(() => {
+    const pairs = lines.flat().flatMap((item) => (item.kind === "pair" && item.chord !== "" ? [item] : []))
+    const labels = chordNumerals(pairs.map((pair) => pair.chord), shownKey)
+    return new Map(pairs.map((pair, index) => [pair.start, labels[index] ?? null]))
+  }, [lines, shownKey])
   // The start of the item whose panel is open, or null when none is.
   const [open, setOpen] = useState<number | null>(null)
   useEffect(() => {
@@ -87,6 +93,7 @@ export function LyricsChart({
           setOpen={setOpen}
           anchor={anchor}
           shownKey={shownKey}
+          numerals={numerals}
           numeralDisplay={numeralDisplay}
           scoreCharts={scoreCharts}
         />
@@ -104,6 +111,7 @@ function Line({
   setOpen,
   anchor,
   shownKey,
+  numerals,
   numeralDisplay,
   scoreCharts,
 }: {
@@ -115,6 +123,7 @@ function Line({
   setOpen: (start: number | null) => void
   anchor: string
   shownKey: string | null
+  numerals: ReadonlyMap<number, string | null>
   numeralDisplay: NumeralDisplay
   scoreCharts: ReadonlyArray<ChartInfo>
 }) {
@@ -160,6 +169,7 @@ function Line({
           setOpen={setOpen}
           anchor={anchor}
           shownKey={shownKey}
+          numerals={numerals}
           numeralDisplay={numeralDisplay}
         />
       ))}
@@ -175,6 +185,7 @@ function Item({
   setOpen,
   anchor,
   shownKey,
+  numerals,
   numeralDisplay,
 }: {
   item: ChartItem
@@ -184,6 +195,7 @@ function Item({
   setOpen: (start: number | null) => void
   anchor: string
   shownKey: string | null
+  numerals: ReadonlyMap<number, string | null>
   numeralDisplay: NumeralDisplay
 }) {
   switch (item.kind) {
@@ -204,7 +216,7 @@ function Item({
       // An empty slot is padding for the next word, not a chord to hold.
       const openable = chordShapes && item.chord !== ""
       const showing = openable && open === item.start
-      const chordNumeral = item.chord ? numeral(item.chord, shownKey) : null
+      const chordNumeral = numerals.get(item.start) ?? null
       // A chord with no numeral (no key, or a name that does not spell) keeps its name, even in numerals-only mode.
       const showNumeral = chordNumeral !== null && numeralDisplay !== "names"
       const showName = !showNumeral || numeralDisplay === "both"

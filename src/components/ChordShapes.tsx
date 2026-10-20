@@ -92,7 +92,8 @@ export function ChordShapes({
  * viewport, so a chord near the right edge flips the panel to the left instead of
  * widening the page, and a panel wider than the screen scrolls within itself.
  */
-function placement(anchor: string): CSSProperties {
+/** Places a fixed panel under the element named `anchor`, flipped sideways when it would leave the window. */
+export function placement(anchor: string): CSSProperties {
   return {
     position: "fixed",
     positionAnchor: anchor,

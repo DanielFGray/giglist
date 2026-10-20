@@ -1,4 +1,4 @@
-import { Context, Effect, Schema as S } from "effect"
+import { Context, Effect, Schema as S, Struct } from "effect"
 import {
   HttpApi,
   HttpApiEndpoint,
@@ -31,6 +31,25 @@ export class SessionMiddleware extends HttpApiMiddleware.Service<
   security: { session: sessionCookie },
 }) {}
 
+// --- Rate limiting ---
+
+export class TooManyRequests extends S.TaggedError<TooManyRequests, { readonly brand: unique symbol }>()(
+  "TooManyRequests",
+  { message: S.String, retryAfterSeconds: S.Int },
+) {}
+
+/**
+ * Limits how often one caller may use an endpoint. The limit comes from the
+ * server's rule for the endpoint's name (`httpapi/rate-limit.ts`); an endpoint
+ * with no rule passes through. Add this BEFORE `SessionMiddleware` on an
+ * endpoint: a later middleware wraps the earlier ones, so the limiter then runs
+ * inside the session and can key a rule on the signed-in user.
+ */
+export class RateLimitMiddleware extends HttpApiMiddleware.Service<RateLimitMiddleware>()(
+  "RateLimitMiddleware",
+  { error: TooManyRequests.pipe(HttpApiSchema.status(429)) },
+) {}
+
 // --- Auth schemas ---
 
 /*
@@ -48,6 +67,14 @@ export const RegisterPayload = S.Struct({
   username: S.String,
   email: S.String,
   password: S.RedactedFromValue(S.String),
+})
+
+export const ForgotPasswordPayload = S.Struct({ email: S.String })
+
+export const ResetPasswordPayload = S.Struct({
+  userId: S.String.check(S.isUUID()),
+  token: S.String.check(S.isMinLength(1)),
+  password: S.RedactedFromValue(S.String.check(S.isMinLength(8))),
 })
 
 /** Matches `app_public.username`: 2–64 chars, letter then letters/digits/_/-. */
@@ -68,6 +95,11 @@ export const AuthUser = S.Struct({
   name: S.NullOr(S.String),
   bio: S.NullOr(S.String),
   avatar_url: S.NullOr(S.String),
+  /** Whether anyone may open `/u/:username` (docs/adr/0011); off until the user turns it on. */
+  is_public: S.Boolean,
+  /** The profile's theme (docs/adr/0012), shaped like a band's `PageTheme` below. */
+  page_theme: S.NullOr(S.String),
+  page_options: S.Record(S.String, S.String),
   role: S.String,
   is_verified: S.Boolean,
 })
@@ -75,8 +107,17 @@ export const AuthUser = S.Struct({
 export const UpdateProfilePayload = S.Struct({
   username: Username,
   name: S.NullOr(S.String.pipe(S.check(S.isMaxLength(200)))),
-  bio: S.NullOr(S.String.pipe(S.check(S.isMaxLength(4000)))),
+  // Markdown (docs/adr/0010), sized like a band's description.
+  bio: S.NullOr(S.String.pipe(S.check(S.isMaxLength(10000)))),
   avatar_url: AvatarUrl,
+  is_public: S.optional(S.Boolean),
+  page_theme: S.optional(S.NullOr(S.String.pipe(S.check(S.isMaxLength(200_000))))),
+  page_options: S.optional(
+    S.Record(
+      S.String.pipe(S.check(S.isPattern(/^(color|image|text|if):[A-Za-z][A-Za-z0-9 ]*$/))),
+      S.String.pipe(S.check(S.isMaxLength(2000))),
+    ),
+  ),
 })
 
 export const ChangePasswordPayload = S.Struct({
@@ -89,7 +130,7 @@ export const UserEmail = S.Struct({
   email: S.String,
   is_verified: S.Boolean,
   is_primary: S.Boolean,
-  created_at: S.String,
+  created_at: S.Date,
 })
 
 export const AddEmailPayload = S.Struct({
@@ -118,14 +159,27 @@ export const AuthApiGroup = HttpApiGroup.make("auth")
       payload: LoginPayload,
       success: AuthSuccess,
       error: AuthError.pipe(HttpApiSchema.status(401)),
-    }),
+    }).middleware(RateLimitMiddleware),
   )
   .add(
     HttpApiEndpoint.post("register", "/register", {
       payload: RegisterPayload,
       success: AuthSuccess,
       error: AuthError.pipe(HttpApiSchema.status(400)),
-    }),
+    }).middleware(RateLimitMiddleware),
+  )
+  .add(
+    HttpApiEndpoint.post("forgotPassword", "/forgot-password", {
+      payload: ForgotPasswordPayload,
+      success: AuthSuccess,
+    }).middleware(RateLimitMiddleware),
+  )
+  .add(
+    HttpApiEndpoint.post("resetPassword", "/reset-password", {
+      payload: ResetPasswordPayload,
+      success: AuthSuccess,
+      error: AuthError.pipe(HttpApiSchema.status(400)),
+    }).middleware(RateLimitMiddleware),
   )
   .add(
     HttpApiEndpoint.post("logout", "/logout", { success: AuthSuccess }).middleware(
@@ -149,7 +203,7 @@ export const AuthApiGroup = HttpApiGroup.make("auth")
       payload: ChangePasswordPayload,
       success: AuthSuccess,
       error: AuthError.pipe(HttpApiSchema.status(400)),
-    }).middleware(SessionMiddleware),
+    }).middleware(RateLimitMiddleware).middleware(SessionMiddleware),
   )
   .add(
     HttpApiEndpoint.get("listEmails", "/emails", {
@@ -162,14 +216,14 @@ export const AuthApiGroup = HttpApiGroup.make("auth")
       payload: AddEmailPayload,
       success: UserEmail.pipe(HttpApiSchema.status(201)),
       error: AuthError.pipe(HttpApiSchema.status(400)),
-    }).middleware(SessionMiddleware),
+    }).middleware(RateLimitMiddleware).middleware(SessionMiddleware),
   )
   .add(
     HttpApiEndpoint.post("verifyEmail", "/emails/verify", {
       payload: VerifyEmailPayload,
       success: AuthSuccess,
       error: AuthError.pipe(HttpApiSchema.status(400)),
-    }),
+    }).middleware(RateLimitMiddleware),
   )
   .add(
     HttpApiEndpoint.delete("removeEmail", "/emails/:id", {
@@ -190,13 +244,13 @@ export const AuthApiGroup = HttpApiGroup.make("auth")
       params: { id: S.String.check(S.isUUID()) },
       success: AuthSuccess,
       error: AuthError.pipe(HttpApiSchema.status(400)),
-    }).middleware(SessionMiddleware),
+    }).middleware(RateLimitMiddleware).middleware(SessionMiddleware),
   )
   .add(
     HttpApiEndpoint.post("requestAccountDeletion", "/account/delete-request", {
       success: AuthSuccess,
       error: AuthError.pipe(HttpApiSchema.status(400)),
-    }).middleware(SessionMiddleware),
+    }).middleware(RateLimitMiddleware).middleware(SessionMiddleware),
   )
   .add(
     HttpApiEndpoint.post("confirmAccountDeletion", "/account/delete", {
@@ -209,21 +263,38 @@ export const AuthApiGroup = HttpApiGroup.make("auth")
 
 // --- Bands schemas ---
 
+/**
+ * How a band's public page looks (docs/adr/0006): `page_theme` is an HTML
+ * document with theme tags, or null for the built-in Classic theme, and
+ * `page_options` holds the band's values for the options the theme declares,
+ * keyed like `color:Accent`.
+ */
+export const PageTheme = S.Struct({
+  page_theme: S.NullOr(S.String.pipe(S.check(S.isMaxLength(200_000)))),
+  page_options: S.Record(
+    S.String.pipe(S.check(S.isPattern(/^(color|image|text|if):[A-Za-z][A-Za-z0-9 ]*$/))),
+    S.String.pipe(S.check(S.isMaxLength(2000))),
+  ),
+})
+
 export const BandInfo = S.Struct({
   id: S.String.check(S.isUUID()),
   slug: S.String,
   name: S.String,
   description: S.NullOr(S.String),
+  is_public: S.Boolean,
   show_members_publicly: S.Boolean,
   show_gig_dates_publicly: S.Boolean,
-  created_at: S.String,
+  show_songs_publicly: S.Boolean,
+  ...PageTheme.fields,
+  created_at: S.Date,
 })
 
 export const BandMember = S.Struct({
   id: S.String.check(S.isUUID()),
   user_id: S.String.check(S.isUUID()),
   is_owner: S.Boolean,
-  created_at: S.String,
+  created_at: S.Date,
   username: S.String,
   name: S.NullOr(S.String),
   avatar_url: S.NullOr(S.String),
@@ -242,9 +313,14 @@ export const CreateBandPayload = S.Struct({
 })
 
 export const UpdateBandPayload = S.Struct({
-  description: S.optional(S.NullOr(S.String.pipe(S.check(S.isMaxLength(4000))))),
+  // Markdown (docs/adr/0010): room for prose plus the links and pasted embed code that become players.
+  description: S.optional(S.NullOr(S.String.pipe(S.check(S.isMaxLength(10000))))),
+  is_public: S.optional(S.Boolean),
   show_members_publicly: S.optional(S.Boolean),
   show_gig_dates_publicly: S.optional(S.Boolean),
+  show_songs_publicly: S.optional(S.Boolean),
+  page_theme: S.optional(PageTheme.fields.page_theme),
+  page_options: S.optional(PageTheme.fields.page_options),
 })
 
 export const PublicBandMember = S.Struct({
@@ -255,19 +331,28 @@ export const PublicBandMember = S.Struct({
 })
 
 export const PublicBandGig = S.Struct({
-  name: S.String,
+  venue: S.NullOr(S.String),
   /** `YYYY-MM-DD` */
   gig_date: S.String,
 })
 
+export const PublicBandSong = S.Struct({
+  title: S.String,
+  artist: S.NullOr(S.String),
+})
+
+/**
+ * A band's public page. Each list is empty when the owner has not turned it on,
+ * so the page shows a section exactly when its list has rows.
+ */
 export const PublicBandProfile = S.Struct({
   slug: S.String,
   name: S.String,
   description: S.NullOr(S.String),
-  show_members_publicly: S.Boolean,
-  show_gig_dates_publicly: S.Boolean,
+  ...PageTheme.fields,
   members: S.Array(PublicBandMember),
   gigs: S.Array(PublicBandGig),
+  songs: S.Array(PublicBandSong),
 })
 
 export const InvitePayload = S.Struct({
@@ -366,7 +451,7 @@ export const BandsApiGroup = HttpApiGroup.make("myBands")
       params: { bandId: S.String.check(S.isUUID()) },
       payload: InvitePayload,
       error: BandError.pipe(HttpApiSchema.status(400)),
-    }),
+    }).middleware(RateLimitMiddleware),
   )
   .middleware(SessionMiddleware)
   .prefix("/api/my/bands")
@@ -385,6 +470,42 @@ export const PublicBandsApiGroup = HttpApiGroup.make("publicBands")
     }),
   )
   .prefix("/api/public/bands")
+
+// --- Public user profiles ---
+
+/** A band with a public page that a user belongs to, linked from their profile. */
+export const PublicUserBand = S.Struct({
+  slug: S.String,
+  name: S.String,
+})
+
+/**
+ * A user's public profile (docs/adr/0011). Present only while the user keeps
+ * `is_public` on; `bands` holds only bands whose own page is also on.
+ */
+export const PublicUserProfile = S.Struct({
+  username: S.String,
+  name: S.NullOr(S.String),
+  bio: S.NullOr(S.String),
+  avatar_url: S.NullOr(S.String),
+  ...PageTheme.fields,
+  bands: S.Array(PublicUserBand),
+})
+
+export class PublicUserNotFound extends S.TaggedError<
+  PublicUserNotFound,
+  { readonly brand: unique symbol }
+>()("PublicUserNotFound", { username: S.String }) {}
+
+export const PublicUsersApiGroup = HttpApiGroup.make("publicUsers")
+  .add(
+    HttpApiEndpoint.get("getPublicUser", "/:username", {
+      params: { username: S.String.pipe(S.check(S.isMinLength(1))) },
+      success: PublicUserProfile,
+      error: PublicUserNotFound.pipe(HttpApiSchema.status(404)),
+    }),
+  )
+  .prefix("/api/public/users")
 
 // --- Testing schemas ---
 
@@ -406,7 +527,11 @@ export const TestingLoginPayload = S.Struct({
   password: S.String,
 })
 
-export const TestingSuccess = S.Struct({ success: S.Boolean })
+export const TestingSuccess = S.Struct({
+  success: S.Boolean,
+  /** Why it failed. Present only when `success` is false. */
+  message: S.optional(S.String),
+})
 
 /**
  * Creates a user through app_private.really_create_user, bypassing the
@@ -460,6 +585,7 @@ export const TestEmailSecrets = S.Struct({
   verification_token: S.NullOr(S.String),
   verification_email_sent_at: S.NullOr(S.Date),
   password_reset_email_sent_at: S.NullOr(S.Date),
+  reset_password_token: S.NullOr(S.String),
 })
 
 export const TestingApiGroup = HttpApiGroup.make("testing")
@@ -574,8 +700,8 @@ export const Song = S.Struct({
   capo: S.NullOr(S.Finite),
   notes: S.NullOr(S.String),
   created_by: S.NullOr(S.String.check(S.isUUID())),
-  created_at: S.String,
-  updated_at: S.String,
+  created_at: S.Date,
+  updated_at: S.Date,
 })
 
 export const SongInsert = S.Struct({
@@ -591,17 +717,14 @@ export const SongInsert = S.Struct({
   notes: S.NullOr(S.String.pipe(S.check(S.isMaxLength(10000)))),
 })
 
-export const SongUpdate = S.Struct({
-  title: S.String.pipe(S.check(S.isMinLength(1)), S.check(S.isMaxLength(500))),
-  artist: S.NullOr(S.String),
-  key: S.NullOr(musicalKey),
-  tempo_bpm: S.NullOr(S.Finite.pipe(S.check(S.isGreaterThanOrEqualTo(0)), S.check(S.isLessThanOrEqualTo(999)))),
-  duration_seconds: S.NullOr(
-    S.Finite.pipe(S.check(S.isGreaterThanOrEqualTo(0)), S.check(S.isLessThanOrEqualTo(86400))),
-  ),
-  capo: S.NullOr(S.Finite.pipe(S.check(S.isGreaterThanOrEqualTo(0)), S.check(S.isLessThanOrEqualTo(12)))),
-  notes: S.NullOr(S.String.pipe(S.check(S.isMaxLength(10000)))),
-})
+/**
+ * The fields to change; an absent field keeps its value. A grid cell sends only
+ * its own field, so two people editing different cells of one song both land.
+ */
+/** A song's own fields: everything a band can set on it. */
+export const SongFields = Struct.omit(SongInsert.fields, ["band_id"])
+
+export const SongUpdate = S.Struct(Struct.map(SongFields, S.optionalKey))
 
 export class SongNotFound extends S.TaggedError<SongNotFound, { readonly brand: unique symbol }>()("SongNotFound", {
   id: S.String.check(S.isUUID()),
@@ -669,31 +792,45 @@ export const SetlistStatus = S.Literals(["draft", "rehearsal", "final"])
 
 export type SetlistStatusType = S.Schema.Type<typeof SetlistStatus>
 
-export const Setlist = S.Struct({
-  id: S.String.check(S.isUUID()),
-  band_id: S.String.check(S.isUUID()),
-  name: S.String,
-  description: S.NullOr(S.String),
-  /** `YYYY-MM-DD`, or null when the setlist is not tied to a date. */
+const uuid = S.String.check(S.isUUID())
+
+const SetlistName = S.String.pipe(S.check(S.isMinLength(1)), S.check(S.isMaxLength(200)))
+
+/** A gig that plays a setlist: enough to name it (see `gigLabel`) and link to it. */
+export const GigRef = S.Struct({
+  id: uuid,
+  venue: S.NullOr(S.String),
+  /** `YYYY-MM-DD`, or null when the gig has no date yet. */
   gig_date: S.NullOr(S.String),
+})
+
+/** A named, ordered list of songs. `gigs` are the gigs that play it, soonest first: an edit reaches all of them. */
+export const Setlist = S.Struct({
+  id: uuid,
+  band_id: uuid,
+  name: S.String,
   status: SetlistStatus,
-  created_at: S.String,
-  updated_at: S.String,
+  gigs: S.Array(GigRef),
+  /** How many songs, and their summed durations (songs without one count as 0). */
+  song_count: S.Finite,
+  duration_seconds: S.Finite,
+  created_at: S.Date,
+  updated_at: S.Date,
 })
 
 export const SetlistInsert = S.Struct({
-  band_id: S.String.check(S.isUUID()),
-  name: S.String.pipe(S.check(S.isMinLength(1)), S.check(S.isMaxLength(500))),
-  description: S.NullOr(S.String.pipe(S.check(S.isMaxLength(5000)))),
-  gig_date: S.NullOr(S.String.pipe(S.check(S.isPattern(/^\d{4}-\d{2}-\d{2}$/)))),
-  status: SetlistStatus,
+  band_id: uuid,
+  name: SetlistName,
 })
 
 export const SetlistUpdate = S.Struct({
-  name: SetlistInsert.fields.name,
-  description: SetlistInsert.fields.description,
-  gig_date: SetlistInsert.fields.gig_date,
-  status: SetlistStatus,
+  name: S.optionalKey(SetlistName),
+  status: S.optionalKey(SetlistStatus),
+})
+
+/** A copy takes the songs and their overrides; it plays in no gig until one adds it. */
+export const SetlistCopy = S.Struct({
+  name: SetlistName,
 })
 
 /**
@@ -702,10 +839,9 @@ export const SetlistUpdate = S.Struct({
  * field saying whether the entry overrides it.
  */
 export const SetlistEntry = S.Struct({
-  id: S.String.check(S.isUUID()),
-  setlist_id: S.String.check(S.isUUID()),
-  section_id: S.NullOr(S.String.check(S.isUUID())),
-  song_id: S.String.check(S.isUUID()),
+  id: uuid,
+  setlist_id: uuid,
+  song_id: uuid,
   position_key: S.String,
   title: S.String,
   artist: S.NullOr(S.String),
@@ -719,66 +855,56 @@ export const SetlistEntry = S.Struct({
   notes_overridden: S.Boolean,
 })
 
+/** A new entry plays last. */
 export const SetlistEntryInsert = S.Struct({
-  song_id: S.String.check(S.isUUID()),
-  section_id: S.optional(S.NullOr(S.String.check(S.isUUID()))),
+  song_id: uuid,
 })
 
-/** The whole entry is sent on update: a null override means "inherit". */
+/**
+ * The fields to change; an absent field keeps its value. A null override means
+ * "inherit the song's value". `song_id` puts another song of the band in this
+ * place, keeping the overrides.
+ */
 export const SetlistEntryUpdate = S.Struct({
-  section_id: S.NullOr(S.String.check(S.isUUID())),
-  key_override: S.NullOr(musicalKey),
-  tempo_override: S.NullOr(
-    S.Finite.pipe(S.check(S.isGreaterThanOrEqualTo(1)), S.check(S.isLessThanOrEqualTo(999))),
+  song_id: S.optionalKey(uuid),
+  key_override: S.optionalKey(S.NullOr(musicalKey)),
+  tempo_override: S.optionalKey(
+    S.NullOr(S.Finite.pipe(S.check(S.isGreaterThanOrEqualTo(1)), S.check(S.isLessThanOrEqualTo(999)))),
   ),
-  notes_override: S.NullOr(S.String.pipe(S.check(S.isMaxLength(10000)))),
+  notes_override: S.optionalKey(S.NullOr(S.String.pipe(S.check(S.isMaxLength(10000))))),
 })
 
-/** A named group of entries in a setlist ("Set 1", "Encore"), in the order the setlist plays them. */
-export const SetlistSection = S.Struct({
-  id: S.String.check(S.isUUID()),
-  setlist_id: S.String.check(S.isUUID()),
-  name: S.String,
-  position_key: S.String,
+/** One reorder: `id` goes right after `previous`, or first when `previous` is null. The server resolves keys inside the write. */
+export const Move = S.Struct({
+  id: uuid,
+  previous: S.NullOr(uuid),
 })
 
-export const SetlistSectionName = S.Struct({
-  name: S.String.pipe(S.check(S.isMinLength(1)), S.check(S.isMaxLength(200))),
-})
-
-/** One reorder. The server resolves the previous anchor to keys inside the write. */
-export const SetlistMove = S.Struct({
-  kind: S.Literals(["entry", "section"]),
-  id: S.String.check(S.isUUID()),
-  section_id: S.optional(S.NullOr(S.String.check(S.isUUID()))),
-  previous: S.NullOr(S.String.check(S.isUUID())),
-})
-
-/** Someone with a setlist open: reading it, or performing it from song number `at`. */
-export const SetlistViewer = S.Struct({
-  client: S.String.check(S.isUUID()),
+/** Someone with a setlist or a gig open: reading it, or performing it from song number `at`. */
+export const LiveViewer = S.Struct({
+  client: uuid,
   username: S.String,
   mode: S.Literals(["viewing", "performing"]),
   at: S.NullOr(S.Finite),
 })
 
 /**
- * What a setlist's event stream carries. `changed` says the setlist was written
- * and by whom, and holds no data: a listener fetches the new state through the
- * ordinary endpoints, so row-level security decides what it sees. `presence` is
- * the full list of viewers each time it changes. `ping` keeps an idle
- * connection alive and lets a client notice a dead one.
+ * What a setlist's or a gig's event stream carries. `changed` says it was
+ * written and by whom, and holds no data: a listener fetches the new state
+ * through the ordinary endpoints, so row-level security decides what it sees.
+ * `presence` is the full list of viewers each time it changes. `ping` keeps an
+ * idle connection alive and lets a client notice a dead one.
  */
-export const SetlistEvent = S.Union([
+export const LiveEvent = S.Union([
   S.Struct({ kind: S.Literal("changed"), by: S.NullOr(S.String) }),
-  S.Struct({ kind: S.Literal("presence"), viewers: S.Array(SetlistViewer) }),
+  S.Struct({ kind: S.Literal("presence"), viewers: S.Array(LiveViewer) }),
   S.Struct({ kind: S.Literal("ping") }),
 ])
 
-export const SetlistPresence = S.Struct({
-  client: S.String.check(S.isUUID()),
-  mode: S.Literals(["viewing", "performing"]),
-  at: S.NullOr(S.Finite),
+export const LivePresence = S.Struct({
+  client: uuid,
+  mode: LiveViewer.fields.mode,
+  at: LiveViewer.fields.at,
 })
 
 export class SetlistForbidden extends S.TaggedError<
@@ -789,12 +915,17 @@ export class SetlistForbidden extends S.TaggedError<
 export class SetlistNotFound extends S.TaggedError<
   SetlistNotFound,
   { readonly brand: unique symbol }
->()("SetlistNotFound", { id: S.String.check(S.isUUID()) }) {}
+>()("SetlistNotFound", { id: uuid }) {}
+
+const setlistErrors = [
+  SetlistNotFound.pipe(HttpApiSchema.status(404)),
+  SetlistForbidden.pipe(HttpApiSchema.status(403)),
+]
 
 export const SetlistsApiGroup = HttpApiGroup.make("setlists")
   .add(
     HttpApiEndpoint.get("listSetlists", "/band/:bandId", {
-      params: { bandId: S.String.check(S.isUUID()) },
+      params: { bandId: uuid },
       success: S.Array(Setlist),
       error: SetlistForbidden.pipe(HttpApiSchema.status(403)),
     }),
@@ -806,163 +937,221 @@ export const SetlistsApiGroup = HttpApiGroup.make("setlists")
       error: SetlistForbidden.pipe(HttpApiSchema.status(403)),
     }),
   )
-  .add(
-    HttpApiEndpoint.get("getSetlist", "/:id", {
-      params: { id: S.String.check(S.isUUID()) },
-      success: Setlist,
-      error: [
-        SetlistNotFound.pipe(HttpApiSchema.status(404)),
-        SetlistForbidden.pipe(HttpApiSchema.status(403)),
-      ],
-    }),
-  )
+  .add(HttpApiEndpoint.get("getSetlist", "/:id", { params: { id: uuid }, success: Setlist, error: setlistErrors }))
   .add(
     HttpApiEndpoint.put("updateSetlist", "/:id", {
-      params: { id: S.String.check(S.isUUID()) },
+      params: { id: uuid },
       payload: SetlistUpdate,
       success: Setlist,
-      error: [
-        SetlistNotFound.pipe(HttpApiSchema.status(404)),
-        SetlistForbidden.pipe(HttpApiSchema.status(403)),
-      ],
+      error: setlistErrors,
     }),
   )
   .add(
-    HttpApiEndpoint.delete("deleteSetlist", "/:id", {
-      params: { id: S.String.check(S.isUUID()) },
-      error: [
-        SetlistNotFound.pipe(HttpApiSchema.status(404)),
-        SetlistForbidden.pipe(HttpApiSchema.status(403)),
-      ],
+    HttpApiEndpoint.post("copySetlist", "/:id/copy", {
+      params: { id: uuid },
+      payload: SetlistCopy,
+      success: Setlist.pipe(HttpApiSchema.status(201)),
+      error: setlistErrors,
     }),
   )
+  .add(HttpApiEndpoint.delete("deleteSetlist", "/:id", { params: { id: uuid }, error: setlistErrors }))
   .add(
     HttpApiEndpoint.get("listEntries", "/:id/entries", {
-      params: { id: S.String.check(S.isUUID()) },
+      params: { id: uuid },
       success: S.Array(SetlistEntry),
-      error: [
-        SetlistNotFound.pipe(HttpApiSchema.status(404)),
-        SetlistForbidden.pipe(HttpApiSchema.status(403)),
-      ],
+      error: setlistErrors,
     }),
   )
   .add(
     HttpApiEndpoint.post("addEntry", "/:id/entries", {
-      params: { id: S.String.check(S.isUUID()) },
+      params: { id: uuid },
       payload: SetlistEntryInsert,
       success: SetlistEntry.pipe(HttpApiSchema.status(201)),
-      error: [
-        SetlistNotFound.pipe(HttpApiSchema.status(404)),
-        SetlistForbidden.pipe(HttpApiSchema.status(403)),
-      ],
+      error: setlistErrors,
     }),
   )
   .add(
     HttpApiEndpoint.put("updateEntry", "/:id/entries/:entryId", {
-      params: {
-        id: S.String.check(S.isUUID()),
-        entryId: S.String.check(S.isUUID()),
-      },
+      params: { id: uuid, entryId: uuid },
       payload: SetlistEntryUpdate,
       success: SetlistEntry,
-      error: [
-        SetlistNotFound.pipe(HttpApiSchema.status(404)),
-        SetlistForbidden.pipe(HttpApiSchema.status(403)),
-      ],
+      error: setlistErrors,
     }),
   )
   .add(
     HttpApiEndpoint.delete("deleteEntry", "/:id/entries/:entryId", {
-      params: {
-        id: S.String.check(S.isUUID()),
-        entryId: S.String.check(S.isUUID()),
-      },
-      error: [
-        SetlistNotFound.pipe(HttpApiSchema.status(404)),
-        SetlistForbidden.pipe(HttpApiSchema.status(403)),
-      ],
+      params: { id: uuid, entryId: uuid },
+      error: setlistErrors,
     }),
   )
+  .add(HttpApiEndpoint.put("move", "/:id/move", { params: { id: uuid }, payload: Move, error: setlistErrors }))
   .add(
     HttpApiEndpoint.get("watchSetlist", "/:id/events", {
-      params: { id: S.String.check(S.isUUID()) },
-      query: { client: S.String.check(S.isUUID()) },
-      success: HttpApiSchema.StreamSse({ data: SetlistEvent }),
-      error: [
-        SetlistNotFound.pipe(HttpApiSchema.status(404)),
-        SetlistForbidden.pipe(HttpApiSchema.status(403)),
-      ],
+      params: { id: uuid },
+      query: { client: uuid },
+      success: HttpApiSchema.StreamSse({ data: LiveEvent }),
+      error: setlistErrors,
     }),
   )
   .add(
     HttpApiEndpoint.post("reportPresence", "/:id/presence", {
-      params: { id: S.String.check(S.isUUID()) },
-      payload: SetlistPresence,
-      error: [
-        SetlistNotFound.pipe(HttpApiSchema.status(404)),
-        SetlistForbidden.pipe(HttpApiSchema.status(403)),
-      ],
-    }),
-  )
-  .add(
-    HttpApiEndpoint.get("listSections", "/:id/sections", {
-      params: { id: S.String.check(S.isUUID()) },
-      success: S.Array(SetlistSection),
-      error: [
-        SetlistNotFound.pipe(HttpApiSchema.status(404)),
-        SetlistForbidden.pipe(HttpApiSchema.status(403)),
-      ],
-    }),
-  )
-  .add(
-    HttpApiEndpoint.post("addSection", "/:id/sections", {
-      params: { id: S.String.check(S.isUUID()) },
-      payload: SetlistSectionName,
-      success: SetlistSection.pipe(HttpApiSchema.status(201)),
-      error: [
-        SetlistNotFound.pipe(HttpApiSchema.status(404)),
-        SetlistForbidden.pipe(HttpApiSchema.status(403)),
-      ],
-    }),
-  )
-  .add(
-    HttpApiEndpoint.put("renameSection", "/:id/sections/:sectionId", {
-      params: {
-        id: S.String.check(S.isUUID()),
-        sectionId: S.String.check(S.isUUID()),
-      },
-      payload: SetlistSectionName,
-      success: SetlistSection,
-      error: [
-        SetlistNotFound.pipe(HttpApiSchema.status(404)),
-        SetlistForbidden.pipe(HttpApiSchema.status(403)),
-      ],
-    }),
-  )
-  .add(
-    HttpApiEndpoint.delete("deleteSection", "/:id/sections/:sectionId", {
-      params: {
-        id: S.String.check(S.isUUID()),
-        sectionId: S.String.check(S.isUUID()),
-      },
-      error: [
-        SetlistNotFound.pipe(HttpApiSchema.status(404)),
-        SetlistForbidden.pipe(HttpApiSchema.status(403)),
-      ],
-    }),
-  )
-  .add(
-    HttpApiEndpoint.put("move", "/:id/move", {
-      params: { id: S.String.check(S.isUUID()) },
-      payload: SetlistMove,
-      error: [
-        SetlistNotFound.pipe(HttpApiSchema.status(404)),
-        SetlistForbidden.pipe(HttpApiSchema.status(403)),
-      ],
+      params: { id: uuid },
+      payload: LivePresence,
+      error: setlistErrors,
     }),
   )
   .middleware(SessionMiddleware)
   .prefix("/api/setlists")
+
+// --- Gigs schemas ---
+
+/**
+ * A wall-clock time at the venue on the gig date, `HH:MM` (the database may
+ * answer `HH:MM:SS`). No time zone is stored: the gig date and the venue's
+ * local time are all a band needs to know when to show up.
+ */
+const GigTime = S.NullOr(
+  S.String.pipe(S.check(S.isPattern(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/))),
+)
+
+/** A setlist as a gig plays it, in the gig's order. `gig_count` counts every gig that plays it, this one included. */
+export const GigSetlist = S.Struct({
+  id: uuid,
+  name: S.String,
+  song_count: S.Finite,
+  duration_seconds: S.Finite,
+  gig_count: S.Finite,
+})
+
+/** One performance. It has no name: `gigLabel` names it by venue, or by date. */
+export const Gig = S.Struct({
+  ...GigRef.fields,
+  band_id: uuid,
+  address: S.NullOr(S.String),
+  load_in_time: GigTime,
+  performance_time: GigTime,
+  /** For the band only. */
+  notes: S.NullOr(S.String),
+  setlists: S.Array(GigSetlist),
+  created_at: S.Date,
+  updated_at: S.Date,
+})
+
+export const GigDetails = S.Struct({
+  venue: S.NullOr(S.String.pipe(S.check(S.isMinLength(1)), S.check(S.isMaxLength(200)))),
+  gig_date: S.NullOr(S.String.pipe(S.check(S.isPattern(/^\d{4}-\d{2}-\d{2}$/)))),
+  address: S.NullOr(S.String.pipe(S.check(S.isMaxLength(1000)))),
+  load_in_time: GigTime,
+  performance_time: GigTime,
+  notes: S.NullOr(S.String.pipe(S.check(S.isMaxLength(5000)))),
+})
+
+export const GigInsert = S.Struct({
+  band_id: uuid,
+  ...GigDetails.fields,
+})
+
+/** A setlist the gig starts playing, after the ones it already plays. */
+export const GigSetlistInsert = S.Struct({
+  setlist_id: uuid,
+})
+
+/** One song of a gig, in play order: an entry of one of its setlists. */
+export const GigEntry = S.Struct({
+  ...SetlistEntry.fields,
+  setlist_name: S.String,
+})
+
+export class GigNotFound extends S.TaggedError<GigNotFound, { readonly brand: unique symbol }>()("GigNotFound", {
+  id: uuid,
+}) {}
+
+const gigErrors = [
+  GigNotFound.pipe(HttpApiSchema.status(404)),
+  SetlistForbidden.pipe(HttpApiSchema.status(403)),
+]
+
+export const GigsApiGroup = HttpApiGroup.make("gigs")
+  .add(
+    HttpApiEndpoint.get("listGigs", "/band/:bandId", {
+      params: { bandId: uuid },
+      success: S.Array(Gig),
+      error: SetlistForbidden.pipe(HttpApiSchema.status(403)),
+    }),
+  )
+  .add(
+    HttpApiEndpoint.post("createGig", "/", {
+      payload: GigInsert,
+      success: Gig.pipe(HttpApiSchema.status(201)),
+      error: SetlistForbidden.pipe(HttpApiSchema.status(403)),
+    }),
+  )
+  .add(HttpApiEndpoint.get("getGig", "/:id", { params: { id: uuid }, success: Gig, error: gigErrors }))
+  .add(
+    HttpApiEndpoint.put("updateGig", "/:id", {
+      params: { id: uuid },
+      payload: GigDetails,
+      success: Gig,
+      error: gigErrors,
+    }),
+  )
+  .add(HttpApiEndpoint.delete("deleteGig", "/:id", { params: { id: uuid }, error: gigErrors }))
+  .add(
+    HttpApiEndpoint.post("addGigSetlist", "/:id/setlists", {
+      params: { id: uuid },
+      payload: GigSetlistInsert,
+      success: Gig,
+      error: gigErrors,
+    }),
+  )
+  .add(
+    HttpApiEndpoint.delete("removeGigSetlist", "/:id/setlists/:setlistId", {
+      params: { id: uuid, setlistId: uuid },
+      success: Gig,
+      error: gigErrors,
+    }),
+  )
+  .add(
+    // The gig plays a new copy of the setlist in its place; other gigs keep the original.
+    HttpApiEndpoint.post("copyGigSetlist", "/:id/setlists/:setlistId/copy", {
+      params: { id: uuid, setlistId: uuid },
+      payload: SetlistCopy,
+      success: Gig,
+      error: gigErrors,
+    }),
+  )
+  .add(
+    HttpApiEndpoint.put("moveGigSetlist", "/:id/setlists/move", {
+      params: { id: uuid },
+      payload: Move,
+      success: Gig,
+      error: gigErrors,
+    }),
+  )
+  .add(
+    HttpApiEndpoint.get("listGigEntries", "/:id/entries", {
+      params: { id: uuid },
+      success: S.Array(GigEntry),
+      error: gigErrors,
+    }),
+  )
+  .add(
+    HttpApiEndpoint.get("watchGig", "/:id/events", {
+      params: { id: uuid },
+      query: { client: uuid },
+      success: HttpApiSchema.StreamSse({ data: LiveEvent }),
+      error: gigErrors,
+    }),
+  )
+  .add(
+    HttpApiEndpoint.post("reportGigPresence", "/:id/presence", {
+      params: { id: uuid },
+      payload: LivePresence,
+      error: gigErrors,
+    }),
+  )
+  .middleware(SessionMiddleware)
+  .prefix("/api/gigs")
 
 // --- Charts schemas ---
 
@@ -980,7 +1169,7 @@ export const Chart = S.Struct({
   written_key: S.NullOr(musicalKey),
   revision_id: S.String.check(S.isUUID()),
   source: S.NullOr(S.String),
-  created_at: S.String,
+  created_at: S.Date,
 })
 
 /** A lyrics chart made from text pasted as chords over lyrics. */
@@ -1120,8 +1309,8 @@ export const Mark = S.Struct({
   id: S.String.check(S.isUUID()),
   user_id: S.String.check(S.isUUID()),
   ...markPlacement,
-  created_at: S.String,
-  updated_at: S.String,
+  created_at: S.Date,
+  updated_at: S.Date,
 })
 
 /** One revision of a chart, as the browser needs it to follow a mark: its text and the change set the editor recorded. */
@@ -1145,7 +1334,7 @@ export const Stamp = S.Struct({
   id: S.String.check(S.isUUID()),
   name: S.String,
   body: MarkBody,
-  created_at: S.String,
+  created_at: S.Date,
 })
 
 export const StampInsert = S.Struct({
@@ -1251,14 +1440,17 @@ export const ScoresApiGroup = HttpApiGroup.make("scores")
 
 // --- Unified API ---
 
-export const SetListApi = HttpApi.make("SetListApi")
+export const GigListApi = HttpApi.make("GigListApi")
   .add(AuthApiGroup)
   .add(BandsApiGroup)
   .add(PublicBandsApiGroup)
-  .add(TestingApiGroup)
+  .add(PublicUsersApiGroup)
   .add(SongsApiGroup)
   .add(SetlistsApiGroup)
+  .add(GigsApiGroup)
   .add(ChartsApiGroup)
   .add(ScoresApiGroup)
   .add(MarksApiGroup)
   .add(StampsApiGroup)
+
+export const TestingApi = HttpApi.make("TestingApi").add(TestingApiGroup)

@@ -8,7 +8,7 @@
 /** The database refuses a larger file (`score_files.bytes`). */
 export const MAX_SCORE_BYTES = 20 * 1024 * 1024
 
-export type ScoreFormat = "gp3-5" | "gpx" | "gp7"
+type ScoreFormat = "gp3-5" | "gpx" | "gp7"
 
 /**
  * The Guitar Pro format that `bytes` start like, or null if it is none.

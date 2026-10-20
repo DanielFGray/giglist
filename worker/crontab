@@ -13,3 +13,4 @@
 # │ │ │ │ │ │    │     │
 # │ │ │ │ │ │    │     │
 # * * * * * task ?opts {payload}
+17 3 * * * maintenance__cleanup

@@ -24,7 +24,7 @@ const songsOf = (page: Page, bandId: string) => page.request.get(`/api/songs/ban
 test.describe("band invitations", () => {
   test("an invited user sees the invitation and joins the band by accepting it", async ({ page, browser, testing }) => {
     await testing.login()
-    const { bandId, context, invitee } = await invite(browser, page, "test_invitee")
+    const { bandId, context, invitee } = await invite(browser, page, testing.username("test_invitee"))
 
     // Before accepting, the band's songs are out of reach.
     expect((await songsOf(invitee, bandId)).status()).not.toBe(200)
@@ -45,7 +45,7 @@ test.describe("band invitations", () => {
 
   test("declining removes the invitation and adds no membership", async ({ page, browser, testing }) => {
     await testing.login()
-    const { bandId, context, invitee } = await invite(browser, page, "test_decliner")
+    const { bandId, context, invitee } = await invite(browser, page, testing.username("test_decliner"))
 
     await invitee.goto("/")
     await getPw(invitee, "invitation-decline").click()
@@ -57,12 +57,12 @@ test.describe("band invitations", () => {
 
   test("nobody but the invited user can accept or decline an invitation", async ({ page, browser, testing }) => {
     await testing.login()
-    const { bandId, context, invitee } = await invite(browser, page, "test_invitee")
+    const { bandId, context, invitee } = await invite(browser, page, testing.username("test_invitee"))
     const invitationId = ((await (await invitee.request.get("/api/my/bands/invitations")).json()) as Array<{ id: string }>)[0]!.id
 
     const strangerContext = await browser.newContext()
     const stranger = await strangerContext.newPage()
-    await stranger.request.post("/api/testing/login", { data: { username: "test_stranger", password: TEST_PASSWORD } })
+    await stranger.request.post("/api/testing/login", { data: { username: testing.username("test_stranger"), password: TEST_PASSWORD } })
     expect(await (await stranger.request.get("/api/my/bands/invitations")).json()).toEqual([])
     expect((await stranger.request.post(`/api/my/bands/invitations/${invitationId}/accept`)).status()).toBe(400)
     // Declining someone else's invitation does nothing.

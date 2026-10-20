@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{BandName}</title>
+<meta name="color:Background" content="#18181b">
+<meta name="color:Text" content="#f4f4f5">
+<meta name="color:Accent" content="#f59e0b">
+<meta name="image:Header" content="">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap">
+<style>
+  :root {
+    --bg: {color:Background};
+    --ink: {color:Text};
+    --accent: {color:Accent};
+    --muted: color-mix(in srgb, var(--ink) 62%, var(--bg));
+    --rule: color-mix(in srgb, var(--ink) 15%, transparent);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.5 "DM Sans", system-ui, sans-serif;
+  }
+  .header-image { display: block; width: 100%; max-height: 40vh; object-fit: cover; }
+  main { max-width: 42rem; margin: 0 auto; padding: 2.5rem 1.25rem; }
+  h1 { font-size: clamp(2.25rem, 7vw, 3rem); line-height: 1.1; letter-spacing: -0.02em; margin: 0; }
+  .bar { width: 4rem; height: 4px; border-radius: 2px; background: var(--accent); margin: 0.75rem 0; }
+  .description { color: var(--muted); margin: 0; }
+  .description > :first-child { margin-top: 0; }
+  .description > :last-child { margin-bottom: 0; }
+  .description p { margin: 0 0 0.75rem; }
+  .description a { color: var(--accent); }
+  .description img { max-width: 100%; }
+  .description ul, .description ol { padding-left: 1.25rem; margin: 0 0 0.75rem; }
+  .description blockquote { border-left: 3px solid var(--accent); margin: 0 0 0.75rem; padding-left: 1rem; }
+  .description .embed { margin: 1rem 0; }
+  .embed iframe { display: block; width: 100%; border: 0; }
+  .embed-youtube iframe, .embed-vimeo iframe { aspect-ratio: 16 / 9; height: auto; }
+  .embed-tiktok iframe { max-width: 325px; height: 740px; margin: 0 auto; }
+  .embed-instagram iframe { max-width: 540px; height: 480px; margin: 0 auto; }
+  section { margin-top: 2.5rem; }
+  h2 {
+    font-size: 0.75rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--accent); margin: 0 0 0.75rem;
+  }
+  ul { list-style: none; margin: 0; padding: 0; }
+  .gigs li {
+    display: flex; justify-content: space-between; gap: 1rem;
+    padding: 0.5rem 0; border-bottom: 1px solid var(--rule); font-size: 0.9rem;
+  }
+  .gigs time { color: var(--muted); white-space: nowrap; }
+  .members { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); }
+  .members li { display: flex; align-items: center; gap: 0.75rem; }
+  .avatar {
+    width: 2.5rem; height: 2.5rem; border-radius: 50%; object-fit: cover; flex: none;
+    display: grid; place-items: center; background: var(--accent); color: var(--bg); font-weight: 700;
+  }
+  .username { color: var(--muted); font-size: 0.8rem; }
+  .songs { columns: 2 14rem; column-gap: 2rem; font-size: 0.9rem; }
+  .songs li { break-inside: avoid; padding: 0.2rem 0; }
+  .artist { color: var(--muted); }
+  footer { text-align: center; font-size: 0.75rem; color: var(--muted); padding: 2rem 0; }
+  footer a { color: inherit; text-decoration-color: var(--accent); }
+</style>
+</head>
+<body>
+<block:IfHeaderImage><img class="header-image" src="{image:Header}" alt=""></block:IfHeaderImage>
+<main>
+  <h1>{BandName}</h1>
+  <div class="bar"></div>
+  <block:Description><div class="description">{DescriptionHTML}</div></block:Description>
+
+  <block:Gigs>
+  <section>
+    <h2>Upcoming shows</h2>
+    <ul class="gigs">
+      <block:Gig><li><span>{GigVenue}</span><time datetime="{GigISODate}">{GigDate}</time></li></block:Gig>
+    </ul>
+  </section>
+  </block:Gigs>
+
+  <block:Members>
+  <section>
+    <h2>Members</h2>
+    <ul class="members">
+      <block:Member>
+      <li>
+        <!-- An <object> shows what it holds when its picture fails to load, so a
+             member with no Gravatar gets their initial without any script. -->
+        <block:AvatarURL><object class="avatar" data="{AvatarURL}" aria-hidden="true"><span class="avatar">{MemberInitial}</span></object></block:AvatarURL>
+        <block:NotAvatarURL><span class="avatar" aria-hidden="true">{MemberInitial}</span></block:NotAvatarURL>
+        <div><div>{MemberName}</div><div class="username">@{Username}</div></div>
+      </li>
+      </block:Member>
+    </ul>
+  </section>
+  </block:Members>
+
+  <block:Songs>
+  <section>
+    <h2>Songs we play</h2>
+    <ul class="songs">
+      <block:Song><li>{SongTitle}<block:SongArtist> <span class="artist">· {SongArtist}</span></block:SongArtist></li></block:Song>
+    </ul>
+  </section>
+  </block:Songs>
+</main>
+<footer>Made with <a href="/" target="_top">GigList</a></footer>
+</body>
+</html>

@@ -2,16 +2,19 @@ import { Effect, ManagedRuntime, Schema as S } from "effect"
 import { FetchHttpClient, HttpClient } from "effect/http"
 import { HttpApiClient } from "effect/http-api"
 import {
-  SetListApi,
+  GigListApi,
   AuthUser as AuthUserSchema,
   UserEmail as UserEmailSchema,
   BandInfo as BandInfoSchema,
   BandMember as BandMemberSchema,
   BandInvitation as BandInvitationSchema,
   PublicBandProfile as PublicBandProfileSchema,
+  PublicUserProfile as PublicUserProfileSchema,
+  PageTheme as PageThemeSchema,
   Setlist as SetlistSchema,
   SetlistEntry as SetlistEntrySchema,
-  SetlistSection as SetlistSectionSchema,
+  Gig as GigSchema,
+  GigEntry as GigEntrySchema,
   Song,
   Chart as ChartSchema,
   ChartMarks as ChartMarksSchema,
@@ -32,38 +35,50 @@ export type BandInfo = S.Schema.Type<typeof BandInfoSchema>
 export type BandMember = S.Schema.Type<typeof BandMemberSchema>
 export type BandInvitationInfo = S.Schema.Type<typeof BandInvitationSchema>
 export type PublicBandProfileInfo = S.Schema.Type<typeof PublicBandProfileSchema>
+export type PublicUserProfileInfo = S.Schema.Type<typeof PublicUserProfileSchema>
+export type PageTheme = S.Schema.Type<typeof PageThemeSchema>
 export type SetlistInfo = S.Schema.Type<typeof SetlistSchema>
 export type SetlistEntryInfo = S.Schema.Type<typeof SetlistEntrySchema>
-export type SetlistSectionInfo = S.Schema.Type<typeof SetlistSectionSchema>
+export type GigInfo = S.Schema.Type<typeof GigSchema>
+export type GigEntryInfo = S.Schema.Type<typeof GigEntrySchema>
 
 /** The payloads each endpoint declares, taken from the contract so the client
  *  never restates the shape the server validates. */
-type SongsClient = Effect.Success<SetListApiClient>["songs"]
+type SongsClient = Effect.Success<GigListApiClient>["songs"]
 export type SongCreateData = Parameters<SongsClient["songCreate"]>[0]["payload"]
 export type SongUpdateData = Parameters<SongsClient["songUpdate"]>[0]["payload"]
 
-type ChartsClient = Effect.Success<SetListApiClient>["charts"]
+type MyBandsClient = Effect.Success<GigListApiClient>["myBands"]
+export type BandUpdateData = Parameters<MyBandsClient["updateBand"]>[0]["payload"]
+
+type ChartsClient = Effect.Success<GigListApiClient>["charts"]
 export type LyricsChartCreateData = Parameters<ChartsClient["createLyricsChart"]>[0]["payload"]
 export type ChartRevisionData = Parameters<ChartsClient["saveRevision"]>[0]["payload"]
 
-type MarksClient = Effect.Success<SetListApiClient>["marks"]
+type MarksClient = Effect.Success<GigListApiClient>["marks"]
 export type MarkData = Parameters<MarksClient["createMark"]>[0]["payload"]
-type StampsClient = Effect.Success<SetListApiClient>["stamps"]
+type StampsClient = Effect.Success<GigListApiClient>["stamps"]
 export type StampData = Parameters<StampsClient["createStamp"]>[0]["payload"]
 
-type SetlistsClient = Effect.Success<SetListApiClient>["setlists"]
+type SetlistsClient = Effect.Success<GigListApiClient>["setlists"]
 export type SetlistCreateData = Parameters<SetlistsClient["createSetlist"]>[0]["payload"]
 export type SetlistUpdateData = Parameters<SetlistsClient["updateSetlist"]>[0]["payload"]
 export type SetlistEntryCreateData = Parameters<SetlistsClient["addEntry"]>[0]["payload"]
 export type SetlistEntryUpdateData = Parameters<SetlistsClient["updateEntry"]>[0]["payload"]
-export type SetlistMoveData = Parameters<SetlistsClient["move"]>[0]["payload"]
-export type SetlistPresenceData = Parameters<SetlistsClient["reportPresence"]>[0]["payload"]
+export type MoveData = Parameters<SetlistsClient["move"]>[0]["payload"]
+export type PresenceData = Parameters<SetlistsClient["reportPresence"]>[0]["payload"]
+
+type GigsClient = Effect.Success<GigListApiClient>["gigs"]
+export type GigCreateData = Parameters<GigsClient["createGig"]>[0]["payload"]
+export type GigDetailsData = Parameters<GigsClient["updateGig"]>[0]["payload"]
 
 /** The auth payloads, likewise taken from the contract. The password is a
  *  `Redacted` here, so the browser form builds one before it calls the API. */
-type AuthClient = Effect.Success<SetListApiClient>["auth"]
+type AuthClient = Effect.Success<GigListApiClient>["auth"]
 export type LoginData = Parameters<AuthClient["login"]>[0]["payload"]
 export type RegisterData = Parameters<AuthClient["register"]>[0]["payload"]
+export type ForgotPasswordData = Parameters<AuthClient["forgotPassword"]>[0]["payload"]
+export type ResetPasswordData = Parameters<AuthClient["resetPassword"]>[0]["payload"]
 export type UpdateProfileData = Parameters<AuthClient["updateMe"]>[0]["payload"]
 export type ChangePasswordData = Parameters<AuthClient["changePassword"]>[0]["payload"]
 export type AddEmailData = Parameters<AuthClient["addEmail"]>[0]["payload"]
@@ -84,8 +99,8 @@ const run = <A, E>(
 
 // --- Typed API client (one client for the unified API) ---
 
-const api = HttpApiClient.make(SetListApi, { baseUrl: window.location.origin })
-type SetListApiClient = typeof api
+const api = HttpApiClient.make(GigListApi, { baseUrl: window.location.origin })
+type GigListApiClient = typeof api
 
 // --- Auth ---
 
@@ -97,6 +112,12 @@ export const auth = {
 
   register: (data: RegisterData) =>
     run(api.pipe(Effect.flatMap((c) => c.auth.register({ payload: data })))),
+
+  forgotPassword: (data: ForgotPasswordData) =>
+    run(api.pipe(Effect.flatMap((c) => c.auth.forgotPassword({ payload: data })))),
+
+  resetPassword: (data: ResetPasswordData) =>
+    run(api.pipe(Effect.flatMap((c) => c.auth.resetPassword({ payload: data })))),
 
   logout: () => run(api.pipe(Effect.flatMap((c) => c.auth.logout({})))),
 
@@ -154,14 +175,7 @@ export const bands = {
   delete: (bandId: string) =>
     run(api.pipe(Effect.flatMap((c) => c.myBands.deleteBand({ params: { bandId } })))),
 
-  update: (
-    bandId: string,
-    data: {
-      description?: string | null
-      show_members_publicly?: boolean
-      show_gig_dates_publicly?: boolean
-    },
-  ) =>
+  update: (bandId: string, data: BandUpdateData) =>
     run(
       api.pipe(
         Effect.flatMap((c) =>
@@ -170,9 +184,13 @@ export const bands = {
       ),
     ),
 
+  /** A band's public page, or null when no band has that slug. */
   publicProfile: (slug: string) =>
     run(
-      api.pipe(Effect.flatMap((c) => c.publicBands.getPublicBand({ params: { slug } }))),
+      api.pipe(
+        Effect.flatMap((c) => c.publicBands.getPublicBand({ params: { slug } })),
+        Effect.catchTag("PublicBandNotFound", () => Effect.succeed(null)),
+      ),
     ),
 
   leave: (bandId: string, data: { transfer_to?: string } = {}) =>
@@ -210,6 +228,19 @@ export const bands = {
         Effect.flatMap((c) =>
           c.myBands.inviteToBand({ params: { bandId }, payload: data }),
         ),
+      ),
+    ),
+}
+
+// --- Public user profiles ---
+
+export const users = {
+  /** A user's public profile, or null when no user has that name or the profile is off. */
+  publicProfile: (username: string) =>
+    run(
+      api.pipe(
+        Effect.flatMap((c) => c.publicUsers.getPublicUser({ params: { username } })),
+        Effect.catchTag("PublicUserNotFound", () => Effect.succeed(null)),
       ),
     ),
 }
@@ -315,9 +346,11 @@ export const setlists = {
     run(api.pipe(Effect.flatMap((c) => c.setlists.createSetlist({ payload: data })))),
 
   update: (id: string, data: SetlistUpdateData) =>
-    run(
-      api.pipe(Effect.flatMap((c) => c.setlists.updateSetlist({ params: { id }, payload: data }))),
-    ),
+    run(api.pipe(Effect.flatMap((c) => c.setlists.updateSetlist({ params: { id }, payload: data })))),
+
+  /** A new setlist with the same songs and overrides, in no gig yet. */
+  copy: (id: string, name: string) =>
+    run(api.pipe(Effect.flatMap((c) => c.setlists.copySetlist({ params: { id }, payload: { name } })))),
 
   remove: (id: string) =>
     run(api.pipe(Effect.flatMap((c) => c.setlists.deleteSetlist({ params: { id } })))),
@@ -328,41 +361,61 @@ export const setlists = {
   addEntry: (id: string, data: SetlistEntryCreateData) =>
     run(api.pipe(Effect.flatMap((c) => c.setlists.addEntry({ params: { id }, payload: data })))),
 
+  /** Changes only the fields in `data`; a null override inherits the song's value. */
   updateEntry: (id: string, entryId: string, data: SetlistEntryUpdateData) =>
-    run(
-      api.pipe(
-        Effect.flatMap((c) =>
-          c.setlists.updateEntry({ params: { id, entryId }, payload: data }),
-        ),
-      ),
-    ),
+    run(api.pipe(Effect.flatMap((c) => c.setlists.updateEntry({ params: { id, entryId }, payload: data })))),
 
   removeEntry: (id: string, entryId: string) =>
-    run(
-      api.pipe(Effect.flatMap((c) => c.setlists.deleteEntry({ params: { id, entryId } }))),
-    ),
+    run(api.pipe(Effect.flatMap((c) => c.setlists.deleteEntry({ params: { id, entryId } })))),
 
-  sections: (id: string) =>
-    run(api.pipe(Effect.flatMap((c) => c.setlists.listSections({ params: { id } })))),
-
-  addSection: (id: string, name: string) =>
-    run(api.pipe(Effect.flatMap((c) => c.setlists.addSection({ params: { id }, payload: { name } })))),
-
-  renameSection: (id: string, sectionId: string, name: string) =>
-    run(
-      api.pipe(
-        Effect.flatMap((c) => c.setlists.renameSection({ params: { id, sectionId }, payload: { name } })),
-      ),
-    ),
-
-  removeSection: (id: string, sectionId: string) =>
-    run(api.pipe(Effect.flatMap((c) => c.setlists.deleteSection({ params: { id, sectionId } })))),
-
-  /** Tells the others watching the setlist what this connection is doing; see `useSetlistLive`. */
-  reportPresence: (id: string, data: SetlistPresenceData) =>
+  /** Tells the others watching the setlist what this connection is doing; see `useLive`. */
+  reportPresence: (id: string, data: PresenceData) =>
     run(api.pipe(Effect.flatMap((c) => c.setlists.reportPresence({ params: { id }, payload: data })))),
 
-  /** Moves one row between its neighbours; the server computes its key. */
-  move: (id: string, move: SetlistMoveData) =>
-    run(api.pipe(Effect.flatMap((c) => c.setlists.move({ params: { id }, payload: move })))), 
+  /** Moves one entry right after `previous`; the server computes its key. */
+  move: (id: string, move: MoveData) =>
+    run(api.pipe(Effect.flatMap((c) => c.setlists.move({ params: { id }, payload: move })))),
+}
+
+// --- Gigs ---
+
+export const gigs = {
+  byBand: (bandId: string) =>
+    run(api.pipe(Effect.flatMap((c) => c.gigs.listGigs({ params: { bandId } })))),
+
+  get: (id: string) =>
+    run(api.pipe(Effect.flatMap((c) => c.gigs.getGig({ params: { id } })))),
+
+  create: (data: GigCreateData) =>
+    run(api.pipe(Effect.flatMap((c) => c.gigs.createGig({ payload: data })))),
+
+  update: (id: string, data: GigDetailsData) =>
+    run(api.pipe(Effect.flatMap((c) => c.gigs.updateGig({ params: { id }, payload: data })))),
+
+  remove: (id: string) =>
+    run(api.pipe(Effect.flatMap((c) => c.gigs.deleteGig({ params: { id } })))),
+
+  /** The gig plays `setlistId` after the setlists it already plays. */
+  addSetlist: (id: string, setlistId: string) =>
+    run(api.pipe(Effect.flatMap((c) => c.gigs.addGigSetlist({ params: { id }, payload: { setlist_id: setlistId } })))),
+
+  /** The gig stops playing `setlistId`; the setlist itself stays. */
+  removeSetlist: (id: string, setlistId: string) =>
+    run(api.pipe(Effect.flatMap((c) => c.gigs.removeGigSetlist({ params: { id, setlistId } })))),
+
+  /** The gig plays a new copy of `setlistId`, named `name`, in its place; other gigs keep the original. */
+  copySetlist: (id: string, setlistId: string, name: string) =>
+    run(api.pipe(Effect.flatMap((c) => c.gigs.copyGigSetlist({ params: { id, setlistId }, payload: { name } })))),
+
+  /** Moves one setlist right after `previous` in the gig's order. */
+  moveSetlist: (id: string, move: MoveData) =>
+    run(api.pipe(Effect.flatMap((c) => c.gigs.moveGigSetlist({ params: { id }, payload: move })))),
+
+  /** Every song the gig plays, in order, each with its setlist's name. */
+  entries: (id: string) =>
+    run(api.pipe(Effect.flatMap((c) => c.gigs.listGigEntries({ params: { id } })))),
+
+  /** Tells the others watching the gig what this connection is doing; see `useLive`. */
+  reportPresence: (id: string, data: PresenceData) =>
+    run(api.pipe(Effect.flatMap((c) => c.gigs.reportGigPresence({ params: { id }, payload: data })))),
 }

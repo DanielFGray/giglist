@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { createFileRoute, redirect, useRouter } from "@tanstack/react-router"
+import { Link, createFileRoute, redirect, useRouter } from "@tanstack/react-router"
 import { useForm } from "@tanstack/react-form"
 import { Schema as S } from "effect"
 import {
@@ -22,6 +22,11 @@ import {
   errorMessage,
   fieldError,
 } from "~/components/form"
+import { Markdown } from "~/components/Markdown"
+import { UserPage } from "~/components/UserPage"
+import { ThemeOptionFields } from "~/components/ThemeOptionFields"
+import { themeOptions } from "~/components/band-theme"
+import { DEFAULT_USER_THEME } from "~/components/user-theme"
 
 export const Route = createFileRoute("/settings")({
   beforeLoad: ({ context }) => {
@@ -47,6 +52,24 @@ function blankToNull(value: string): string | null {
   return trimmed.length === 0 ? null : trimmed
 }
 
+/** The user's values for the options the theme still declares; values for removed options are dropped. */
+function declaredOptions(theme: string, chosen: Readonly<Record<string, string>>) {
+  return Object.fromEntries(
+    themeOptions(theme).flatMap((o) => (chosen[o.key] === undefined ? [] : [[o.key, chosen[o.key]!]])),
+  )
+}
+
+/** The reference shown under "Theme tags"; `userScope` in band-theme.ts is what fills them. */
+const USER_THEME_TAGS: ReadonlyArray<readonly [string, string]> = [
+  ["{DisplayName} {Username} {Initial} {AvatarURL}", "Who you are. DisplayName is your display name, or your username until you set one. <block:AvatarURL>…</block:AvatarURL> shows only with a picture; <block:NotAvatarURL> shows without one."],
+  ["{Bio} {BioHTML}", "Your bio. {Bio} is the Markdown as written; {BioHTML} is it rendered — links and YouTube/Spotify/Vimeo/TikTok/Instagram players included. <block:Bio>…</block:Bio> shows only when you have one, and .bio .embed styles the players (the default theme shows how)."],
+  ["<block:Bands> <block:Band>", "Bands repeats for each of your bands whose public page is on: {BandName} {BandSlug} {BandURL}."],
+  ["<block:NameWord> <block:NameLetter>", "Your display name word by word, then letter by letter: {Letter}."],
+  ["<block:NotName>", "Shows when Name is empty, such as <block:NotAvatarURL> for no picture."],
+  ['<meta name="color:Accent" content="#f59e0b">', "Declares an option you set above; print it with {color:Accent}. Kinds: color, image (a link, also opens <block:IfAccentImage>), text, and if (<block:IfName> / <block:IfNotName>)."],
+  ["Scripts and forms", "Do not run: the theme's own scripts and frames are removed before the page is shown, and forms cannot submit. The players in a bio are the only frames. Styles, fonts, images and links work."],
+]
+
 function SettingsPage() {
   const { user } = Route.useRouteContext()
   const { emails, memberships } = Route.useLoaderData()
@@ -62,7 +85,12 @@ function SettingsPage() {
         </p>
       </div>
 
-      <ProfileSection user={user} />
+      <ProfileSection
+        user={user}
+        publicBands={memberships
+          .filter((m) => m.band.is_public)
+          .map((m) => ({ slug: m.band.slug, name: m.band.name }))}
+      />
       <PasswordSection />
       <EmailsSection emails={emails} />
       <BandsSection userId={user.id} memberships={memberships} />
@@ -71,7 +99,13 @@ function SettingsPage() {
   )
 }
 
-function ProfileSection({ user }: { user: AuthUser }) {
+function ProfileSection({
+  user,
+  publicBands,
+}: {
+  user: AuthUser
+  publicBands: ReadonlyArray<{ slug: string; name: string }>
+}) {
   const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
@@ -82,6 +116,9 @@ function ProfileSection({ user }: { user: AuthUser }) {
       name: user.name ?? "",
       bio: user.bio ?? "",
       avatar_url: user.avatar_url ?? "",
+      is_public: user.is_public,
+      page_theme: user.page_theme ?? DEFAULT_USER_THEME,
+      page_options: user.page_options,
     },
     onSubmit: async ({ value }) => {
       setServerError(null)
@@ -93,6 +130,12 @@ function ProfileSection({ user }: { user: AuthUser }) {
             name: blankToNull(value.name),
             bio: blankToNull(value.bio),
             avatar_url: blankToNull(value.avatar_url),
+            is_public: value.is_public,
+            page_theme: value.page_theme.trim() === "" ? null : value.page_theme,
+            page_options: declaredOptions(
+              value.page_theme.trim() === "" ? DEFAULT_USER_THEME : value.page_theme,
+              value.page_options,
+            ),
           }),
         )
         await router.invalidate()
@@ -158,19 +201,70 @@ function ProfileSection({ user }: { user: AuthUser }) {
           )}
         </form.Field>
 
-        <form.Field name="bio">
-          {(field) => (
-            <TextAreaField
-              label="Bio"
-              pwid="settings-bio"
-              value={field.state.value}
-              onChange={field.handleChange}
-              error={fieldError(field)}
-              placeholder="A short note about you"
-              rows={3}
-            />
-          )}
-        </form.Field>
+        <div className="space-y-1">
+          <form.Field name="bio">
+            {(field) => (
+              <TextAreaField
+                label="Bio (Markdown)"
+                pwid="settings-bio"
+                value={field.state.value}
+                onChange={field.handleChange}
+                error={fieldError(field)}
+                placeholder={"**Drums** in two bands. Latest set:\n\nhttps://www.youtube.com/watch?v=…"}
+                rows={6}
+              />
+            )}
+          </form.Field>
+          <p data-pwid="settings-bio-help" className="text-xs text-zinc-500">
+            Markdown works: **bold**, links, lists, pictures. Put a YouTube, Spotify, Vimeo, TikTok or
+            Instagram link on its own line — or paste its embed code — and it shows as a player.
+          </p>
+          <form.Subscribe selector={(state) => state.values.bio}>
+            {(bio) =>
+              bio.trim() !== "" ? (
+                <div className="rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] px-3 py-2">
+                  <Markdown pwid="settings-bio-preview" source={bio} className="text-sm text-zinc-300" />
+                </div>
+              ) : null
+            }
+          </form.Subscribe>
+        </div>
+
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <span className="text-sm text-zinc-300">Public profile</span>
+            <p className="text-xs text-zinc-500 mt-1">
+              {user.is_public
+                ? "Anyone can open your profile at "
+                : "Give yourself a page anyone can open, with your name, picture and bio."}
+              {user.is_public && (
+                <Link
+                  to="/u/$username"
+                  params={{ username: user.username }}
+                  data-pwid="settings-profile-public-link"
+                  className="text-[var(--color-amber-accent)] hover:underline"
+                >
+                  /u/{user.username}
+                </Link>
+              )}
+            </p>
+          </div>
+          <form.Field name="is_public">
+            {(field) => (
+              <button
+                type="button"
+                role="switch"
+                aria-checked={field.state.value}
+                aria-label="Public profile"
+                data-pwid="settings-profile-public"
+                onClick={() => field.handleChange(!field.state.value)}
+                className="group relative h-6 w-11 shrink-0 rounded-full bg-zinc-600 transition-colors aria-checked:bg-[var(--color-amber-accent)] cursor-pointer"
+              >
+                <span className="absolute left-0.5 top-0.5 size-5 rounded-full bg-white shadow transition-transform group-aria-checked:translate-x-5" />
+              </button>
+            )}
+          </form.Field>
+        </div>
 
         <form.Field name="avatar_url">
           {(field) => (
@@ -184,6 +278,92 @@ function ProfileSection({ user }: { user: AuthUser }) {
             />
           )}
         </form.Field>
+        <p className="text-xs text-zinc-500">
+          New accounts start with the Gravatar for their signup email. Replace
+          it with any picture URL, or clear it to show your initial instead.
+        </p>
+
+        <fieldset className="space-y-3">
+          <legend className="text-sm font-medium text-zinc-300">Profile theme</legend>
+          <p className="text-xs text-zinc-500">
+            Your profile is a page you theme yourself: one HTML document with theme tags.
+            There are no ready-made themes to pick from; write your own, or restore the default.
+          </p>
+
+          <form.Subscribe selector={(state) => [state.values.page_theme, state.values.page_options] as const}>
+            {([theme, chosen]) => (
+              <ThemeOptionFields
+                options={themeOptions(theme)}
+                chosen={chosen}
+                pwidPrefix="settings-theme-option-"
+                onChange={(key, value) => {
+                  form.setFieldValue("page_options", { ...chosen, [key]: value })
+                  setSaved(false)
+                }}
+              />
+            )}
+          </form.Subscribe>
+
+          <details className="text-sm">
+            <summary className="cursor-pointer text-zinc-400 hover:text-zinc-200">Edit theme HTML</summary>
+            <form.Field name="page_theme">
+              {(field) => (
+                <textarea
+                  data-pwid="settings-theme-source"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  spellCheck={false}
+                  rows={18}
+                  className="mt-2 w-full rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface)] p-2 font-mono text-xs leading-relaxed"
+                />
+              )}
+            </form.Field>
+            <button
+              type="button"
+              data-pwid="settings-theme-reset"
+              onClick={() => {
+                form.setFieldValue("page_theme", DEFAULT_USER_THEME)
+                form.setFieldValue("page_options", {})
+                setSaved(false)
+              }}
+              className="mt-2 rounded-md border border-[var(--color-border-subtle)] px-3 py-1 text-sm hover:border-zinc-500 cursor-pointer"
+            >
+              Restore default theme
+            </button>
+          </details>
+
+          <details className="text-sm">
+            <summary className="cursor-pointer text-zinc-400 hover:text-zinc-200">Theme tags</summary>
+            <dl className="mt-2 space-y-2 text-xs">
+              {USER_THEME_TAGS.map(([tags, meaning]) => (
+                <div key={tags}>
+                  <dt className="font-mono text-zinc-300">{tags}</dt>
+                  <dd className="text-zinc-500">{meaning}</dd>
+                </div>
+              ))}
+            </dl>
+          </details>
+
+          <div data-pwid="settings-theme-preview" className="space-y-1">
+            <form.Subscribe selector={(state) => state.values}>
+              {(values) => (
+                <UserPage
+                  className="h-[30rem] rounded-md border border-[var(--color-border-subtle)]"
+                  profile={{
+                    username: values.username.trim() || user.username,
+                    name: blankToNull(values.name),
+                    bio: blankToNull(values.bio),
+                    avatar_url: blankToNull(values.avatar_url),
+                    page_theme: values.page_theme.trim() === "" ? null : values.page_theme,
+                    page_options: values.page_options,
+                    bands: publicBands,
+                  }}
+                />
+              )}
+            </form.Subscribe>
+            <p className="text-xs text-zinc-500">Preview. It shows on your profile once you save.</p>
+          </div>
+        </fieldset>
 
         <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
           {([canSubmit, isSubmitting]) => (

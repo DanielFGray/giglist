@@ -1,3 +1,5 @@
+import { Option } from "effect"
+
 /** Sortable, base-62 position keys. ASCII order matches this alphabet. */
 const DIGITS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 const BASE = DIGITS.length
@@ -41,4 +43,31 @@ export function rebalance(count: number): Array<string> {
     // The closing mid digit keeps every key off the lowest digit, which would leave no room before it.
     return key + DIGITS[Math.floor(BASE / 2)]
   })
+}
+
+/** A row ordered by its key, as the server reads it. */
+export type KeyedRow = { readonly id: string; readonly position_key: string }
+
+/** Keys longer than this make the whole group renumber, so keys stay short. */
+const LONGEST_KEY = 32
+
+/**
+ * The key writes that put `movedId` right after `previousId` (first when it is
+ * null). `siblings` are the other rows of the group, in order. Usually one
+ * write: a key between the new neighbours. When that key would be too long,
+ * every row of the group gets a fresh key. None when `previousId` is not a
+ * sibling, so a move can only name a neighbour in the same group.
+ */
+export function placeAfter(
+  siblings: ReadonlyArray<KeyedRow>,
+  movedId: string,
+  previousId: string | null,
+): Option.Option<Array<KeyedRow>> {
+  const index = previousId === null ? 0 : siblings.findIndex((row) => row.id === previousId) + 1
+  if (index === 0 && previousId !== null) return Option.none()
+  const key = between(siblings[index - 1]?.position_key ?? null, siblings[index]?.position_key ?? null)
+  if (key.length <= LONGEST_KEY) return Option.some([{ id: movedId, position_key: key }])
+  const ids = [...siblings.slice(0, index).map((row) => row.id), movedId, ...siblings.slice(index).map((row) => row.id)]
+  const keys = rebalance(ids.length)
+  return Option.some(ids.map((id, at) => ({ id, position_key: keys[at]! })))
 }

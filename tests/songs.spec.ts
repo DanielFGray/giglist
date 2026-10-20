@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test"
 import { test, expect, getPw, TEST_PASSWORD } from "./helpers"
 
 /** Create a band for the logged-in user and return its id. Band-scoped routes
@@ -44,65 +45,126 @@ const createSong = async (
   return (await res.json()).id as string
 }
 
+/** The catalog grid's rows, and one column of them. */
+const rows = (page: Page) => getPw(page, "grid-row")
+const column = (page: Page, key: string) => rows(page).locator(`[data-pwid="cell-${key}"]`)
+const newTitle = (page: Page) => getPw(page, "grid-new-row").locator('[data-pwid="cell-title"]')
+
 test.describe("songs", () => {
-  test("adds a song with every metadata field", async ({ page, testing }) => {
+  test("types a run of titles into the last row, then fills in the artists down the column", async ({ page, testing }) => {
     await testing.login()
-    const bandId = await createBand(page, `test-songs-metadata-${Date.now()}`)
+    const bandId = await createBand(page, `test-songs-grid-${Date.now()}`)
 
     await page.goto(`/band/${bandId}/songs`)
-    await expect(getPw(page, "songs-empty")).toBeVisible({ timeout: 10000 })
+    await newTitle(page).click()
+    for (const title of ["Roadhouse Blues", "Hey Joe", "Gloria"]) {
+      await page.keyboard.type(title)
+      await page.keyboard.press("Enter")
+      // Enter in the last row adds the song and stays there for the next one.
+      await expect(column(page, "title").last()).toHaveText(title)
+    }
+    await expect(column(page, "title")).toHaveText(["Roadhouse Blues", "Hey Joe", "Gloria"])
 
-    await getPw(page, "song-new").click()
-    await expect(getPw(page, "song-edit-form")).toBeVisible({ timeout: 10000 })
-    await getPw(page, "song-title").fill("Wonderwall")
-    await getPw(page, "song-artist").fill("Oasis")
-    // The key is a select of the keys the database's domain accepts, so the
-    // form cannot send a value the schema will refuse.
-    await getPw(page, "song-key").selectOption("Em")
-    await getPw(page, "song-tempo").fill("87")
-    await getPw(page, "song-duration").fill("4:18")
-    await getPw(page, "song-capo").fill("2")
-    await getPw(page, "song-notes").fill("Capo 2, strummed")
-    await getPw(page, "song-submit").click()
+    // Back to the top, one step right, and down the artist column.
+    await page.keyboard.press("Control+Home")
+    await page.keyboard.press("ArrowRight")
+    for (const artist of ["The Doors", "Jimi Hendrix", "Them"]) {
+      await page.keyboard.type(artist)
+      await page.keyboard.press("Enter")
+    }
+    await expect(column(page, "artist")).toHaveText(["The Doors", "Jimi Hendrix", "Them"])
+    await expect(column(page, "artist").last()).toHaveAttribute("aria-busy", "false")
 
-    // Saving leaves the song in read view; the list shows what the form collected.
-    await page.goto(`/band/${bandId}/songs`)
-    await expect(getPw(page, "song-row")).toHaveCount(1, { timeout: 10000 })
-    await expect(getPw(page, "song-row-title")).toHaveText("Wonderwall")
-    // The row carries the fields the form collected, duration as mm:ss.
-    await expect(getPw(page, "song-row-meta")).toContainText("Em")
-    await expect(getPw(page, "song-row-meta")).toContainText("87 BPM")
-    await expect(getPw(page, "song-row-meta")).toContainText("4:18")
-    await expect(getPw(page, "song-row-meta")).toContainText("capo 2")
-    await expect(getPw(page, "song-row-notes")).toHaveText("Capo 2, strummed")
+    // The rows are saved, and keep the order they were typed in.
+    await page.reload()
+    await expect(column(page, "title")).toHaveText(["Roadhouse Blues", "Hey Joe", "Gloria"], { timeout: 10000 })
+    await expect(column(page, "artist")).toHaveText(["The Doors", "Jimi Hendrix", "Them"])
   })
 
-  test("edits and deletes a song", async ({ page, testing }) => {
+  test("Tab saves a cell and moves along the row; Escape cancels and Delete clears", async ({ page, testing }) => {
     await testing.login()
-    const bandId = await createBand(page, `test-songs-crud-${Date.now()}`)
+    const bandId = await createBand(page, `test-songs-tab-${Date.now()}`)
+
+    await page.goto(`/band/${bandId}/songs`)
+    await newTitle(page).click()
+    await page.keyboard.type("Wonderwall")
+    await page.keyboard.press("Tab")
+    // Tab from the new row's title adds the song and goes on along its row.
+    await expect(rows(page)).toHaveCount(1, { timeout: 10000 })
+    for (const value of ["Oasis", "em", "87", "4:18", "2", "Capo 2, strummed"]) {
+      await page.keyboard.type(value)
+      await page.keyboard.press("Tab")
+    }
+    const cells = () => rows(page).first().locator("td")
+    // The key column offers the keys that match what was typed, and Tab takes the first.
+    await expect(cells()).toHaveText(["Wonderwall", "Oasis", "Em", "87", "4:18", "2", "Capo 2, strummed", /Charts/])
+
+    await column(page, "tempo").click()
+    await page.keyboard.type("120")
+    await page.keyboard.press("Escape")
+    await expect(column(page, "tempo")).toHaveText("87")
+
+    await page.keyboard.press("Delete")
+    await expect(column(page, "tempo")).toHaveText("")
+    await expect(column(page, "tempo")).toHaveAttribute("aria-busy", "false")
+    await page.reload()
+    await expect(column(page, "tempo")).toHaveText("", { timeout: 10000 })
+    await expect(column(page, "duration")).toHaveText("4:18")
+  })
+
+  test("refuses a bad value in a cell and says why", async ({ page, testing }) => {
+    await testing.login()
+    const bandId = await createBand(page, `test-songs-bad-${Date.now()}`)
     await createSong(page, bandId, { title: "Everlong", artist: "Foo Fighters", tempo_bpm: 158 })
 
     await page.goto(`/band/${bandId}/songs`)
-    await expect(getPw(page, "song-row")).toHaveCount(1, { timeout: 10000 })
+    await column(page, "tempo").click()
+    await page.keyboard.type("fast")
+    await page.keyboard.press("Enter")
+    await expect(getPw(page, "songs-grid-error")).toHaveText("Tempo is a whole number from 1 to 999")
+    await expect(column(page, "tempo")).toHaveText("158")
 
-    await getPw(page, "song-edit").click()
-    await expect(getPw(page, "song-edit-form")).toBeVisible({ timeout: 10000 })
-    await getPw(page, "song-tempo").fill("92")
-    await getPw(page, "song-duration").fill("4:05")
-    await getPw(page, "song-submit").click()
+    await column(page, "duration").click()
+    await page.keyboard.type("nope")
+    await page.keyboard.press("Enter")
+    await expect(getPw(page, "songs-grid-error")).toHaveText("Length is minutes:seconds, like 3:45")
 
-    // Saving leaves the song in read view: the form is disabled behind one Edit button.
-    await expect(getPw(page, "song-submit")).toHaveCount(0, { timeout: 10000 })
-    await expect(getPw(page, "song-edit")).toBeVisible()
+    await column(page, "title").click()
+    await page.keyboard.press("Delete")
+    await expect(getPw(page, "songs-grid-error")).toHaveText("A song needs a title")
+    await expect(column(page, "title")).toHaveText("Everlong")
+  })
+
+  test("deletes a song from its row", async ({ page, testing }) => {
+    await testing.login()
+    const bandId = await createBand(page, `test-songs-delete-${Date.now()}`)
+    await createSong(page, bandId, { title: "Everlong", artist: "Foo Fighters", tempo_bpm: 158 })
 
     await page.goto(`/band/${bandId}/songs`)
-    await expect(getPw(page, "song-row-meta")).toContainText("92 BPM", { timeout: 10000 })
-    await expect(getPw(page, "song-row-meta")).toContainText("4:05")
-
-    await getPw(page, "song-edit").click()
-    await expect(getPw(page, "song-edit-form")).toBeVisible({ timeout: 10000 })
+    await expect(rows(page)).toHaveCount(1, { timeout: 10000 })
     await getPw(page, "song-delete").click()
-    await expect(getPw(page, "songs-empty")).toBeVisible({ timeout: 10000 })
+    await expect(rows(page)).toHaveCount(0, { timeout: 10000 })
+  })
+
+  test("a sort is applied when asked: an edited row keeps its place until the next sort", async ({ page, testing }) => {
+    await testing.login()
+    const bandId = await createBand(page, `test-songs-stable-${Date.now()}`)
+    await createSong(page, bandId, { title: "Apple", artist: "The As", tempo_bpm: 140 })
+    await createSong(page, bandId, { title: "Mango", artist: "The Ms", tempo_bpm: 120 })
+
+    await page.goto(`/band/${bandId}/songs?sort=title`)
+    await expect(column(page, "title")).toHaveText(["Apple", "Mango"], { timeout: 10000 })
+    await column(page, "title").first().click()
+    await page.keyboard.type("Zucchini")
+    await page.keyboard.press("Enter")
+    await expect(column(page, "title")).toHaveText(["Zucchini", "Mango"])
+    // A sort orders the rows as saved, so let the rename land first.
+    await expect(column(page, "title").first()).toHaveAttribute("aria-busy", "false")
+
+    await getPw(page, "songs-sort").selectOption("artist")
+    await expect(page).toHaveURL(/sort=artist/)
+    await getPw(page, "songs-sort").selectOption("title")
+    await expect(column(page, "title")).toHaveText(["Mango", "Zucchini"])
   })
 
   test("a song opens read-only, and Edit or Cancel moves between the two modes", async ({ page, testing }) => {
@@ -111,8 +173,7 @@ test.describe("songs", () => {
     await createSong(page, bandId, { title: "Everlong", artist: "Foo Fighters", tempo_bpm: 158 })
 
     await page.goto(`/band/${bandId}/songs`)
-    await expect(getPw(page, "song-row")).toHaveCount(1, { timeout: 10000 })
-    await getPw(page, "song-row-title").click()
+    await getPw(page, "song-open").click()
 
     await expect(getPw(page, "song-edit")).toBeVisible({ timeout: 10000 })
     await expect(getPw(page, "song-title")).toBeDisabled()
@@ -227,7 +288,7 @@ test.describe("songs", () => {
     await expect(getPw(page, "song-edit")).toBeVisible({ timeout: 10000 })
 
     await page.goto(`/band/${bandId}/songs`)
-    await expect(getPw(page, "song-row-title")).toHaveText("Named Later")
+    await expect(column(page, "title")).toHaveText(["Named Later"], { timeout: 10000 })
   })
 
   test("sorts and searches the catalog", async ({ page, testing }) => {
@@ -238,17 +299,17 @@ test.describe("songs", () => {
     await createSong(page, bandId, { title: "Mango", artist: "The Ms", tempo_bpm: 120 })
 
     await page.goto(`/band/${bandId}/songs`)
-    await expect(getPw(page, "song-row")).toHaveCount(3, { timeout: 10000 })
+    // The default order is the order the songs were added.
+    await expect(column(page, "title")).toHaveText(["Zebra", "Apple", "Mango"], { timeout: 10000 })
 
     await getPw(page, "songs-sort").selectOption("title")
-    await expect(getPw(page, "song-row-title").first()).toHaveText("Apple")
+    await expect(column(page, "title")).toHaveText(["Apple", "Mango", "Zebra"])
 
     await getPw(page, "songs-sort").selectOption("tempo")
-    await expect(getPw(page, "song-row-title").first()).toHaveText("Zebra")
+    await expect(column(page, "title")).toHaveText(["Zebra", "Mango", "Apple"])
 
     await getPw(page, "songs-search").fill("mang")
-    await expect(getPw(page, "song-row")).toHaveCount(1, { timeout: 5000 })
-    await expect(getPw(page, "song-row-title")).toHaveText("Mango")
+    await expect(column(page, "title")).toHaveText(["Mango"])
 
     await getPw(page, "songs-search").fill("nothing matches this")
     await expect(getPw(page, "songs-no-match")).toBeVisible({ timeout: 5000 })

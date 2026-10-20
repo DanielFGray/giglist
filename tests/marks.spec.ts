@@ -130,8 +130,12 @@ test.describe("marks", () => {
     await page.goto(url)
     await expect(getPw(page, "marked-chart")).toBeVisible({ timeout: 10000 })
     // Hold the save back, so the time between the stroke and the saved mark is long enough to see.
+    let releaseSave!: () => void
+    const saveHeld = new Promise<void>((resolve) => {
+      releaseSave = resolve
+    })
     await page.route("**/api/marks", async (route) => {
-      if (route.request().method() === "POST") await new Promise((done) => setTimeout(done, 800))
+      if (route.request().method() === "POST") await saveHeld
       await route.continue()
     })
     await openTool(page, "ink")
@@ -139,11 +143,9 @@ test.describe("marks", () => {
     await stroke(page, [{ x: at.x, y: at.y + 20 }, { x: at.x + 20, y: at.y + 30 }, { x: at.x + 40, y: at.y + 20 }])
     const preview = page.locator('path[class~="fill-blue-500/70"]')
     // While the save is held back, the stroke is still drawn and no mark exists yet.
-    for (let i = 0; i < 4; i++) {
-      await expect(preview).toHaveCount(1)
-      await expect(getPw(page, "mark")).toHaveCount(0)
-      await page.waitForTimeout(100)
-    }
+    await expect(preview).toHaveCount(1)
+    await expect(getPw(page, "mark")).toHaveCount(0)
+    releaseSave()
     await expect(getPw(page, "mark")).toHaveCount(1, { timeout: 10000 })
     await expect(preview).toHaveCount(0)
   })
@@ -197,8 +199,9 @@ test.describe("marks", () => {
     const { bandId, url, chart } = await createChart(page)
     const context = await browser.newContext()
     const mate = await context.newPage()
-    await mate.request.post("/api/testing/login", { data: { username: "test_bandmate", password: TEST_PASSWORD } })
-    await page.request.post("/api/testing/band-member", { data: { band_id: bandId, username: "test_bandmate" } })
+    const mateName = testing.username("test_bandmate")
+    await mate.request.post("/api/testing/login", { data: { username: mateName, password: TEST_PASSWORD } })
+    await page.request.post("/api/testing/band-member", { data: { band_id: bandId, username: mateName } })
 
     await page.goto(url)
     await expect(getPw(page, "marked-chart")).toBeVisible({ timeout: 10000 })

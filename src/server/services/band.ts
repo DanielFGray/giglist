@@ -1,10 +1,28 @@
 import { Effect, Schema } from "effect";
 import { sql } from "kysely";
 import { Kysely } from "../db";
+import type { UpdateBandPayload } from "../../api/contracts";
+
+type BandUpdate = Schema.Schema.Type<typeof UpdateBandPayload>;
 
 export class BandError extends Schema.TaggedError<BandError, { readonly brand: unique symbol }>()("BandError", {
   message: Schema.String,
 }) {}
+
+/** The columns of a band its members read; `BandInfo` in the contract has the same fields. */
+const bandColumns = [
+  "app_public.bands.id",
+  "app_public.bands.slug",
+  "app_public.bands.name",
+  "app_public.bands.description",
+  "app_public.bands.is_public",
+  "app_public.bands.show_members_publicly",
+  "app_public.bands.show_gig_dates_publicly",
+  "app_public.bands.show_songs_publicly",
+  "app_public.bands.page_theme",
+  "app_public.bands.page_options",
+  "app_public.bands.created_at",
+] as const;
 
 /**
  * Bands the current user belongs to.
@@ -12,27 +30,20 @@ export class BandError extends Schema.TaggedError<BandError, { readonly brand: u
  * The membership join is a convenience, not the security boundary: the visitor
  * role has only `select` on bands, and the `select_member` policy allows a row
  * only when the user is a member. Both mechanisms agree, so the join only keeps
- * the result to one query for the common case.
+ * the result to one query for the common case. The public page reads bands
+ * through `app_public.public_band`, never through a policy.
  */
-export const getUserBands = Effect.fnUntraced(function* () {
+export const getUserBands = Effect.fn("Band.getUserBands")(function* () {
   const db = yield* Kysely;
   return yield* db
     .selectFrom("app_public.band_memberships")
     .innerJoin("app_public.bands", "app_public.bands.id", "app_public.band_memberships.band_id")
-    .select([
-      "app_public.bands.id",
-      "app_public.bands.slug",
-      "app_public.bands.name",
-      "app_public.bands.description",
-      "app_public.bands.show_members_publicly",
-      "app_public.bands.show_gig_dates_publicly",
-      "app_public.bands.created_at",
-    ])
+    .select(bandColumns)
     .where("app_public.band_memberships.user_id", "=", sql<string>`app_public.current_user_id()`)
     .orderBy("app_public.bands.name", "asc");
 });
 
-export const getBandMembers = Effect.fnUntraced(function* (bandId: string) {
+export const getBandMembers = Effect.fn("Band.getBandMembers")(function* (bandId: string) {
   const db = yield* Kysely;
   return yield* db
     .selectFrom("app_public.band_memberships")
@@ -51,17 +62,17 @@ export const getBandMembers = Effect.fnUntraced(function* (bandId: string) {
     .orderBy("app_public.users.username", "asc");
 });
 
-export const createBand = Effect.fnUntraced(
+export const createBand = Effect.fn("Band.createBand")(
   function* (args: { slug: string; name: string }) {
     const db = yield* Kysely;
-    const band = yield* db
+    const created = yield* db
       .selectFrom(
-        sql<{ id: string; slug: string; name: string }>`app_public.create_band(
+        sql<{ id: string | null }>`app_public.create_band(
           slug => ${args.slug}::citext,
           name => ${args.name}
         )`.as("b"),
       )
-      .selectAll()
+      .select("id")
       .pipe(
         Effect.head,
         Effect.catchTag("NoSuchElementError", () =>
@@ -69,8 +80,13 @@ export const createBand = Effect.fnUntraced(
         ),
       );
 
-    if (!band.id) return yield* new BandError({ message: "Failed to create band" });
-    return { id: band.id, slug: band.slug, name: band.name };
+    const id = created.id;
+    if (!id) return yield* new BandError({ message: "Failed to create band" });
+    return yield* db
+      .selectFrom("app_public.bands")
+      .select(bandColumns)
+      .where("app_public.bands.id", "=", id)
+      .pipe(Effect.head);
   },
   Effect.tapError((e) => Effect.logError("createBand failed", e)),
   Effect.catch((e) => {
@@ -82,7 +98,7 @@ export const createBand = Effect.fnUntraced(
   }),
 );
 
-export const inviteToBand = Effect.fnUntraced(
+export const inviteToBand = Effect.fn("Band.inviteToBand")(
   function* (args: { bandId: string; username?: string; email?: string }) {
     const db = yield* Kysely;
     yield* db.selectNoFrom([
@@ -108,14 +124,14 @@ export const inviteToBand = Effect.fnUntraced(
 );
 
 /** The invitations addressed to the current user. */
-export const listInvitations = Effect.fnUntraced(function* () {
+export const listInvitations = Effect.fn("Band.listInvitations")(function* () {
   const db = yield* Kysely;
   return yield* db
     .selectFrom(sql<{ id: string; band_id: string; band_name: string }>`app_public.my_band_invitations()`.as("i"))
     .selectAll();
 });
 
-export const acceptInvitation = Effect.fnUntraced(
+export const acceptInvitation = Effect.fn("Band.acceptInvitation")(
   function* (invitationId: string) {
     const db = yield* Kysely;
     yield* db.selectNoFrom([sql`app_public.accept_invitation_to_band(${invitationId}::uuid)`.as("_")]);
@@ -128,7 +144,7 @@ export const acceptInvitation = Effect.fnUntraced(
   }),
 );
 
-export const declineInvitation = Effect.fnUntraced(
+export const declineInvitation = Effect.fn("Band.declineInvitation")(
   function* (invitationId: string) {
     const db = yield* Kysely;
     yield* db.selectNoFrom([sql`app_public.decline_invitation_to_band(${invitationId}::uuid)`.as("_")]);
@@ -136,7 +152,7 @@ export const declineInvitation = Effect.fnUntraced(
   Effect.mapError(() => new BandError({ message: "Could not decline the invitation" })),
 );
 
-export const deleteBand = Effect.fnUntraced(
+export const deleteBand = Effect.fn("Band.deleteBand")(
   function* (bandId: string) {
     const db = yield* Kysely;
     const mine = yield* db
@@ -155,24 +171,19 @@ export const deleteBand = Effect.fnUntraced(
     }
     yield* db.selectNoFrom([sql`app_public.delete_band(${bandId}::uuid)`.as("_")]);
   },
-  Effect.catch((e) => {
-    if (e._tag === "BandError") return Effect.fail(e);
-    return Effect.fail(new BandError({ message: "Could not delete the band" }));
-  }),
+  Effect.catchIf(
+    (e): e is Exclude<typeof e, BandError> => e._tag !== "BandError",
+    () => Effect.fail(new BandError({ message: "Could not delete the band" })),
+  ),
 );
 
-export const updateBand = Effect.fnUntraced(
-  function* (args: {
-    bandId: string;
-    description?: string | null;
-    show_members_publicly?: boolean;
-    show_gig_dates_publicly?: boolean;
-  }) {
+export const updateBand = Effect.fn("Band.updateBand")(
+  function* ({ bandId, page_options, ...fields }: { bandId: string } & BandUpdate) {
     const db = yield* Kysely;
     const mine = yield* db
       .selectFrom("app_public.band_memberships")
       .select(["is_owner"])
-      .where("band_id", "=", args.bandId)
+      .where("band_id", "=", bandId)
       .where("user_id", "=", sql<string>`app_public.current_user_id()`)
       .pipe(
         Effect.head,
@@ -184,62 +195,31 @@ export const updateBand = Effect.fnUntraced(
       return yield* new BandError({ message: "Only the owner can update the band" });
     }
 
-    const patch: {
-      description?: string | null;
-      show_members_publicly?: boolean;
-      show_gig_dates_publicly?: boolean;
-    } = {};
-    if (args.description !== undefined) patch.description = args.description;
-    if (args.show_members_publicly !== undefined)
-      patch.show_members_publicly = args.show_members_publicly;
-    if (args.show_gig_dates_publicly !== undefined)
-      patch.show_gig_dates_publicly = args.show_gig_dates_publicly;
-
-    if (Object.keys(patch).length === 0) {
-      return yield* db
-        .selectFrom("app_public.bands")
-        .select([
-          "id",
-          "slug",
-          "name",
-          "description",
-          "show_members_publicly",
-          "show_gig_dates_publicly",
-          "created_at",
-        ])
-        .where("id", "=", args.bandId)
-        .pipe(
-          Effect.head,
-          Effect.catchTag("NoSuchElementError", () =>
-            Effect.fail(new BandError({ message: "Band not found" })),
-          ),
-        );
-    }
-
-    return yield* db
-      .updateTable("app_public.bands")
-      .set(patch)
-      .where("id", "=", args.bandId)
-      .returning([
-        "id",
-        "slug",
-        "name",
-        "description",
-        "show_members_publicly",
-        "show_gig_dates_publicly",
-        "created_at",
-      ])
-      .pipe(
-        Effect.head,
-        Effect.catchTag("NoSuchElementError", () =>
-          Effect.fail(new BandError({ message: "Band not found" })),
-        ),
-      );
+    // Kysely drops undefined fields from `set`, so the patch holds only what
+    // the owner sent. With nothing to change, read the row instead.
+    const patch = {
+      ...fields,
+      page_options: page_options === undefined ? undefined : JSON.stringify(page_options),
+    };
+    const changed = Object.values(patch).some((v) => v !== undefined);
+    const row = changed
+      ? db
+          .updateTable("app_public.bands")
+          .set(patch)
+          .where("app_public.bands.id", "=", bandId)
+          .returning(bandColumns)
+      : db.selectFrom("app_public.bands").select(bandColumns).where("app_public.bands.id", "=", bandId);
+    return yield* row.pipe(
+      Effect.head,
+      Effect.catchTag("NoSuchElementError", () =>
+        Effect.fail(new BandError({ message: "Band not found" })),
+      ),
+    );
   },
-  Effect.catch((e) => {
-    if (e._tag === "BandError") return Effect.fail(e);
-    return Effect.fail(new BandError({ message: "Could not update the band" }));
-  }),
+  Effect.catchIf(
+    (e): e is Exclude<typeof e, BandError> => e._tag !== "BandError",
+    () => Effect.fail(new BandError({ message: "Could not update the band" })),
+  ),
 );
 
 export class PublicBandMissing extends Schema.TaggedError<
@@ -247,72 +227,65 @@ export class PublicBandMissing extends Schema.TaggedError<
   { readonly brand: unique symbol }
 >()("PublicBandMissing", { slug: Schema.String }) {}
 
-/** Public profile for a slug; runs as the visitor (including signed-out). */
-export const getPublicBandProfile = Effect.fnUntraced(function* (slug: string) {
+/**
+ * A band's public page, read as the visitor (signed out or not). The bands
+ * table is member-scoped, so every read goes through a security definer
+ * function that returns only public fields. `public_band` returns no row while
+ * the page is off, and each list function returns no rows while the owner keeps
+ * that list hidden.
+ */
+export const getPublicBandProfile = Effect.fn("Band.getPublicBandProfile")(function* (slug: string) {
   const db = yield* Kysely;
   const band = yield* db
-    .selectFrom("app_public.bands")
-    .select([
-      "slug",
-      "name",
-      "description",
-      "show_members_publicly",
-      "show_gig_dates_publicly",
-    ])
-    .where("slug", "=", slug)
+    .selectFrom(
+      sql<{
+        slug: string;
+        name: string;
+        description: string | null;
+        page_theme: string | null;
+        page_options: Record<string, string>;
+      }>`app_public.public_band(${slug}::citext)`.as("b"),
+    )
+    .selectAll()
     .pipe(
       Effect.head,
-      Effect.catchTag("NoSuchElementError", () =>
-        Effect.fail(new PublicBandMissing({ slug })),
-      ),
+      Effect.catchTag("NoSuchElementError", () => Effect.fail(new PublicBandMissing({ slug }))),
     );
 
-  const members = band.show_members_publicly
-    ? yield* db
-        .selectFrom(
-          sql<{
-            username: string;
-            name: string | null;
-            avatar_url: string | null;
-            is_owner: boolean;
-          }>`app_public.public_band_members(${slug}::citext)`.as("m"),
-        )
-        .selectAll()
-    : [];
+  const members = yield* db
+    .selectFrom(
+      sql<{
+        username: string;
+        name: string | null;
+        avatar_url: string | null;
+        is_owner: boolean;
+      }>`app_public.public_band_members(${slug}::citext)`.as("m"),
+    )
+    .selectAll();
 
-  const gigs = band.show_gig_dates_publicly
-    ? yield* db
-        .selectFrom(
-          sql<{ name: string; gig_date: Date | string }>`app_public.public_band_gig_dates(${slug}::citext)`.as(
-            "g",
-          ),
-        )
-        .selectAll()
-    : [];
+  // `date` as text: the driver would otherwise build a local-midnight Date,
+  // which shifts the day in any zone west of UTC.
+  const gigs = yield* db
+    .selectFrom(sql<{ venue: string | null; gig_date: string }>`app_public.public_band_gig_dates(${slug}::citext)`.as("g"))
+    .select(["g.venue", sql<string>`g.gig_date::text`.as("gig_date")]);
+
+  const songs = yield* db
+    .selectFrom(sql<{ title: string; artist: string | null }>`app_public.public_band_songs(${slug}::citext)`.as("s"))
+    .selectAll();
 
   return {
     slug: band.slug,
     name: band.name,
-    description: band.description ?? null,
-    show_members_publicly: band.show_members_publicly,
-    show_gig_dates_publicly: band.show_gig_dates_publicly,
-    members: members.map((m) => ({
-      username: m.username,
-      name: m.name ?? null,
-      avatar_url: m.avatar_url ?? null,
-      is_owner: m.is_owner,
-    })),
-    gigs: gigs.map((g) => ({
-      name: g.name,
-      gig_date:
-        typeof g.gig_date === "string"
-          ? g.gig_date.slice(0, 10)
-          : g.gig_date.toISOString().slice(0, 10),
-    })),
+    description: band.description,
+    page_theme: band.page_theme,
+    page_options: band.page_options,
+    members,
+    gigs,
+    songs,
   };
 });
 
-export const transferOwnership = Effect.fnUntraced(
+export const transferOwnership = Effect.fn("Band.transferOwnership")(
   function* (args: { bandId: string; userId: string }) {
     const db = yield* Kysely;
     const band = yield* db
@@ -339,17 +312,17 @@ export const transferOwnership = Effect.fnUntraced(
       });
     }
   },
-  Effect.catch((e) => {
-    if (e._tag === "BandError") return Effect.fail(e);
-    return Effect.fail(new BandError({ message: "Could not transfer ownership" }));
-  }),
+  Effect.catchIf(
+    (e): e is Exclude<typeof e, BandError> => e._tag !== "BandError",
+    () => Effect.fail(new BandError({ message: "Could not transfer ownership" })),
+  ),
 );
 
 /**
  * Leave a band. An owner with other members must name `transferTo` so ownership
  * moves first; the sole owner must delete the band instead.
  */
-export const leaveBand = Effect.fnUntraced(
+export const leaveBand = Effect.fn("Band.leaveBand")(
   function* (args: { bandId: string; transferTo: string | undefined }) {
     const db = yield* Kysely;
     const me = yield* db
@@ -393,8 +366,8 @@ export const leaveBand = Effect.fnUntraced(
       )`.as("_"),
     ]);
   },
-  Effect.catch((e) => {
-    if (e._tag === "BandError") return Effect.fail(e);
-    return Effect.fail(new BandError({ message: "Could not leave the band" }));
-  }),
+  Effect.catchIf(
+    (e): e is Exclude<typeof e, BandError> => e._tag !== "BandError",
+    () => Effect.fail(new BandError({ message: "Could not leave the band" })),
+  ),
 );

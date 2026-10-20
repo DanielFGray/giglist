@@ -1,5 +1,12 @@
 import { test, expect, getPw } from "./helpers"
 
+/**
+ * A band name no other run uses. The create form derives the slug from the
+ * name, so a fixed name makes two runs in the same checkout race on one slug.
+ */
+const bandName = (stem: string) =>
+  `Test: ${stem} ${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`
+
 test.describe("bands", () => {
   test("shows create band prompt when user has no bands", async ({
     page,
@@ -19,7 +26,7 @@ test.describe("bands", () => {
 
     await page.goto("/band/new")
     await page.waitForLoadState("networkidle")
-    await getPw(page, "new-band-name").fill("Test: My Band")
+    await getPw(page, "new-band-name").fill(bandName("My Band"))
     await getPw(page, "new-band-submit").click()
 
     await expect(getPw(page, "band-page")).toBeVisible({ timeout: 10000 })
@@ -32,27 +39,26 @@ test.describe("bands", () => {
   }) => {
     await testing.login()
     await page.goto("/band/new")
-    await getPw(page, "new-band-name").fill("Test: Switcher Band")
+    const name = bandName("Switcher Band")
+    await getPw(page, "new-band-name").fill(name)
     await getPw(page, "new-band-submit").click()
     await expect(getPw(page, "band-page")).toBeVisible({ timeout: 5000 })
 
     // Band switcher should show the band name
     await expect(getPw(page, "band-switcher")).toBeVisible()
-    await expect(getPw(page, "band-switcher-toggle")).toContainText(
-      "Test: Switcher Band",
-    )
+    await expect(getPw(page, "band-switcher-toggle")).toContainText(name)
   })
 
   test("owner is listed as member", async ({ page, testing }) => {
-    await testing.login()
+    const me = await testing.login()
     await page.goto("/band/new")
-    await getPw(page, "new-band-name").fill("Test: Member Check")
+    await getPw(page, "new-band-name").fill(bandName("Member Check"))
     await getPw(page, "new-band-submit").click()
     await expect(getPw(page, "band-page")).toBeVisible({ timeout: 5000 })
 
     // Members list should include the owner
     const members = getPw(page, "band-members")
-    await expect(members).toContainText("test_admin")
+    await expect(members).toContainText(me.username)
     await expect(members).toContainText("Owner")
   })
 
@@ -60,14 +66,15 @@ test.describe("bands", () => {
     await testing.login()
 
     // Create first band
+    const name = bandName("Dupe Band")
     await page.goto("/band/new")
-    await getPw(page, "new-band-name").fill("Test: Dupe Band")
+    await getPw(page, "new-band-name").fill(name)
     await getPw(page, "new-band-submit").click()
     await expect(getPw(page, "band-page")).toBeVisible({ timeout: 5000 })
 
     // Try to create another with same name
     await page.goto("/band/new")
-    await getPw(page, "new-band-name").fill("Test: Dupe Band")
+    await getPw(page, "new-band-name").fill(name)
     await getPw(page, "new-band-submit").click()
     await expect(getPw(page, "new-band-error")).toBeVisible({ timeout: 5000 })
   })

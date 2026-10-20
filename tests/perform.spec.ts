@@ -1,22 +1,24 @@
 import { readFileSync } from "node:fs"
 import type { Page } from "@playwright/test"
-import { test, expect, getPw, createSetlist } from "./helpers"
+import { test, expect, getPw, createGig } from "./helpers"
 
 const chordSize = (page: Page) => getPw(page, "lyrics-chart").evaluate((n) => parseFloat(getComputedStyle(n).fontSize))
 
 test.describe("performance mode", () => {
-  test("steps through the setlist by keyboard, buttons, list and swipe, showing each song in its own key", async ({ page, testing }) => {
+  test("steps through the gig's setlists by keyboard, buttons, list and swipe, showing each song in its own key", async ({ page, testing }) => {
     await testing.login()
-    const { bandId, setlistId } = await createSetlist(page)
-    await page.goto(`/band/${bandId}/setlists/${setlistId}`)
-    await getPw(page, "setlist-perform").click()
+    const { bandId, gigId } = await createGig(page)
+    await page.goto(`/band/${bandId}/gigs/${gigId}`)
+    await getPw(page, "gig-perform").click()
 
-    // The first song, with the section it is in and the song after it.
+    // The first song, with the setlist it is in and the song after it.
     await expect(getPw(page, "perform-title")).toHaveText("Alpha", { timeout: 10000 })
     await expect(getPw(page, "perform-section")).toHaveText("Set 1")
     await expect(getPw(page, "perform-position")).toHaveText("1 / 3")
     await expect(getPw(page, "perform-next-title")).toHaveText("Next: Beta")
     await expect(getPw(page, "perform-prev")).toBeDisabled()
+    // The song list heads each setlist with its name.
+    await expect(getPw(page, "perform-set-heading")).toHaveText(["Set 1", "Encore"])
 
     // The overlay covers the whole window.
     const box = (await getPw(page, "perform").boundingBox())!
@@ -79,14 +81,26 @@ test.describe("performance mode", () => {
 
     // Escape leaves.
     await page.keyboard.press("Escape")
-    await expect(getPw(page, "setlist-perform")).toBeVisible({ timeout: 10000 })
+    await expect(getPw(page, "gig-perform")).toBeVisible({ timeout: 10000 })
     await expect(getPw(page, "perform")).toHaveCount(0)
+  })
+
+  test("a setlist's own stage page plays only its songs, and Escape goes back to it", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, setlistId } = await createGig(page)
+    await page.goto(`/band/${bandId}/setlists/${setlistId}`)
+    await getPw(page, "setlist-perform").click()
+    await expect(getPw(page, "perform-title")).toHaveText("Alpha", { timeout: 10000 })
+    await expect(getPw(page, "perform-position")).toHaveText("1 / 2")
+    await expect(getPw(page, "perform-section")).toHaveCount(0)
+    await page.keyboard.press("Escape")
+    await expect(getPw(page, "setlist-perform")).toBeVisible({ timeout: 10000 })
   })
 
   test("opens at the song number in the address, and remembers the text size", async ({ page, testing }) => {
     await testing.login()
-    const { bandId, setlistId } = await createSetlist(page)
-    await page.goto(`/band/${bandId}/setlists/${setlistId}/perform?at=2`)
+    const { bandId, gigId } = await createGig(page)
+    await page.goto(`/band/${bandId}/gigs/${gigId}/perform?at=2`)
     await expect(getPw(page, "perform-title")).toHaveText("Beta", { timeout: 10000 })
     await expect(getPw(page, "lyrics-chart")).toBeVisible({ timeout: 10000 })
 
@@ -103,15 +117,15 @@ test.describe("performance mode", () => {
     expect(await chordSize(page)).toBe(larger)
 
     // A number past the end holds at the last song.
-    await page.goto(`/band/${bandId}/setlists/${setlistId}/perform?at=99`)
+    await page.goto(`/band/${bandId}/gigs/${gigId}/perform?at=99`)
     await expect(getPw(page, "perform-title")).toHaveText("Gamma", { timeout: 10000 })
   })
 
   test("a phone-width screen shows one song and no list; a tablet shows the list beside it", async ({ page, testing }) => {
     await testing.login()
-    const { bandId, setlistId } = await createSetlist(page)
+    const { bandId, gigId } = await createGig(page)
     await page.setViewportSize({ width: 390, height: 800 })
-    await page.goto(`/band/${bandId}/setlists/${setlistId}/perform`)
+    await page.goto(`/band/${bandId}/gigs/${gigId}/perform`)
     await expect(getPw(page, "perform-title")).toHaveText("Alpha", { timeout: 10000 })
     await expect(getPw(page, "perform-song")).toHaveCount(3)
     await expect(getPw(page, "perform-song").first()).toBeHidden()
@@ -123,8 +137,8 @@ test.describe("performance mode", () => {
 
   test("the click track counts beats at the song's tempo and stops when pressed again", async ({ page, testing }) => {
     await testing.login()
-    const { bandId, setlistId } = await createSetlist(page)
-    await page.goto(`/band/${bandId}/setlists/${setlistId}/perform`)
+    const { bandId, gigId } = await createGig(page)
+    await page.goto(`/band/${bandId}/gigs/${gigId}/perform`)
     await expect(getPw(page, "perform-title")).toHaveText("Alpha", { timeout: 10000 })
     await expect(getPw(page, "perform-click")).toHaveText("Click")
 
@@ -146,9 +160,9 @@ test.describe("performance mode", () => {
 
   test("the chord strip checkbox draws the strip of chords above the chart", async ({ page, testing }) => {
     await testing.login()
-    const { bandId, setlistId } = await createSetlist(page)
+    const { bandId, gigId } = await createGig(page)
     // The second song is the one with a lyrics chart.
-    await page.goto(`/band/${bandId}/setlists/${setlistId}/perform?at=2`)
+    await page.goto(`/band/${bandId}/gigs/${gigId}/perform?at=2`)
     await expect(getPw(page, "lyrics-chart")).toBeVisible({ timeout: 10000 })
     await expect(getPw(page, "chord-strip")).toHaveCount(0)
 
@@ -160,9 +174,9 @@ test.describe("performance mode", () => {
 
   test("a song with only a score shows neither chord control", async ({ page, testing }) => {
     await testing.login()
-    const { bandId, setlistId } = await createSetlist(page)
+    const { bandId, gigId } = await createGig(page)
     // The first song has no chart; giving it a score makes it score-only.
-    const entries = (await (await page.request.get(`/api/setlists/${setlistId}/entries`)).json()) as Array<{ song_id: string }>
+    const entries = (await (await page.request.get(`/api/gigs/${gigId}/entries`)).json()) as Array<{ song_id: string }>
     const scoreOnly = entries[0]!.song_id
     const upload = await page.request.post(
       `/api/scores?${new URLSearchParams({ song_id: scoreOnly, name: "Four tracks", file_name: "four-tracks.gp5" })}`,
@@ -170,7 +184,7 @@ test.describe("performance mode", () => {
     )
     expect(upload.ok(), await upload.text()).toBe(true)
 
-    await page.goto(`/band/${bandId}/setlists/${setlistId}/perform?at=1`)
+    await page.goto(`/band/${bandId}/gigs/${gigId}/perform?at=1`)
     await expect(getPw(page, "score-viewer")).toBeVisible({ timeout: 20000 })
     await expect(getPw(page, "perform-diagrams")).toHaveCount(0)
     await expect(getPw(page, "perform-show-chords-above")).toHaveCount(0)
@@ -178,9 +192,9 @@ test.describe("performance mode", () => {
 
   test("auto-scroll moves a long chart down and stops when switched off", async ({ page, testing }) => {
     await testing.login()
-    const { bandId, setlistId } = await createSetlist(page)
+    const { bandId, gigId } = await createGig(page)
     await page.setViewportSize({ width: 1280, height: 300 })
-    await page.goto(`/band/${bandId}/setlists/${setlistId}/perform?at=2`)
+    await page.goto(`/band/${bandId}/gigs/${gigId}/perform?at=2`)
     await expect(getPw(page, "lyrics-chart")).toBeVisible({ timeout: 10000 })
     // Make the scroll area longer than the window so there is something to scroll.
     await getPw(page, "perform-scroller").evaluate((el) => {
@@ -196,7 +210,6 @@ test.describe("performance mode", () => {
     await getPw(page, "perform-scroll").click()
     await expect(getPw(page, "perform-scroll")).toHaveText("Scroll off")
     const stopped = await top()
-    await page.waitForTimeout(500)
-    expect(await top()).toBe(stopped)
+    await expect.poll(top, { timeout: 1000, intervals: [100] }).toBe(stopped)
   })
 })

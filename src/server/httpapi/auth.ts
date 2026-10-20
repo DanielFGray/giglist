@@ -3,7 +3,7 @@ import { HttpApiBuilder } from "effect/http-api"
 import * as Auth from "../services/auth"
 import { withAuthContext } from "../db"
 import {
-  SetListApi,
+  GigListApi,
   AuthError,
   CurrentSession,
   sessionCookie,
@@ -19,31 +19,29 @@ const requireSession = Effect.fnUntraced(function* () {
   return session
 })
 
-const toUserEmail = (row: {
-  id: string
-  email: string
-  is_verified: boolean
-  is_primary: boolean
-  created_at: Date | string
-}) => ({
+const setSessionCookie = Effect.fnUntraced(function* (sessionId: string) {
+  yield* HttpApiBuilder.securitySetCookie(sessionCookie, sessionId, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: isSecure,
+    path: "/",
+    maxAge: "30 days",
+  })
+})
+
+const toUserEmail = (row: { id: string; email: string; is_verified: boolean; is_primary: boolean; created_at: Date }) => ({
   id: row.id,
   email: row.email,
   is_verified: row.is_verified,
   is_primary: row.is_primary,
-  created_at: String(row.created_at),
+  created_at: row.created_at,
 })
 
-export const authHandlers = HttpApiBuilder.group(SetListApi, "auth", (handlers) =>
+export const authHandlers = HttpApiBuilder.group(GigListApi, "auth", (handlers) =>
   handlers
     .handle("login", Effect.fnUntraced(function*({ payload }) {
         const result = yield* Auth.login(payload)
-        yield* HttpApiBuilder.securitySetCookie(sessionCookie, result.sessionId, {
-          httpOnly: true,
-          sameSite: "lax",
-          secure: isSecure,
-          path: "/",
-          maxAge: "30 days",
-        })
+        yield* setSessionCookie(result.sessionId)
         return { ok: true as const }
       },
         Effect.mapError((e) => new AuthError({ message: e.message })),
@@ -51,18 +49,23 @@ export const authHandlers = HttpApiBuilder.group(SetListApi, "auth", (handlers) 
     )
     .handle("register", Effect.fnUntraced(function*({ payload }) {
         const result = yield* Auth.register(payload)
-        yield* HttpApiBuilder.securitySetCookie(sessionCookie, result.sessionId, {
-          httpOnly: true,
-          sameSite: "lax",
-          secure: isSecure,
-          path: "/",
-          maxAge: "30 days",
-        })
+        yield* setSessionCookie(result.sessionId)
         return { ok: true as const }
       },
         Effect.mapError((e) => new AuthError({ message: e.message })),
       ),
     )
+    .handle("forgotPassword", Effect.fnUntraced(function* ({ payload }) {
+      yield* Auth.forgotPassword(payload.email).pipe(Effect.orDie)
+      return { ok: true as const }
+    }))
+    .handle("resetPassword", Effect.fnUntraced(function* ({ payload }) {
+      const result = yield* Auth.resetPassword(payload).pipe(
+        Effect.mapError((error) => new AuthError({ message: error.message })),
+      )
+      yield* setSessionCookie(result.sessionId)
+      return { ok: true as const }
+    }))
     .handle("logout", Effect.fnUntraced(function*() {
         const session = yield* CurrentSession
         if (session.sessionId) {

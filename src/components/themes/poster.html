@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{BandName}</title>
+<meta name="color:Paper" content="#f2e8d5">
+<meta name="color:Ink" content="#1c1917">
+<meta name="color:Frame" content="#c2410c">
+<meta name="image:Photo" content="">
+<meta name="text:Kicker" content="Live">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=DM+Sans:wght@400;500&display=swap">
+<style>
+  :root { --paper: {color:Paper}; --ink: {color:Ink}; --frame: {color:Frame}; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: clamp(0.75rem, 2vw, 1.5rem);
+    background: var(--paper); color: var(--ink);
+    font: 16px/1.5 "DM Sans", system-ui, sans-serif;
+  }
+  .poster {
+    border: clamp(10px, 1.6vw, 16px) solid var(--frame);
+    padding: clamp(2rem, 5vw, 3.5rem) clamp(1.25rem, 4vw, 2.5rem);
+    text-align: center;
+  }
+  .display { font-family: Anton, Impact, sans-serif; text-transform: uppercase; font-weight: 400; }
+  .kicker { color: var(--frame); letter-spacing: 0.4em; font-size: 0.9rem; margin: 0; }
+  h1 { font-size: clamp(3rem, 15vw, 10rem); line-height: 0.85; letter-spacing: -0.01em; margin: 0.25rem 0 1.25rem; overflow-wrap: anywhere; }
+  .photo { display: block; width: 100%; max-height: 50vh; object-fit: cover; margin: 1.5rem 0; filter: grayscale(1) contrast(1.2); mix-blend-mode: multiply; }
+  .description { max-width: 36rem; margin: 0 auto; font-size: 1.1rem; }
+  .description > :first-child { margin-top: 0; }
+  .description > :last-child { margin-bottom: 0; }
+  .description p { margin: 0 0 0.75rem; }
+  .description a { color: var(--frame); }
+  .description img { max-width: 100%; }
+  .description ul, .description ol { padding-left: 1.25rem; margin: 0 0 0.75rem; text-align: left; }
+  .description blockquote { border-left: 3px solid var(--frame); margin: 0 0 0.75rem; padding-left: 1rem; text-align: left; }
+  .description .embed { margin: 1rem 0; }
+  .embed iframe { display: block; width: 100%; border: 0; }
+  .embed-youtube iframe, .embed-vimeo iframe { aspect-ratio: 16 / 9; height: auto; }
+  .embed-tiktok iframe { max-width: 325px; height: 740px; margin: 0 auto; }
+  .embed-instagram iframe { max-width: 540px; height: 480px; margin: 0 auto; }
+  ul { list-style: none; margin: 0; padding: 0; }
+  .gigs { margin-top: 2.5rem; display: grid; gap: 1rem; }
+  .gig-date { display: block; font-size: clamp(2.25rem, 7vw, 4rem); line-height: 1; color: var(--frame); }
+  .gig-venue { display: block; font-size: 0.85rem; letter-spacing: 0.25em; text-transform: uppercase; }
+  .members { margin-top: 2.5rem; font-size: clamp(1.25rem, 3vw, 1.6rem); letter-spacing: 0.03em; }
+  .members li { display: inline; }
+  .members li + li::before { content: " / "; color: var(--frame); }
+  h2 { color: var(--frame); font-size: 1.6rem; margin: 2.5rem 0 0.5rem; letter-spacing: 0.03em; }
+  .songs { max-width: 36rem; margin: 0 auto; font-size: 0.85rem; letter-spacing: 0.08em; text-transform: uppercase; }
+  .songs li { display: inline; }
+  .songs li + li::before { content: " ✶ "; color: var(--frame); }
+  footer { text-align: center; font-size: 0.75rem; padding: 1.5rem 0 0.5rem; opacity: 0.7; }
+  footer a { color: inherit; }
+</style>
+</head>
+<body>
+<div class="poster">
+  <p class="kicker display">{text:Kicker}</p>
+  <h1 class="display">{BandName}</h1>
+  <block:IfPhotoImage><img class="photo" src="{image:Photo}" alt=""></block:IfPhotoImage>
+  <block:Description><div class="description">{DescriptionHTML}</div></block:Description>
+
+  <block:Gigs>
+  <ul class="gigs">
+    <block:Gig>
+    <li>
+      <time class="gig-date display" datetime="{GigISODate}">{GigDayOfWeek} {GigMonth} {GigDayOfMonth}</time>
+      <block:GigVenue><span class="gig-venue">{GigVenue}</span></block:GigVenue>
+    </li>
+    </block:Gig>
+  </ul>
+  </block:Gigs>
+
+  <block:Members>
+  <ul class="members display"><block:Member><li>{MemberName}</li></block:Member></ul>
+  </block:Members>
+
+  <block:Songs>
+  <h2 class="display">Playing</h2>
+  <ul class="songs"><block:Song><li>{SongTitle}</li></block:Song></ul>
+  </block:Songs>
+</div>
+<footer>Made with <a href="/" target="_top">GigList</a></footer>
+</body>
+</html>

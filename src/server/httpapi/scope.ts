@@ -8,7 +8,7 @@ import { CurrentSession, type SessionData } from "../../api/contracts"
  * fn() as ids` names its single column after the table alias, so each row
  * carries the id under `ids` rather than `band_id` or the function name.
  */
-export const memberBandIds = Effect.fnUntraced(function*() {
+const memberBandIds = Effect.fnUntraced(function*() {
   const db = yield* Kysely
   return yield* db
     .selectFrom(sql<{ ids: string }>`app_public.current_user_member_band_ids()`.as("ids"))

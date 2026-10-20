@@ -28,7 +28,7 @@ export type ChartDoc = ReadonlyArray<DocLine>
 export type Edit = { readonly doc: ChartDoc; readonly changes: Array<Change> }
 
 /** A stretch of a lyric line a chord can be dropped on: a word with the space after it. */
-export type Segment = { readonly start: number; readonly end: number; readonly chords: ReadonlyArray<number> }
+type Segment = { readonly start: number; readonly end: number; readonly chords: ReadonlyArray<number> }
 
 // ---------------------------------------------------------------------------
 // Text <-> chart
@@ -451,15 +451,6 @@ function reorder(doc: ChartDoc, order: ReadonlyArray<number>): Edit {
     return [text, newline(old === lastLine ? order.at(-1)! : old)]
   })
   return { doc: order.map((old) => doc[old]!), changes: rearranged(anchorText(doc).length, parts) }
-}
-
-/** The section a line sits in: its label, or null before the first section. */
-export function sectionLabel(doc: ChartDoc, lineIndex: number): string | null {
-  for (let i = lineIndex; i >= 0; i--) {
-    const line = doc[i]!
-    if (line.kind === "directive" && /^\{\s*start_of_/.test(line.raw)) return anchorLine(line)
-  }
-  return null
 }
 
 // ---------------------------------------------------------------------------

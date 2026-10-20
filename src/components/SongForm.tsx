@@ -1,8 +1,8 @@
 import { useState, type ReactNode } from "react"
 import { useForm } from "@tanstack/react-form"
 import { Schema as S } from "effect"
-import { MusicalKeys, SongUpdate, type MusicalKeyType } from "~/api/contracts"
-import type { SongInfo, SongUpdateData } from "~/api/client"
+import { MusicalKeys, SongFields, type MusicalKeyType } from "~/api/contracts"
+import type { SongCreateData, SongInfo, SongUpdateData } from "~/api/client"
 import {
   NumberField,
   SelectField,
@@ -23,14 +23,14 @@ import { HANGING_CARD } from "./card"
  * contract rather than restating it here.
  */
 const SongFormSchema = S.Struct({
-  ...SongUpdate.fields,
+  ...SongFields,
   duration_seconds: S.NullOr(S.String.pipe(S.check(S.isPattern(DURATION)))),
 })
 
 type SongFormValues = (typeof SongFormSchema)["Encoded"]
 
 /** What "Add song" saves: a song needs a title, and the player renames it once they know it. */
-export const BLANK_SONG: SongUpdateData = {
+export const BLANK_SONG: Omit<SongCreateData, "band_id"> = {
   title: UNTITLED_SONG,
   artist: null,
   key: null,

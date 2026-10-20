@@ -1,11 +1,16 @@
 import { useEffect, useRef, useState } from "react"
 import { Schema as S } from "effect"
-import { setlists } from "~/api/client"
-import { SetlistEvent, type SetlistViewer } from "~/api/contracts"
+import { gigs, setlists } from "~/api/client"
+import { LiveEvent, type LiveViewer } from "~/api/contracts"
 
-export type Viewer = S.Schema.Type<typeof SetlistViewer>
+export type Viewer = S.Schema.Type<typeof LiveViewer>
 
-const decodeEvent = S.decodeUnknownSync(S.fromJsonString(SetlistEvent))
+/** What a page keeps in step with: a setlist, or a gig (which hears the writes to every setlist it plays). */
+export type Room = { readonly kind: "setlist" | "gig"; readonly id: string }
+
+const decodeEvent = S.decodeUnknownSync(S.fromJsonString(LiveEvent))
+
+const ROOM_API = { setlist: { path: "setlists", client: setlists }, gig: { path: "gigs", client: gigs } } as const
 
 /** The server pings every 20 seconds; this much quiet means the connection is dead. */
 const SILENCE_MS = 45_000
@@ -13,15 +18,15 @@ const SILENCE_MS = 45_000
 const RETRY_MS = 2000
 
 /**
- * Keeps a page in step with one setlist.
+ * Keeps a page in step with one setlist or gig.
  *
- * It opens the setlist's event stream and gives back who else has it open.
- * `onChanged` runs when someone writes the setlist (with their name), and with
+ * It opens the room's event stream and gives back who else has it open.
+ * `onChanged` runs when someone writes it (with their name), and with
  * `null` each time the stream opens, because writes made while it was down were
  * never announced. `status` is what this page is doing, shown to the others.
  */
-export function useSetlistLive(
-  setlistId: string,
+export function useLive(
+  room: Room,
   status: { mode: Viewer["mode"]; at: number | null },
   onChanged: (by: string | null) => void,
 ): { client: string; viewers: ReadonlyArray<Viewer> } {
@@ -38,12 +43,12 @@ export function useSetlistLive(
     const open = () => {
       clearTimeout(retry)
       source?.close()
-      const stream = new EventSource(`/api/setlists/${setlistId}/events?client=${client}`)
+      const stream = new EventSource(`/api/${ROOM_API[room.kind].path}/${room.id}/events?client=${client}`)
       // Whatever was written before the stream opened was never announced, so every open reloads.
       stream.onopen = () => handler.current(null)
       stream.onmessage = (message) => {
         lastHeard = Date.now()
-        let event: S.Schema.Type<typeof SetlistEvent>
+        let event: S.Schema.Type<typeof LiveEvent>
         try {
           event = decodeEvent(message.data)
         } catch {
@@ -79,13 +84,13 @@ export function useSetlistLive(
       setViewers([])
       setJoined(false)
     }
-  }, [setlistId, client])
+  }, [room.kind, room.id, client])
 
   // The server lists a connection as "viewing" when it opens, so a page tells it what it is doing once it is listed.
   useEffect(() => {
     if (!joined) return
-    setlists.reportPresence(setlistId, { client, mode: status.mode, at: status.at }).catch(() => undefined)
-  }, [joined, setlistId, client, status.mode, status.at])
+    ROOM_API[room.kind].client.reportPresence(room.id, { client, mode: status.mode, at: status.at }).catch(() => undefined)
+  }, [joined, room.kind, room.id, client, status.mode, status.at])
 
   return { client, viewers }
 }

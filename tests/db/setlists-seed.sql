@@ -13,3 +13,9 @@ insert into app_public.setlists (id, band_id, name) values
 insert into app_public.setlist_entries (setlist_id, song_id, position_key) values
   ('00000000-0000-0000-0000-000000000051', '00000000-0000-0000-0000-0000000000e1', 'Ab'),
   ('00000000-0000-0000-0000-000000000051', '00000000-0000-0000-0000-0000000000e2', 'aB');
+insert into app_public.setlists (id, band_id, name) values
+  ('00000000-0000-0000-0000-000000000052', '00000000-0000-0000-0000-0000000000d2', 'Other band set');
+insert into app_public.gigs (id, band_id, venue) values
+  ('00000000-0000-0000-0000-000000000061', '00000000-0000-0000-0000-0000000000d1', 'The Echo Room');
+insert into app_public.gig_setlists (band_id, gig_id, setlist_id, position_key) values
+  ('00000000-0000-0000-0000-0000000000d1', '00000000-0000-0000-0000-000000000061', '00000000-0000-0000-0000-000000000051', 'U');
