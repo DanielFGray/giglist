@@ -1,22 +1,16 @@
-import { Effect, Schema as S, Struct } from "effect"
-import { HttpApiBuilder } from "effect/http-api"
-import { Kysely, withAuthContext } from "../db"
-import { isBandMember } from "./scope"
-import {
-  Song,
-  GigListApi,
-  CurrentSession,
-  SongForbidden,
-  type SessionData,
-} from "../../api/contracts"
+import { Effect, Schema as S, Struct } from "effect";
+import { HttpApiBuilder } from "effect/http-api";
+import { Kysely, withAuthContext } from "../db";
+import { isBandMember } from "./scope";
+import { Song, GigListApi, CurrentSession, SongForbidden } from "../../api/contracts";
 import {
   songFindById,
   songCreate,
   songDelete,
   songFindByBandId,
-} from "../../../generated/queries.js"
+} from "../../../generated/queries.js";
 
-const decodeSong = S.decodeUnknownEffect(Song)
+const decodeSong = S.decodeUnknownEffect(Song);
 
 /**
  * Require that the session is a member of `bandId`.
@@ -25,23 +19,21 @@ const decodeSong = S.decodeUnknownEffect(Song)
  * returned nothing" into a 403 the browser can show. Both run in the same
  * transaction, so they cannot disagree about who the user is.
  */
-const assertBandMember = Effect.fnUntraced(function*(bandId: string) {
-    if (!(yield* isBandMember(bandId))) {
-      return yield* new SongForbidden({ message: "You are not a member of that band" })
-    }
-  })
+const assertBandMember = Effect.fnUntraced(function* (bandId: string) {
+  if (!(yield* isBandMember(bandId))) {
+    return yield* new SongForbidden({ message: "You are not a member of that band" });
+  }
+});
 
 /** Run `query` as the session's user, or answer 403 if there is no session. */
-const asSession = <A, E>(
-  query: (session: SessionData) => Effect.Effect<A, E, Kysely>,
-) =>
+const asSession = <A, E>(query: Effect.Effect<A, E, Kysely>) =>
   Effect.gen(function* () {
-    const session = yield* CurrentSession
+    const session = yield* CurrentSession;
     if (!session.sessionId) {
-      return yield* new SongForbidden({ message: "You must be signed in" })
+      return yield* new SongForbidden({ message: "You must be signed in" });
     }
-    return yield* query(session).pipe(withAuthContext(session.sessionId))
-  })
+    return yield* query.pipe(withAuthContext(session.sessionId));
+  });
 
 /**
  * Reads the song, so the handler can authorise its band before touching it.
@@ -50,89 +42,76 @@ const asSession = <A, E>(
  * returns nothing, so a missing row and a foreign song look the same. Both are
  * answered 403 — a caller outside the band must not learn the song exists.
  */
-const songRow = Effect.fnUntraced(function*(id: string) {
-    const db = yield* Kysely
-    return yield* songFindById(db)({ id }).pipe(
-      Effect.head,
-      Effect.catchTag("NoSuchElementError", () =>
-        Effect.fail(
-          new SongForbidden({ message: "You are not a member of that band" }),
-        ),
-      ),
-    )
-  })
+const songRow = Effect.fnUntraced(function* (id: string) {
+  const db = yield* Kysely;
+  return yield* songFindById(db)({ id }).pipe(
+    Effect.head,
+    Effect.catchTag("NoSuchElementError", () =>
+      Effect.fail(new SongForbidden({ message: "You are not a member of that band" })),
+    ),
+  );
+});
 
 export const songsHandlers = HttpApiBuilder.group(GigListApi, "songs", (handlers) =>
   handlers
-    .handle("songFindById", ({ params: { id } }) =>
-      asSession((_session) =>
-        Effect.gen(function* () {
-          const row = yield* songRow(id)
-          return yield* decodeSong(row).pipe(Effect.orDie)
-        }),
-      ),
+    .handle(
+      "songFindById",
+      Effect.fnUntraced(function* ({ params: { id } }) {
+        const row = yield* songRow(id);
+        return yield* decodeSong(row).pipe(Effect.orDie);
+      }, asSession),
     )
-    .handle("songFindByBandId", ({ params: { bandId } }) =>
-      asSession((_session) =>
-        Effect.gen(function* () {
-          const db = yield* Kysely
-          yield* assertBandMember(bandId)
-          return yield* songFindByBandId(db)({ band_id: bandId }).pipe(
-            Effect.andThen(S.decodeUnknownEffect(S.Array(Song))),
-            Effect.orDie,
-          )
-        }),
-      ),
+    .handle(
+      "songFindByBandId",
+      Effect.fnUntraced(function* ({ params: { bandId } }) {
+        const db = yield* Kysely;
+        yield* assertBandMember(bandId);
+        return yield* songFindByBandId(db)({ band_id: bandId }).pipe(
+          Effect.andThen(S.decodeUnknownEffect(S.Array(Song))),
+          Effect.orDie,
+        );
+      }, asSession),
     )
-    .handle("songCreate", ({ payload }) =>
-      asSession((session) =>
-        Effect.gen(function* () {
-          const db = yield* Kysely
-          yield* assertBandMember(payload.band_id)
-          // created_by has no default and no trigger sets it.
-          return yield* songCreate(db)({
-            ...payload,
-            created_by: session.userId,
-          }).pipe(
-            Effect.head,
-            Effect.andThen(decodeSong),
-            Effect.orDie,
-          )
-        }),
-      ),
+    .handle(
+      "songCreate",
+      Effect.fnUntraced(function* ({ payload }) {
+        const db = yield* Kysely;
+        yield* assertBandMember(payload.band_id);
+        // created_by has no default and no trigger sets it.
+        return yield* songCreate(db)({ ...payload }).pipe(
+          Effect.head,
+          Effect.andThen(decodeSong),
+          Effect.orDie,
+        );
+      }, asSession),
     )
-    .handle("songUpdate", ({ params: { id }, payload }) =>
-      asSession((_session) =>
-        Effect.gen(function* () {
-          const db = yield* Kysely
-          const existing = yield* songRow(id)
-          yield* assertBandMember(existing.band_id)
-          // Not the generated songUpdate: it also writes band_id and
-          // created_by, and the visitor role may update only the song's own
-          // fields. The where clause plus the update policy do the scoping.
-          // An empty SET is not valid SQL, and an empty payload changes nothing.
-          if (Struct.keys(payload).length === 0) return yield* decodeSong(existing).pipe(Effect.orDie)
-          return yield* db
-            .updateTable("app_public.songs")
-            .set(payload)
-            .where("id", "=", id)
-            .returningAll()
-            .pipe(
-              Effect.head,
-              Effect.andThen(decodeSong),
-              Effect.orDie,
-            )
-        }),
-      ),
+    .handle(
+      "songUpdate",
+      Effect.fnUntraced(function* ({ params: { id }, payload }) {
+        const db = yield* Kysely;
+        const existing = yield* songRow(id);
+        yield* assertBandMember(existing.band_id);
+        // Not the generated songUpdate: it also writes band_id and
+        // created_by, and the visitor role may update only the song's own
+        // fields. The where clause plus the update policy do the scoping.
+        // An empty SET is not valid SQL, and an empty payload changes nothing.
+        if (Struct.keys(payload).length === 0)
+          return yield* decodeSong(existing).pipe(Effect.orDie);
+        return yield* db
+          .updateTable("app_public.songs")
+          .set(payload)
+          .where("id", "=", id)
+          .returningAll()
+          .pipe(Effect.head, Effect.andThen(decodeSong), Effect.orDie);
+      }, asSession),
     )
-    .handle("songDelete", ({ params: { id } }) =>
-      asSession((_session) =>
-        Effect.gen(function* () {
-          const db = yield* Kysely
-          const existing = yield* songRow(id)
-          yield* assertBandMember(existing.band_id)
-          return yield* songDelete(db)({ id }).pipe(Effect.asVoid, Effect.orDie)
-        }),
-      ),
+    .handle(
+      "songDelete",
+      Effect.fnUntraced(function* ({ params: { id } }) {
+        const db = yield* Kysely;
+        const existing = yield* songRow(id);
+        yield* assertBandMember(existing.band_id);
+        return yield* songDelete(db)({ id }).pipe(Effect.asVoid, Effect.orDie);
+      }, asSession),
     ),
-)
+);
