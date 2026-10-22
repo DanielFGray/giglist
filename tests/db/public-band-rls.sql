@@ -7,7 +7,7 @@
 \set ON_ERROR_STOP 1
 
 create function pg_temp.as_user(session_name text) returns void language sql as $$
-  select set_config('role', 'setlist_visitor', true),
+  select set_config('role', 'giglist_visitor', true),
          set_config('my.session_id', session_name::text, true);
 $$;
 

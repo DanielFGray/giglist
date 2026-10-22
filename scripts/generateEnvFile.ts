@@ -30,7 +30,7 @@ const fields: [string, FieldDef][] = [
   ["ROOT_DATABASE_PASSWORD", { default: "postgres" }],
   ["DATABASE_HOST", { default: "localhost" }],
   ["DATABASE_PORT", { default: "5432" }],
-  ["DATABASE_NAME", { default: "setlist" }],
+  ["DATABASE_NAME", { default: "giglist" }],
 
   ["DATABASE_OWNER", { derive: (c) => c.DATABASE_NAME }],
   ["DATABASE_OWNER_PASSWORD", { generate: genPassword }],
