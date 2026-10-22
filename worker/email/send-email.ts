@@ -1,9 +1,11 @@
-import { Clock, Effect, Schema } from "effect"
+import { Array as Arr, Clock, Effect, Schema } from "effect"
 import { FileSystem } from "effect/FileSystem"
 import template from "lodash.template"
 import mjml from "mjml"
 import { convert } from "html-to-text"
+import { RateLimiter } from "effect/persistence/RateLimiter"
 import { Mailer, MailMessage } from "./mailer"
+import { storeTimeout } from "../../src/server/services/rate-limiter"
 import { projectName } from "../../package.json"
 
 const options = Schema.Struct({
@@ -31,9 +33,16 @@ export class EmailRenderError extends Schema.TaggedError<EmailRenderError, { rea
   cause: Schema.Defect(),
 }) {}
 
-/** Decode one queued job, render its template, and require delivery from Mailer. */
+/**
+ * Decode one queued job, render its template, and require delivery from Mailer.
+ * A recipient over the per-address cap is dropped with a warning, and the job
+ * still succeeds: a failed job would be retried and the mail sent later anyway.
+ * When the cap cannot be checked, the job fails so that graphile-worker retries it.
+ */
 export const sendEmail = Effect.fn("sendEmail")(function* (input: unknown) {
   const job = yield* Schema.decodeUnknownEffect(QueuedEmail)(input)
+  const recipients = yield* withinCap(job)
+  if (!Arr.isReadonlyArrayNonEmpty(recipients)) return
   const fs = yield* FileSystem
   const source = yield* fs.readFileString(`${import.meta.dir}/../templates/${job.template}`)
   const now = yield* Clock.currentTimeMillis
@@ -48,9 +57,44 @@ export const sendEmail = Effect.fn("sendEmail")(function* (input: unknown) {
   })
   const mailer = yield* Mailer
   yield* mailer.send(new MailMessage({
-    to: typeof job.options.to === "string" ? [job.options.to] : job.options.to,
+    to: recipients,
     subject: job.options.subject,
     html,
     text,
   }))
+})
+
+/**
+ * Mail to one address per hour, across every kind of mail, so that requests
+ * from many networks cannot flood one inbox. The API's per-caller limits
+ * cannot see that case.
+ */
+const PER_ADDRESS_LIMIT = 5
+const PER_ADDRESS_WINDOW = "1 hour"
+
+/**
+ * Security notices are exempt. Only an action on the account sends one, and a
+ * flood that used up the cap first would otherwise hide the notice of the attack.
+ */
+const uncapped: ReadonlySet<QueuedEmail["template"]> = new Set(["account_activity.mjml"])
+
+/** The job's recipients that are still under the per-address cap. */
+const withinCap = Effect.fnUntraced(function* (job: QueuedEmail) {
+  const to = typeof job.options.to === "string" ? [job.options.to] : job.options.to
+  if (uncapped.has(job.template)) return to
+  const limiter = yield* RateLimiter
+  return yield* Effect.filter(to, (address) =>
+    limiter.consume({
+      key: `email:${address.toLowerCase()}`,
+      limit: PER_ADDRESS_LIMIT,
+      window: PER_ADDRESS_WINDOW,
+      onExceeded: "fail",
+    }).pipe(
+      Effect.timeout(storeTimeout),
+      Effect.as(true),
+      Effect.catchReason("RateLimiterError", "RateLimitExceeded", () =>
+        Effect.logWarning(`Dropped ${job.template}: ${address} is over ${PER_ADDRESS_LIMIT} mails per ${PER_ADDRESS_WINDOW}`).pipe(Effect.as(false)),
+      ),
+    ),
+  )
 })

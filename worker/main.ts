@@ -4,6 +4,8 @@ import { FileSystem } from "effect/FileSystem"
 import { getTasks, run, type Task } from "graphile-worker"
 import { Mailer } from "./email/mailer"
 import { sendEmail } from "./email/send-email"
+import { RateLimiter } from "effect/persistence/RateLimiter"
+import { RateLimiterLive } from "../src/server/services/rate-limiter"
 
 class WorkerError extends Schema.TaggedError<WorkerError, { readonly brand: unique symbol }>()("WorkerError", {
   message: Schema.String,
@@ -27,7 +29,7 @@ const MailerLive = Layer.unwrap(Effect.gen(function* () {
 
 const program = Effect.gen(function* () {
   const connection = yield* Config.Redacted("DATABASE_URL")
-  const context = yield* Effect.context<Mailer | FileSystem>()
+  const context = yield* Effect.context<Mailer | FileSystem | RateLimiter>()
   const tasks = yield* Effect.acquireRelease(
     Effect.tryPromise({ try: () => getTasks({}, `${import.meta.dir}/tasks`), catch: (cause) => new WorkerError({ message: "Could not load worker tasks", cause }) }),
     (tasks) => Effect.sync(() => tasks.release()),
@@ -51,6 +53,6 @@ const program = Effect.gen(function* () {
 
 program.pipe(
   Effect.scoped,
-  Effect.provide(MailerLive.pipe(Layer.provideMerge(BunServices.layer))),
+  Effect.provide(Layer.mergeAll(MailerLive, RateLimiterLive).pipe(Layer.provideMerge(BunServices.layer))),
   BunRuntime.runMain,
 )

@@ -28,7 +28,7 @@ A service that reads or writes user data must `yield* Kysely` (the tag `withAuth
 
 ## Rate limits
 
-An endpoint is limited when its contract adds `RateLimitMiddleware`, before `SessionMiddleware` so the limit can key on the signed-in user. The limit itself is a row of `rules` in `src/server/httpapi/rate-limit.ts`, found by the endpoint's name. Counts live in the shared Valkey instance (`VALKEY_URL`, keys `giglist:rl:*`); `RATE_LIMIT=off` disables the middleware, and Playwright sets it. The caller is `X-Real-IP` (set by Caddy; IPv6 grouped by /64, `client-ip.ts`), or the socket address in development. The email-sending SQL functions still have no cap of their own, so a per-recipient limit has to live there.
+An endpoint is limited when its contract adds `RateLimitMiddleware`, before `SessionMiddleware` so the limit can key on the signed-in user. The limit itself is a row of `rules` in `src/server/httpapi/rate-limit.ts`, found by the endpoint's name. Counts live in the shared Valkey instance (`VALKEY_URL`, keys `giglist:rl:*`); `RATE_LIMIT=off` disables the middleware, and Playwright sets it. The caller is `X-Real-IP` (set by Caddy; IPv6 grouped by /64, `client-ip.ts`), or the socket address in development. Each recipient address also has a cap of 5 mails per hour, checked by the worker's `send_email` task (`worker/email/send-email.ts`), the one place every email passes; security notices (`account_activity.mjml`) are exempt. The worker shares the API's limiter (`src/server/services/rate-limiter.ts`), so it needs `VALKEY_URL` too.
 
 ## Effect Patterns
 

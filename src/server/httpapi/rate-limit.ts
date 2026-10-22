@@ -1,9 +1,9 @@
 import { Config, Duration, Effect, Layer, Match, Option } from "effect"
 import { HttpServerRequest } from "effect/http"
-import { RateLimiter, layer as rateLimiterLayer, layerStoreRedis } from "effect/persistence/RateLimiter"
+import { RateLimiter } from "effect/persistence/RateLimiter"
 import type { RateLimiterError } from "effect/persistence/RateLimiter"
 import { CurrentSession, RateLimitMiddleware, TooManyRequests } from "../../api/contracts"
-import { ValkeyLive } from "../services/valkey"
+import { RateLimiterLive, storeTimeout } from "../services/rate-limiter"
 import { networkOf } from "./client-ip"
 
 /**
@@ -51,17 +51,7 @@ export const RateLimitMiddlewareLive = Layer.unwrap(
   ),
 )
 
-// Bun queues commands while it retries a lost connection, so without a deadline an
-// outage would stall every limited endpoint instead of applying `whenStoreDown`.
-const storeTimeout = "1 second"
-
 const passThrough = Layer.succeed(RateLimitMiddleware, (effect) => effect)
-
-// Every consumer of the shared Valkey instance owns a key prefix.
-const Limiter = rateLimiterLayer.pipe(
-  Layer.provide(layerStoreRedis({ prefix: "giglist:rl:" })),
-  Layer.provide(ValkeyLive),
-)
 
 const enforce = Layer.effect(
   RateLimitMiddleware,
@@ -90,7 +80,7 @@ const enforce = Layer.effect(
           ),
       })
   }),
-).pipe(Layer.provide(Limiter))
+).pipe(Layer.provide(RateLimiterLive))
 
 const caller = Effect.fnUntraced(function* (rule: Rule) {
   if (rule.by === "user") {
