@@ -33,7 +33,7 @@
     "test:clean": "bun scripts/testClean.ts",
     "test:client": "bun run build && bun --env-file=.env -b vite preview",
     "test:db": "bash tests/db/run.sh",
-    "test:mail": "bun test worker/email",
+    "test:mail": "bun test worker",
     "test:ui": "bunx playwright test --ui",
     "test:unit": "bun test src",
     "typecheck": "tsc --noEmit",
