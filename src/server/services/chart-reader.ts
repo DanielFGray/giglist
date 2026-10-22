@@ -1,4 +1,4 @@
-import { Context, Effect, Layer, Stream } from "effect"
+import { Context, Effect, Layer, Semaphore, Stream } from "effect"
 import { FileSystem } from "effect/FileSystem"
 import { Path } from "effect/Path"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
@@ -8,6 +8,14 @@ import { MAX_SCAN_BYTES, MAX_SCAN_PAGES, scanFormat, textFromWords, wordsFromPdf
 
 /** Longer than any one page takes; a program still running then is stuck. */
 const TOOL_TIMEOUT = "60 seconds"
+
+/**
+ * At most two reads run at once for the whole process: each spawns
+ * pdftoppm/tesseract subprocesses that are CPU- and memory-heavy, so more
+ * would thrash the machine rather than finish sooner. A read that cannot
+ * start yet waits for a permit.
+ */
+const MAX_CONCURRENT_READS = 2
 
 /**
  * Reads the chords and lyrics of an uploaded PDF or image, as the chords over
@@ -26,6 +34,7 @@ export class ChartReader extends Context.Service<ChartReader, {
     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
     const fs = yield* FileSystem
     const path = yield* Path
+    const permits = yield* Semaphore.make(MAX_CONCURRENT_READS)
 
     /** The standard output of a program; a non-zero exit means it could not read the file. */
     const output = (command: string, args: ReadonlyArray<string>) =>
@@ -73,6 +82,6 @@ export class ChartReader extends Context.Service<ChartReader, {
       return text.trimEnd()
     }, Effect.scoped)
 
-    return ChartReader.of({ read })
+    return ChartReader.of({ read: (bytes) => permits.withPermit(read(bytes)) })
   })).pipe(Layer.provide(BunServices.layer))
 }
