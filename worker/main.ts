@@ -6,6 +6,7 @@ import { Mailer } from "./email/mailer"
 import { sendEmail } from "./email/send-email"
 import { RateLimiter } from "effect/persistence/RateLimiter"
 import { RateLimiterLive } from "../src/server/services/rate-limiter"
+import { TelemetryLive } from "../src/server/telemetry"
 
 class WorkerError extends Schema.TaggedError<WorkerError, { readonly brand: unique symbol }>()("WorkerError", {
   message: Schema.String,
@@ -53,6 +54,6 @@ const program = Effect.gen(function* () {
 
 program.pipe(
   Effect.scoped,
-  Effect.provide(Layer.mergeAll(MailerLive, RateLimiterLive).pipe(Layer.provideMerge(BunServices.layer))),
+  Effect.provide(Layer.mergeAll(MailerLive, RateLimiterLive, TelemetryLive).pipe(Layer.provideMerge(BunServices.layer))),
   BunRuntime.runMain,
 )

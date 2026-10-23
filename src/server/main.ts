@@ -22,7 +22,7 @@ import { ChartReader } from "./services/chart-reader";
 import { SessionMiddlewareLive } from "./httpapi/session";
 import { RateLimitMiddlewareLive } from "./httpapi/rate-limit";
 import { HealthLive } from "./httpapi/health";
-import { TracingLive } from "./tracing";
+import { TelemetryLive } from "./telemetry";
 
 const ApiLive = HttpApiBuilder.layer(GigListApi).pipe(
   Layer.provide(Layer.mergeAll(authHandlers, bandsHandlers, publicBandsHandlers, publicUsersHandlers, songsHandlers, setlistsHandlers, gigsHandlers, chartsHandlers, scoresHandlers, marksHandlers, stampsHandlers)),
@@ -55,10 +55,10 @@ const ServerLive = HttpRouter.serve(Layer.mergeAll(ApiLive, TestingLive, HealthL
     const hostname = yield* Config.NonEmptyString("API_HOST").pipe(Config.withDefault("127.0.0.1"));
     return BunHttpServer.layer({ port, hostname });
   }))),
-  // Last, and merged rather than provided: `Tracer.Tracer` is a reference with
-  // a default, so it is never a requirement of the server layer and `provide`
-  // has nothing to satisfy. Merging keeps it in every handler's context.
-  Layer.provideMerge(TracingLive),
+  // Last, and merged rather than provided: telemetry services are references
+  // with defaults, so they are not requirements of the server layer. Merging
+  // keeps the exporters in every handler's context.
+  Layer.provideMerge(TelemetryLive),
 );
 
 // Launch
