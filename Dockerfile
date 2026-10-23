@@ -1,5 +1,5 @@
 # Stage 1: install dependencies and build the browser assets
-FROM oven/bun:1 AS builder
+FROM oven/bun:1.4.4 AS builder
 WORKDIR /app
 
 COPY package.json bun.lock ./
@@ -10,7 +10,7 @@ COPY . .
 RUN bun run client:build
 
 # Stage 2: production runtime. The API runs from source with Bun, as in `bun run start`.
-FROM oven/bun:1 AS runtime
+FROM oven/bun:1.4.4 AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 

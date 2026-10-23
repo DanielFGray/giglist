@@ -76,7 +76,7 @@
     "@playwright/test": "^1.64.1",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/router-plugin": "^1.168.47",
-    "@types/bun": "^1.4.3",
+    "@types/bun": "^1.4.4",
     "@types/diff-match-patch": "1.0.36",
     "@types/html-to-text": "^9.0.4",
     "@types/lodash.template": "^4.5.3",
