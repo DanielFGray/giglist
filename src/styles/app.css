@@ -1,14 +1,6 @@
-@import "tailwindcss" source("../");
-
-@font-face {
-  font-family: "DM Sans";
-  font-style: normal;
-  font-weight: 400 700;
-  font-display: swap;
-  src: url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap");
-}
-
+/* CSS ignores an @import that follows any other rule, so the fonts come first. */
 @import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap");
+@import "tailwindcss" source("../");
 
 @theme {
   --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
