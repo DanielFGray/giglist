@@ -89,8 +89,8 @@ test.describe("songs", () => {
     await newTitle(page).click()
     await page.keyboard.type("Wonderwall")
     await page.keyboard.press("Tab")
-    // Tab from the new row's title adds the song and goes on along its row.
-    await expect(rows(page)).toHaveCount(1, { timeout: 10000 })
+    // Tab from the new row's title goes on along that row at once: typing does
+    // not wait for the song to be created, and no keystroke is lost meanwhile.
     for (const value of ["Oasis", "em", "87", "4:18", "2", "Capo 2, strummed"]) {
       await page.keyboard.type(value)
       await page.keyboard.press("Tab")

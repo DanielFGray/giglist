@@ -253,7 +253,7 @@ function SetlistPage() {
           create: async (songId) => {
             const created = await setlists.addEntry(setlistId, { song_id: songId })
             await refresh()
-            return created.id
+            return created
           },
         }}
         onMoveRow={(id, index) => move(moveTo(ids, id, index))}

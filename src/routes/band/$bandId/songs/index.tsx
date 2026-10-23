@@ -186,7 +186,7 @@ function SongCatalog() {
           create: async (title) => {
             const created = await songs.create({ ...BLANK_SONG, band_id: bandId, title })
             await router.invalidate()
-            return created.id
+            return created
           },
         }}
         actions={(song) => <SongActions bandId={bandId} song={song} onDeleted={() => router.invalidate()} />}

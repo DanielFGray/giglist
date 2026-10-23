@@ -30,15 +30,16 @@ export type GridColumn<R> = {
   readonly edit?: ColumnEdit<R>
 }
 
-/** The empty last row, where typing in `column` adds a row. `create` answers the new row's key. */
-export type NewRow = {
+/** The empty last row, where typing in `column` adds a row. */
+export type NewRow<R> = {
   readonly column: string
   readonly placeholder: string
-  /** Resolves to the new row's key once the page holds the row. */
-  readonly create: (value: string) => Promise<string>
+  /** Resolves to the new row once the page holds it. */
+  readonly create: (value: string) => Promise<R>
 }
 
 const NEW = "\u0000new"
+const DRAFT = "\u0000draft"
 
 /** The focused cell by row key, and the row's index when it was focused, for when that row leaves. */
 type Active = { readonly row: string; readonly col: string; readonly index: number }
@@ -65,7 +66,7 @@ export function Grid<R>({
   rows: ReadonlyArray<R>
   rowKey: (row: R) => string
   columns: ReadonlyArray<GridColumn<R>>
-  newRow?: NewRow
+  newRow?: NewRow<R>
   /** Puts a row at an index; turns on Alt+Up/Down and drag handles. */
   onMoveRow?: (key: string, index: number) => void
   /** Removes a row; turns on Ctrl+Delete. */
@@ -74,7 +75,33 @@ export function Grid<R>({
   actions?: (row: R) => ReactNode
   pwid: string
 }) {
-  const keys = [...rows.map(rowKey), ...(newRow ? [NEW] : [])]
+  /*
+   * A value typed in the new row becomes a draft row at once, so Tab moves
+   * along it while `create` runs, and typing lands where the person looks. A
+   * cell saved in a draft waits on the draft's `create`. Once the page holds
+   * the row, it renders under the draft's React key, so an editor open in it
+   * keeps its text.
+   */
+  const [drafts, setDrafts] = useState<ReadonlyMap<string, string | null>>(new Map())
+  const creating = useRef(new Map<string, Promise<R>>())
+  const draftCount = useRef(0)
+  const rowKeys = rows.map(rowKey)
+  const arrived = (draft: string) => {
+    const created = drafts.get(draft)
+    return created !== undefined && created !== null && rowKeys.includes(created) ? created : null
+  }
+  const waiting = [...drafts.keys()].filter((draft) => arrived(draft) === null)
+  const draftOf = new Map(
+    [...drafts.keys()].flatMap((draft): ReadonlyArray<readonly [string, string]> => {
+      const created = arrived(draft)
+      return created === null ? [] : [[created, draft]]
+    }),
+  )
+  const isDraft = (key: string) => drafts.has(key)
+  /** A row keeps its draft's identity, for React and for the value shown while a save runs. */
+  const identity = (key: string) => draftOf.get(key) ?? key
+
+  const keys = [...rowKeys, ...waiting, ...(newRow ? [NEW] : [])]
   const size = { rows: keys.length, cols: columns.length }
   const [active, setActive] = useState<Active>({ row: keys[0] ?? NEW, col: columns[0]!.key, index: 0 })
   const [editing, setEditing] = useState<Editing | null>(null)
@@ -84,8 +111,10 @@ export function Grid<R>({
   const ownsFocus = useRef(false)
   const dragging = useRef<string | null>(null)
 
+  // A focused draft whose row arrived is that row.
+  const activeRow = (isDraft(active.row) ? arrived(active.row) : null) ?? active.row
   // A row that left (deleted, or filtered out) gives its place to the row now there.
-  const found = keys.indexOf(active.row)
+  const found = keys.indexOf(activeRow)
   const rowIndex = found >= 0 ? found : active.index
   // A focused row that moved (Alt+arrows, or another person's edit) takes its new index with it.
   if (found >= 0 && found !== active.index) setActive({ ...active, index: found })
@@ -103,6 +132,20 @@ export function Grid<R>({
 
   const rowAt = (key: string) => rows.find((row) => rowKey(row) === key)
 
+  /** Shows `shown` in a cell until `saving` settles. */
+  const showUntil = (id: string, shown: string, saving: Promise<unknown>) => {
+    setPending((map) => new Map(map).set(id, shown))
+    saving
+      .catch((e: unknown) => setError(errorMessage(e)))
+      .finally(() =>
+        setPending((map) => {
+          const next = new Map(map)
+          next.delete(id)
+          return next
+        }),
+      )
+  }
+
   /**
    * Saves one cell, shows the value until the save settles, then moves on. A
    * value equal to the stored one is not saved: the edit only moves.
@@ -114,29 +157,47 @@ export function Grid<R>({
     const row = rowAt(key)
     const stored = row !== undefined && column.edit ? column.edit.text(row) : ""
     if (value === stored) return goTo(step(from, direction, size))
-    const id = cellId(key, column.key)
-    setPending((map) => new Map(map).set(id, shown))
     setError(null)
-    const saving =
-      key === NEW && newRow
-        ? newRow.create(value)
-        : row !== undefined && column.edit
-          ? Promise.resolve(row).then((saved) => column.edit?.save(saved, value)).then(() => null)
-          : Promise.resolve(null)
-    // Enter in the new row stays there for the next one; Tab goes on along the row just made.
-    if (key !== NEW || direction !== "next") goTo(step(from, direction, size))
-    saving
-      .then((created) => {
-        if (created !== null && direction === "next") setActive({ row: created, col: columns[from.col + 1]?.key ?? column.key, index: from.row })
-      })
-      .catch((e: unknown) => setError(errorMessage(e)))
-      .finally(() =>
-        setPending((map) => {
-          const next = new Map(map)
-          next.delete(id)
-          return next
-        }),
-      )
+    if (key === NEW && newRow) return startDraft(newRow, column, value, shown, direction, from)
+    const saved = row !== undefined ? Promise.resolve(row) : creating.current.get(key)
+    if (saved && column.edit) {
+      const edit = column.edit
+      showUntil(cellId(identity(key), column.key), shown, saved.then((target) => edit.save(target, value)))
+    }
+    goTo(step(from, direction, size))
+  }
+
+  /** Enter in the new row stays there for the next one; Tab goes on along the draft. */
+  const startDraft = (
+    newRow: NewRow<R>,
+    column: GridColumn<R>,
+    value: string,
+    shown: string,
+    direction: Direction,
+    from: { row: number; col: number },
+  ) => {
+    const draft = `${DRAFT}${draftCount.current++}`
+    const created = newRow.create(value)
+    creating.current.set(draft, created)
+    setDrafts((map) => new Map(map).set(draft, null))
+    if (direction === "next") setActive({ row: draft, col: columns[from.col + 1]?.key ?? column.key, index: from.row })
+    else goTo(step(from, direction, size))
+    showUntil(
+      cellId(draft, column.key),
+      shown,
+      created.then(
+        (row) => setDrafts((map) => new Map(map).set(draft, rowKey(row))),
+        (e: unknown) => {
+          // A draft whose row was never made leaves, and the edits waiting on it fail with it.
+          setDrafts((map) => {
+            const next = new Map(map)
+            next.delete(draft)
+            return next
+          })
+          throw e
+        },
+      ),
+    )
   }
 
   const editable = (key: string, column: GridColumn<R>) =>
@@ -165,11 +226,11 @@ export function Grid<R>({
         commit(key, column, "", "", "stay")
         break
       case "moveRow":
-        if (!onMoveRow || key === NEW) return
+        if (!onMoveRow || key === NEW || isDraft(key)) return
         onMoveRow(key, Math.min(Math.max(current.row + intent.delta, 0), rows.length - 1))
         break
       case "deleteRow":
-        if (!onDeleteRow || key === NEW) return
+        if (!onDeleteRow || key === NEW || isDraft(key)) return
         onDeleteRow(key)
         break
     }
@@ -209,16 +270,18 @@ export function Grid<R>({
           <tbody>
             {keys.map((key, index) => {
               const row = rowAt(key)
+              // The new row and draft rows have no place in the order yet, so they neither drag nor take drops.
+              const fixed = key === NEW || isDraft(key)
               return (
                 <tr
-                  key={key}
+                  key={identity(key)}
                   role="row"
                   aria-rowindex={index + 2}
-                  data-pwid={key === NEW ? "grid-new-row" : "grid-row"}
-                  data-row-key={key === NEW ? undefined : key}
-                  onDragOver={onMoveRow && key !== NEW ? (e) => e.preventDefault() : undefined}
+                  data-pwid={key === NEW ? "grid-new-row" : isDraft(key) ? "grid-draft-row" : "grid-row"}
+                  data-row-key={key === NEW || isDraft(key) ? undefined : key}
+                  onDragOver={onMoveRow && !fixed ? (e) => e.preventDefault() : undefined}
                   onDrop={
-                    onMoveRow && key !== NEW
+                    onMoveRow && !fixed
                       ? (e) => {
                           e.preventDefault()
                           if (dragging.current !== null) onMoveRow(dragging.current, index)
@@ -232,20 +295,20 @@ export function Grid<R>({
                     <td
                       aria-hidden
                       data-pwid="grid-drag"
-                      draggable={key !== NEW}
+                      draggable={!fixed}
                       onDragStart={() => {
                         dragging.current = key
                       }}
-                      className={`text-center text-zinc-600 select-none ${key === NEW ? "" : "cursor-grab"}`}
+                      className={`text-center text-zinc-600 select-none ${fixed ? "" : "cursor-grab"}`}
                     >
-                      {key === NEW ? "" : "⋮⋮"}
+                      {fixed ? "" : "⋮⋮"}
                     </td>
                   )}
                   {columns.map((column) => {
                     const id = cellId(key, column.key)
                     const isActive = id === activeId
                     const isEditing = isActive && editing !== null
-                    const shown = pending.get(id)
+                    const shown = pending.get(cellId(identity(key), column.key))
                     return (
                       <td
                         key={column.key}
@@ -277,7 +340,7 @@ export function Grid<R>({
                         {isEditing ? (
                           <CellEditor
                             edit={key === NEW ? newRowEdit(columns, newRow) : column.edit}
-                            initial={editing.text ?? (row !== undefined && column.edit ? column.edit.text(row) : "")}
+                            initial={editing.text ?? (row !== undefined && column.edit ? column.edit.text(row) : (shown ?? ""))}
                             caretAtEnd={editing.text !== null}
                             onFinish={(value, shownText, direction) => commit(key, column, value, shownText, direction)}
                             onCancel={() => {
@@ -314,7 +377,7 @@ export function Grid<R>({
 const cellId = (row: string, col: string) => `${row}:${col}`
 
 /** The new row's editor is its column's, with `save` unused (the grid calls `create`). */
-const newRowEdit = <R,>(columns: ReadonlyArray<GridColumn<R>>, newRow: NewRow | undefined) =>
+const newRowEdit = <R,>(columns: ReadonlyArray<GridColumn<R>>, newRow: NewRow<R> | undefined) =>
   columns.find((column) => column.key === newRow?.column)?.edit
 
 /**
