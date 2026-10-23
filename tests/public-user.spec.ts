@@ -46,8 +46,8 @@ test.describe("public user profile", () => {
 
   test("the bio is Markdown with players, and lists only public bands", async ({ page, testing }) => {
     const me = await testing.login({ username: "test_public_user_bio" })
-    const band = await post(page, "/api/my/bands", { slug: "test-public-user-band", name: "Profile Band" })
-    await post(page, "/api/my/bands", { slug: "test-public-user-private", name: "Private Band" })
+    const band = await post(page, "/api/my/bands", { slug: `test-public-user-band-${Date.now()}`, name: "Profile Band" })
+    await post(page, "/api/my/bands", { slug: `test-public-user-private-${Date.now()}`, name: "Private Band" })
     const enabled = await page.request.put(`/api/my/bands/${band.id}`, { data: { is_public: true } })
     expect(enabled.ok(), await enabled.text()).toBe(true)
 

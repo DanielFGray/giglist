@@ -40,7 +40,7 @@ test.describe("public band page", () => {
     testing,
   }) => {
     await testing.login({ username: "test_public_switch" })
-    const band = await post(page, "/api/my/bands", { slug: "test-public-switch", name: "Switch Band" })
+    const band = await post(page, "/api/my/bands", { slug: `test-public-switch-${Date.now()}`, name: "Switch Band" })
     await page.goto(`/b/${band.slug}`)
     await expect(getPw(page, "public-band-missing")).toBeVisible({ timeout: 5000 })
 
@@ -68,7 +68,7 @@ test.describe("public band page", () => {
     testing,
   }) => {
     const me = await testing.login({ username: "test_public_band" })
-    const band = await post(page, "/api/my/bands", { slug: "test-public-profile", name: "Public Profile Band" })
+    const band = await post(page, "/api/my/bands", { slug: `test-public-profile-${Date.now()}`, name: "Public Profile Band" })
     await enablePublicPage(page, band.id)
     const upcoming = dayFromToday(30)
     await post(page, "/api/gigs", gig(band.id, "The Echo Room", upcoming))
@@ -133,7 +133,7 @@ test.describe("public band page", () => {
     testing,
   }) => {
     await testing.login({ username: "test_public_markdown" })
-    const band = await post(page, "/api/my/bands", { slug: "test-public-markdown", name: "Markdown Band" })
+    const band = await post(page, "/api/my/bands", { slug: `test-public-markdown-${Date.now()}`, name: "Markdown Band" })
     await enablePublicPage(page, band.id)
     await page.goto(`/band/${band.id}`)
     await expect(getPw(page, "band-public-settings")).toBeVisible({ timeout: 5000 })
@@ -177,7 +177,7 @@ test.describe("public band page", () => {
     testing,
   }) => {
     await testing.login({ username: "test_public_theme" })
-    const band = await post(page, "/api/my/bands", { slug: "test-public-theme", name: "Theme Band" })
+    const band = await post(page, "/api/my/bands", { slug: `test-public-theme-${Date.now()}`, name: "Theme Band" })
     await enablePublicPage(page, band.id)
     await page.goto(`/band/${band.id}`)
     await expect(getPw(page, "band-public-settings")).toBeVisible({ timeout: 5000 })
@@ -208,7 +208,7 @@ test.describe("public band page", () => {
 
   test("a band writes its own theme; its options appear and its scripts do not run", async ({ page, testing }) => {
     await testing.login({ username: "test_public_own_theme" })
-    const band = await post(page, "/api/my/bands", { slug: "test-public-own-theme", name: "Own Theme Band" })
+    const band = await post(page, "/api/my/bands", { slug: `test-public-own-theme-${Date.now()}`, name: "Own Theme Band" })
     await enablePublicPage(page, band.id)
     await page.goto(`/band/${band.id}`)
     await expect(getPw(page, "band-public-settings")).toBeVisible({ timeout: 5000 })
