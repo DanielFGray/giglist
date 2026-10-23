@@ -66,6 +66,19 @@ test.describe("auth", () => {
     await expect(getPw(page, "nav-links")).toBeVisible()
   })
 
+  test("names the broken rule under each field instead of sending the form", async ({ page }) => {
+    await page.goto("/signup")
+    await getPw(page, "signup-username").fill("first.last")
+    await getPw(page, "signup-email").fill("first.last")
+    await getPw(page, "signup-password").fill("short")
+    await expect(getPw(page, "signup-submit")).toBeDisabled()
+    await expect(getPw(page, "signup-username-error")).toHaveText(
+      "Start with a letter, then use only letters, digits, _ and -",
+    )
+    await expect(getPw(page, "signup-email-error")).toHaveText("Enter an email address")
+    await expect(getPw(page, "signup-password-error")).toHaveText("Use at least 8 characters")
+  })
+
   test("can login via UI", async ({ page, testing }) => {
     // Create user via testing API (don't need the session — will login via UI)
     const me = await testing.login({ username: "test_loginui" })

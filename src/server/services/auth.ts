@@ -71,13 +71,17 @@ export const register = Effect.fn("Auth.register")(
 
     return { user, sessionId: session.uuid as string };
   },
-  Effect.mapError((e): AuthError => {
-    if (e._tag === "RegistrationFailed") return e;
+  Effect.catch((e): Effect.Effect<never, AuthError> => {
+    if (e._tag === "RegistrationFailed") return Effect.fail(e);
     const msg = String(e);
     if (msg.includes("23505"))
-      return new DuplicateAccount({ message: "Username or email already taken" });
-    if (msg.includes("WEAKP")) return new WeakPassword({ message: "Password is too weak" });
-    return new RegistrationFailed({ message: "Registration failed" });
+      return Effect.fail(new DuplicateAccount({ message: "Username or email already taken" }));
+    if (msg.includes("WEAKP"))
+      return Effect.fail(new WeakPassword({ message: "Password is too weak" }));
+    // The person sees only the generic message, so the cause must reach the log.
+    return Effect.logError("Registration failed", e).pipe(
+      Effect.andThen(Effect.fail(new RegistrationFailed({ message: "Registration failed" }))),
+    );
   }),
 );
 

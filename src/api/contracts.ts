@@ -63,10 +63,35 @@ export const LoginPayload = S.Struct({
   password: S.RedactedFromValue(S.String),
 })
 
+/*
+ * The field rules below repeat the database's checks. The forms validate
+ * against these payloads as the person types, so each message reaches the
+ * field it is about; a rule only the database holds comes back as one
+ * message for the whole form.
+ */
+
+/** Matches `app_public.username`: 2–64 chars, letter then letters/digits/_/-. */
+const Username = S.String.pipe(
+  S.check(S.isMinLength(2, { message: "Use at least 2 characters" })),
+  S.check(S.isMaxLength(64, { message: "Use at most 64 characters" })),
+  S.check(
+    S.isPattern(/^[a-zA-Z][a-zA-Z0-9_-]+$/, {
+      message: "Start with a letter, then use only letters, digits, _ and -",
+    }),
+  ),
+)
+
+/** Matches the check on `app_public.user_emails.email`. */
+const Email = S.String.check(S.isPattern(/^[^@]+@[^@]+\.[^@]+$/, { message: "Enter an email address" }))
+
+const NewPassword = S.RedactedFromValue(
+  S.String.check(S.isMinLength(8, { message: "Use at least 8 characters" })),
+)
+
 export const RegisterPayload = S.Struct({
-  username: S.String,
-  email: S.String,
-  password: S.RedactedFromValue(S.String),
+  username: Username,
+  email: Email,
+  password: NewPassword,
 })
 
 export const ForgotPasswordPayload = S.Struct({ email: S.String })
@@ -74,15 +99,8 @@ export const ForgotPasswordPayload = S.Struct({ email: S.String })
 export const ResetPasswordPayload = S.Struct({
   userId: S.String.check(S.isUUID()),
   token: S.String.check(S.isMinLength(1)),
-  password: S.RedactedFromValue(S.String.check(S.isMinLength(8))),
+  password: NewPassword,
 })
-
-/** Matches `app_public.username`: 2–64 chars, letter then letters/digits/_/-. */
-const Username = S.String.pipe(
-  S.check(S.isMinLength(2)),
-  S.check(S.isMaxLength(64)),
-  S.check(S.isPattern(/^[a-zA-Z][a-zA-Z0-9_-]+$/)),
-)
 
 /** Matches `app_public.url`, or null when the user clears the field. */
 const AvatarUrl = S.NullOr(
@@ -122,7 +140,7 @@ export const UpdateProfilePayload = S.Struct({
 
 export const ChangePasswordPayload = S.Struct({
   old_password: S.RedactedFromValue(S.String),
-  new_password: S.RedactedFromValue(S.String.pipe(S.check(S.isMinLength(8)))),
+  new_password: NewPassword,
 })
 
 export const UserEmail = S.Struct({
