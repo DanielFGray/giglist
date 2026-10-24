@@ -13,7 +13,7 @@ export type Choice = { readonly value: string; readonly label: string; readonly 
 export type ColumnEdit<R> = {
   /** The text an edit starts from. */
   readonly text: (row: R) => string
-  /** Resolves once the page holds the saved row; until then the cell shows what was typed. */
+  /** Resolves once the server holds the value; the grid shows the typed value until the page renders a new row object. */
   readonly save: (row: R, value: string) => Promise<void>
 } & (
   | { readonly kind: "text"; readonly inputMode?: "text" | "numeric" | "decimal"; readonly placeholder?: string }
@@ -46,10 +46,27 @@ type Active = { readonly row: string; readonly col: string; readonly index: numb
 type Editing = { readonly text: string | null }
 
 /**
+ * A cell's last save: the editor text (`value`), how it reads (`shown`), and
+ * the row object it saved over (`from`; none for the edit that makes a new
+ * row). The cell shows `shown` while the save runs, and after it settles for
+ * as long as the page still renders `from`: the page's refresh can render
+ * after the save resolves. `save` numbers the save, so only the latest save
+ * to a cell changes its entry.
+ */
+type Pending<R> = {
+  readonly value: string
+  readonly shown: string
+  readonly from: R | undefined
+  readonly saving: boolean
+  readonly save: number
+}
+
+/**
  * A spreadsheet: arrows and Tab move between cells, typing edits, Enter saves
  * and moves down (see `grid-keys.ts` for the keys). Each saved cell calls its
- * column's `save`, and shows what was typed (marked `aria-busy`) until the
- * save settles. The rows are shown in the order given.
+ * column's `save` and shows what was typed until the page renders the saved
+ * row, marked `aria-busy` while the save runs. The rows are shown in the order
+ * given.
  */
 export function Grid<R>({
   label,
@@ -85,6 +102,7 @@ export function Grid<R>({
   const [drafts, setDrafts] = useState<ReadonlyMap<string, string | null>>(new Map())
   const creating = useRef(new Map<string, Promise<R>>())
   const draftCount = useRef(0)
+  const saveCount = useRef(0)
   const rowKeys = rows.map(rowKey)
   const arrived = (draft: string) => {
     const created = drafts.get(draft)
@@ -105,7 +123,7 @@ export function Grid<R>({
   const size = { rows: keys.length, cols: columns.length }
   const [active, setActive] = useState<Active>({ row: keys[0] ?? NEW, col: columns[0]!.key, index: 0 })
   const [editing, setEditing] = useState<Editing | null>(null)
-  const [pending, setPending] = useState<ReadonlyMap<string, string>>(new Map())
+  const [pending, setPending] = useState<ReadonlyMap<string, Pending<R>>>(new Map())
   const [error, setError] = useState<string | null>(null)
   const cells = useRef(new Map<string, HTMLTableCellElement>())
   const ownsFocus = useRef(false)
@@ -132,23 +150,34 @@ export function Grid<R>({
 
   const rowAt = (key: string) => rows.find((row) => rowKey(row) === key)
 
-  /** Shows `shown` in a cell until `saving` settles. */
-  const showUntil = (id: string, shown: string, saving: Promise<unknown>) => {
-    setPending((map) => new Map(map).set(id, shown))
-    saving
-      .catch((e: unknown) => setError(errorMessage(e)))
-      .finally(() =>
-        setPending((map) => {
-          const next = new Map(map)
-          next.delete(id)
-          return next
-        }),
-      )
+  /**
+   * Shows a cell's save, as described at `Pending`. `saving` resolves with the
+   * row object the save wrote over. A failed save stops showing at once: the
+   * error banner explains it.
+   */
+  const showUntil = (id: string, value: string, shown: string, saving: Promise<R | undefined>) => {
+    const save = saveCount.current++
+    const settle = (next: (map: Map<string, Pending<R>>) => void) =>
+      setPending((map) => {
+        if (map.get(id)?.save !== save) return map
+        const copy = new Map(map)
+        next(copy)
+        return copy
+      })
+    setPending((map) => new Map(map).set(id, { value, shown, from: undefined, saving: true, save }))
+    saving.then(
+      (from) => settle((map) => map.set(id, { value, shown, from, saving: false, save })),
+      (e: unknown) => {
+        setError(errorMessage(e))
+        settle((map) => map.delete(id))
+      },
+    )
   }
 
   /**
-   * Saves one cell, shows the value until the save settles, then moves on. A
-   * value equal to the stored one is not saved: the edit only moves.
+   * Saves one cell, shows the typed value until the page renders the saved
+   * row, then moves on. A value equal to the stored one is not saved: the
+   * edit only moves.
    */
   const commit = (key: string, column: GridColumn<R>, value: string, shown: string, direction: Direction) => {
     setEditing(null)
@@ -162,7 +191,12 @@ export function Grid<R>({
     const saved = row !== undefined ? Promise.resolve(row) : creating.current.get(key)
     if (saved && column.edit) {
       const edit = column.edit
-      showUntil(cellId(identity(key), column.key), shown, saved.then((target) => edit.save(target, value)))
+      showUntil(
+        cellId(identity(key), column.key),
+        value,
+        shown,
+        saved.then((target) => edit.save(target, value).then(() => target)),
+      )
     }
     goTo(step(from, direction, size))
   }
@@ -184,9 +218,13 @@ export function Grid<R>({
     else goTo(step(from, direction, size))
     showUntil(
       cellId(draft, column.key),
+      value,
       shown,
       created.then(
-        (row) => setDrafts((map) => new Map(map).set(draft, rowKey(row))),
+        (row) => {
+          setDrafts((map) => new Map(map).set(draft, rowKey(row)))
+          return undefined
+        },
         (e: unknown) => {
           // A draft whose row was never made leaves, and the edits waiting on it fail with it.
           setDrafts((map) => {
@@ -308,7 +346,9 @@ export function Grid<R>({
                     const id = cellId(key, column.key)
                     const isActive = id === activeId
                     const isEditing = isActive && editing !== null
-                    const shown = pending.get(cellId(identity(key), column.key))
+                    const entry = pending.get(cellId(identity(key), column.key))
+                    const shown = entry !== undefined && (entry.saving || rowAt(key) === entry.from) ? entry.shown : undefined
+                    const saving = entry?.saving === true
                     return (
                       <td
                         key={column.key}
@@ -316,7 +356,7 @@ export function Grid<R>({
                         role="gridcell"
                         tabIndex={isActive && !isEditing ? 0 : -1}
                         aria-readonly={!editable(key, column)}
-                        aria-busy={shown !== undefined}
+                        aria-busy={saving}
                         data-pwid={`cell-${column.key}`}
                         ref={(element) => {
                           if (element) cells.current.set(id, element)
@@ -340,7 +380,10 @@ export function Grid<R>({
                         {isEditing ? (
                           <CellEditor
                             edit={key === NEW ? newRowEdit(columns, newRow) : column.edit}
-                            initial={editing.text ?? (row !== undefined && column.edit ? column.edit.text(row) : (shown ?? ""))}
+                            initial={
+                              editing.text ??
+                              (shown !== undefined ? entry!.value : row !== undefined && column.edit ? column.edit.text(row) : "")
+                            }
                             caretAtEnd={editing.text !== null}
                             onFinish={(value, shownText, direction) => commit(key, column, value, shownText, direction)}
                             onCancel={() => {

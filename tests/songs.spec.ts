@@ -81,6 +81,41 @@ test.describe("songs", () => {
     await expect(column(page, "artist")).toHaveText(["The Doors", "Jimi Hendrix", "Them"])
   })
 
+  test("an edited cell keeps the typed artist until the page renders the saved row", async ({ page, testing }) => {
+    await testing.login()
+    const bandId = await createBand(page, `test-songs-pending-${Date.now()}`)
+    await createSong(page, bandId, { title: "Seven Nation Army", artist: "The White Stripes", tempo_bpm: 124 })
+
+    await page.goto(`/band/${bandId}/songs`)
+    const cell = column(page, "artist").first()
+    await expect(cell).toHaveText("The White Stripes", { timeout: 10000 })
+
+    // Every text the cell takes, with the time it took it, so a flash of the
+    // old value between the save settling and the page rendering shows up.
+    await cell.evaluate((element) => {
+      const seen: Array<{ t: number; text: string }> = []
+      ;(window as unknown as { seenArtistTexts: typeof seen }).seenArtistTexts = seen
+      new MutationObserver(() => seen.push({ t: performance.now(), text: element.textContent ?? "" })).observe(
+        element,
+        { subtree: true, childList: true, characterData: true },
+      )
+    })
+
+    await cell.click()
+    await page.keyboard.type("Aretha Franklin")
+    await page.keyboard.press("Enter")
+    await expect(cell).toHaveText("Aretha Franklin")
+    await expect(cell).toHaveAttribute("aria-busy", "false")
+
+    const seen = await page.evaluate(
+      () => (window as unknown as { seenArtistTexts: Array<{ t: number; text: string }> }).seenArtistTexts,
+    )
+    const firstNew = seen.findIndex((entry) => entry.text === "Aretha Franklin")
+    expect(firstNew, `the observer never saw the new artist: ${JSON.stringify(seen)}`).toBeGreaterThanOrEqual(0)
+    const flashed = seen.slice(firstNew).filter((entry) => entry.text === "The White Stripes")
+    expect(flashed, `the old artist flashed back after the new one: ${JSON.stringify(seen)}`).toEqual([])
+  })
+
   test("Tab saves a cell and moves along the row; Escape cancels and Delete clears", async ({ page, testing }) => {
     await testing.login()
     const bandId = await createBand(page, `test-songs-tab-${Date.now()}`)
