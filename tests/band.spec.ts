@@ -76,6 +76,7 @@ test.describe("bands", () => {
     await page.goto("/band/new")
     await getPw(page, "new-band-name").fill(name)
     await getPw(page, "new-band-submit").click()
-    await expect(getPw(page, "new-band-error")).toBeVisible({ timeout: 5000 })
+    // The message comes from the slug's unique constraint, so it proves the server reads the Postgres error.
+    await expect(getPw(page, "new-band-error")).toHaveText("A band with that slug already exists", { timeout: 5000 })
   })
 })

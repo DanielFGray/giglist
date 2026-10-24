@@ -152,7 +152,7 @@ export const UserEmail = S.Struct({
 })
 
 export const AddEmailPayload = S.Struct({
-  email: S.String.pipe(S.check(S.isPattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/))),
+  email: Email,
 })
 
 export const VerifyEmailPayload = S.Struct({

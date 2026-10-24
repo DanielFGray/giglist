@@ -1,6 +1,7 @@
 import { Effect, Redacted, Schema as S } from "effect";
 import { sql } from "kysely";
 import { Db, Kysely } from "../db";
+import { pgError } from "./pg-error";
 import { gravatarUrl } from "../gravatar";
 
 export class InvalidCredentials extends S.TaggedError<InvalidCredentials, { readonly brand: unique symbol }>()("InvalidCredentials", {
@@ -73,12 +74,11 @@ export const register = Effect.fn("Auth.register")(
   },
   Effect.catch((e): Effect.Effect<never, AuthError> => {
     if (e._tag === "RegistrationFailed") return Effect.fail(e);
-    const msg = String(e);
-    if (msg.includes("23505"))
+    const info = pgError(e);
+    if (info?.code === "23505")
       return Effect.fail(new DuplicateAccount({ message: "Username or email already taken" }));
-    if (msg.includes("WEAKP"))
+    if (info?.code === "WEAKP")
       return Effect.fail(new WeakPassword({ message: "Password is too weak" }));
-    // The person sees only the generic message, so the cause must reach the log.
     return Effect.logError("Registration failed", e).pipe(
       Effect.andThen(Effect.fail(new RegistrationFailed({ message: "Registration failed" }))),
     );
@@ -105,12 +105,14 @@ export const login = Effect.fn("Auth.login")(
 
     return { sessionId: session.uuid, userId: session.user_id };
   },
-  Effect.mapError((e): InvalidCredentials | AccountLocked => {
-    if (e._tag === "InvalidCredentials") return e;
-    const msg = String(e);
-    if (msg.includes("LOCKD"))
-      return new AccountLocked({ message: "Account locked — too many attempts" });
-    return new InvalidCredentials({ message: "Invalid username or password" });
+  Effect.catch((e): Effect.Effect<never, InvalidCredentials | AccountLocked> => {
+    if (e._tag === "InvalidCredentials") return Effect.fail(e);
+    const code = pgError(e)?.code;
+    if (code === "LOCKD")
+      return Effect.fail(new AccountLocked({ message: "Account locked — too many attempts" }));
+    return Effect.logError("login failed", e).pipe(
+      Effect.andThen(Effect.fail(new InvalidCredentials({ message: "Invalid username or password" }))),
+    );
   }),
 );
 
@@ -135,9 +137,10 @@ export const resetPassword = Effect.fn("Auth.resetPassword")(
     if (!session) return yield* new AccountError({ message: "This reset link is invalid or expired" });
     return { sessionId: session.uuid, userId: session.user_id };
   },
-  Effect.mapError((error): AccountError => {
-    if (error._tag === "AccountError") return error;
-    return new AccountError({ message: "This reset link is invalid or expired" });
+  Effect.catch((e) => {
+    if (e._tag === "AccountError") return Effect.fail(e);
+    const message = "This reset link is invalid or expired";
+    return Effect.logError(message, e).pipe(Effect.andThen(Effect.fail(new AccountError({ message }))));
   }),
 );
 
@@ -202,17 +205,16 @@ export const updateProfile = Effect.fn("Auth.updateProfile")(
   },
   Effect.catch((e) => {
     if (e._tag === "AccountError") return Effect.fail(e);
-    const msg = String(e);
-    // Match Postgres codes / constraint names, not free text like "username".
-    if (msg.includes("23505"))
+    const info = pgError(e);
+    if (info?.code === "23505" && info.constraint === "users_username_key")
       return Effect.fail(new AccountError({ message: "That username is already taken" }));
-    if (msg.includes("users_username_check") || msg.includes("username_"))
+    if (info?.constraint === "username_check")
       return Effect.fail(new AccountError({ message: "That username is not allowed" }));
-    if (msg.includes("users_avatar_url_check") || msg.includes("domain url"))
-      return Effect.fail(
-        new AccountError({ message: "Avatar URL must start with http:// or https://" }),
-      );
-    return Effect.fail(new AccountError({ message: "Could not update profile" }));
+    if (info?.constraint === "url_check")
+      return Effect.fail(new AccountError({ message: "Avatar URL must start with http:// or https://" }));
+    return Effect.logError("updateProfile failed", e).pipe(
+      Effect.andThen(Effect.fail(new AccountError({ message: "Could not update profile" }))),
+    );
   }),
 );
 
@@ -243,14 +245,16 @@ export const changePassword = Effect.fn("Auth.changePassword")(
   },
   Effect.catch((e) => {
     if (e._tag === "AccountError") return Effect.fail(e);
-    const msg = String(e);
-    if (msg.includes("CREDS"))
+    const code = pgError(e)?.code;
+    if (code === "CREDS")
       return Effect.fail(new AccountError({ message: "Incorrect password" }));
-    if (msg.includes("LOGIN"))
+    if (code === "LOGIN")
       return Effect.fail(new AccountError({ message: "You must be signed in" }));
-    if (msg.includes("WEAKP"))
+    if (code === "WEAKP")
       return Effect.fail(new AccountError({ message: "Password is too weak" }));
-    return Effect.fail(new AccountError({ message: "Could not change password" }));
+    return Effect.logError("Could not change password", e).pipe(
+      Effect.andThen(Effect.fail(new AccountError({ message: "Could not change password" }))),
+    );
   }),
 );
 
@@ -279,10 +283,12 @@ export const addEmail = Effect.fn("Auth.addEmail")(
   },
   Effect.catch((e) => {
     if (e._tag === "AccountError") return Effect.fail(e);
-    const msg = String(e);
-    if (msg.includes("EMTKN") || msg.includes("23505"))
+    const code = pgError(e)?.code;
+    if (code === "EMTKN" || code === "23505")
       return Effect.fail(new AccountError({ message: "That email is already in use" }));
-    return Effect.fail(new AccountError({ message: "Could not add email" }));
+    return Effect.logError("Could not add email", e).pipe(
+      Effect.andThen(Effect.fail(new AccountError({ message: "Could not add email" }))),
+    );
   }),
 );
 
@@ -299,12 +305,14 @@ export const removeEmail = Effect.fn("Auth.removeEmail")(
   },
   Effect.catch((e) => {
     if (e._tag === "AccountError") return Effect.fail(e);
-    const msg = String(e);
-    if (msg.includes("CDLEA"))
+    const code = pgError(e)?.code;
+    if (code === "CDLEA")
       return Effect.fail(
         new AccountError({ message: "You must keep at least one verified email" }),
       );
-    return Effect.fail(new AccountError({ message: "Could not remove email" }));
+    return Effect.logError("Could not remove email", e).pipe(
+      Effect.andThen(Effect.fail(new AccountError({ message: "Could not remove email" }))),
+    );
   }),
 );
 
@@ -331,14 +339,16 @@ export const makeEmailPrimary = Effect.fn("Auth.makeEmailPrimary")(
   },
   Effect.catch((e) => {
     if (e._tag === "AccountError") return Effect.fail(e);
-    const msg = String(e);
-    if (msg.includes("DNIED"))
+    const code = pgError(e)?.code;
+    if (code === "DNIED")
       return Effect.fail(new AccountError({ message: "That's not your email" }));
-    if (msg.includes("VRFY1"))
+    if (code === "VRFY1")
       return Effect.fail(
         new AccountError({ message: "Verify the email before making it primary" }),
       );
-    return Effect.fail(new AccountError({ message: "Could not update primary email" }));
+    return Effect.logError("Could not update primary email", e).pipe(
+      Effect.andThen(Effect.fail(new AccountError({ message: "Could not update primary email" }))),
+    );
   }),
 );
 
@@ -364,7 +374,7 @@ export const resendEmailVerification = Effect.fn("Auth.resendEmailVerification")
   },
   Effect.catchIf(
     (e): e is Exclude<typeof e, AccountError> => e._tag !== "AccountError",
-    () => Effect.fail(new AccountError({ message: "Could not resend verification" })),
+    (e) => Effect.logError("Could not resend verification", e).pipe(Effect.andThen(Effect.fail(new AccountError({ message: "Could not resend verification" })))),
   ),
 );
 
@@ -392,7 +402,7 @@ export const verifyEmail = Effect.fn("Auth.verifyEmail")(
   },
   Effect.catchIf(
     (e): e is Exclude<typeof e, AccountError> => e._tag !== "AccountError",
-    () => Effect.fail(new AccountError({ message: "Could not verify email" })),
+    (e) => Effect.logError("Could not verify email", e).pipe(Effect.andThen(Effect.fail(new AccountError({ message: "Could not verify email" })))),
   ),
 );
 
@@ -431,10 +441,12 @@ export const requestAccountDeletion = Effect.fn("Auth.requestAccountDeletion")(
   },
   Effect.catch((e) => {
     if (e._tag === "AccountError") return Effect.fail(e);
-    const msg = String(e);
-    if (msg.includes("LOGIN"))
+    const code = pgError(e)?.code;
+    if (code === "LOGIN")
       return Effect.fail(new AccountError({ message: "You must be signed in" }));
-    return Effect.fail(new AccountError({ message: "Could not start account deletion" }));
+    return Effect.logError("Could not start account deletion", e).pipe(
+      Effect.andThen(Effect.fail(new AccountError({ message: "Could not start account deletion" }))),
+    );
   }),
 );
 
@@ -459,19 +471,21 @@ export const confirmAccountDeletion = Effect.fn("Auth.confirmAccountDeletion")(
   },
   Effect.catch((e) => {
     if (e._tag === "AccountError") return Effect.fail(e);
-    const msg = String(e);
-    if (msg.includes("LOGIN"))
+    const code = pgError(e)?.code;
+    if (code === "LOGIN")
       return Effect.fail(new AccountError({ message: "You must be signed in" }));
-    if (msg.includes("OWNER"))
+    if (code === "OWNER")
       return Effect.fail(
         new AccountError({
           message: "Transfer ownership or delete every band you own before deleting your account",
         }),
       );
-    if (msg.includes("DNIED"))
+    if (code === "DNIED")
       return Effect.fail(
         new AccountError({ message: "That confirmation code is wrong or has expired" }),
       );
-    return Effect.fail(new AccountError({ message: "Could not delete account" }));
+    return Effect.logError("Could not delete account", e).pipe(
+      Effect.andThen(Effect.fail(new AccountError({ message: "Could not delete account" }))),
+    );
   }),
 );

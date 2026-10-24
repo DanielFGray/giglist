@@ -2,6 +2,7 @@ import { Effect, Schema } from "effect";
 import { sql } from "kysely";
 import { Kysely } from "../db";
 import type { UpdateBandPayload } from "../../api/contracts";
+import { pgError } from "./pg-error";
 
 type BandUpdate = Schema.Schema.Type<typeof UpdateBandPayload>;
 
@@ -88,13 +89,14 @@ export const createBand = Effect.fn("Band.createBand")(
       .where("app_public.bands.id", "=", id)
       .pipe(Effect.head);
   },
-  Effect.tapError((e) => Effect.logError("createBand failed", e)),
   Effect.catch((e) => {
     if (e._tag === "BandError") return Effect.fail(e);
-    const msg = String(e);
-    if (msg.includes("23505"))
+    const info = pgError(e);
+    if (info?.constraint === "bands_slug_key")
       return Effect.fail(new BandError({ message: "A band with that slug already exists" }));
-    return Effect.fail(new BandError({ message: msg }));
+    return Effect.logError("createBand failed", e).pipe(
+      Effect.andThen(Effect.fail(new BandError({ message: "Could not create band" }))),
+    );
   }),
 );
 
@@ -110,16 +112,18 @@ export const inviteToBand = Effect.fn("Band.inviteToBand")(
     ]);
   },
   Effect.catch((e) => {
-    const msg = String(e);
-    if (msg.includes("LOGIN"))
+    const code = pgError(e)?.code;
+    if (code === "LOGIN")
       return Effect.fail(new BandError({ message: "You must be logged in" }));
-    if (msg.includes("DNIED"))
+    if (code === "DNIED")
       return Effect.fail(new BandError({ message: "You must be the band owner to invite" }));
-    if (msg.includes("ISMBR"))
+    if (code === "ISMBR")
       return Effect.fail(new BandError({ message: "That person is already a member" }));
-    if (msg.includes("NTFND"))
+    if (code === "NTFND")
       return Effect.fail(new BandError({ message: "Could not find that person" }));
-    return Effect.fail(new BandError({ message: "Failed to send invite" }));
+    return Effect.logError("inviteToBand failed", e).pipe(
+      Effect.andThen(Effect.fail(new BandError({ message: "Failed to send invite" }))),
+    );
   }),
 );
 
@@ -137,10 +141,12 @@ export const acceptInvitation = Effect.fn("Band.acceptInvitation")(
     yield* db.selectNoFrom([sql`app_public.accept_invitation_to_band(${invitationId}::uuid)`.as("_")]);
   },
   Effect.catch((e) => {
-    const msg = String(e);
-    if (msg.includes("NTFND")) return Effect.fail(new BandError({ message: "That invitation no longer exists" }));
-    if (msg.includes("DNIED")) return Effect.fail(new BandError({ message: "That invitation is not for you" }));
-    return Effect.fail(new BandError({ message: "Could not accept the invitation" }));
+    const code = pgError(e)?.code;
+    if (code === "NTFND") return Effect.fail(new BandError({ message: "That invitation no longer exists" }));
+    if (code === "DNIED") return Effect.fail(new BandError({ message: "That invitation is not for you" }));
+    return Effect.logError("acceptInvitation failed", e).pipe(
+      Effect.andThen(Effect.fail(new BandError({ message: "Could not accept the invitation" }))),
+    );
   }),
 );
 
@@ -149,7 +155,11 @@ export const declineInvitation = Effect.fn("Band.declineInvitation")(
     const db = yield* Kysely;
     yield* db.selectNoFrom([sql`app_public.decline_invitation_to_band(${invitationId}::uuid)`.as("_")]);
   },
-  Effect.mapError(() => new BandError({ message: "Could not decline the invitation" })),
+  Effect.catch((e) =>
+    Effect.logError("Could not decline the invitation", e).pipe(
+      Effect.andThen(Effect.fail(new BandError({ message: "Could not decline the invitation" }))),
+    ),
+  ),
 );
 
 export const deleteBand = Effect.fn("Band.deleteBand")(
@@ -173,7 +183,7 @@ export const deleteBand = Effect.fn("Band.deleteBand")(
   },
   Effect.catchIf(
     (e): e is Exclude<typeof e, BandError> => e._tag !== "BandError",
-    () => Effect.fail(new BandError({ message: "Could not delete the band" })),
+    (e) => Effect.logError("Could not delete the band", e).pipe(Effect.andThen(Effect.fail(new BandError({ message: "Could not delete the band" })))),
   ),
 );
 
@@ -218,7 +228,7 @@ export const updateBand = Effect.fn("Band.updateBand")(
   },
   Effect.catchIf(
     (e): e is Exclude<typeof e, BandError> => e._tag !== "BandError",
-    () => Effect.fail(new BandError({ message: "Could not update the band" })),
+    (e) => Effect.logError("Could not update the band", e).pipe(Effect.andThen(Effect.fail(new BandError({ message: "Could not update the band" })))),
   ),
 );
 
@@ -314,7 +324,7 @@ export const transferOwnership = Effect.fn("Band.transferOwnership")(
   },
   Effect.catchIf(
     (e): e is Exclude<typeof e, BandError> => e._tag !== "BandError",
-    () => Effect.fail(new BandError({ message: "Could not transfer ownership" })),
+    (e) => Effect.logError("Could not transfer ownership", e).pipe(Effect.andThen(Effect.fail(new BandError({ message: "Could not transfer ownership" })))),
   ),
 );
 
@@ -368,6 +378,6 @@ export const leaveBand = Effect.fn("Band.leaveBand")(
   },
   Effect.catchIf(
     (e): e is Exclude<typeof e, BandError> => e._tag !== "BandError",
-    () => Effect.fail(new BandError({ message: "Could not leave the band" })),
+    (e) => Effect.logError("Could not leave the band", e).pipe(Effect.andThen(Effect.fail(new BandError({ message: "Could not leave the band" })))),
   ),
 );
