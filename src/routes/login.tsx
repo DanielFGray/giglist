@@ -5,13 +5,21 @@ import { Schema as S } from "effect"
 import { auth } from "~/api/client"
 import { LoginPayload } from "~/api/contracts"
 import { SubmitButton, TextField, errorMessage, fieldError } from "~/components/form"
+import { safeRedirect } from "~/components/safe-redirect"
 
 export const Route = createFileRoute("/login")({
+  validateSearch: (search: Record<string, unknown>): { redirect?: string } => {
+    const raw = typeof search.redirect === "string" ? search.redirect : ""
+    // Omit when none was asked for, so Links to /login need no search prop.
+    if (raw === "") return {}
+    return { redirect: safeRedirect(raw) }
+  },
   component: Login,
 })
 
 function Login() {
   const router = useRouter()
+  const { redirect } = Route.useSearch()
   const [serverError, setServerError] = useState<string | null>(null)
 
   const form = useForm({
@@ -24,7 +32,7 @@ function Login() {
         // API takes; the form value itself stays the string the user typed.
         await auth.login(S.decodeSync(LoginPayload)(value))
         await router.invalidate()
-        await router.navigate({ to: "/" })
+        await router.navigate({ href: redirect ?? "/" })
       } catch (e) {
         setServerError(errorMessage(e))
       }

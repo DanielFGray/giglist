@@ -54,9 +54,9 @@ export const bandsHandlers = HttpApiBuilder.group(GigListApi, "myBands", (handle
     )
     .handle(
       "acceptInvitation",
-      Effect.fnUntraced(function* ({ params: { invitationId } }) {
+      Effect.fnUntraced(function* ({ params: { invitationId }, payload: { code } }) {
         const session = yield* requireSession();
-        return yield* BandService.acceptInvitation(invitationId).pipe(
+        return yield* BandService.acceptInvitation(invitationId, code).pipe(
           withAuthContext(session.sessionId),
           Effect.mapError((e) => new BandError({ message: e.message })),
         );
@@ -154,6 +154,17 @@ export const bandsHandlers = HttpApiBuilder.group(GigListApi, "myBands", (handle
       }),
     )
     .handle(
+      "removeMember",
+      Effect.fnUntraced(function* ({ params: { bandId, userId } }) {
+        const session = yield* requireSession();
+        yield* BandService.removeMember({ bandId, userId }).pipe(
+          withAuthContext(session.sessionId),
+          Effect.mapError((e) => new BandError({ message: e.message })),
+        );
+        return { ok: true as const };
+      }),
+    )
+    .handle(
       "inviteToBand",
       Effect.fnUntraced(function* ({ params: { bandId }, payload }) {
         const session = yield* requireSession();
@@ -165,6 +176,34 @@ export const bandsHandlers = HttpApiBuilder.group(GigListApi, "myBands", (handle
           withAuthContext(session.sessionId),
           Effect.mapError((e) => new BandError({ message: e.message })),
         );
+      }),
+    )
+    .handle(
+      "listPendingInvitations",
+      Effect.fnUntraced(function* ({ params: { bandId } }) {
+        const session = yield* requireSession();
+        return yield* BandService.listPendingInvitations(bandId).pipe(
+          Effect.map((rows) =>
+            rows.map((r) => ({
+              id: r.id,
+              username: r.username ?? null,
+              email: r.email ?? null,
+            })),
+          ),
+          withAuthContext(session.sessionId),
+          Effect.mapError((e) => new BandError({ message: e.message })),
+        );
+      }),
+    )
+    .handle(
+      "cancelInvitation",
+      Effect.fnUntraced(function* ({ params: { bandId, invitationId } }) {
+        const session = yield* requireSession();
+        yield* BandService.cancelInvitation({ bandId, invitationId }).pipe(
+          withAuthContext(session.sessionId),
+          Effect.mapError((e) => new BandError({ message: e.message })),
+        );
+        return { ok: true as const };
       }),
     ),
 );

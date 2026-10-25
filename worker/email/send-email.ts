@@ -25,6 +25,9 @@ export const QueuedEmail = Schema.Union([
   }) }),
   Schema.Struct({ options, template: Schema.Literal("password_reset_unregistered.mjml"), variables: Schema.Struct({ url: Schema.String }) }),
   Schema.Struct({ options, template: Schema.Literal("account_activity.mjml"), variables: Schema.Struct({ actionDescription: Schema.String }) }),
+  Schema.Struct({ options, template: Schema.Literal("band_invite.mjml"), variables: Schema.Struct({
+    bandName: Schema.String, link: Schema.String,
+  }) }),
 ])
 export type QueuedEmail = typeof QueuedEmail.Type
 

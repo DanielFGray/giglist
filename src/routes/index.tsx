@@ -53,6 +53,21 @@ function Home() {
 
   return (
     <div data-pwid="dashboard" className="space-y-6">
+      {!user.is_verified && (
+        <section className="rounded-lg border border-[var(--color-amber-accent)]/40 bg-[var(--color-amber-accent)]/10 p-4">
+          <p className="text-sm">
+            Your email is not verified yet.{" "}
+            <Link
+              to="/settings"
+              data-pwid="verify-notice"
+              className="font-semibold text-[var(--color-amber-accent)] hover:underline"
+            >
+              Open Settings
+            </Link>{" "}
+            to resend the verification email.
+          </p>
+        </section>
+      )}
       <Invitations invitations={invitations} />
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{band === undefined ? "Welcome" : band.name}</h1>
@@ -132,6 +147,19 @@ function Invitations({ invitations }: { invitations: ReadonlyArray<BandInvitatio
     await router.invalidate()
   }
 
+  // Reload the root route before navigating: the band page reads the user's bands from it.
+  const accept = async (invitation: BandInvitationInfo) => {
+    setError(null)
+    try {
+      const { bandId } = await bandsApi.acceptInvitation(invitation.id, null)
+      await router.invalidate()
+      await router.navigate({ to: "/band/$bandId", params: { bandId } })
+    } catch (e) {
+      setError(errorMessage(e))
+      await router.invalidate()
+    }
+  }
+
   return (
     <section data-pwid="invitations" className="rounded-lg border border-[var(--color-amber-accent)]/40 bg-[var(--color-amber-accent)]/10 p-4 space-y-3">
       <h2 className="text-sm font-semibold">You are invited</h2>
@@ -143,7 +171,7 @@ function Invitations({ invitations }: { invitations: ReadonlyArray<BandInvitatio
               <button
                 data-pwid="invitation-accept"
                 type="button"
-                onClick={() => void answer(() => bandsApi.acceptInvitation(invitation.id))}
+                onClick={() => void accept(invitation)}
                 className="px-3 py-1.5 rounded-md bg-[var(--color-amber-accent)] text-zinc-950 text-xs font-semibold cursor-pointer"
               >
                 Accept

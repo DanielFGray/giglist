@@ -8,6 +8,7 @@ import {
   BandInfo as BandInfoSchema,
   BandMember as BandMemberSchema,
   BandInvitation as BandInvitationSchema,
+  PendingInvitation as PendingInvitationSchema,
   PublicBandProfile as PublicBandProfileSchema,
   PublicUserProfile as PublicUserProfileSchema,
   PageTheme as PageThemeSchema,
@@ -34,6 +35,7 @@ export type UserEmailInfo = S.Schema.Type<typeof UserEmailSchema>
 export type BandInfo = S.Schema.Type<typeof BandInfoSchema>
 export type BandMember = S.Schema.Type<typeof BandMemberSchema>
 export type BandInvitationInfo = S.Schema.Type<typeof BandInvitationSchema>
+export type PendingInvitationInfo = S.Schema.Type<typeof PendingInvitationSchema>
 export type PublicBandProfileInfo = S.Schema.Type<typeof PublicBandProfileSchema>
 export type PublicUserProfileInfo = S.Schema.Type<typeof PublicUserProfileSchema>
 export type PageTheme = S.Schema.Type<typeof PageThemeSchema>
@@ -214,10 +216,23 @@ export const bands = {
       ),
     ),
 
+  removeMember: (bandId: string, userId: string) =>
+    run(
+      api.pipe(
+        Effect.flatMap((c) =>
+          c.myBands.removeMember({ params: { bandId, userId } }),
+        ),
+      ),
+    ),
+
   invitations: () => run(api.pipe(Effect.flatMap((c) => c.myBands.listInvitations({})))),
 
-  acceptInvitation: (invitationId: string) =>
-    run(api.pipe(Effect.flatMap((c) => c.myBands.acceptInvitation({ params: { invitationId } })))),
+  acceptInvitation: (invitationId: string, code: string | null) =>
+    run(
+      api.pipe(
+        Effect.flatMap((c) => c.myBands.acceptInvitation({ params: { invitationId }, payload: { code } })),
+      ),
+    ),
 
   declineInvitation: (invitationId: string) =>
     run(api.pipe(Effect.flatMap((c) => c.myBands.declineInvitation({ params: { invitationId } })))),
@@ -227,6 +242,24 @@ export const bands = {
       api.pipe(
         Effect.flatMap((c) =>
           c.myBands.inviteToBand({ params: { bandId }, payload: data }),
+        ),
+      ),
+    ),
+
+  pendingInvitations: (bandId: string) =>
+    run(
+      api.pipe(
+        Effect.flatMap((c) =>
+          c.myBands.listPendingInvitations({ params: { bandId } }),
+        ),
+      ),
+    ),
+
+  cancelInvitation: (bandId: string, invitationId: string) =>
+    run(
+      api.pipe(
+        Effect.flatMap((c) =>
+          c.myBands.cancelInvitation({ params: { bandId, invitationId } }),
         ),
       ),
     ),

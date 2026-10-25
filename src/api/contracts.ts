@@ -325,6 +325,24 @@ export const BandInvitation = S.Struct({
   band_name: S.String,
 })
 
+/**
+ * A pending invitation the band owner can see. User invitations carry a
+ * username; address invitations carry an email. The secret code is never
+ * included.
+ */
+export const PendingInvitation = S.Struct({
+  id: S.String.check(S.isUUID()),
+  username: S.NullOr(S.String),
+  email: S.NullOr(S.String),
+})
+
+/** `code` is the secret from an emailed invitation's link; a user's own invitation has none. */
+export const AcceptInvitationPayload = S.Struct({
+  code: S.NullOr(S.String),
+})
+
+export const AcceptInvitationSuccess = S.Struct({ bandId: S.String })
+
 export const CreateBandPayload = S.Struct({
   slug: S.String,
   name: S.String,
@@ -448,6 +466,16 @@ export const BandsApiGroup = HttpApiGroup.make("myBands")
     }),
   )
   .add(
+    HttpApiEndpoint.delete("removeMember", "/:bandId/members/:userId", {
+      params: {
+        bandId: S.String.check(S.isUUID()),
+        userId: S.String.check(S.isUUID()),
+      },
+      success: BandSuccess,
+      error: BandError.pipe(HttpApiSchema.status(400)),
+    }),
+  )
+  .add(
     HttpApiEndpoint.get("listInvitations", "/invitations", {
       success: S.Array(BandInvitation),
     }),
@@ -455,6 +483,8 @@ export const BandsApiGroup = HttpApiGroup.make("myBands")
   .add(
     HttpApiEndpoint.post("acceptInvitation", "/invitations/:invitationId/accept", {
       params: { invitationId: S.String.check(S.isUUID()) },
+      payload: AcceptInvitationPayload,
+      success: AcceptInvitationSuccess,
       error: BandError.pipe(HttpApiSchema.status(400)),
     }),
   )
@@ -470,6 +500,23 @@ export const BandsApiGroup = HttpApiGroup.make("myBands")
       payload: InvitePayload,
       error: BandError.pipe(HttpApiSchema.status(400)),
     }).middleware(RateLimitMiddleware),
+  )
+  .add(
+    HttpApiEndpoint.get("listPendingInvitations", "/:bandId/invitations", {
+      params: { bandId: S.String.check(S.isUUID()) },
+      success: S.Array(PendingInvitation),
+      error: BandError.pipe(HttpApiSchema.status(400)),
+    }),
+  )
+  .add(
+    HttpApiEndpoint.delete("cancelInvitation", "/:bandId/invitations/:invitationId", {
+      params: {
+        bandId: S.String.check(S.isUUID()),
+        invitationId: S.String.check(S.isUUID()),
+      },
+      success: BandSuccess,
+      error: BandError.pipe(HttpApiSchema.status(400)),
+    }),
   )
   .middleware(SessionMiddleware)
   .prefix("/api/my/bands")
@@ -606,6 +653,12 @@ export const TestEmailSecrets = S.Struct({
   reset_password_token: S.NullOr(S.String),
 })
 
+/** The invitation's id and the code its emailed link carries. Read only in tests. */
+export const TestBandInvitation = S.Struct({
+  id: S.String.check(S.isUUID()),
+  code: S.NullOr(S.String),
+})
+
 export const TestingApiGroup = HttpApiGroup.make("testing")
   .add(
     HttpApiEndpoint.post("clear", "/clear", {
@@ -670,6 +723,12 @@ export const TestingApiGroup = HttpApiGroup.make("testing")
     HttpApiEndpoint.get("getEmailSecrets", "/email-secrets", {
       query: { email: S.String },
       success: TestEmailSecrets,
+    }),
+  )
+  .add(
+    HttpApiEndpoint.get("getBandInvitation", "/band-invitation", {
+      query: { band_id: S.String, email: S.String },
+      success: TestBandInvitation,
     }),
   )
   .add(

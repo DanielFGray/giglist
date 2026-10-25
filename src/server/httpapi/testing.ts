@@ -250,6 +250,18 @@ const testingHandlers = HttpApiBuilder.group(TestingApi, "testing", (handlers) =
       }),
     )
     .handle(
+      "getBandInvitation",
+      Effect.fnUntraced(function* ({ query }) {
+        const db = yield* Db;
+        return yield* db
+          .selectFrom("app_public.band_invitations")
+          .select(["id", "code"])
+          .where("band_id", "=", query.band_id)
+          .where("email", "=", query.email)
+          .pipe(Effect.head, Effect.orDie);
+      }),
+    )
+    .handle(
       "verifyUser",
       Effect.fnUntraced(function* ({ query }) {
         const db = yield* Db;

@@ -121,6 +121,17 @@ export const inviteToBand = Effect.fn("Band.inviteToBand")(
       return Effect.fail(new BandError({ message: "That person is already a member" }));
     if (code === "NTFND")
       return Effect.fail(new BandError({ message: "Could not find that person" }));
+    // band_invitations is unique on (band, user) and on (band, email).
+    if (code === "23505")
+      return Effect.fail(
+        new BandError({ message: "That person already has an invitation to this band" }),
+      );
+    if (code === "VRFY2")
+      return Effect.fail(
+        new BandError({
+          message: "That account has not verified its email yet, so it cannot be invited",
+        }),
+      );
     return Effect.logError("inviteToBand failed", e).pipe(
       Effect.andThen(Effect.fail(new BandError({ message: "Failed to send invite" }))),
     );
@@ -136,14 +147,18 @@ export const listInvitations = Effect.fn("Band.listInvitations")(function* () {
 });
 
 export const acceptInvitation = Effect.fn("Band.acceptInvitation")(
-  function* (invitationId: string) {
+  function* (invitationId: string, code: string | null) {
     const db = yield* Kysely;
-    yield* db.selectNoFrom([sql`app_public.accept_invitation_to_band(${invitationId}::uuid)`.as("_")]);
+    const [row] = yield* db.selectNoFrom([
+      sql<string>`app_public.accept_invitation_to_band(${invitationId}::uuid, ${code}::text)`.as("band_id"),
+    ]);
+    return { bandId: row.band_id };
   },
   Effect.catch((e) => {
     const code = pgError(e)?.code;
     if (code === "NTFND") return Effect.fail(new BandError({ message: "That invitation no longer exists" }));
     if (code === "DNIED") return Effect.fail(new BandError({ message: "That invitation is not for you" }));
+    if (code === "INCOD") return Effect.fail(new BandError({ message: "That code does not match this invitation" }));
     return Effect.logError("acceptInvitation failed", e).pipe(
       Effect.andThen(Effect.fail(new BandError({ message: "Could not accept the invitation" }))),
     );
@@ -160,6 +175,47 @@ export const declineInvitation = Effect.fn("Band.declineInvitation")(
       Effect.andThen(Effect.fail(new BandError({ message: "Could not decline the invitation" }))),
     ),
   ),
+);
+
+/** Pending invitations for a band. Only the owner may call this. */
+export const listPendingInvitations = Effect.fn("Band.listPendingInvitations")(
+  function* (bandId: string) {
+    const db = yield* Kysely;
+    return yield* db
+      .selectFrom(
+        sql<{ id: string; username: string | null; email: string | null }>`app_public.band_pending_invitations(${bandId}::uuid)`.as(
+          "i",
+        ),
+      )
+      .selectAll();
+  },
+  Effect.catch((e) => {
+    const code = pgError(e)?.code;
+    if (code === "DNIED")
+      return Effect.fail(new BandError({ message: "You must be the band owner to see invitations" }));
+    return Effect.logError("listPendingInvitations failed", e).pipe(
+      Effect.andThen(Effect.fail(new BandError({ message: "Could not load invitations" }))),
+    );
+  }),
+);
+
+/** Delete a pending invitation. Only the band's owner may cancel it. */
+export const cancelInvitation = Effect.fn("Band.cancelInvitation")(
+  function* (args: { bandId: string; invitationId: string }) {
+    const db = yield* Kysely;
+    yield* db.selectNoFrom([
+      sql`app_public.cancel_invitation(${args.bandId}::uuid, ${args.invitationId}::uuid)`.as("_"),
+    ]);
+  },
+  Effect.catch((e) => {
+    const code = pgError(e)?.code;
+    if (code === "NTFND") return Effect.fail(new BandError({ message: "That invitation no longer exists" }));
+    if (code === "DNIED")
+      return Effect.fail(new BandError({ message: "You must be the band owner to cancel an invitation" }));
+    return Effect.logError("cancelInvitation failed", e).pipe(
+      Effect.andThen(Effect.fail(new BandError({ message: "Could not cancel the invitation" }))),
+    );
+  }),
 );
 
 export const deleteBand = Effect.fn("Band.deleteBand")(
@@ -325,6 +381,40 @@ export const transferOwnership = Effect.fn("Band.transferOwnership")(
   Effect.catchIf(
     (e): e is Exclude<typeof e, BandError> => e._tag !== "BandError",
     (e) => Effect.logError("Could not transfer ownership", e).pipe(Effect.andThen(Effect.fail(new BandError({ message: "Could not transfer ownership" })))),
+  ),
+);
+
+/**
+ * Owner removes another member. Self-removal is Leave, which needs a successor
+ * when the caller is the owner. The SQL returns void even when it did nothing,
+ * so a membership row that is still present after the call is treated as failure.
+ */
+export const removeMember = Effect.fn("Band.removeMember")(
+  function* (args: { bandId: string; userId: string }) {
+    const db = yield* Kysely;
+    const [me] = yield* db.selectNoFrom([
+      sql<string>`app_public.current_user_id()`.as("user_id"),
+    ]);
+
+    if (me.user_id === args.userId) {
+      return yield* new BandError({ message: "Use Leave to remove yourself" });
+    }
+
+    yield* db.selectNoFrom([
+      sql`app_public.remove_from_band(
+        ${args.bandId}::uuid,
+        ${args.userId}::uuid
+      )`.as("_"),
+    ]);
+  },
+  Effect.catchIf(
+    (e): e is Exclude<typeof e, BandError> => e._tag !== "BandError",
+    (e) =>
+      pgError(e)?.code === "DNIED"
+        ? Effect.fail(new BandError({ message: "You cannot remove that member" }))
+        : Effect.logError("Could not remove member", e).pipe(
+            Effect.andThen(Effect.fail(new BandError({ message: "Could not remove member" }))),
+          ),
   ),
 );
 

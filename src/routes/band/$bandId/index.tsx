@@ -6,6 +6,7 @@ import {
   bands,
   type BandInfo,
   type BandMember,
+  type PendingInvitationInfo,
   type PublicBandProfileInfo,
 } from "~/api/client"
 import { Avatar } from "~/components/Avatar"
@@ -30,18 +31,21 @@ export const Route = createFileRoute("/band/$bandId/")({
       bands.members(params.bandId),
       band?.is_public ? bands.publicProfile(band.slug) : null,
     ])
-    return { members, saved }
+    const user = context.user
+    const isOwner =
+      user !== null && members.some((m) => m.user_id === user.id && m.is_owner)
+    // Only the owner may call the pending list; a member would get DNIED.
+    const pending = isOwner ? await bands.pendingInvitations(params.bandId) : []
+    return { members, saved, pending, isOwner }
   },
   component: BandSettings,
 })
 
 function BandSettings() {
   const { bandId } = Route.useParams()
-  const { members, saved } = Route.useLoaderData()
-  const { user, bands: myBands } = useAuth()
+  const { members, saved, pending, isOwner } = Route.useLoaderData()
+  const { bands: myBands } = useAuth()
   const band = myBands.find((b) => b.id === bandId)
-  const isOwner =
-    user !== null && members.some((m) => m.user_id === user.id && m.is_owner)
 
   return (
     <div data-pwid="band-page" className="space-y-6">
@@ -63,8 +67,9 @@ function BandSettings() {
       </div>
 
       {band && isOwner && <PublicProfile band={band} saved={saved} />}
-      <MembersList members={members} />
-      <InviteForm bandId={bandId} />
+      <MembersList bandId={bandId} members={members} isOwner={isOwner} />
+      {isOwner && <PendingInvitations bandId={bandId} invitations={pending} />}
+      {isOwner && <InviteForm bandId={bandId} />}
     </div>
   )
 }
@@ -370,7 +375,47 @@ function trimmedOrNull(text: string) {
   return trimmed === "" ? null : trimmed
 }
 
-function MembersList({ members }: { members: readonly BandMember[] }) {
+function MembersList({
+  bandId,
+  members,
+  isOwner,
+}: {
+  bandId: string
+  members: readonly BandMember[]
+  isOwner: boolean
+}) {
+  const router = useRouter()
+  const [error, setError] = useState<string | null>(null)
+
+  const remove = async (m: BandMember) => {
+    const label = m.name ?? m.username
+    if (!window.confirm(`Remove ${label} from the band?`)) return
+    setError(null)
+    try {
+      await bands.removeMember(bandId, m.user_id)
+      await router.invalidate()
+    } catch (e) {
+      setError(errorMessage(e))
+    }
+  }
+
+  const makeOwner = async (m: BandMember) => {
+    const label = m.name ?? m.username
+    if (
+      !window.confirm(
+        `Make ${label} the owner? The owner role moves to them.`,
+      )
+    )
+      return
+    setError(null)
+    try {
+      await bands.transferOwnership(bandId, m.user_id)
+      await router.invalidate()
+    } catch (e) {
+      setError(errorMessage(e))
+    }
+  }
+
   return (
     <div data-pwid="band-members" className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] divide-y divide-[var(--color-border-subtle)]">
       <div className="px-4 py-3">
@@ -394,8 +439,100 @@ function MembersList({ members }: { members: readonly BandMember[] }) {
               Owner
             </span>
           )}
+          {isOwner && !m.is_owner && (
+            <>
+              <button
+                type="button"
+                data-pwid={`band-member-make-owner-${m.user_id}`}
+                className="px-2 py-1 rounded text-xs text-zinc-300 hover:bg-zinc-700 cursor-pointer"
+                onClick={() => void makeOwner(m)}
+              >
+                Make owner
+              </button>
+              <button
+                type="button"
+                data-pwid={`band-member-remove-${m.user_id}`}
+                className="px-2 py-1 rounded text-xs text-red-400 hover:bg-red-500/10 cursor-pointer"
+                onClick={() => void remove(m)}
+              >
+                Remove
+              </button>
+            </>
+          )}
         </div>
       ))}
+      {error && (
+        <p data-pwid="band-members-error" className="px-4 py-2 text-sm text-red-400">
+          {error}
+        </p>
+      )}
+    </div>
+  )
+}
+
+function PendingInvitations({
+  bandId,
+  invitations,
+}: {
+  bandId: string
+  invitations: readonly PendingInvitationInfo[]
+}) {
+  const router = useRouter()
+  const [error, setError] = useState<string | null>(null)
+
+  if (invitations.length === 0 && error === null) return null
+
+  const cancel = async (invitation: PendingInvitationInfo) => {
+    const label =
+      invitation.username !== null
+        ? `@${invitation.username}`
+        : (invitation.email ?? "this invitation")
+    if (!window.confirm(`Cancel the invitation to ${label}?`)) return
+    setError(null)
+    try {
+      await bands.cancelInvitation(bandId, invitation.id)
+      await router.invalidate()
+    } catch (e) {
+      setError(errorMessage(e))
+    }
+  }
+
+  return (
+    <div
+      data-pwid="band-pending-invitations"
+      className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] divide-y divide-[var(--color-border-subtle)]"
+    >
+      <div className="px-4 py-3">
+        <h2 className="text-sm font-semibold text-zinc-300">Pending invitations</h2>
+      </div>
+      {invitations.map((invitation) => {
+        const label =
+          invitation.username !== null
+            ? `@${invitation.username}`
+            : (invitation.email ?? "Invitation")
+        return (
+          <div
+            key={invitation.id}
+            data-pwid={`band-pending-invitation-${invitation.id}`}
+            className="px-4 py-3 flex items-center gap-3"
+          >
+            <div className="flex-1 min-w-0 text-sm font-medium truncate">{label}</div>
+            <button
+              type="button"
+              data-pwid={`band-pending-cancel-${invitation.id}`}
+              className="px-2 py-1 rounded text-xs text-red-400 hover:bg-red-500/10 cursor-pointer"
+              onClick={() => void cancel(invitation)}
+            >
+              Cancel
+            </button>
+          </div>
+        )
+      })}
+      {error && (
+        <p data-pwid="band-pending-invitations-error" className="px-4 py-2 text-sm text-red-400">
+          {error}
+        </p>
+      )}
     </div>
   )
 }
@@ -403,6 +540,7 @@ function MembersList({ members }: { members: readonly BandMember[] }) {
 const Invitee = S.toStandardSchemaV1(S.NonEmptyString)
 
 function InviteForm({ bandId }: { bandId: string }) {
+  const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
   const [sent, setSent] = useState(false)
 
@@ -420,6 +558,7 @@ function InviteForm({ bandId }: { bandId: string }) {
         )
         form.reset()
         setSent(true)
+        await router.invalidate()
       } catch (e) {
         setServerError(errorMessage(e))
       }
@@ -427,7 +566,10 @@ function InviteForm({ bandId }: { bandId: string }) {
   })
 
   return (
-    <div className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] p-4 space-y-3">
+    <div
+      data-pwid="band-invite-form"
+      className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] p-4 space-y-3"
+    >
       <h2 className="text-sm font-semibold text-zinc-300">Invite a member</h2>
       <form
         onSubmit={(e) => {

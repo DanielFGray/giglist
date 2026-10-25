@@ -42,6 +42,21 @@ describe("queued email delivery", () => {
     expect(delivered[4]?.to).toEqual(["one@example.invalid", "two@example.invalid"])
   })
 
+  test("renders a band invitation with its link in both the HTML and the text", async () => {
+    const delivered: MailMessage[] = []
+    const capture = Layer.succeed(Mailer, { send: (message) => Effect.sync(() => { delivered.push(message) }) })
+    const link = "https://giglist.example/invitations/accept?id=abc&code=a1b2"
+    await Effect.runPromise(sendEmail({
+      options: { to: "newcomer@example.invalid", subject: "You have been invited to The Setlisters" },
+      template: "band_invite.mjml",
+      variables: { bandName: "The <Setlisters>", link },
+    }).pipe(Effect.provide(Layer.mergeAll(capture, BunServices.layer, memoryLimiter))))
+    expect(delivered).toHaveLength(1)
+    expect(delivered[0]?.html).toContain(`href="${link.replaceAll("&", "&amp;")}"`)
+    expect(delivered[0]?.html).toContain("The &lt;Setlisters&gt;")
+    expect(delivered[0]?.text).toContain(link)
+  })
+
   test("rejects an invalid queued payload before delivery", async () => {
     const delivered: MailMessage[] = []
     const capture = Layer.succeed(Mailer, { send: (message) => Effect.sync(() => { delivered.push(message) }) })

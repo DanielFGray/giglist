@@ -1,11 +1,20 @@
 import type { Browser, Page } from "@playwright/test"
 import { test, expect, getPw, TEST_PASSWORD } from "./helpers"
 
+/**
+ * A band the owner creates. Workers can start in the same millisecond, so a
+ * timestamp alone can repeat a slug; the random suffix keeps each one unique.
+ */
+const newBand = async (owner: Page, name: string) => {
+  const suffix = Math.random().toString(36).slice(2, 8)
+  const band = await owner.request.post("/api/my/bands", { data: { slug: `test-invite-${Date.now()}-${suffix}`, name } })
+  expect(band.ok(), await band.text()).toBe(true)
+  return (await band.json()).id as string
+}
+
 /** The band owner (the fixture's page) invites a new, verified user, who gets a browser of their own. */
 const invite = async (browser: Browser, owner: Page, username: string) => {
-  const band = await owner.request.post("/api/my/bands", { data: { slug: `test-invite-${Date.now()}`, name: "Test: Invitations" } })
-  expect(band.ok(), await band.text()).toBe(true)
-  const bandId = (await band.json()).id as string
+  const bandId = await newBand(owner, "Test: Invitations")
 
   const context = await browser.newContext()
   const invitee = await context.newPage()
@@ -32,12 +41,12 @@ test.describe("band invitations", () => {
     await invitee.goto("/")
     await expect(getPw(invitee, "invitation")).toContainText("Join Test: Invitations", { timeout: 10000 })
     await getPw(invitee, "invitation-accept").click()
-    await expect(getPw(invitee, "invitations")).toHaveCount(0, { timeout: 10000 })
-    await expect(getPw(invitee, "dashboard-setlists")).toBeVisible()
+    await expect(invitee).toHaveURL(new RegExp(`/band/${bandId}`), { timeout: 10000 })
+    await expect(getPw(invitee, "band-members")).toBeVisible({ timeout: 10000 })
     expect((await songsOf(invitee, bandId)).status()).toBe(200)
 
     // The invitation is used up: it does not come back.
-    await invitee.reload()
+    await invitee.goto("/")
     await expect(getPw(invitee, "dashboard")).toBeVisible()
     await expect(getPw(invitee, "invitations")).toHaveCount(0)
     await context.close()
@@ -70,6 +79,67 @@ test.describe("band invitations", () => {
     expect(await (await invitee.request.get("/api/my/bands/invitations")).json()).toHaveLength(1)
     expect((await songsOf(stranger, bandId)).status()).not.toBe(200)
     await strangerContext.close()
+    await context.close()
+  })
+})
+
+/** The owner invites an address with no account. Returns the invitation's id and the code its emailed link carries. */
+const inviteByEmail = async (owner: Page, bandId: string, email: string) => {
+  const sent = await owner.request.post(`/api/my/bands/${bandId}/invite`, { data: { email } })
+  expect(sent.ok(), await sent.text()).toBe(true)
+  const secret = await owner.request.get(`/api/testing/band-invitation?band_id=${bandId}&email=${encodeURIComponent(email)}`)
+  expect(secret.ok(), await secret.text()).toBe(true)
+  const { id, code } = (await secret.json()) as { id: string; code: string }
+  expect(code).toBeTruthy()
+  return { id, code }
+}
+
+test.describe("emailed band invitations", () => {
+  test("a signed-in invitee opens the emailed link and joins the band with its code", async ({ page, browser, testing }) => {
+    await testing.login()
+    const bandId = await newBand(page, "Test: Emailed invitations")
+    const { id, code } = await inviteByEmail(page, bandId, `${testing.username("test_emailed")}@test.local`)
+
+    const context = await browser.newContext()
+    const invitee = await context.newPage()
+    const login = await invitee.request.post("/api/testing/login", { data: { username: testing.username("test_emailed_invitee"), password: TEST_PASSWORD } })
+    expect(login.ok(), await login.text()).toBe(true)
+    expect((await songsOf(invitee, bandId)).status()).not.toBe(200)
+
+    await invitee.goto(`/invitations/accept?id=${id}&code=${code}`)
+    await getPw(invitee, "accept-invitation-submit").click()
+    await expect(invitee).toHaveURL(new RegExp(`/band/${bandId}`), { timeout: 10000 })
+    await expect(getPw(invitee, "band-members")).toBeVisible({ timeout: 10000 })
+    expect((await songsOf(invitee, bandId)).status()).toBe(200)
+    await context.close()
+  })
+
+  test("a wrong code is refused and joins nobody", async ({ page, browser, testing }) => {
+    await testing.login()
+    const bandId = await newBand(page, "Test: Emailed invitations")
+    const { id } = await inviteByEmail(page, bandId, `${testing.username("test_wrong_code")}@test.local`)
+
+    const context = await browser.newContext()
+    const invitee = await context.newPage()
+    await invitee.request.post("/api/testing/login", { data: { username: testing.username("test_wrong_code_invitee"), password: TEST_PASSWORD } })
+
+    await invitee.goto(`/invitations/accept?id=${id}&code=not-the-code`)
+    await getPw(invitee, "accept-invitation-submit").click()
+    await expect(getPw(invitee, "accept-invitation-error")).toContainText("does not match this invitation", { timeout: 10000 })
+    expect((await songsOf(invitee, bandId)).status()).not.toBe(200)
+    await context.close()
+  })
+
+  test("a signed-out visitor is asked to sign in and cannot accept", async ({ page, browser, testing }) => {
+    await testing.login()
+    const bandId = await newBand(page, "Test: Emailed invitations")
+    const { id, code } = await inviteByEmail(page, bandId, `${testing.username("test_signed_out")}@test.local`)
+
+    const context = await browser.newContext()
+    const visitor = await context.newPage()
+    await visitor.goto(`/invitations/accept?id=${id}&code=${code}`)
+    await expect(getPw(visitor, "accept-invitation-signin")).toBeVisible({ timeout: 10000 })
+    await expect(getPw(visitor, "accept-invitation-submit")).toHaveCount(0)
     await context.close()
   })
 })
