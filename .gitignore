@@ -21,3 +21,4 @@ playwright-report/
 # Ethereal test-mail account (holds an SMTP password) and pi agent state
 worker/.ethereal
 .pi/
+*.log
