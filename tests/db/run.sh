@@ -16,6 +16,11 @@ psql -q "$(swap_db "$ROOT_DATABASE_URL")" "${vars[@]}" -f "$repo/migrations/afte
 for file in "$repo"/migrations/committed/*.sql "$repo"/migrations/current/*.sql "$here"/*-seed.sql; do
   psql -q "$(swap_db "$DATABASE_URL")" "${vars[@]}" -1 -f "$file"
 done
+# Owner-only function checks (app_private.login / reset_password): same scratch
+# DB, run as the table owner after seeds so the fixtures exist.
+for file in "$here"/*-owner.sql; do
+  psql -q "$(swap_db "$DATABASE_URL")" -v ON_ERROR_STOP=1 -f "$file"
+done
 for file in "$here"/*-rls.sql; do
   psql -q "$(swap_db "$AUTH_DATABASE_URL")" -v ON_ERROR_STOP=1 -f "$file"
 done
