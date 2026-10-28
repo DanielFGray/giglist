@@ -14,7 +14,7 @@
     "db:exec": "docker exec -it ops-dev-pg17",
     "db:init": "bun scripts/dbSetup.ts",
     "db:latest": "bun --env-file=.env -b graphile-migrate watch --once",
-    "db:reset": "bun --env-file=.env -b graphile-migrate reset --erase",
+    "db:reset": "ops dev db reset giglist && bun run db:latest && bun run worker:schema",
     "db:setup": "run-s db:up db:latest worker:schema",
     "db:stop": "ops dev db down",
     "db:up": "ops dev db up",

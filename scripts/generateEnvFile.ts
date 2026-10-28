@@ -26,50 +26,18 @@ interface FieldDef {
 const fields: [string, FieldDef][] = [
   ["NODE_ENV", { default: "development" }],
 
-  ["ROOT_DATABASE_USER", { default: "postgres" }],
-  ["ROOT_DATABASE_PASSWORD", { default: "postgres" }],
-  ["DATABASE_HOST", { default: "localhost" }],
-  ["DATABASE_PORT", { default: "5432" }],
+  // Host/port are informational; `ops dev db up` writes DATABASE_URL /
+  // AUTH_DATABASE_URL / SHADOW_DATABASE_URL / TEST_DATABASE_URL on the managed cluster.
+  ["DATABASE_HOST", { default: "127.0.0.1" }],
+  ["DATABASE_PORT", { default: "5417" }],
   ["DATABASE_NAME", { default: "giglist" }],
 
-  ["DATABASE_OWNER", { derive: (c) => c.DATABASE_NAME }],
-  ["DATABASE_OWNER_PASSWORD", { generate: genPassword }],
+  ["DATABASE_OWNER", { derive: (c) => `${c.DATABASE_NAME}_owner` }],
   [
     "DATABASE_AUTHENTICATOR",
-    { derive: (c) => `${c.DATABASE_NAME}_authenticator` },
+    { derive: (c) => `alchemy_${c.DATABASE_NAME}_api` },
   ],
-  ["DATABASE_AUTHENTICATOR_PASSWORD", { generate: genPassword }],
   ["DATABASE_VISITOR", { derive: (c) => `${c.DATABASE_NAME}_visitor` }],
-  ["SHADOW_DATABASE_PASSWORD", { generate: genPassword }],
-
-  [
-    "ROOT_DATABASE_URL",
-    {
-      derive: (c) =>
-        `postgres://${c.ROOT_DATABASE_USER}:${c.ROOT_DATABASE_PASSWORD}@${c.DATABASE_HOST}:${c.DATABASE_PORT}/template1`,
-    },
-  ],
-  [
-    "DATABASE_URL",
-    {
-      derive: (c) =>
-        `postgres://${c.DATABASE_OWNER}:${c.DATABASE_OWNER_PASSWORD}@${c.DATABASE_HOST}:${c.DATABASE_PORT}/${c.DATABASE_NAME}`,
-    },
-  ],
-  [
-    "AUTH_DATABASE_URL",
-    {
-      derive: (c) =>
-        `postgres://${c.DATABASE_AUTHENTICATOR}:${c.DATABASE_AUTHENTICATOR_PASSWORD}@${c.DATABASE_HOST}:${c.DATABASE_PORT}/${c.DATABASE_NAME}`,
-    },
-  ],
-  [
-    "SHADOW_DATABASE_URL",
-    {
-      derive: (c) =>
-        `postgres://${c.DATABASE_NAME}_shadow:${c.SHADOW_DATABASE_PASSWORD}@${c.DATABASE_HOST}:${c.DATABASE_PORT}/${c.DATABASE_NAME}_shadow`,
-    },
-  ],
 
   // PORT is the Effect API server. CLIENT_PORT is the Vite dev server the browser
   // talks to. They must differ: both processes bind their own port, and Vite
