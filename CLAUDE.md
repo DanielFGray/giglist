@@ -28,7 +28,7 @@ A service that reads or writes user data must `yield* Kysely` (the tag `withAuth
 
 ## Rate limits
 
-An endpoint is limited when its contract adds `RateLimitMiddleware`, before `SessionMiddleware` so the limit can key on the signed-in user. The limit itself is a row of `rules` in `src/server/httpapi/rate-limit.ts`, found by the endpoint's name. Counts live in the shared Valkey instance (`VALKEY_URL`, keys `giglist:rl:*`); `RATE_LIMIT=off` disables the middleware, and Playwright sets it. The caller is `X-Real-IP` (set by Caddy; IPv6 grouped by /64, `client-ip.ts`), or the socket address in development. Each recipient address also has a cap of 5 mails per hour, checked by the worker's `send_email` task (`worker/email/send-email.ts`), the one place every email passes; security notices (`account_activity.mjml`) are exempt. The worker shares the API's limiter (`src/server/services/rate-limiter.ts`), so it needs `VALKEY_URL` too.
+An endpoint is limited when its contract adds `RateLimitMiddleware`, before `SessionMiddleware` so the limit can key on the signed-in user. The limit itself is a row of `rules` in `src/server/httpapi/rate-limit.ts`, found by the endpoint's name. Counts live in the shared Valkey instance (`VALKEY_URL`, keys `giglist:rl:*`); `RATE_LIMIT=off` disables the middleware, and Playwright sets it. The caller is `X-Real-IP` (set by the edge proxy, Traefik in production; IPv6 grouped by /64, `client-ip.ts`), or the socket address in development. Each recipient address also has a cap of 5 mails per hour, checked by the worker's `send_email` task (`worker/email/send-email.ts`), the one place every email passes; security notices (`account_activity.mjml`) are exempt. The worker shares the API's limiter (`src/server/services/rate-limiter.ts`), so it needs `VALKEY_URL` too.
 
 ## Effect Patterns
 
@@ -55,7 +55,7 @@ guide doesn't cover, search through the source code in `node_modules/effect/src`
 - `bun run test` — Playwright specs in `tests/`; builds the client and serves it on `vite preview` (needs the database and the API on `PORT`, which Playwright starts if it is down)
 - `bun run test:clean` — deletes the `test_*` users and bands the specs left behind (run it when no suite is running)
 - `bun run test:unit` — pure-module tests next to the code in `src/`
-- `bun run test:db` — RLS checks in `tests/db/` as the authenticator, on a scratch database `setlist_test_rls`
+- `bun run test:db` — RLS checks in `tests/db/` as the authenticator, on a scratch database `giglist_test` (`ops dev db reset`)
 
 ## Reaching the dev server from another machine
 

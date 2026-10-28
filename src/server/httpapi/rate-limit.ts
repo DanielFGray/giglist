@@ -93,9 +93,10 @@ const caller = Effect.fnUntraced(function* (rule: Rule) {
 })
 
 /**
- * Caddy sets `X-Real-IP` to the address it saw (deploy/Caddyfile) and replaces
- * any value the client sent. The API listens on loopback, so only Caddy can
- * reach it; with `API_HOST` set to a public interface this header is forgeable.
+ * The edge proxy sets `X-Real-IP` to the address it saw and replaces any value
+ * the client sent: Traefik in production, Caddy under deploy/Caddyfile. Anyone
+ * who reaches the API without passing the proxy can forge it, so the API port
+ * must be reachable only from the proxy.
  * Without the header (local development) the socket address stands in.
  */
 const network = Effect.gen(function* () {
