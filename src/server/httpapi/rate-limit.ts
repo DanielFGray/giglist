@@ -93,10 +93,10 @@ const caller = Effect.fnUntraced(function* (rule: Rule) {
 })
 
 /**
- * The edge proxy sets `X-Real-IP` to the address it saw and replaces any value
- * the client sent: Traefik in production, Caddy under deploy/Caddyfile. Anyone
- * who reaches the API without passing the proxy can forge it, so the API port
- * must be reachable only from the proxy.
+ * The edge proxy (Traefik in production, docs/deploy.md) sets `X-Real-IP` to the
+ * address it saw and replaces any value the client sent. Anyone who reaches the
+ * API without passing the proxy can forge it, so the API port must be reachable
+ * only from the proxy.
  * Without the header (local development) the socket address stands in.
  */
 const network = Effect.gen(function* () {

@@ -9,7 +9,6 @@ The build writes the license text of every npm package in the client bundle to `
 ## Code adapted
 
 - **postgres.garden**: production-only exclusion of testing handlers in `src/server/main.ts` follows `../postgres.garden/server/index.ts`.
-- **Caddy documentation**: `deploy/Caddyfile` follows the single-page app and API routing pattern. <https://caddyserver.com/docs/caddyfile/patterns#single-page-apps-spas>
 
 - **graphile-starter**: the user, session, email and organization migrations in `migrations/`, the three-schema layout, and the email jobs and templates in `worker/` follow it. MIT License, Copyright © 2020 Graphile Ltd. <https://github.com/graphile/starter>. License text: <https://github.com/graphile/starter/blob/main/GRAPHILE_STARTER_LICENSE.md>
 
