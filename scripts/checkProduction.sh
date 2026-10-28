@@ -7,9 +7,9 @@ scratch=$(mktemp -d)
 trap 'rm -rf "$scratch"' EXIT
 
 expect_status() {
-  local expected=$1 method=$2 path=$3
+  local expected=$1 method=$2 path=$3 accept=${4:-*/*}
   local actual
-  actual=$(curl --silent --show-error --max-time 15 --request "$method" \
+  actual=$(curl --silent --show-error --max-time 15 --request "$method" --header "Accept: $accept" \
     --output "$scratch/body" --dump-header "$scratch/headers" \
     --write-out '%{http_code}' "$base$path")
   if [[ "$actual" != "$expected" ]]; then
@@ -46,7 +46,9 @@ expect_status 404 POST /api/testing/login
 expect_status 404 GET /api/does-not-exist
 expect_status 404 POST /api/does-not-exist
 
-expect_status 200 GET /login
+# The static host answers an unknown path with the app page only when the request accepts HTML,
+# as a browser does; a missing script or image still gets 404.
+expect_status 200 GET /login text/html
 expect_headers
 rg --quiet 'text/html' "$scratch/headers"
 rg --quiet '<div id="root"' "$scratch/body"
