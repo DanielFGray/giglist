@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import { TanStackRouterVite } from "@tanstack/router-plugin/vite";
 import tailwindcss from "@tailwindcss/vite";
 import { alphaTabAssetsPlugin } from "./scripts/alphaTabAssetsPlugin";
+import { licenseNoticesPlugin } from "./scripts/licenseNoticesPlugin";
 import path from "node:path";
 
 // `host` from URL includes the port ("localhost:3001"); Vite needs the bare
@@ -53,6 +54,7 @@ export default defineConfig({
     }),
     tailwindcss(),
     alphaTabAssetsPlugin(),
+    licenseNoticesPlugin(),
     react(),
   ],
 });

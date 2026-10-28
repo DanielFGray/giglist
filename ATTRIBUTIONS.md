@@ -4,6 +4,8 @@ This file lists every outside source GigList uses: code we adapted, data we fitt
 
 When a change brings in a source, add its entry in the same commit, with a link. The code comment that uses the source names it, so a reader can find the entry here.
 
+The build writes the license text of every npm package in the client bundle to `/third-party-licenses.txt` (`scripts/licenseNoticesPlugin.ts`), so this file does not repeat them.
+
 ## Code adapted
 
 - **postgres.garden**: production-only exclusion of testing handlers in `src/server/main.ts` follows `../postgres.garden/server/index.ts`.
