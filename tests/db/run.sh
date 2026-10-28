@@ -9,9 +9,13 @@ repo="$here/../.."
 set -a; source "$repo/.env"; set +a
 db=giglist_test_rls
 swap_db() { echo "${1%/*}/$db"; }
-vars=(-v ON_ERROR_STOP=1 -v DATABASE_NAME=$db -v DATABASE_OWNER=giglist -v DATABASE_AUTHENTICATOR=giglist_authenticator -v DATABASE_VISITOR=giglist_visitor)
+# Shared ops-dev-pg17 roles (postgresRoles + postgresLoginRole), not the old compose logins.
+owner="${DATABASE_OWNER:-giglist_owner}"
+authenticator="${DATABASE_AUTHENTICATOR:-alchemy_giglist_api}"
+visitor="${DATABASE_VISITOR:-giglist_visitor}"
+vars=(-v ON_ERROR_STOP=1 -v DATABASE_NAME=$db -v DATABASE_OWNER=$owner -v DATABASE_AUTHENTICATOR=$authenticator -v DATABASE_VISITOR=$visitor)
 
-psql -q "$ROOT_DATABASE_URL" -c "drop database if exists $db" -c "create database $db owner giglist"
+psql -q "$ROOT_DATABASE_URL" -c "drop database if exists $db" -c "create database $db owner $owner"
 psql -q "$(swap_db "$ROOT_DATABASE_URL")" "${vars[@]}" -f "$repo/migrations/afterReset.sql"
 for file in "$repo"/migrations/committed/*.sql "$repo"/migrations/current/*.sql "$here"/*-seed.sql; do
   psql -q "$(swap_db "$DATABASE_URL")" "${vars[@]}" -1 -f "$file"

@@ -6,7 +6,7 @@ Collaborative musical setlist manager for bands.
 
 - **Frontend**: TanStack Start (React 19, file-based routing, SSR), TanStack DB (reactive collections, optimistic mutations), TailwindCSS v4
 - **Backend**: Effect-TS services calling PostgreSQL functions via @effect/sql-kysely (no promise conversion)
-- **Database**: PostgreSQL 17 with graphile-migrate, graphile-worker
+- **Database**: PostgreSQL 17 with graphile-migrate, graphile-worker — local shared cluster via `ops dev db up` (`ops-dev-pg17` on `127.0.0.1:5417`); compose only runs Valkey
 - **Runtime**: Bun
 
 ## Database Conventions (from graphile-starter)

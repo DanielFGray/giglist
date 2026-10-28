@@ -1,6 +1,8 @@
 #!/usr/bin/env bun
 /**
- * dbEnsure — predev hook: start containers, test connection, run init on failure.
+ * dbEnsure — predev hook: ensure the shared ops Postgres cluster and this app's
+ * database are up (`ops dev db up`), test DATABASE_URL, and fall back to
+ * `init` only when the URL is missing or still unreachable.
  */
 import { Config, Duration, Effect, Option, Redacted, Schedule, Schema as S } from "effect";
 import { NodeRuntime } from "@effect/platform-node";
