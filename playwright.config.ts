@@ -2,7 +2,7 @@ import { defineConfig } from "@playwright/test"
 import { BASE_URL } from "./tests/baseUrl"
 
 /** Where `src/server/main.ts` listens. The client proxies `/api` here. */
-const API_PORT = process.env.PORT ?? "3010"
+const API_PORT = process.env.PORT ?? "3000"
 
 export default defineConfig({
   testDir: "./tests",
