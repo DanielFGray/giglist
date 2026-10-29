@@ -1,4 +1,7 @@
 {
+  // ops dev db makes each database owned by this group role; the migration login is a member.
+  "databaseOwner": "giglist_owner",
+
   "pgSettings": {
     "search_path": "app_public,app_private,app_hidden,public"
   },
@@ -9,6 +12,8 @@
   },
 
   "afterReset": [
+    // graphile-migrate recreates the shadow database empty; ops rebuilds it from the cartridge.
+    { "_": "command", "shadow": true, "command": "ops dev db reset \"$GM_DBNAME\"" },
     "!afterReset.sql"
   ],
 
