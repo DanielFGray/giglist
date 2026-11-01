@@ -1,6 +1,6 @@
 {
   // ops dev db makes each database owned by this group role; the migration login is a member.
-  "databaseOwner": "giglist_owner",
+  "databaseOwner": "giglist_dev_owner",
 
   "pgSettings": {
     "search_path": "app_public,app_private,app_hidden,public"

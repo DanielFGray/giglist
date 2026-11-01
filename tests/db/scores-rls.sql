@@ -16,7 +16,7 @@ insert into ids values
   ('score_revision', '00000000-0000-0000-0000-000000000502');
 
 create function pg_temp.as_user(session_name text) returns void language sql as $$
-  select set_config('role', 'giglist_visitor', true),
+  select set_config('role', current_setting('test.visitor'), true),
          set_config('my.session_id', (select id::text from ids where name = session_name), true);
 $$;
 

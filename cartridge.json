@@ -55,7 +55,7 @@
           "_tag": "PostgresCredentials",
           "database": "giglist",
           "login": "api",
-          "urlEnv": "AUTH_DATABASE_URL"
+          "urlEnv": "AUTH_DATABASE_URL", "usernameEnv": "DATABASE_AUTHENTICATOR"
         },
         {
           "_tag": "KvSecret",
