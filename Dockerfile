@@ -13,6 +13,8 @@ RUN bun run client:build
 FROM oven/bun:1.4.4 AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
+ARG GIT_COMMIT
+ENV GIT_COMMIT=$GIT_COMMIT
 
 COPY package.json bun.lock ./
 COPY patches ./patches
