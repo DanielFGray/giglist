@@ -184,7 +184,11 @@ export function Grid<R>({
     ownsFocus.current = true
     const from = { row: keys.indexOf(key), col: columns.indexOf(column) }
     const row = rowAt(key)
-    const stored = row !== undefined && column.edit ? column.edit.text(row) : ""
+    // A cell still waiting for the page to reload its row holds what was typed
+    // last; the row object is older, so comparing against it would drop an edit
+    // that undoes the previous one (type 87, then Delete before the reload).
+    const awaiting = pending.get(cellId(identity(key), column.key))
+    const stored = awaiting ? awaiting.value : row !== undefined && column.edit ? column.edit.text(row) : ""
     if (value === stored) return goTo(step(from, direction, size))
     setError(null)
     if (key === NEW && newRow) return startDraft(newRow, column, value, shown, direction, from)

@@ -196,10 +196,11 @@ test.describe("songs", () => {
     // A sort orders the rows as saved, so let the rename land first.
     await expect(column(page, "title").first()).toHaveAttribute("aria-busy", "false")
 
-    await getPw(page, "songs-sort").selectOption("artist")
-    await expect(page).toHaveURL(/sort=artist/)
-    await getPw(page, "songs-sort").selectOption("title")
+    // Each step waits for the order it asks for, so the next sort starts from a rendered one.
+    await getPw(page, "songs-sort").selectOption("tempo")
     await expect(column(page, "title")).toHaveText(["Mango", "Zucchini"])
+    await getPw(page, "songs-sort").selectOption("artist")
+    await expect(column(page, "title")).toHaveText(["Zucchini", "Mango"])
   })
 
   test("a song opens read-only, and Edit or Cancel moves between the two modes", async ({ page, testing }) => {
