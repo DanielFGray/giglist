@@ -115,5 +115,6 @@ its script, alphaTab's files, and 404s for the testing API and missing assets. I
 no account and sends no mail.
 
 `GET /api/health` returns 200 only when both database connections can run a query, and
-503 after a failed query or a five-second timeout. The API and worker send traces and logs
+503 after a failed query or a five-second timeout. The response's `x-commit` header names the
+commit the deploy runs, which the platform sets as `GIT_COMMIT`, or `unknown` when it is unset. The API and worker send traces and logs
 over OTLP to OpenObserve. Nothing alerts on a 503 or a failed job yet.

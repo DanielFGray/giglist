@@ -11,7 +11,7 @@ export const HealthLive = HttpRouter.add("GET", "/api/health", Effect.gen(functi
     owner.selectNoFrom(sql<number>`1`.as("ok")),
     authenticator.selectNoFrom(sql<number>`1`.as("ok")),
   ], { concurrency: "unbounded" })
-  return HttpServerResponse.text("ok\n", { headers: { "cache-control": "no-store" } })
+  return HttpServerResponse.text("ok\n", { headers: { "cache-control": "no-store", "x-commit": process.env.GIT_COMMIT || "unknown" } })
 }).pipe(
   Effect.timeout("5 seconds"),
   Effect.catch((error) => Effect.logError("Database readiness check failed", error).pipe(
