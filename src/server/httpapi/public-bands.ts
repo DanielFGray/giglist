@@ -1,6 +1,6 @@
 import { Effect } from "effect"
 import { HttpApiBuilder } from "effect/http-api"
-import * as BandService from "../services/band"
+import { Bands } from "../services/band"
 import { withAuthContext } from "../db"
 import { GigListApi, PublicBandNotFound } from "../../api/contracts"
 
@@ -12,13 +12,16 @@ export const publicBandsHandlers = HttpApiBuilder.group(
   GigListApi,
   "publicBands",
   (handlers) =>
-    handlers.handle(
-      "getPublicBand",
-      Effect.fnUntraced(function* ({ params: { slug } }) {
-        return yield* BandService.getPublicBandProfile(slug).pipe(
-          withAuthContext(undefined),
-          Effect.catchTag("PublicBandMissing", (e) => Effect.fail(new PublicBandNotFound({ slug: e.slug }))),
-        )
-      }),
-    ),
+    Effect.gen(function* () {
+      const bands = yield* Bands
+      return handlers.handle(
+        "getPublicBand",
+        Effect.fnUntraced(function* ({ params: { slug } }) {
+          return yield* bands.getPublicBandProfile(slug).pipe(
+            withAuthContext(undefined),
+            Effect.catchTag("PublicBandMissing", (e) => Effect.fail(new PublicBandNotFound({ slug: e.slug }))),
+          )
+        }),
+      )
+    }),
 )

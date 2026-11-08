@@ -3,7 +3,7 @@ import { HttpApiBuilder } from "effect/http-api"
 import { sql } from "kysely"
 import { Kysely } from "../db"
 import { LiveHub } from "../services/live-hub"
-import * as Auth from "../services/auth"
+import { Auth } from "../services/auth"
 import { asSessionOr, isBandMember } from "./scope"
 import { between, placeAfter } from "../../components/position"
 import {
@@ -212,8 +212,9 @@ const asWriter = <A, E>(setlistId: string, query: (session: SessionData) => Effe
 /** Tells everyone watching each room that the session's user wrote it. */
 export const announce = Effect.fn("Setlists.announce")(function*(rooms: ReadonlyArray<string>) {
   const hub = yield* LiveHub
+  const auth = yield* Auth
   const session = yield* CurrentSession
-  const me = yield* Auth.getMe(session.sessionId).pipe(Effect.orElseSucceed(() => null))
+  const me = yield* auth.getMe(session.sessionId).pipe(Effect.orElseSucceed(() => null))
   yield* Effect.forEach(rooms, (room) => hub.changed(room, me?.username ?? null))
 })
 
@@ -223,7 +224,8 @@ export const watchRoom = <A, E, R>(roomId: string, client: string, visible: Effe
     const session = yield* CurrentSession
     // Opening the stream is the visibility check; after that it holds no database connection.
     yield* visible
-    const me = yield* Auth.getMe(session.sessionId).pipe(Effect.orElseSucceed(() => null))
+    const auth = yield* Auth
+    const me = yield* auth.getMe(session.sessionId).pipe(Effect.orElseSucceed(() => null))
     if (!me) return yield* new SetlistForbidden({ message: "You must be signed in" })
     const hub = yield* LiveHub
     return hub.watch(roomId, {

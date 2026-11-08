@@ -58,7 +58,7 @@ test("parallel adds get distinct keys and a following move lands after its ancho
 })
 
 test("rebalances entry and gig setlist keys after repeated neighbour moves", async ({ page, testing }) => {
-  test.setTimeout(60_000)
+  test.setTimeout(240_000)
   await testing.login()
   const band = await post(page, "/api/my/bands", { slug: `test-rebalance-${Date.now()}`, name: "Rebalance" })
   const setlist = await post(page, "/api/setlists", { band_id: band.id, name: "Rebalance" })

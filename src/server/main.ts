@@ -19,6 +19,9 @@ import { scoresHandlers } from "./httpapi/scores";
 import { marksHandlers, stampsHandlers } from "./httpapi/marks";
 import { LiveHub } from "./services/live-hub";
 import { ChartReader } from "./services/chart-reader";
+import { Auth } from "./services/auth";
+import { Bands } from "./services/band";
+import { PublicUsers } from "./services/public-user";
 import { SessionMiddlewareLive } from "./httpapi/session";
 import { RateLimitMiddlewareLive } from "./httpapi/rate-limit";
 import { HealthLive } from "./httpapi/health";
@@ -48,8 +51,11 @@ const ServerLive = HttpRouter.serve(Layer.mergeAll(ApiLive, TestingLive, HealthL
   Layer.provide(AuthVisitor.Live),
   Layer.provide(Db.Live),
   // One hub per process: viewers and change events are shared by every request.
-  Layer.provide(LiveHub.Live),
-  Layer.provide(ChartReader.Live),
+  Layer.provide(LiveHub.layer),
+  Layer.provide(ChartReader.layer),
+  Layer.provide(Auth.layer),
+  Layer.provide(Bands.layer),
+  Layer.provide(PublicUsers.layer),
   Layer.provide(Layer.unwrap(Effect.gen(function* () {
     const port = yield* Config.Port("PORT").pipe(Config.withDefault(3000));
     const hostname = yield* Config.NonEmptyString("API_HOST").pipe(Config.withDefault("127.0.0.1"));

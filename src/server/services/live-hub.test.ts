@@ -7,7 +7,7 @@ const CLIENT_B = "22222222-2222-4222-8222-222222222222"
 const viewer = (client: string, username: string) => ({ client, username, mode: "viewing" as const, at: null })
 
 const run = <A>(body: (hub: typeof LiveHub.Service) => Effect.Effect<A>) =>
-  Effect.runPromise(LiveHub.use(body).pipe(Effect.provide(LiveHub.Live)))
+  Effect.runPromise(LiveHub.use(body).pipe(Effect.provide(LiveHub.layer)))
 
 const names = (event: LiveEventData | undefined) => (event?.kind === "presence" ? event.viewers.map((v) => v.username) : null)
 

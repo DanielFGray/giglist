@@ -1,6 +1,6 @@
 import { Effect } from "effect"
 import { HttpApiBuilder } from "effect/http-api"
-import * as PublicUserService from "../services/public-user"
+import { PublicUsers } from "../services/public-user"
 import { withAuthContext } from "../db"
 import { GigListApi, PublicUserNotFound } from "../../api/contracts"
 
@@ -12,13 +12,16 @@ export const publicUsersHandlers = HttpApiBuilder.group(
   GigListApi,
   "publicUsers",
   (handlers) =>
-    handlers.handle(
-      "getPublicUser",
-      Effect.fnUntraced(function* ({ params: { username } }) {
-        return yield* PublicUserService.getPublicUserProfile(username).pipe(
-          withAuthContext(undefined),
-          Effect.catchTag("PublicUserMissing", (e) => Effect.fail(new PublicUserNotFound({ username: e.username }))),
-        )
-      }),
-    ),
+    Effect.gen(function* () {
+      const users = yield* PublicUsers
+      return handlers.handle(
+        "getPublicUser",
+        Effect.fnUntraced(function* ({ params: { username } }) {
+          return yield* users.getPublicUserProfile(username).pipe(
+            withAuthContext(undefined),
+            Effect.catchTag("PublicUserMissing", (e) => Effect.fail(new PublicUserNotFound({ username: e.username }))),
+          )
+        }),
+      )
+    }),
 )

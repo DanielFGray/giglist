@@ -6,10 +6,6 @@ import { between, placeAfter } from "../../components/position"
 import { Gig, GigEntry, GigListApi, GigNotFound, SetlistForbidden, type SessionData } from "../../api/contracts"
 import { announce, asSession, assertBandMember, copySetlist, reportInRoom, watchRoom } from "./setlists"
 
-const decodeGig = S.decodeUnknownEffect(Gig)
-const decodeGigArray = S.decodeUnknownEffect(S.Array(Gig))
-const decodeGigEntryArray = S.decodeUnknownEffect(S.Array(GigEntry))
-
 export const gigsHandlers = HttpApiBuilder.group(GigListApi, "gigs", (handlers) =>
   handlers
     .handle("listGigs", ({ params: { bandId } }) =>
@@ -23,7 +19,8 @@ export const gigsHandlers = HttpApiBuilder.group(GigListApi, "gigs", (handlers) 
                 .orderBy(sql`g.gig_date desc nulls last`)
                 .orderBy("g.created_at", "desc"),
             ),
-            Effect.flatMap((rows) => decodeGigArray(rows).pipe(Effect.orDie)),
+            Effect.flatMap(S.decodeUnknownEffect(S.Array(Gig))),
+            Effect.orDie,
           )
         }),
       ),
@@ -173,7 +170,7 @@ export const gigsHandlers = HttpApiBuilder.group(GigListApi, "gigs", (handlers) 
             .orderBy("gs.setlist_id")
             .orderBy("r.position_key")
             .orderBy("r.id")
-            .pipe(Effect.flatMap((rows) => decodeGigEntryArray(rows).pipe(Effect.orDie)))
+            .pipe(Effect.flatMap(S.decodeUnknownEffect(S.Array(GigEntry))),Effect.orDie)
         }),
       ),
     )
@@ -258,7 +255,7 @@ const gigOr404 = Effect.fnUntraced(function*(id: string) {
     Effect.flatMap((query) => query.where("g.id", "=", id)),
     Effect.head,
     Effect.catchTag("NoSuchElementError", () => Effect.fail(new GigNotFound({ id }))),
-    Effect.flatMap((row) => decodeGig(row).pipe(Effect.orDie)),
+    Effect.flatMap((row) => S.decodeUnknownEffect(Gig)(row).pipe(Effect.orDie)),
   )
 })
 
