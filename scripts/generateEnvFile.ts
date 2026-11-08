@@ -12,7 +12,6 @@ import { Effect, pipe, Record as R } from "effect";
 import { NodeRuntime, NodeServices } from "@effect/platform-node";
 import * as FileSystem from "effect/FileSystem";
 
-const genPassword = (len = 32) => crypto.randomBytes(len).toString("base64url");
 const genSecret = (len = 64) => crypto.randomBytes(len).toString("hex");
 
 type Ctx = Record<string, string>;
