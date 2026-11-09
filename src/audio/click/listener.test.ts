@@ -42,17 +42,19 @@ it("hears low, slow bass notes the same at any input level", () => {
   }
 })
 
-it("hears a chord rolled over 60 ms as one note", () => {
+// Room noise, and digital silence, which an input with a gate sends between notes.
+it.each([0.001, 0])("hears a chord rolled over 60 ms as one note, from its first string (noise %p)", (level) => {
   // Six notes of a guitar chord, low to high, each 12 ms after the last, as a strum plays them.
-  // A sharp attack on each note gives each its own rise.
+  // A sharp attack on each note gives each its own rise, and the last string's is the loudest.
   const strings = [82.4, 110, 146.8, 196, 246.9, 329.6]
-  const strums = 4
-  const signal = noise(SAMPLE_RATE * 4, 0.001, 9)
-  for (let s = 0; s < strums; s++) {
-    strings.forEach((pitchHz, i) => mix(signal, keyNote(SAMPLE_RATE, pitchHz, 10 * s + i + 1), Math.round((0.5 + 0.8 * s + 0.012 * i) * SAMPLE_RATE)))
-  }
+  const firstStrings = [0, 1, 2, 3].map((s) => Math.round((0.5 + 0.8 * s) * SAMPLE_RATE))
+  const signal = noise(SAMPLE_RATE * 4, level, 9)
+  firstStrings.forEach((first, s) =>
+    strings.forEach((pitchHz, i) => mix(signal, keyNote(SAMPLE_RATE, pitchHz, 10 * s + i + 1), first + Math.round(0.012 * i * SAMPLE_RATE))),
+  )
   const listener = new Listener(SAMPLE_RATE)
   const onsets: Array<number> = []
   for (let i = 0; i < signal.length; i += 128) onsets.push(...placed(listener.push(signal.subarray(i, i + 128), i)))
-  expect(onsets).toHaveLength(strums)
+  expect(onsets).toHaveLength(firstStrings.length)
+  onsets.forEach((onset, s) => expect(Math.abs(onset - firstStrings[s]!)).toBeLessThan(SAMPLE_RATE / 1000))
 })
