@@ -2,25 +2,12 @@ import { readFileSync } from "node:fs"
 import type { APIRequestContext, Locator, Page } from "@playwright/test"
 import type { Change } from "../src/charts/changes"
 import { parseDoc, placeChord, serializeDoc } from "../src/charts/doc"
-import { test, expect, getPw, openTool } from "./helpers"
+import { test, expect, getPw, openTool, createSong, createBareChart } from "./helpers"
 
 const fixturePath = (name: string) => new URL(`./fixtures/${name}`, import.meta.url).pathname
 const pasted = readFileSync(fixturePath("amazing-grace.txt"), "utf8")
 
 /** Create a band and a song in G through the API; chart specs start from a song. */
-const createSong = async (page: Page, tempo: number | null = null) => {
-  const bandRes = await page.request.post("/api/my/bands", {
-    data: { slug: `test-charts-${Date.now()}`, name: "Test: charts" },
-  })
-  expect(bandRes.ok(), `create band failed: ${await bandRes.text()}`).toBe(true)
-  const bandId = (await bandRes.json()).id as string
-  const songRes = await page.request.post("/api/songs", {
-    data: { band_id: bandId, title: "Amazing Grace", artist: null, key: "G", tempo_bpm: tempo, duration_seconds: null, capo: null, notes: null },
-  })
-  expect(songRes.ok(), `create song failed: ${await songRes.text()}`).toBe(true)
-  return { bandId, songId: (await songRes.json()).id as string }
-}
-
 /** The chart settings sit in a slideout; open it before using a setting. */
 const openSettings = async (page: Page) => {
   const panel = getPw(page, "chart-settings")
@@ -489,14 +476,6 @@ test.describe("chord shapes", () => {
 })
 
 /** A chart of bare lyrics, the way a band starts one before it has any chords. */
-const createBareChart = async (page: Page, songId: string) => {
-  const res = await page.request.post("/api/charts", {
-    data: { song_id: songId, name: "Words", written_key: "G", pasted: "[Verse 1]\nAmazing grace, how sweet\nThe sound" },
-  })
-  expect(res.ok(), `create chart failed: ${await res.text()}`).toBe(true)
-  return (await res.json()) as { id: string; revision_id: string }
-}
-
 /** The word whose lyric matches `text`; a string matches in any case, anywhere in the word. */
 const segment = (page: Page, text: string | RegExp) => getPw(page, "editor-segment").filter({ has: getPw(page, "editor-lyric").filter({ hasText: text }) })
 

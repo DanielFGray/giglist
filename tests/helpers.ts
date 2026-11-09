@@ -96,7 +96,7 @@ export const post = async (page: Page, url: string, data: unknown) => {
  * and "Encore" (Gamma). Beta has a chart with a mark and the notes "Watch the break".
  */
 export const createGig = async (page: Page) => {
-  const band = await post(page, "/api/my/bands", { slug: `test-perform-${Date.now()}`, name: "Test: perform" })
+  const band = await post(page, "/api/my/bands", { slug: `test-perform-${crypto.randomUUID().slice(0, 8)}`, name: "Test: perform" })
   const song = (title: string, key: string) =>
     post(page, "/api/songs", { band_id: band.id, title, artist: null, key, tempo_bpm: 120, duration_seconds: null, capo: null, notes: title === "Beta" ? "Watch the break" : null })
   const [alpha, beta, gamma] = [await song("Alpha", "G"), await song("Beta", "G"), await song("Gamma", "D")]
@@ -119,6 +119,29 @@ export const createGig = async (page: Page) => {
   })
   for (const s of [one, encore]) await post(page, `/api/gigs/${gig.id}/setlists`, { setlist_id: s.id })
   return { bandId: band.id as string, gigId: gig.id as string, setlistId: one.id, encoreId: encore.id }
+}
+
+/** A new band with one song, "Amazing Grace" in G, at `tempo` beats per minute or none. */
+export const createSong = async (page: Page, tempo: number | null = null) => {
+  const bandRes = await page.request.post("/api/my/bands", {
+    data: { slug: `test-charts-${crypto.randomUUID().slice(0, 8)}`, name: "Test: charts" },
+  })
+  expect(bandRes.ok(), `create band failed: ${await bandRes.text()}`).toBe(true)
+  const bandId = (await bandRes.json()).id as string
+  const songRes = await page.request.post("/api/songs", {
+    data: { band_id: bandId, title: "Amazing Grace", artist: null, key: "G", tempo_bpm: tempo, duration_seconds: null, capo: null, notes: null },
+  })
+  expect(songRes.ok(), `create song failed: ${await songRes.text()}`).toBe(true)
+  return { bandId, songId: (await songRes.json()).id as string }
+}
+
+/** A lyrics chart on `songId` with one verse of two lines and no chords. */
+export const createBareChart = async (page: Page, songId: string) => {
+  const res = await page.request.post("/api/charts", {
+    data: { song_id: songId, name: "Words", written_key: "G", pasted: "[Verse 1]\nAmazing grace, how sweet\nThe sound" },
+  })
+  expect(res.ok(), `create chart failed: ${await res.text()}`).toBe(true)
+  return (await res.json()) as { id: string; revision_id: string }
 }
 
 /** Turns annotate mode on if it is off, then arms a mark tool. */
