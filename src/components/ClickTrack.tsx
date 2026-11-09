@@ -3,7 +3,8 @@ import { useEffect, useState } from "react"
 import { BEATS_PER_BAR } from "~/audio/click/click"
 import { clickTrack } from "~/audio/click/engine"
 import type { Subdivision } from "~/audio/click/timing"
-import { hitTiles, judgement, meterFill, NEW_TAKE, signedMs, SUBDIVISIONS, type Take, takeHits, takeStatus, takeStep } from "./click-take"
+import { NEW_TAKE, type Take, takeHits, takeStep } from "~/audio/click/take"
+import { hitTiles, judgement, meterFill, signedMs, SUBDIVISIONS, takeStatus } from "./click-take"
 
 type Mode = "off" | "click" | "listen"
 

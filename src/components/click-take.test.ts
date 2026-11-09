@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test"
 import { COUNT_IN_BEATS } from "~/audio/click/click"
 import type { ClickEvent } from "~/audio/click/engine"
-import { hitTiles, meterFill, NEW_TAKE, signedMs, takeHits, takeStatus, takeStep } from "./click-take"
+import { NEW_TAKE, takeStep } from "~/audio/click/take"
+import { hitTiles, meterFill, signedMs, takeStatus } from "./click-take"
 
 const fold = (events: ReadonlyArray<ClickEvent>) => events.reduce(takeStep, NEW_TAKE)
 
@@ -10,8 +11,8 @@ const opened: ReadonlyArray<ClickEvent> = [
   { _tag: "Beat", beat: 0 },
 ]
 
-describe("a Listen take", () => {
-  test("tells the player what to do at each stage", () => {
+describe("Listen mode's words", () => {
+  test("tell the player what to do at each stage", () => {
     expect(takeStatus(NEW_TAKE, true)).toBe("Opening the microphone…")
     expect(takeStatus(fold(opened), true)).toBe(`Count-in 1 of ${COUNT_IN_BEATS}: listen while the mic measures the click.`)
     const playing = fold([...opened, { _tag: "MeasuredLatency", latencyMs: 87.4, clickLeak: 0.1 }, { _tag: "Note", atMs: 90 }])
@@ -19,33 +20,14 @@ describe("a Listen take", () => {
     expect(takeStatus(playing, false)).toBe("Stopped after 1 note.")
   })
 
-  test("places each note against the click the player heard", () => {
-    // 120 BPM: a beat is 500 ms, and the mic hears each click 80 ms after it is scheduled.
-    const take = fold([...opened, { _tag: "MeasuredLatency", latencyMs: 80, clickLeak: 0 }, { _tag: "Note", atMs: 75 }, { _tag: "Note", atMs: 586 }, { _tag: "Note", atMs: 830 }])
-    expect(takeHits(take, 120, 1).map((hit) => [hit.beat, hit.step, Math.round(hit.offsetMs)])).toEqual([
-      [0, 0, -5],
-      [1, 0, 6],
-      [2, 0, -250],
-    ])
-    expect(takeHits(take, 120, 2).map((hit) => [hit.beat, hit.step, Math.round(hit.offsetMs)])).toEqual([
-      [0, 0, -5],
-      [1, 0, 6],
-      [1, 1, 0],
-    ])
+  test("say why a take cannot be scored, during it and after it stops", () => {
+    const missed = fold([...opened, { _tag: "MissedClick" }])
+    expect(takeStatus(missed, true)).toContain("did not hear the click")
+    expect(takeStatus(missed, false)).toContain("did not hear the click")
+    expect(takeStatus(fold([{ _tag: "Failed", reason: "Microphone access was refused." }]), false)).toBe("Microphone access was refused.")
   })
 
-  test("scores nothing when the mic missed the click, and says why", () => {
-    const take = fold([...opened, { _tag: "MissedClick" }, { _tag: "Note", atMs: 600 }])
-    expect(takeHits(take, 100, 1)).toEqual([])
-    expect(takeStatus(take, true)).toContain("did not hear the click")
-  })
-
-  test("a failure stays on screen after the take stops", () => {
-    const take = fold([{ _tag: "Failed", reason: "Microphone access was refused." }])
-    expect(takeStatus(take, false)).toBe("Microphone access was refused.")
-  })
-
-  test("the summary reads as the player would say it", () => {
+  test("summarise the notes as the player would say it", () => {
     expect(hitTiles([])).toEqual([
       ["Notes", "0"],
       ["Average", "—"],

@@ -1,64 +1,13 @@
 import { COUNT_IN_BEATS } from "~/audio/click/click"
-import type { ClickEvent } from "~/audio/click/engine"
-import { type Hit, placeHit, type Subdivision, summarize, TIGHT_MS } from "~/audio/click/timing"
+import type { Take } from "~/audio/click/take"
+import { type Hit, type Subdivision, summarize, TIGHT_MS } from "~/audio/click/timing"
 
-/**
- * What a Listen take has heard so far, folded from the click engine's events.
- * Nothing is saved: a take lives while its panel is open.
- */
-export interface Take {
-  /** The click sounding now, the count-in's first being 0; null before the first. */
-  readonly beat: number | null
-  /** The mic's name, once it is open. */
-  readonly device: string | null
-  /** The loudest recent sample, 0 to 1. */
-  readonly level: number
-  /** The speaker-to-mic delay the count-in measured. */
-  readonly latencyMs: number | null
-  /** Each note's `atMs` (the Note event); `takeHits` places them on the grid. */
-  readonly notesMs: ReadonlyArray<number>
-  readonly dropouts: number
-  /** Why the take cannot be scored, in words for the player. */
-  readonly failure: string | null
-}
-
-export const NEW_TAKE: Take = { beat: null, device: null, level: 0, latencyMs: null, notesMs: [], dropouts: 0, failure: null }
-
-export const takeStep = (take: Take, event: ClickEvent): Take => {
-  switch (event._tag) {
-    case "Beat":
-      return { ...take, beat: event.beat }
-    case "Listening":
-      return { ...take, device: event.device }
-    case "Level":
-      return { ...take, level: event.peak }
-    case "MeasuredLatency":
-      return { ...take, latencyMs: event.latencyMs }
-    case "Note":
-      return { ...take, notesMs: [...take.notesMs, event.atMs] }
-    case "Dropout":
-      return { ...take, dropouts: take.dropouts + 1 }
-    case "MissedClick":
-      return { ...take, failure: MISSED_CLICK }
-    case "Failed":
-      return { ...take, failure: event.reason }
-  }
-}
-
-/**
- * The take's notes against the click the player heard. A note can be scored
- * only against the measured delay: the browser's own estimate is too rough
- * for millisecond offsets.
- */
-export const takeHits = (take: Take, bpm: number, subdivision: Subdivision): ReadonlyArray<Hit> => {
-  const { latencyMs } = take
-  if (latencyMs === null) return []
-  return take.notesMs.map((atMs) => placeHit(atMs - latencyMs, 60_000 / bpm, subdivision))
-}
+// The words Listen mode shows for a take. Nothing is saved: a take lives while its panel is open.
 
 /** One line on what the player should do now. */
 export const takeStatus = (take: Take, running: boolean): string => {
   if (take.failure !== null) return take.failure
+  if (take.missedClick) return MISSED_CLICK
   const notes = take.notesMs.length
   if (!running) return `Stopped after ${notes} ${notes === 1 ? "note" : "notes"}.`
   if (take.device === null) return "Opening the microphone…"
