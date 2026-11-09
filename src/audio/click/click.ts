@@ -1,7 +1,8 @@
 /**
  * The metronome click is a short tone at one pitch. The mic hears it through
  * the speakers, so the listener splits the spectrum in two: the click bands
- * show where the click arrived, and every other band shows the instrument.
+ * hold the click, and every other band shows the instrument. The arrival is
+ * found by the tone band alone, against the bands beside it (clickToneBins).
  *
  * The click bands are the tone and the harmonics a distorting speaker adds:
  * the 2nd and 3rd above it, and the low thump below it (even-order distortion
@@ -60,4 +61,24 @@ export const clickBins = (size: number, sampleRate: number): Uint8Array => {
     mark(harmonic * CLICK_PITCH_HZ - CLICK_BAND_HALF_WIDTH_HZ, harmonic * CLICK_PITCH_HZ + CLICK_BAND_HALF_WIDTH_HZ)
   }
   return marks
+}
+
+/**
+ * The bins of an FFT of `size` where the listener looks for the click's
+ * arrival: the tone band at the click's pitch, and the bands of the same
+ * width on each side of it. A click adds power only in the tone band. A drum
+ * or a strum adds about as much on each side, so comparing the two tells a
+ * click from other sounds, even when they sound together.
+ */
+export const clickToneBins = (size: number, sampleRate: number): { readonly tone: ReadonlyArray<number>; readonly sides: ReadonlyArray<number> } => {
+  const binHz = sampleRate / size
+  const centres = Array.from({ length: size / 2 + 1 }, (_, k) => k)
+  const within = (lowHz: number, highHz: number) => centres.filter((k) => k * binHz >= lowHz && k * binHz <= highHz)
+  const low = CLICK_PITCH_HZ - CLICK_BAND_HALF_WIDTH_HZ
+  const high = CLICK_PITCH_HZ + CLICK_BAND_HALF_WIDTH_HZ
+  const width = 2 * CLICK_BAND_HALF_WIDTH_HZ
+  return {
+    tone: within(low, high),
+    sides: [...within(low - width / 2, low - binHz / 2), ...within(high + binHz / 2, high + width / 2)],
+  }
 }

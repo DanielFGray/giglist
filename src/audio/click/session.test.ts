@@ -111,6 +111,21 @@ describe("Session", () => {
     expectHits(listen({ latencySeconds: 0.087, notes, subdivision: 2 }), notes, 3, 2)
   })
 
+  it("measures the latency when a drum plays in every count-in beat, on the click or off it", () => {
+    // A drum is loud in every band, the click's among them. At 100 BPM a beat is 600 ms.
+    for (const offsetBeats of [-0.3, 0.02, 0.2, 0.5]) {
+      for (const gain of [1, 3]) {
+        const hits = Array.from({ length: COUNT_IN_BEATS }, (_, beat) => {
+          const sound = drum(SAMPLE_RATE, 40 + beat).map((x) => x * gain)
+          return [sound, Math.round((beat + offsetBeats) * 0.6 * SAMPLE_RATE + 0.05 * SAMPLE_RATE)] as const
+        })
+        const events = listen({ latencySeconds: 0.05, notes: [], extra: hits.filter(([, at]) => at >= 0) })
+        expect(latencyOf(events), `drum ${offsetBeats} beat from the click at gain ${gain}`).toHaveLength(1)
+        expect(Math.abs(latencyOf(events)[0]! - 50), `drum ${offsetBeats} beat from the click at gain ${gain}`).toBeLessThan(1)
+      }
+    }
+  })
+
   it("measures the latency at a fast tempo, where the next click comes before the first is heard", () => {
     const events = listen({ latencySeconds: 0.2, notes: [], bpm: 240 })
     expect(Math.abs(latencyOf(events)[0]! - 200)).toBeLessThan(0.5)

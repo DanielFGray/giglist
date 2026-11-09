@@ -1,4 +1,4 @@
-import { clickBins } from "./click"
+import { clickBins, clickToneBins } from "./click"
 import { PowerSpectrum } from "./fft"
 import { predictionError, predictor } from "./lpc"
 
@@ -43,6 +43,8 @@ export class Listener {
   private readonly fine: Resolution
   private readonly coarse: Resolution
   private readonly isClickBin: Uint8Array
+  /** Where the click's arrival is looked for (clickToneBins). */
+  private readonly toneBins: ReturnType<typeof clickToneBins>
   /** Fine power spectra, kept for placement, indexed by fine frame modulo their count. */
   private readonly spectra: Array<Float64Array>
   /** Instrument bands of the long windows (see logBands). */
@@ -81,6 +83,7 @@ export class Listener {
     this.fine = resolution(size, size / 8, 8)
     this.coarse = resolution(size * 8, size, 2)
     this.isClickBin = clickBins(this.fine.size, sampleRate)
+    this.toneBins = clickToneBins(this.fine.size, sampleRate)
     const kept = Math.ceil((KEEP_SPECTRA_SECONDS * sampleRate) / this.fine.hop)
     this.spectra = Array.from({ length: kept }, () => new Float64Array(this.fine.spectrum.bins))
     this.bands = logBands(this.coarse.size, sampleRate, clickBins(this.coarse.size, sampleRate))
@@ -165,16 +168,9 @@ export class Listener {
     this.fine.spectrum.compute(this.reader(this.frameStart(this.fine, k)), power)
     normalise(power, this.fine.size)
     const before = k >= this.fine.lag ? this.spectra[(k - this.fine.lag) % this.spectra.length]! : undefined
-    let click = 0
     let instrument = 0
-    if (before !== undefined) {
-      for (let b = 0; b < power.length; b++) {
-        const rise = Math.max(0, power[b]! - before[b]!)
-        if (this.isClickBin[b] === 1) click += rise
-        else instrument += rise
-      }
-    }
-    this.clickFlux.push(click)
+    if (before !== undefined) for (let b = 0; b < power.length; b++) if (this.isClickBin[b] === 0) instrument += Math.max(0, power[b]! - before[b]!)
+    this.clickFlux.push(before === undefined ? 0 : this.toneRise(power, before))
     this.instrumentFlux.push(instrument)
     this.clickFlux.trim(KEEP_SERIES_FRAMES)
     this.instrumentFlux.trim(KEEP_SERIES_FRAMES)
@@ -295,13 +291,10 @@ export class Listener {
   private placeClick(near: number): Rise | undefined {
     const reference = this.spectra[(near - this.fine.lag * 2) % this.spectra.length]!
     let before = 0
-    for (let b = 0; b < reference.length; b++) if (this.isClickBin[b] === 1) before += reference[b]!
+    for (const b of this.toneBins.tone) before += reference[b]!
     const added: Array<number> = []
     for (let k = near - this.fine.lag * 2 + 1; k <= near + this.fine.lag; k++) {
-      const power = this.spectra[k % this.spectra.length]!
-      let sum = 0
-      for (let b = 0; b < power.length; b++) if (this.isClickBin[b] === 1) sum += Math.max(0, power[b]! - reference[b]!)
-      added.push(sum)
+      added.push(this.toneRise(this.spectra[k % this.spectra.length]!, reference))
     }
     const peak = Math.max(...added)
     if (peak <= 0) return undefined
@@ -310,6 +303,22 @@ export class Listener {
     const fraction = (peak / 2 - prior) / (added[crossing]! - prior)
     return { index: near - this.fine.lag * 2 + crossing + fraction, peak, before }
   }
+
+
+  /**
+   * The power `power` adds over `reference` in the click's tone band, less
+   * what it adds in the bands beside it (clickToneBins). A click shows here;
+   * a sound that rises across the spectrum, such as a drum, cancels out.
+   */
+  private toneRise(power: Float64Array, reference: Float64Array): number {
+    const { tone, sides } = this.toneBins
+    let toneRise = 0
+    for (const b of tone) toneRise += Math.max(0, power[b]! - reference[b]!)
+    let sideRise = 0
+    for (const b of sides) sideRise += Math.max(0, power[b]! - reference[b]!)
+    return Math.max(0, toneRise - (sideRise * tone.length) / sides.length)
+  }
+
 
   private reader(start: number): (i: number) => number {
     return (i) => this.ring[(start + i) & this.mask]!
