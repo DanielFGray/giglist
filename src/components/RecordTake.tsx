@@ -2,8 +2,9 @@ import { Effect, Fiber, Stream } from "effect"
 import { useEffect, useMemo, useState } from "react"
 import { BEATS_PER_BAR, COUNT_IN_BEATS } from "~/audio/click/click"
 import { clickTrack } from "~/audio/click/engine"
+import { NEW_TAKE, type Take, takeStep } from "~/audio/click/take"
 import { readTake, type TakeReading } from "~/charts/take"
-import { meterFill, NEW_TAKE, type Take, takeStep } from "./click-take"
+import { MicMeter } from "./MicMeter"
 
 /**
  * Records a take for a phrase (docs/adr/0013): plays the song's click, listens
@@ -26,7 +27,7 @@ export function RecordTake({ bpm, onTex, className }: { bpm: number; onTex: (tex
     }
   }, [recording, bpm])
 
-  // The count-in's measured delay when the mic heard the click; with headphones, the browser's estimate.
+  // The count-in's measured delay when the mic heard the click; otherwise the browser's estimate.
   const expectedDelayMs = take.latencyMs ?? take.reportedLatencyMs
   const reading = useMemo(
     () => (expectedDelayMs === null ? null : readTake(take.notesMs, { bpm, expectedDelayMs, shift })),
@@ -43,7 +44,6 @@ export function RecordTake({ bpm, onTex, className }: { bpm: number; onTex: (tex
     setShift(shift + by)
     write(expectedDelayMs === null ? null : readTake(take.notesMs, { bpm, expectedDelayMs, shift: shift + by }))
   }
-  const fill = Math.round(meterFill(take.level) * 100)
   const done = !recording && take.device !== null
 
   return (
@@ -63,8 +63,8 @@ export function RecordTake({ bpm, onTex, className }: { bpm: number; onTex: (tex
           </>
         )}
         {recording && (
-          <div role="meter" aria-label="Microphone level" aria-valuemin={0} aria-valuemax={100} aria-valuenow={fill} className="h-1.5 w-24 overflow-hidden rounded-full bg-zinc-800">
-            <div className="h-full bg-zinc-400" style={{ width: `${fill}%` }} />
+          <div className="w-24">
+            <MicMeter peak={take.level} />
           </div>
         )}
       </div>
@@ -78,7 +78,7 @@ export function RecordTake({ bpm, onTex, className }: { bpm: number; onTex: (tex
 /** One line on what the player should do now, or what the take read. */
 function recordStatus(take: Take, recording: boolean, reading: TakeReading | null, shift: number): string {
   if (take.failure !== null) return take.failure
-  if (!recording && take.device === null) return `Plays the click at the song's tempo and writes the rhythm you play. Headphones work best.`
+  if (!recording && take.device === null) return `Plays the click at the song's tempo and writes the rhythm you play. Play the click through speakers, so the mic can time it.`
   if (take.device === null) return "Opening the microphone…"
   if (take.beat === null) return "Starting…"
   if (recording && take.beat < COUNT_IN_BEATS) return `Count-in ${take.beat + 1} of ${COUNT_IN_BEATS}.`
