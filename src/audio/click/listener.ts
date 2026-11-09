@@ -5,29 +5,32 @@ import { predictionError, predictor } from "./lpc"
 /**
  * Finds note starts and click arrivals in a mic stream.
  *
- * Detection is SuperFlux (Böck & Widmer, DAFx-13): spectral flux against a
- * maximum-filtered earlier frame, so vibrato makes no onset. Placement by
- * linear-prediction error follows Glover, Lazzarini & Timoney (EURASIP 2011).
- * Both are in ATTRIBUTIONS.md.
- *
  * The spectrum is split into click bands and instrument bands (see click.ts).
  * A note is first detected, then placed:
  *
- * - Detection uses long windows (about 43 ms), fine enough in frequency to
- *   keep most partials of ringing notes apart; partials closer than that
- *   still beat, which the share-of-loudest rule below covers. A note
- *   start is a peak in the instrument bands' spectral flux: the summed rise
- *   of each bin's power on a log scale, log(1 + power / (1000 · floor)). The
- *   floor is the quietest median instrument-bin power in the last 2 s, so the
- *   flux does not change with the input gain: a quiet mic and a loud one
- *   detect the same notes. A peak counts only when it rises clear of the
- *   noise, of what a click alone leaks into these bands (clickLeak), and of a
- *   small share of the loudest recent note.
+ * - Detection is SuperFlux (Böck & Widmer, DAFx-13), as its reference
+ *   implementation SuperFlux.py runs offline: long windows (about 43 ms), the
+ *   magnitude spectrum pooled into 24 bands per octave and compressed as
+ *   log10(1 + magnitude), and the summed rise of each band over the loudest of
+ *   its three neighbours two frames earlier, so vibrato makes no onset. A
+ *   peak is a note when it is the largest from 10 ms before to 70 ms after it,
+ *   and rises DELTA over twice the median of the 150 ms before it (Böck,
+ *   Krebs & Schedl, ISMIR 2012, with the median of Bello et al. 2005). Only
+ *   the instrument bands count, and in a room where the mic hears the click,
+ *   a peak must also clear what a click alone leaks into them (clickLeak).
+ *
+ *   The reference reads files at a normal recording level, and its
+ *   thresholds assume that level. A mic has any gain, so before the log each
+ *   window is scaled so that the loudest band of the last few seconds reads
+ *   LOUDEST_BAND. The flux is then the same at any input gain.
  * - Placement fits a linear predictor to the sound just before the note and
  *   follows the prediction error (see lpc.ts). Ringing notes are predictable
  *   and cancel out; the new note is not. The note starts where the error's
  *   instrument-band energy, in short windows (about 5 ms), crosses halfway
- *   from its floor to its peak.
+ *   from its floor to its peak. This follows Glover, Lazzarini & Timoney
+ *   (EURASIP 2011), who detect onsets by linear-prediction error.
+ *
+ * The papers are in ATTRIBUTIONS.md.
  *
  * A click arrival is where the click-band energy added over the spectrum just
  * before it crosses half its peak. That carries a small fixed bias, which the
@@ -40,21 +43,22 @@ export class Listener {
   private readonly fine: Resolution
   private readonly coarse: Resolution
   private readonly isClickBin: Uint8Array
-  private readonly isCoarseClickBin: Uint8Array
   /** Fine power spectra, kept for placement, indexed by fine frame modulo their count. */
   private readonly spectra: Array<Float64Array>
-  /** The last lag + 1 long-window power spectra, indexed by coarse frame modulo their count. */
-  private readonly coarsePower: Array<Float64Array>
-  /** Median instrument-bin power of the recent long windows, for the background floor; 0 is unfilled or silent. */
-  private readonly levels: Float64Array
-  private levelCount = 0
-  private readonly binScratch: Float64Array
+  /** Instrument bands of the long windows (see logBands). */
+  private readonly bands: ReadonlyArray<Band>
+  /** The band magnitudes of the last lag + 1 long windows, indexed by coarse frame modulo their count. */
+  private readonly bandSpectra: Array<Float64Array>
+  /** Each long window's loudest band magnitude over the last LEVEL_SECONDS, indexed by coarse frame modulo their count. */
+  private readonly loudestBands: Float64Array
+  private readonly coarsePower: Float64Array
   private readonly ring: Float32Array
   private readonly mask: number
-  private readonly peakRadius: number
-  private readonly meanBefore: number
-  private readonly minGap: number
-  private readonly loudestWindow: number
+  private readonly peakBefore: number
+  private readonly merge: number
+  private readonly medianBefore: number
+  private readonly recent: Float64Array
+  private readonly leakRadius: number
   private origin = Number.NaN
   /** Context frame one past the last sample received. */
   private received = 0
@@ -65,10 +69,9 @@ export class Listener {
   private lastOnset = Number.NEGATIVE_INFINITY
   /**
    * The instrument-band flux that a click alone makes in this room, which the
-   * session measures during the count-in. A note must rise above both the
-   * noise (MIN_FLUX) and CLICK_LEAK_MARGIN times this; a speaker spreads some
-   * of every click into the instrument bands, and in a quiet room that alone
-   * would read as a note.
+   * session measures during the count-in. A note must rise to
+   * CLICK_LEAK_MARGIN times this: a speaker spreads some of every click into
+   * the instrument bands, and in a quiet room that alone would read as a note.
    */
   clickLeak = 0
 
@@ -78,24 +81,25 @@ export class Listener {
     this.fine = resolution(size, size / 8, 8)
     this.coarse = resolution(size * 8, size, 2)
     this.isClickBin = clickBins(this.fine.size, sampleRate)
-    this.isCoarseClickBin = clickBins(this.coarse.size, sampleRate)
     const kept = Math.ceil((KEEP_SPECTRA_SECONDS * sampleRate) / this.fine.hop)
     this.spectra = Array.from({ length: kept }, () => new Float64Array(this.fine.spectrum.bins))
-    this.coarsePower = Array.from({ length: this.coarse.lag + 1 }, () => new Float64Array(this.coarse.spectrum.bins))
-    this.levels = new Float64Array(this.coarseFramesIn(FLOOR_SECONDS))
-    this.binScratch = new Float64Array(this.isCoarseClickBin.reduce((count, isClick) => count + (isClick === 1 ? 0 : 1), 0))
+    this.bands = logBands(this.coarse.size, sampleRate, clickBins(this.coarse.size, sampleRate))
+    this.bandSpectra = Array.from({ length: this.coarse.lag + 1 }, () => new Float64Array(this.bands.length))
+    this.loudestBands = new Float64Array(this.coarseFramesIn(LEVEL_SECONDS))
+    this.coarsePower = new Float64Array(this.coarse.spectrum.bins)
     this.ring = new Float32Array(2 ** Math.ceil(Math.log2(sampleRate * RAW_KEEP_SECONDS)))
     this.mask = this.ring.length - 1
-    this.peakRadius = this.coarseFramesIn(PEAK_RADIUS_SECONDS)
-    this.meanBefore = this.coarseFramesIn(MEAN_BEFORE_SECONDS)
-    this.minGap = this.coarseFramesIn(MIN_GAP_SECONDS)
-    this.loudestWindow = this.coarseFramesIn(LOUDEST_SECONDS)
+    this.peakBefore = this.coarseFramesIn(PEAK_BEFORE_SECONDS)
+    this.merge = this.coarseFramesIn(MERGE_SECONDS)
+    this.medianBefore = this.coarseFramesIn(MEDIAN_BEFORE_SECONDS)
+    this.recent = new Float64Array(this.medianBefore + 1)
+    this.leakRadius = this.coarseFramesIn(LEAK_RADIUS_SECONDS)
   }
 
   /**
    * Adds the next block of mic samples, which starts at context frame `start`,
    * and returns the context frames of the note starts it completes. A note is
-   * reported about 60 ms after it starts, once the frames after it have arrived.
+   * reported about 100 ms after it starts, once the frames after it have arrived.
    */
   push(samples: Float32Array, start: number): Array<number> {
     if (Number.isNaN(this.origin)) {
@@ -139,9 +143,9 @@ export class Listener {
    */
   leakAt(arrival: number): number | undefined {
     const centre = Math.round((arrival - this.origin - this.coarse.size / 2) / this.coarse.hop)
-    if (centre + this.peakRadius >= this.detection.end) return undefined
+    if (centre + this.leakRadius >= this.detection.end) return undefined
     let leak = 0
-    for (let j = Math.max(this.detection.start, centre - this.peakRadius); j <= centre + this.peakRadius; j++) leak = Math.max(leak, this.detection.at(j))
+    for (let j = Math.max(this.detection.start, centre - this.leakRadius); j <= centre + this.leakRadius; j++) leak = Math.max(leak, this.detection.at(j))
     return leak
   }
 
@@ -178,20 +182,29 @@ export class Listener {
 
   private analyseCoarse(): void {
     const j = this.detection.end
-    const { spectrum, size, lag } = this.coarse
-    const power = this.coarsePower[j % (lag + 1)]!
-    spectrum.compute(this.reader(this.frameStart(this.coarse, j)), power)
-    normalise(power, size)
-    const gain = this.compressionGain(power)
+    const { spectrum, lag } = this.coarse
+    // The power is unscaled, as SuperFlux takes the magnitude: a full-scale sine reads size / 4 in its bin.
+    spectrum.compute(this.reader(this.frameStart(this.coarse, j)), this.coarsePower)
+    const magnitudes = this.bandSpectra[j % (lag + 1)]!
+    let loudestBand = 0
+    this.bands.forEach((band, i) => {
+      let magnitude = 0
+      band.weights.forEach((weight, k) => (magnitude += weight * Math.sqrt(this.coarsePower[band.first + k]!)))
+      magnitudes[i] = magnitude
+      loudestBand = Math.max(loudestBand, magnitude)
+    })
+    this.loudestBands[j % this.loudestBands.length] = loudestBand
+    // Both windows take the same scale, so a change of level adds no flux of its own.
+    // Digital silence, which a missing input sends, gives a scale of 0 and so no flux.
+    const level = Math.max(...this.loudestBands)
+    const lambda = level > 0 ? LOUDEST_BAND / level : 0
     let flux = 0
-    if (j >= lag && gain > 0) {
-      // Both spectra take the same gain, so a moving floor adds no flux of its own.
-      const before = this.coarsePower[(j - lag) % (lag + 1)]!
-      for (let b = 0; b < power.length; b++) {
-        if (this.isCoarseClickBin[b] === 1) continue
-        // Comparing against the loudest neighbour bin ignores small pitch wobble (vibrato, bends).
-        const loudestBefore = Math.max(before[b]!, before[b - 1] ?? 0, before[b + 1] ?? 0)
-        flux += Math.max(0, Math.log1p(gain * power[b]!) - Math.log1p(gain * loudestBefore))
+    if (j >= lag) {
+      const before = this.bandSpectra[(j - lag) % (lag + 1)]!
+      for (let i = 0; i < magnitudes.length; i++) {
+        // Comparing against the loudest neighbour band ignores small pitch wobble (vibrato, bends).
+        const loudestBefore = Math.max(before[i]!, before[i - 1] ?? 0, before[i + 1] ?? 0)
+        flux += Math.max(0, Math.log10(1 + lambda * magnitudes[i]!) - Math.log10(1 + lambda * loudestBefore))
       }
     }
     this.detection.push(flux)
@@ -199,28 +212,11 @@ export class Listener {
     this.nextCandidate = Math.max(this.nextCandidate, this.detection.start)
   }
 
-  /**
-   * The gain before the log in the detection flux. The background floor is the
-   * quietest median instrument-bin power over the last FLOOR_SECONDS: most bins
-   * hold only background even while a note sounds. The log takes over
-   * FLOOR_HEADROOM above that floor, so the flux, and every threshold on it,
-   * does not change with the input gain. 0 until any sound has been heard;
-   * windows of digital silence, which a missing input sends, do not count.
-   */
-  private compressionGain(power: Float64Array): number {
-    let n = 0
-    for (let b = 0; b < power.length; b++) if (this.isCoarseClickBin[b] === 0) this.binScratch[n++] = power[b]!
-    this.levels[this.levelCount++ % this.levels.length] = this.binScratch.sort()[n >> 1]!
-    let floor = Number.POSITIVE_INFINITY
-    for (const level of this.levels) if (level > 0) floor = Math.min(floor, level)
-    return floor === Number.POSITIVE_INFINITY ? 0 : 1 / (FLOOR_HEADROOM * floor)
-  }
-
   private pickOnsets(): Array<number> {
     const onsets: Array<number> = []
-    for (; this.nextCandidate + this.peakRadius < this.detection.end; this.nextCandidate++) {
+    for (; this.nextCandidate + this.merge < this.detection.end; this.nextCandidate++) {
       const j = this.nextCandidate
-      if (j - this.lastOnset < this.minGap || !this.isDetectionPeak(j)) continue
+      if (j - this.lastOnset <= this.merge || !this.isDetectionPeak(j)) continue
       // The note started somewhere inside the long window that detected it.
       const centre = this.fineIndexAt(this.contextFrameAt(this.coarse, j))
       const reach = this.coarse.size / 2 / this.fine.hop
@@ -235,28 +231,25 @@ export class Listener {
     return onsets
   }
 
+  /**
+   * SuperFlux's peak picking: the largest flux from PEAK_BEFORE_SECONDS before
+   * to MERGE_SECONDS after, and DELTA over MEDIAN_WEIGHT times the median of
+   * the MEDIAN_BEFORE_SECONDS up to it. Looking ahead lets the loudest of two
+   * close rises win, such as a note just after the noise of the last one
+   * being stopped.
+   */
   private isDetectionPeak(j: number): boolean {
     const value = this.detection.at(j)
-    if (value < Math.max(MIN_FLUX, CLICK_LEAK_MARGIN * this.clickLeak, LOUDEST_FRACTION * this.loudestBefore(j))) return false
-    for (let i = Math.max(this.detection.start, j - this.peakRadius); i <= j + this.peakRadius; i++) {
-      if (this.detection.at(i) > value) return false
-    }
-    let sum = 0
-    const from = Math.max(this.detection.start, j - this.meanBefore)
-    for (let i = from; i <= j + this.peakRadius; i++) sum += this.detection.at(i)
-    return value >= (sum / (j + this.peakRadius - from + 1)) * MIN_PEAK_OVER_MEAN
-  }
-
-  /**
-   * The largest flux in the LOUDEST_SECONDS before frame `j`, leaving out the
-   * peak radius around `j` itself. Ringing notes beat where their partials meet,
-   * and each beat is a small rise; against a quiet background those rises clear
-   * MIN_FLUX, so a peak must also be a fair share of the notes just played.
-   */
-  private loudestBefore(j: number): number {
-    let loudest = 0
-    for (let i = Math.max(this.detection.start, j - this.loudestWindow); i < j - this.peakRadius; i++) loudest = Math.max(loudest, this.detection.at(i))
-    return loudest
+    if (value < CLICK_LEAK_MARGIN * this.clickLeak) return false
+    for (let i = j - this.peakBefore; i <= j + this.merge; i++) if (this.detection.at(i) > value) return false
+    // The reference counts flux before the first frame as zero, which suits a
+    // file that starts in silence. A mic opens mid-sound, so the median takes
+    // only the flux measured so far (the first frame with flux is `lag`).
+    const from = Math.max(this.coarse.lag, j - this.medianBefore)
+    const recent = this.recent.subarray(0, j - from + 1)
+    for (let i = from; i <= j; i++) recent[i - from] = this.detection.at(i)
+    const median = recent.sort()[recent.length >> 1]!
+    return value >= DELTA + MEDIAN_WEIGHT * median
   }
 
   /**
@@ -342,22 +335,41 @@ export class Listener {
 
 /** The short analysis window, about 5 ms: short enough to place an attack within a millisecond. */
 const FINE_WINDOW_SECONDS = 0.005
-/** The background floor is the quietest level over this long. */
-const FLOOR_SECONDS = 2
-/** How far above the background floor, as a power ratio, the detection flux turns from linear to logarithmic. */
-const FLOOR_HEADROOM = 1000
-/** A detection peak must be the largest within this distance on each side. */
-const PEAK_RADIUS_SECONDS = 0.03
-const MEAN_BEFORE_SECONDS = 0.1
-const MIN_GAP_SECONDS = 0.05
-/** Noise alone stays under about 0.4 at FLOOR_HEADROOM; a note 25 dB over the noise reaches about 4. */
-const MIN_FLUX = 3
+/** SuperFlux's offline defaults: 24 bands per octave from 30 Hz to 17 kHz, and its peak picking, except MERGE_SECONDS and MEDIAN_WEIGHT. */
+const BANDS_PER_OCTAVE = 24
+const MIN_BAND_HZ = 30
+const MAX_BAND_HZ = 17000
+const PEAK_BEFORE_SECONDS = 0.01
+const MEDIAN_BEFORE_SECONDS = 0.15
+const DELTA = 1.1
+/**
+ * The reference adds DELTA to the mean flux. Here the threshold follows the
+ * median instead (Bello et al., IEEE TSAP 2005), scaled so that loud steady
+ * noise, such as a cymbal wash, does not reach it by chance. The median also
+ * ignores the one large peak of the note before.
+ */
+const MEDIAN_WEIGHT = 2
+/**
+ * A note is the largest rise from PEAK_BEFORE_SECONDS before it to this long
+ * after it, and a rise this soon after a note is part of that note. A strum or
+ * a slow attack rises for up to about 60 ms; 16th notes at 200 BPM are 75 ms
+ * apart. The reference looks 50 ms ahead and merges 30 ms, which splits a strum
+ * into two notes.
+ */
+const MERGE_SECONDS = 0.07
+/**
+ * Before the log, the loudest band of the last LEVEL_SECONDS is scaled to this
+ * magnitude. Between about 20 and 100 the same notes are found. Much lower,
+ * quiet notes stay in the linear part of the log and are lost; much higher,
+ * steady noise with nothing played is scaled up until its own rises read as notes.
+ */
+const LOUDEST_BAND = 50
+/** The level follows the loudest sound of this long, so one loud hit does not set the scale for the rest of the take. */
+const LEVEL_SECONDS = 4
 /** How far a note must rise above the flux of a click alone. */
 const CLICK_LEAK_MARGIN = 2
-/** A note's flux must be at least this share of the loudest flux in the last LOUDEST_SECONDS. A drum 30 dB under the loudest gives about 4%; a beat between ringing partials about 0.25%. */
-const LOUDEST_FRACTION = 0.01
-const LOUDEST_SECONDS = 2
-const MIN_PEAK_OVER_MEAN = 1.5
+/** The click's leak is the largest flux this close to its arrival. */
+const LEAK_RADIUS_SECONDS = 0.03
 /** A click must add this many times the click-band energy that came before it, about 10 dB. */
 const MIN_CLICK_RISE = 10
 const KEEP_SPECTRA_SECONDS = 1
@@ -380,6 +392,38 @@ interface Resolution {
 }
 
 const resolution = (size: number, hop: number, lag: number): Resolution => ({ size, hop, lag, spectrum: new PowerSpectrum(size) })
+
+/** A triangular filter over the FFT bins from `first` on. */
+interface Band {
+  readonly first: number
+  readonly weights: Float64Array
+}
+
+/**
+ * SuperFlux's filterbank for an FFT of `size`: triangles of height 1 whose
+ * edges and peaks lie BANDS_PER_OCTAVE to the octave, tuned to A 440 and
+ * rounded to bins, with repeated bins merged. The click bins get no weight,
+ * and a band left with none is dropped.
+ */
+const logBands = (size: number, sampleRate: number, isClickBin: Uint8Array): Array<Band> => {
+  const bins = size / 2
+  const factor = 2 ** (1 / BANDS_PER_OCTAVE)
+  const top = Math.min(MAX_BAND_HZ, sampleRate / 2)
+  // Each list runs one step past its limit, which serves as the outer band's outer edge.
+  const hz = [440]
+  for (let f = 440; f <= top; ) hz.push((f *= factor))
+  for (let f = 440; f >= MIN_BAND_HZ; ) hz.push((f /= factor))
+  const edges = [...new Set(hz.map((f) => Math.round(f / (sampleRate / 2 / bins))))].filter((bin) => bin < bins).sort((a, b) => a - b)
+  const bands: Array<Band> = []
+  for (let i = 0; i + 2 < edges.length; i++) {
+    const [start, mid, stop] = [edges[i]!, edges[i + 1]!, edges[i + 2]!]
+    const weights = Float64Array.from({ length: stop - start }, (_, k) =>
+      isClickBin[start + k] === 1 ? 0 : k < mid - start ? k / (mid - start) : 1 - (k - (mid - start)) / (stop - mid),
+    )
+    if (weights.some((weight) => weight > 0)) bands.push({ first: start, weights })
+  }
+  return bands
+}
 
 interface Rise {
   readonly index: number

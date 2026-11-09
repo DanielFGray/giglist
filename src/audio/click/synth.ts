@@ -21,6 +21,8 @@ export const random = (seed: number) => {
 
 /** Adds `sound` into `signal` from frame `at` on, times `gain`. */
 export const mix = (signal: Float32Array, sound: Float32Array, at: number, gain = 1): void => {
+  // A fractional index writes a property, not a sample, and the sound would vanish without an error.
+  if (!Number.isInteger(at)) throw new RangeError(`mix: frame ${at} is not a whole number`)
   for (let i = 0; i < sound.length && at + i < signal.length; i++) if (at + i >= 0) signal[at + i]! += sound[i]! * gain
 }
 
@@ -81,6 +83,22 @@ export const keyNote = (sampleRate: number, pitchHz: number, seed: number): Floa
     sampleRate,
   )
 }
+
+/**
+ * A bass note: a fundamental under the thump band (see click.ts) with five
+ * harmonics, swelling over a 15 ms attack, as a finger on a heavy string does.
+ * Most of its energy lies where the listener does not look.
+ */
+export const bassNote = (sampleRate: number, pitchHz: number): Float32Array =>
+  fadeOut(
+    Float32Array.from({ length: Math.round(0.5 * sampleRate) }, (_, i) => {
+      const t = i / sampleRate
+      let tone = 0
+      for (let h = 1; h <= 6; h++) tone += Math.sin(2 * Math.PI * pitchHz * h * t) / h
+      return 0.3 * Math.min(1, t / 0.015) * Math.exp(-t / 0.4) * tone
+    }),
+    sampleRate,
+  )
 
 /** Ends a sound with a 20 ms fade, as a damper or a decay would. A sound cut off dead is a real attack-like transient. */
 const fadeOut = (sound: Float32Array, sampleRate: number): Float32Array => {
