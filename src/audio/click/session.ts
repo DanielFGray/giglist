@@ -94,6 +94,11 @@ export class Session {
     const { sampleRate, countInBeats, framesPerBeat } = this.plan
     const heardFirstBeat = (latency: number) => Session.clickFrame(this.plan, countInBeats) + latency - framesPerBeat / 2
     if (this.latencies.length < countInBeats / 2) {
+      // What the count-in took for clicks were other sounds, such as notes
+      // played over headphones; their levels would hide every later note.
+      this.unmeasuredLeaks.length = 0
+      this.clickLeaks.length = 0
+      this.listener.clickLeak = 0
       this.earliest = heardFirstBeat(0)
       return { _tag: "MissedClick" }
     }

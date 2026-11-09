@@ -125,6 +125,16 @@ describe("Session", () => {
     expect(atMs).toHaveLength(notes.length)
     atMs.forEach((at, i) => expect(Math.abs(at - 50 - (notes[i]!.step * 600 + notes[i]!.offsetMs))).toBeLessThan(1))
   })
+
+  it("after a missed click, a note played in the count-in does not raise the threshold", () => {
+    // With headphones, the session can take a note in the count-in for a
+    // click. That note's level is no click's leak.
+    const notes = OFFSETS_MS.map((offsetMs, step) => ({ step, offsetMs, sound: pluck(SAMPLE_RATE, 220, step + 1) }))
+    const strays = [1.5, 3.5, 5.5].map((beats, i) => [pluck(SAMPLE_RATE, 220, 50 + i), Math.round(beats * 0.6 * SAMPLE_RATE)] as const)
+    const events = listen({ latencySeconds: 0.05, notes, clickLevel: 0, extra: strays })
+    expect(events.map((event) => event._tag)).toContain("MissedClick")
+    expect(notesOf(events)).toHaveLength(notes.length)
+  })
 })
 
 describe("Session after a dropout", () => {
