@@ -1,6 +1,6 @@
 import { clickBins, clickToneBins } from "./click"
 import { PowerSpectrum } from "./fft"
-import { predictionError, predictor } from "./lpc"
+import { NotePlacer, type Placement } from "./placement"
 
 /**
  * Finds note starts and click arrivals in a mic stream.
@@ -23,18 +23,15 @@ import { predictionError, predictor } from "./lpc"
  *   thresholds assume that level. A mic has any gain, so before the log each
  *   window is scaled so that the loudest band of the last few seconds reads
  *   LOUDEST_BAND. The flux is then the same at any input gain.
- * - Placement fits a linear predictor to the sound just before the note and
- *   follows the prediction error (see lpc.ts). Ringing notes are predictable
- *   and cancel out; the new note is not. The note starts where the error's
- *   instrument-band energy, in short windows (about 5 ms), crosses halfway
- *   from its floor to its peak. This follows Glover, Lazzarini & Timoney
- *   (EURASIP 2011), who detect onsets by linear-prediction error.
+ * - Placement looks for the note start in the span the detecting windows
+ *   cover, in short windows (about 5 ms): where the sound, or the error of a
+ *   linear predictor fitted to the sound before, first rises (placement.ts).
  *
  * The papers are in ATTRIBUTIONS.md.
  *
- * A click arrival is where the click-band energy added over the spectrum just
- * before it crosses half its peak. That carries a small fixed bias, which the
- * session measures on the clean click and removes.
+ * A click arrival is where the power added in the click's tone band, less what
+ * the bands beside it add (clickToneBins), crosses half its peak. That carries
+ * a small fixed bias, which the session measures on the clean click and removes.
  *
  * All times are context frames: sample indices on the AudioContext clock.
  */
@@ -45,7 +42,7 @@ export class Listener {
   private readonly isClickBin: Uint8Array
   /** Where the click's arrival is looked for (clickToneBins). */
   private readonly toneBins: ReturnType<typeof clickToneBins>
-  /** Fine power spectra, kept for placement, indexed by fine frame modulo their count. */
+  /** Fine power spectra, kept to place clicks, indexed by fine frame modulo their count. */
   private readonly spectra: Array<Float64Array>
   /** Instrument bands of the long windows (see logBands). */
   private readonly bands: ReadonlyArray<Band>
@@ -61,11 +58,11 @@ export class Listener {
   private readonly medianBefore: number
   private readonly recent: Float64Array
   private readonly leakRadius: number
+  private readonly placer: NotePlacer
   private origin = Number.NaN
   /** Context frame one past the last sample received. */
   private received = 0
   private readonly clickFlux = new Series()
-  private readonly instrumentFlux = new Series()
   private readonly detection = new Series()
   private nextCandidate = 0
   private lastOnset = Number.NEGATIVE_INFINITY
@@ -97,14 +94,15 @@ export class Listener {
     this.medianBefore = this.coarseFramesIn(MEDIAN_BEFORE_SECONDS)
     this.recent = new Float64Array(this.medianBefore + 1)
     this.leakRadius = this.coarseFramesIn(LEAK_RADIUS_SECONDS)
+    this.placer = new NotePlacer(sampleRate, this.fine.size, this.fine.hop, this.isClickBin)
   }
 
   /**
    * Adds the next block of mic samples, which starts at context frame `start`,
-   * and returns the context frames of the note starts it completes. A note is
-   * reported about 100 ms after it starts, once the frames after it have arrived.
+   * and returns the notes it completes. A note is reported about 100 ms after it
+   * starts, once the frames after it have arrived.
    */
-  push(samples: Float32Array, start: number): Array<number> {
+  push(samples: Float32Array, start: number): Array<Placement> {
     if (Number.isNaN(this.origin)) {
       this.origin = start
       this.received = start
@@ -112,7 +110,7 @@ export class Listener {
     if (start !== this.received) throw new RangeError(`mic block starts at frame ${start}, expected ${this.received}`)
     // Each frame is analysed, and each onset placed, as soon as its last sample
     // arrives, so a block of any length reads only buffers that still hold its frames.
-    const onsets: Array<number> = []
+    const onsets: Array<Placement> = []
     for (let i = 0; i < samples.length; i++) {
       this.ring[this.received & this.mask] = samples[i]!
       this.received++
@@ -168,12 +166,8 @@ export class Listener {
     this.fine.spectrum.compute(this.reader(this.frameStart(this.fine, k)), power)
     normalise(power, this.fine.size)
     const before = k >= this.fine.lag ? this.spectra[(k - this.fine.lag) % this.spectra.length]! : undefined
-    let instrument = 0
-    if (before !== undefined) for (let b = 0; b < power.length; b++) if (this.isClickBin[b] === 0) instrument += Math.max(0, power[b]! - before[b]!)
     this.clickFlux.push(before === undefined ? 0 : this.toneRise(power, before))
-    this.instrumentFlux.push(instrument)
     this.clickFlux.trim(KEEP_SERIES_FRAMES)
-    this.instrumentFlux.trim(KEEP_SERIES_FRAMES)
   }
 
   private analyseCoarse(): void {
@@ -208,21 +202,17 @@ export class Listener {
     this.nextCandidate = Math.max(this.nextCandidate, this.detection.start)
   }
 
-  private pickOnsets(): Array<number> {
-    const onsets: Array<number> = []
+  private pickOnsets(): Array<Placement> {
+    const onsets: Array<Placement> = []
     for (; this.nextCandidate + this.merge < this.detection.end; this.nextCandidate++) {
       const j = this.nextCandidate
       if (j - this.lastOnset <= this.merge || !this.isDetectionPeak(j)) continue
-      // The note started somewhere inside the long window that detected it.
-      const centre = this.fineIndexAt(this.contextFrameAt(this.coarse, j))
-      const reach = this.coarse.size / 2 / this.fine.hop
-      const from = Math.max(this.instrumentFlux.start + this.fine.lag * 2, Math.ceil(centre - reach))
-      const to = Math.min(this.instrumentFlux.end - 1 - this.fine.lag, Math.floor(centre + reach))
-      if (from > to) continue
-      const onset = this.placeNote(this.contextFrameAt(this.fine, argmax(this.instrumentFlux, from, to)))
-      if (onset === undefined) continue
-      this.lastOnset = j
-      onsets.push(onset)
+      // Window j - lag had not heard the note, and window j has.
+      const searchStart = this.frameStart(this.coarse, j - this.coarse.lag)
+      if (searchStart - this.placer.history < Math.max(this.origin, this.received - this.ring.length)) continue
+      const placement = this.placer.place((frame) => this.ring[frame & this.mask]!, searchStart, this.frameStart(this.coarse, j) + this.coarse.size)
+      if (placement.frame !== undefined) this.lastOnset = j
+      onsets.push(placement)
     }
     return onsets
   }
@@ -249,42 +239,6 @@ export class Listener {
   }
 
   /**
-   * Places a note that the flux puts near context frame `near`, which may be
-   * up to about 10 ms after the real start. A predictor is fitted to the sound
-   * before that, and the note starts where the instrument-band energy of the
-   * prediction error crosses halfway from its floor to its peak.
-   */
-  private placeNote(near: number): number | undefined {
-    const { size, hop, spectrum } = this.fine
-    const trainEnd = Math.floor(near - TRAIN_GAP_WINDOWS * size)
-    const trainStart = trainEnd - Math.round(TRAIN_SECONDS * this.sampleRate)
-    if (trainStart - PREDICTOR_ORDER < Math.max(this.origin, this.received - this.ring.length)) return undefined
-    const read = (frame: number) => this.ring[frame & this.mask]!
-    const weights = predictor(
-      Float64Array.from({ length: trainEnd - trainStart }, (_, i) => read(trainStart + i)),
-      PREDICTOR_ORDER,
-    )
-    const end = Math.min(this.received, Math.ceil(near + 3 * size))
-    const error = Float64Array.from({ length: end - trainEnd }, (_, i) => predictionError(weights, read, trainEnd + i))
-    const power = new Float64Array(spectrum.bins)
-    const energy: Array<number> = []
-    for (let start = 0; start + size <= error.length; start += hop) {
-      spectrum.compute((i) => error[start + i]!, power)
-      let sum = 0
-      for (let b = 0; b < power.length; b++) if (this.isClickBin[b] === 0) sum += power[b]!
-      energy.push(sum)
-    }
-    const top = energy.indexOf(Math.max(...energy))
-    if (top <= 0) return undefined
-    const bottom = energy.lastIndexOf(Math.min(...energy.slice(0, top)), top)
-    const half = (energy[bottom]! + energy[top]!) / 2
-    let crossing = bottom + 1
-    while (energy[crossing]! < half) crossing++
-    const fraction = (half - energy[crossing - 1]!) / (energy[crossing]! - energy[crossing - 1]!)
-    return trainEnd + (crossing - 1 + fraction) * hop + size / 2
-  }
-
-  /**
    * Places a click near fine frame `near`: the fractional fine frame where the
    * click-band energy added over the spectrum two windows earlier crosses half its peak.
    */
@@ -304,7 +258,6 @@ export class Listener {
     return { index: near - this.fine.lag * 2 + crossing + fraction, peak, before }
   }
 
-
   /**
    * The power `power` adds over `reference` in the click's tone band, less
    * what it adds in the bands beside it (clickToneBins). A click shows here;
@@ -318,7 +271,6 @@ export class Listener {
     for (const b of sides) sideRise += Math.max(0, power[b]! - reference[b]!)
     return Math.max(0, toneRise - (sideRise * tone.length) / sides.length)
   }
-
 
   private reader(start: number): (i: number) => number {
     return (i) => this.ring[(start + i) & this.mask]!
@@ -382,14 +334,8 @@ const LEAK_RADIUS_SECONDS = 0.03
 /** A click must add this many times the click-band energy that came before it, about 10 dB. */
 const MIN_CLICK_RISE = 10
 const KEEP_SPECTRA_SECONDS = 1
-/** Raw samples kept for note placement, which runs about 70 ms after a note starts. */
+/** Raw samples kept for note placement, which reads from about 170 ms before the newest sample. */
 const RAW_KEEP_SECONDS = 0.3
-/** The predictor learns from this much sound before a note. */
-const TRAIN_SECONDS = 0.02
-/** Short windows between the end of the predictor's sound and the flux's estimate of the note. */
-const TRAIN_GAP_WINDOWS = 3
-/** Enough weights to model a dozen ringing partials. */
-const PREDICTOR_ORDER = 24
 const KEEP_SERIES_FRAMES = 8192
 
 interface Resolution {

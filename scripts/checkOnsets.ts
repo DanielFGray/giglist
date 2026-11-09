@@ -20,7 +20,13 @@
  * (start minus MIDI time), and the placement error: its median, the distance
  * from that median that 90% of notes are within, and the largest distance.
  *
- * Usage: bun scripts/checkOnsets.ts <soundfont.sf2> [--noise 0.001,0.0001,0] [--gain 1]
+ * A detection the listener could not place counts as "unplaced", and its note
+ * as missed. `--trace clip@seconds` prints, for each run, the placement whose
+ * search span holds that time: how the prediction error and the sound rise
+ * over the training sound, per short window, in dB and in added power as a
+ * fraction of its largest (NotePlacer). `--clips a,b` runs only those clips.
+ *
+ * Usage: bun scripts/checkOnsets.ts <soundfont.sf2> [--noise 0.001,0.0001,0] [--gain 1] [--clips a,b] [--trace clip@seconds]
  * (GeneralUser GS was used to choose the listener's constants; see ATTRIBUTIONS.md.)
  */
 import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
@@ -28,16 +34,24 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { parseArgs } from "node:util"
 import { Listener } from "../src/audio/click/listener"
+import type { Placement } from "../src/audio/click/placement"
 import { noise } from "../src/audio/click/synth"
 
 const { positionals, values } = parseArgs({
   allowPositionals: true,
-  options: { noise: { type: "string", default: "0.001,0.0001,0" }, gain: { type: "string", default: "1" } },
+  options: {
+    noise: { type: "string", default: "0.001,0.0001,0" },
+    gain: { type: "string", default: "1" },
+    clips: { type: "string" },
+    trace: { type: "string" },
+  },
 })
 const soundfont = positionals[0]
-if (!soundfont) throw new Error("usage: bun scripts/checkOnsets.ts <soundfont.sf2> [--noise 0.001,0.0001,0] [--gain 1]")
+if (!soundfont) throw new Error("usage: bun scripts/checkOnsets.ts <soundfont.sf2> [--noise 0.001,0.0001,0] [--gain 1] [--clips a,b] [--trace clip@seconds]")
 const noiseLevels = values.noise.split(",").map(Number)
 const gain = Number(values.gain)
+const only = values.clips?.split(",")
+const [traceClip, traceAt] = values.trace?.split("@") ?? []
 
 const CLIPS = join(import.meta.dir, "../tests/fixtures/onsets")
 const SAMPLE_RATE = 44100
@@ -54,7 +68,7 @@ const scratch = mkdtempSync(join(tmpdir(), "onsets-"))
 try {
   const clips = await Promise.all(
     readdirSync(CLIPS)
-      .filter((file) => file.endsWith(".mid"))
+      .filter((file) => file.endsWith(".mid") && (only === undefined || only.includes(file.slice(0, -4))))
       .sort()
       .map(async (file) => {
         const path = join(CLIPS, file)
@@ -70,13 +84,23 @@ try {
       let missed = 0
       let extra = 0
       for (const clip of renders) {
-        const score = scoreClip(clip.notes, clip.alone, listen(clip.audio, level))
+        const heard = listen(clip.audio, level)
+        const placed = heard.flatMap((note) => (note.frame === undefined ? [] : [seconds(note.frame)]))
+        const unplaced = heard.length - placed.length
+        const score = scoreClip(clip.notes, clip.alone, placed)
+        if (clip.name === traceClip) trace(heard, Number(traceAt))
+        if (score === undefined) {
+          console.log(`  ${clip.name.padEnd(22)} unscoreable: placed ${placed.length} of ${clip.notes.length} notes, unplaced ${unplaced}`)
+          missed += clip.notes.length
+          continue
+        }
         missed += score.missed.length
         extra += score.extra.length
         console.log(
-          `  ${clip.name.padEnd(22)} missed ${score.missed.length} extra ${score.extra.length}  lead-in ${ms(score.leadIn)}  error ${ms(score.error)} 90% ±${ms(score.p90)} all ±${ms(score.worst)} ms` +
+          `  ${clip.name.padEnd(22)} missed ${score.missed.length} extra ${score.extra.length} unplaced ${unplaced}  lead-in ${ms(score.leadIn)}  error ${ms(score.error)} 90% ±${ms(score.p90)} all ±${ms(score.worst)} ms` +
             (score.worst > 0.003 ? ` (worst at ${score.worstAt.toFixed(2)} s)` : "") +
             (score.missed.length > 0 ? `  missed at ${score.missed.map((t) => t.toFixed(2)).join(" ")}` : "") +
+            (unplaced > 0 ? `  unplaced at ${heard.flatMap((note) => (note.frame === undefined ? [seconds(note.searchStart).toFixed(2)] : [])).join(" ")}` : "") +
             (score.extra.length > 0 ? `  extra at ${score.extra.map((t) => t.toFixed(2)).join(" ")}` : ""),
         )
       }
@@ -126,21 +150,42 @@ async function render(midi: string, room: "wet" | "dry", name: string): Promise<
   return readWav(readFileSync(out))
 }
 
-/** Feeds LEAD_SECONDS of noise, the clip, and 1 s more to a Listener; returns onsets in seconds from the clip's start. */
-function listen(audio: Float32Array, level: number): Array<number> {
+/** Feeds LEAD_SECONDS of noise, the clip, and 1 s more to a Listener, and returns what it heard. */
+function listen(audio: Float32Array, level: number): Array<Placement> {
   const lead = LEAD_SECONDS * SAMPLE_RATE
   const signal = noise(lead + audio.length + SAMPLE_RATE, level, 1)
   audio.forEach((x, i) => (signal[lead + i]! += x))
   const listener = new Listener(SAMPLE_RATE)
-  const onsets: Array<number> = []
-  for (let i = 0; i + BLOCK <= signal.length; i += BLOCK) onsets.push(...listener.push(signal.subarray(i, i + BLOCK), i))
-  return onsets.map((frame) => (frame - lead) / SAMPLE_RATE)
+  const heard: Array<Placement> = []
+  for (let i = 0; i + BLOCK <= signal.length; i += BLOCK) heard.push(...listener.push(signal.subarray(i, i + BLOCK), i))
+  return heard
+}
+
+/** Seconds from the clip's start of a context frame in `listen`. */
+function seconds(frame: number): number {
+  return frame / SAMPLE_RATE - LEAD_SECONDS
+}
+
+/** Prints the placement whose search span holds `at` seconds, as the usage describes. */
+function trace(heard: ReadonlyArray<Placement>, at: number): void {
+  const note = heard.find((p) => seconds(p.searchStart) <= at + 0.01 && at - 0.01 <= seconds(p.searchEnd))
+  if (note === undefined) return console.log(`    trace: no detection near ${at} s`)
+  const msFrom = (frame: number) => ((seconds(frame) - at) * 1000).toFixed(1)
+  const centre = (w: number) => note.trainStart + w * note.hop + note.size / 2
+  console.log(`    trace: searched ${msFrom(note.searchStart)}..${msFrom(note.searchEnd)} ms from ${at} s, placed ${note.frame === undefined ? "nowhere" : `${msFrom(note.frame)} ms`}; windows centred from ${msFrom(centre(0))} ms every ${((note.hop / SAMPLE_RATE) * 1000).toFixed(2)} ms, | ends training`)
+  for (const [name, rise] of [["error", note.error], ["sound", note.sound]] as const) {
+    const most = Math.max(...rise.added)
+    console.log(`    ${name} dB ` + Array.from(rise.db, (db, w) => (w === note.trainedWindows ? "| " : "") + db.toFixed(1)).join(" "))
+    console.log(`    ${name} added ` + Array.from(rise.added, (p, w) => (w === note.trainedWindows ? "| " : "") + (p / most).toFixed(2)).join(" "))
+  }
 }
 
 function scoreClip(groups: ReadonlyArray<NoteGroup>, alone: ReadonlyArray<number>, onsets: ReadonlyArray<number>) {
   const notes = groups.map((group) => group.seconds)
   const nearest = notes.map((note) => onsets.reduce((best, onset) => (Math.abs(onset - note) < Math.abs(best) ? onset - note : best), Infinity))
   const offset = median(nearest)
+  // With most notes unheard, the nearest onsets can be seconds away, and nothing can be matched.
+  if (!(Math.abs(offset) < MATCH_SECONDS)) return undefined
   const used = new Set<number>()
   const missed: Array<number> = []
   const errors: Array<{ at: number; error: number }> = []

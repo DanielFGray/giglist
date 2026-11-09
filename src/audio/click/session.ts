@@ -74,7 +74,8 @@ export class Session {
       this.listener.clickLeak = this.clickLeak()
       this.unmeasuredLeaks.length = 0
     }
-    this.waiting.push(...this.listener.push(samples, start))
+    // A note the listener could not place goes untimed.
+    for (const note of this.listener.push(samples, start)) if (note.frame !== undefined) this.waiting.push(note.frame)
     this.measureLeaks()
     while (this.earliest === undefined) {
       const measured = this.measureNextClick()

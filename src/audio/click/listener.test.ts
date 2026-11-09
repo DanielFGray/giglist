@@ -1,6 +1,9 @@
 import { expect, it } from "bun:test"
 import { Listener } from "./listener"
 import { bassNote, drum, keyNote, mix, noise, pluck, SAMPLE_RATE } from "./synth"
+import type { Placement } from "./placement"
+
+const placed = (notes: ReadonlyArray<Placement>) => notes.flatMap((note) => (note.frame === undefined ? [] : [note.frame]))
 
 it("hears the same notes whatever the size of the mic blocks", () => {
   const signal = noise(SAMPLE_RATE * 3, 0.001, 3)
@@ -8,7 +11,7 @@ it("hears the same notes whatever the size of the mic blocks", () => {
   const inBlocks = (size: number) => {
     const listener = new Listener(SAMPLE_RATE)
     const onsets: Array<number> = []
-    for (let i = 0; i < signal.length; i += size) onsets.push(...listener.push(signal.subarray(i, i + size), 500 + i))
+    for (let i = 0; i < signal.length; i += size) onsets.push(...placed(listener.push(signal.subarray(i, i + size), 500 + i)))
     return onsets
   }
   const reference = inBlocks(128)
@@ -27,7 +30,7 @@ it("hears low, slow bass notes the same at any input level", () => {
     const listener = new Listener(SAMPLE_RATE)
     const scaled = signal.map((x) => (x * 10 ** (dB / 20)) / loudest)
     const onsets: Array<number> = []
-    for (let i = 0; i < scaled.length; i += 128) onsets.push(...listener.push(scaled.subarray(i, i + 128), i))
+    for (let i = 0; i < scaled.length; i += 128) onsets.push(...placed(listener.push(scaled.subarray(i, i + 128), i)))
     return onsets
   }
   const reference = atPeak(-13)
@@ -50,6 +53,6 @@ it("hears a chord rolled over 60 ms as one note", () => {
   }
   const listener = new Listener(SAMPLE_RATE)
   const onsets: Array<number> = []
-  for (let i = 0; i < signal.length; i += 128) onsets.push(...listener.push(signal.subarray(i, i + 128), i))
+  for (let i = 0; i < signal.length; i += 128) onsets.push(...placed(listener.push(signal.subarray(i, i + 128), i)))
   expect(onsets).toHaveLength(strums)
 })
