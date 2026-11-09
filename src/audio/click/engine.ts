@@ -12,10 +12,15 @@ export interface ClickOptions {
 export type ClickEvent =
   | SessionEvent
   /** A click is sounding now. Beat 0 is the first click of the count-in. */
-  | { readonly _tag: "Beat"; readonly beat: number; readonly countInBeats: number }
+  | { readonly _tag: "Beat"; readonly beat: number }
   | { readonly _tag: "Failed"; readonly reason: string }
-  /** The microphone is open; `device` is the name the browser gives it. */
-  | { readonly _tag: "Listening"; readonly device: string }
+  /**
+   * The microphone is open; `device` is the name the browser gives it.
+   * `reportedLatencyMs` is the browser's own estimate of the speaker-to-mic
+   * delay. Browsers estimate it differently, and it leaves out the sound's
+   * travel through the air; use it only when the mic missed the click.
+   */
+  | { readonly _tag: "Listening"; readonly device: string; readonly reportedLatencyMs: number }
   /** The loudest sample (0 to 1) heard since the last Level event. */
   | { readonly _tag: "Level"; readonly peak: number }
 
@@ -39,7 +44,6 @@ export const clickTrack = ({ bpm, listen }: ClickOptions): Stream.Stream<ClickEv
         firstClick: Math.round((context.currentTime + START_DELAY_SECONDS) * sampleRate),
         framesPerBeat: (60 / bpm) * sampleRate,
         countInBeats: COUNT_IN_BEATS,
-        subdivision: 1,
       }
       if (listen) yield* hearMic(context, plan, (event) => Queue.offerUnsafe(queue, event))
 
@@ -61,7 +65,7 @@ export const clickTrack = ({ bpm, listen }: ClickOptions): Stream.Stream<ClickEv
           // The beat shows when the click leaves the speakers, not when it is scheduled.
           // Older Safari has no outputLatency; the beat then shows early by that delay.
           const delay = Math.max(0, (at - context.currentTime + (context.outputLatency || 0)) * 1000)
-          setTimeout(() => Queue.offerUnsafe(queue, { _tag: "Beat", beat, countInBeats: COUNT_IN_BEATS }), delay)
+          setTimeout(() => Queue.offerUnsafe(queue, { _tag: "Beat", beat }), delay)
         }
       })
       yield* Effect.repeat(scheduleAhead, Schedule.spaced(SCHEDULE_EVERY)).pipe(Effect.forkScoped)
@@ -84,8 +88,14 @@ const hearMic = (context: AudioContext, plan: SessionPlan, emit: (event: ClickEv
       ),
       (mic) => Effect.sync(() => mic.getTracks().forEach((track) => track.stop())),
     )
+    const track = mic.getAudioTracks()[0]
+    // Older Safari has no outputLatency. Only some browsers give the input
+    // latency, and the DOM types do not name it yet.
+    const settings = track?.getSettings() ?? {}
+    const inputSeconds = "latency" in settings && typeof settings.latency === "number" ? settings.latency : 0
+    const reportedSeconds = (context.outputLatency || 0) + context.baseLatency + inputSeconds
     // The name shows the player which input the browser chose; an empty label means the default.
-    emit({ _tag: "Listening", device: mic.getAudioTracks()[0]?.label || "the default microphone" })
+    emit({ _tag: "Listening", device: track?.label || "the default microphone", reportedLatencyMs: reportedSeconds * 1000 })
     yield* attempt("The browser could not load the audio processor.", () => context.audioWorklet.addModule(captureUrl))
 
     const session = new Session(plan)

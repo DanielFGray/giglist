@@ -19,24 +19,18 @@ export interface Hit {
   readonly step: number
 }
 
-export interface Grid {
-  /** Context frame at which the mic heard the first beat after the count-in. */
-  readonly firstBeat: number
-  readonly framesPerBeat: number
-  readonly subdivision: Subdivision
-  readonly sampleRate: number
-}
-
-/** Places a note start on the nearest grid point. */
-export const placeHit = (grid: Grid, onset: number): Hit => {
-  const stepFrames = grid.framesPerBeat / grid.subdivision
-  const steps = Math.round((onset - grid.firstBeat) / stepFrames)
-  const point = grid.firstBeat + steps * stepFrames
+/**
+ * Places a note on the nearest grid point. `atMs` is the note's time after
+ * the first beat after the count-in, as the mic heard that beat.
+ */
+export const placeHit = (atMs: number, beatMs: number, subdivision: Subdivision): Hit => {
+  const stepMs = beatMs / subdivision
+  const steps = Math.round(atMs / stepMs)
   return {
-    offsetMs: ((onset - point) / grid.sampleRate) * 1000,
+    offsetMs: atMs - steps * stepMs,
     // Adding 0 turns the -0 that Math.round gives just before beat 0 into 0.
-    beat: Math.floor(steps / grid.subdivision) + 0,
-    step: ((steps % grid.subdivision) + grid.subdivision) % grid.subdivision,
+    beat: Math.floor(steps / subdivision) + 0,
+    step: ((steps % subdivision) + subdivision) % subdivision,
   }
 }
 

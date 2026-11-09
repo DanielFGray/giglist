@@ -2,9 +2,9 @@ import { describe, expect, it, setDefaultTimeout } from "bun:test"
 import { ACCENT_GAIN, BEAT_GAIN, BEATS_PER_BAR, COUNT_IN_BEATS } from "./click"
 import { Session, type SessionEvent, type SessionPlan } from "./session"
 import { drum, keyNote, mix, mixClick, noise, pluck, SAMPLE_RATE } from "./synth"
-import type { Subdivision } from "./timing"
+import { placeHit, type Subdivision } from "./timing"
 
-interface Note {
+interface Played {
   /** Grid step the note aims at, counted from the first beat after the count-in. */
   readonly step: number
   readonly offsetMs: number
@@ -13,7 +13,7 @@ interface Note {
 
 interface Take {
   readonly latencySeconds: number
-  readonly notes: ReadonlyArray<Note>
+  readonly notes: ReadonlyArray<Played>
   readonly bpm?: number
   readonly subdivision?: Subdivision
   readonly clickLevel?: number
@@ -39,7 +39,6 @@ const listen = ({ latencySeconds, notes, bpm = 100, subdivision = 1, clickLevel 
     firstClick: FIRST_FRAME + Math.round(0.2 * SAMPLE_RATE),
     framesPerBeat: (60 / bpm) * SAMPLE_RATE,
     countInBeats: COUNT_IN_BEATS,
-    subdivision,
   }
   const beats = COUNT_IN_BEATS + Math.ceil((notes.at(-1)?.step ?? 0) / subdivision) + 3
   const signal = noise(Math.round(plan.firstClick - FIRST_FRAME + beats * plan.framesPerBeat), noiseLevel, 7)
@@ -67,10 +66,16 @@ const OFFSETS_MS = [-35, -20, -8, -3, 0, 0, 2, 5, 11, 18, 30, 0]
 setDefaultTimeout(30_000)
 
 const latencyOf = (events: ReadonlyArray<SessionEvent>) => events.flatMap((event) => (event._tag === "MeasuredLatency" ? [event.latencyMs] : []))
-const hitsOf = (events: ReadonlyArray<SessionEvent>) => events.flatMap((event) => (event._tag === "Hit" ? [event.hit] : []))
+const notesOf = (events: ReadonlyArray<SessionEvent>) => events.flatMap((event) => (event._tag === "Note" ? [event.atMs] : []))
 
-const expectHits = (events: ReadonlyArray<SessionEvent>, notes: ReadonlyArray<Note>, toleranceMs: number) => {
-  const hits = hitsOf(events)
+/** Places each note against the click as the player heard it, at 100 BPM. */
+const hitsOf = (events: ReadonlyArray<SessionEvent>, subdivision: Subdivision = 1) => {
+  const latencyMs = latencyOf(events)[0] ?? Number.NaN
+  return notesOf(events).map((atMs) => placeHit(atMs - latencyMs, 600, subdivision))
+}
+
+const expectHits = (events: ReadonlyArray<SessionEvent>, notes: ReadonlyArray<Played>, toleranceMs: number, subdivision: Subdivision = 1) => {
+  const hits = hitsOf(events, subdivision)
   expect(hits).toHaveLength(notes.length)
   hits.forEach((hit, i) => {
     const note = notes[i]!
@@ -103,7 +108,7 @@ describe("Session", () => {
     const pitches = [262, 330, 392, 523, 262, 349, 440, 523, 247, 294, 392, 494]
     const notes = OFFSETS_MS.map((offsetMs, step) => ({ step, offsetMs, sound: keyNote(SAMPLE_RATE, pitches[step]!, step + 1) }))
     // The first note follows silence, and its 2 ms fade-in places it about 2.7 ms late.
-    expectHits(listen({ latencySeconds: 0.087, notes, subdivision: 2 }), notes, 3)
+    expectHits(listen({ latencySeconds: 0.087, notes, subdivision: 2 }), notes, 3, 2)
   })
 
   it("measures the latency at a fast tempo, where the next click comes before the first is heard", () => {
@@ -111,14 +116,20 @@ describe("Session", () => {
     expect(Math.abs(latencyOf(events)[0]! - 200)).toBeLessThan(0.5)
   })
 
-  it("reports a missed click when the mic cannot hear the speakers", () => {
-    expect(listen({ latencySeconds: 0.05, notes: [], clickLevel: 0 }).map((event) => event._tag)).toEqual(["MissedClick"])
+  it("reports a missed click when the mic cannot hear the click, and still times the notes", () => {
+    // Headphones: the click never reaches the mic, so no delay is measured.
+    const notes = OFFSETS_MS.map((offsetMs, step) => ({ step, offsetMs, sound: drum(SAMPLE_RATE, step + 1) }))
+    const events = listen({ latencySeconds: 0.05, notes, clickLevel: 0 })
+    expect(events[0]?._tag).toBe("MissedClick")
+    const atMs = notesOf(events)
+    expect(atMs).toHaveLength(notes.length)
+    atMs.forEach((at, i) => expect(Math.abs(at - 50 - (notes[i]!.step * 600 + notes[i]!.offsetMs))).toBeLessThan(1))
   })
 })
 
 describe("Session after a dropout", () => {
   it("measures the latency wherever a gap in the count-in falls", () => {
-    const plan: SessionPlan = { sampleRate: SAMPLE_RATE, firstClick: 9600, framesPerBeat: SAMPLE_RATE * 0.6, countInBeats: 4, subdivision: 1 }
+    const plan: SessionPlan = { sampleRate: SAMPLE_RATE, firstClick: 9600, framesPerBeat: SAMPLE_RATE * 0.6, countInBeats: 4 }
     const signal = noise(Math.round(SAMPLE_RATE * 4), 0.001, 7)
     const latency = Math.round(0.05 * SAMPLE_RATE)
     for (let beat = 0; beat < 6; beat++) mixClick(signal, Session.clickFrame(plan, beat) + latency, 0.3)
@@ -137,7 +148,7 @@ describe("Session after a dropout", () => {
   })
 
   it("keeps scoring when the mic stream skips a block", () => {
-    const plan: SessionPlan = { sampleRate: SAMPLE_RATE, firstClick: 9600, framesPerBeat: SAMPLE_RATE * 0.6, countInBeats: 4, subdivision: 1 }
+    const plan: SessionPlan = { sampleRate: SAMPLE_RATE, firstClick: 9600, framesPerBeat: SAMPLE_RATE * 0.6, countInBeats: 4 }
     const signal = noise(Math.round(SAMPLE_RATE * 6), 0.001, 5)
     const latency = Math.round(0.05 * SAMPLE_RATE)
     for (let beat = 0; beat < 9; beat++) mixClick(signal, Session.clickFrame(plan, beat) + latency, 0.3)
@@ -159,7 +170,7 @@ describe("Session at any level", () => {
   it("hears the same take the same at full, a tenth and a hundredth of the gain", () => {
     const takes = [1, 0.1, 0.01].map((gain) => listen({ latencySeconds: 0.05, notes, gain }))
     for (const events of takes) expectHits(events, notes, 1)
-    const [loud, ...quiet] = takes.map(hitsOf)
+    const [loud, ...quiet] = takes.map((events) => hitsOf(events))
     for (const hits of quiet) hits.forEach((hit, i) => expect(Math.abs(hit.offsetMs - loud![i]!.offsetMs)).toBeLessThan(0.5))
   })
 
@@ -200,6 +211,6 @@ describe("Session after a loud note", () => {
       const sound = drum(SAMPLE_RATE, step + 1)
       return { step, offsetMs, sound: step % 2 === 0 ? sound : sound.map((x) => x * 0.056) }
     })
-    expectHits(listen({ latencySeconds: 0.05, notes, subdivision: 2 }), notes, 1.5)
+    expectHits(listen({ latencySeconds: 0.05, notes, subdivision: 2 }), notes, 1.5, 2)
   })
 })

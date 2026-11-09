@@ -1,5 +1,5 @@
 import { Listener } from "./listener"
-import { clickBias, type Grid, type Hit, median, placeHit, type Subdivision } from "./timing"
+import { clickBias, median } from "./timing"
 
 export interface SessionPlan {
   readonly sampleRate: number
@@ -7,29 +7,37 @@ export interface SessionPlan {
   readonly firstClick: number
   readonly framesPerBeat: number
   readonly countInBeats: number
-  readonly subdivision: Subdivision
 }
 
 export type SessionEvent =
   /** `clickLeak` is the instrument-band flux of a click alone (Listener.clickLeak), reported to compare rooms and speakers. */
   | { readonly _tag: "MeasuredLatency"; readonly latencyMs: number; readonly clickLeak: number }
+  /** Too few count-in clicks reached the mic to measure the latency. Notes still follow. */
   | { readonly _tag: "MissedClick" }
-  | { readonly _tag: "Hit"; readonly hit: Hit }
+  /**
+   * A note start, `atMs` after the moment the first beat after the count-in
+   * was scheduled to sound. The time includes the speaker-to-mic latency:
+   * subtract it to place the note against the click the player heard.
+   */
+  | { readonly _tag: "Note"; readonly atMs: number }
   /** The mic stream skipped `frames` frames. Notes just after the gap may be missed. */
   | { readonly _tag: "Dropout"; readonly frames: number }
 
 /**
- * One take: a count-in that measures the latency, then scored playing.
+ * One take: a count-in that measures the latency, then the notes played.
  *
  * During the count-in the session finds each click in the mic stream. The
  * first click heard fixes a rough latency; each later click is looked for close
  * to where that latency puts it, and the median of all of them is the latency.
- * A click can be lost, for example to a gap in the mic stream; the take fails
- * only when fewer than half the count-in clicks are heard. The count-in also
- * measures how much of each click leaks into the instrument bands, which sets
- * how far a note must rise to count (Listener.clickLeak).
- * Notes start to count from half a grid step before the first beat after the
- * count-in. Notes heard before the latency is known wait until it is.
+ * A click can be lost, for example to a gap in the mic stream; the latency is
+ * missed only when fewer than half the count-in clicks are heard, as with
+ * headphones. The count-in also measures how much of each click leaks into the
+ * instrument bands, which sets how far a note must rise to count
+ * (Listener.clickLeak).
+ *
+ * Notes count from half a beat before the first beat after the count-in, as
+ * the mic hears it: so a note on the count-in's last click never counts, and a
+ * pickup note does. Notes heard before the count-in ends wait until it does.
  */
 export class Session {
   private readonly plan: SessionPlan
@@ -37,8 +45,8 @@ export class Session {
   private readonly bias: number
   private readonly latencies: Array<number> = []
   private nextClick = 0
-  private grid: Grid | undefined
-  private failed = false
+  /** The frame from which notes count, once the count-in is over. */
+  private earliest: number | undefined
   private readonly waiting: Array<number> = []
   /** Arrivals of heard count-in clicks whose leak the listener cannot measure yet. */
   private readonly unmeasuredLeaks: Array<number> = []
@@ -56,10 +64,9 @@ export class Session {
   }
 
   hear(samples: Float32Array, start: number): Array<SessionEvent> {
-    if (this.failed) return []
     const events: Array<SessionEvent> = []
     // A busy audio thread can skip blocks. The listener cannot analyse across
-    // the gap, so a new one starts after it; the grid and the latency stay.
+    // the gap, so a new one starts after it; the latency stays.
     const expected = this.listener.expects
     if (!Number.isNaN(expected) && start !== expected) {
       events.push({ _tag: "Dropout", frames: start - expected })
@@ -69,33 +76,30 @@ export class Session {
     }
     this.waiting.push(...this.listener.push(samples, start))
     this.measureLeaks()
-    while (this.grid === undefined && !this.failed) {
+    while (this.earliest === undefined) {
       const measured = this.measureNextClick()
       if (measured === "pending") break
       if (measured !== "missed") this.latencies.push(measured)
       this.nextClick++
-      if (this.nextClick === this.plan.countInBeats) events.push(...this.fixGrid())
+      if (this.nextClick === this.plan.countInBeats) events.push(this.endCountIn())
     }
-    if (this.grid === undefined) return events
-    const grid = this.grid
-    const earliest = grid.firstBeat - grid.framesPerBeat / grid.subdivision / 2
-    for (const onset of this.waiting.splice(0)) if (onset >= earliest) events.push({ _tag: "Hit", hit: placeHit(grid, onset) })
+    if (this.earliest === undefined) return events
+    const { sampleRate, countInBeats } = this.plan
+    const firstBeat = Session.clickFrame(this.plan, countInBeats)
+    for (const onset of this.waiting.splice(0)) if (onset >= this.earliest) events.push({ _tag: "Note", atMs: ((onset - firstBeat) / sampleRate) * 1000 })
     return events
   }
 
-  private fixGrid(): Array<SessionEvent> {
-    if (this.latencies.length < this.plan.countInBeats / 2) {
-      this.failed = true
-      return [{ _tag: "MissedClick" }]
+  private endCountIn(): SessionEvent {
+    const { sampleRate, countInBeats, framesPerBeat } = this.plan
+    const heardFirstBeat = (latency: number) => Session.clickFrame(this.plan, countInBeats) + latency - framesPerBeat / 2
+    if (this.latencies.length < countInBeats / 2) {
+      this.earliest = heardFirstBeat(0)
+      return { _tag: "MissedClick" }
     }
     const latency = median(this.latencies)
-    this.grid = {
-      firstBeat: Session.clickFrame(this.plan, this.plan.countInBeats) + latency,
-      framesPerBeat: this.plan.framesPerBeat,
-      subdivision: this.plan.subdivision,
-      sampleRate: this.plan.sampleRate,
-    }
-    return [{ _tag: "MeasuredLatency", latencyMs: (latency / this.plan.sampleRate) * 1000, clickLeak: this.clickLeak() }]
+    this.earliest = heardFirstBeat(latency)
+    return { _tag: "MeasuredLatency", latencyMs: (latency / sampleRate) * 1000, clickLeak: this.clickLeak() }
   }
 
   /** The latency in frames shown by the next count-in click, once the mic has had time to hear it. */
