@@ -4,7 +4,8 @@ import { BEATS_PER_BAR } from "~/audio/click/click"
 import { clickTrack } from "~/audio/click/engine"
 import type { Subdivision } from "~/audio/click/timing"
 import { NEW_TAKE, type Take, takeHits, takeStep } from "~/audio/click/take"
-import { hitTiles, judgement, meterFill, signedMs, SUBDIVISIONS, takeStatus } from "./click-take"
+import { hitTiles, judgement, signedMs, SUBDIVISIONS, takeStatus } from "./click-take"
+import { MicMeter } from "./MicMeter"
 
 type Mode = "off" | "click" | "listen"
 
@@ -85,7 +86,6 @@ function ListenPanel({
 }) {
   const hits = takeHits(take, bpm, subdivision)
   const last = hits.at(-1)
-  const fill = Math.round(meterFill(take.level) * 100)
   // The panel is dark in both themes, because it also opens over the dark
   // stage view. So its text uses only grey shades that the light theme does
   // not remap (app.css). On a phone it is a sheet at the bottom of the screen.
@@ -106,9 +106,7 @@ function ListenPanel({
       {running && (
         <div className="space-y-1">
           <p className="truncate text-xs text-zinc-500">{take.device === null ? "Opening the microphone…" : `Listening on ${take.device}`}</p>
-          <div role="meter" aria-label="Microphone level" aria-valuemin={0} aria-valuemax={100} aria-valuenow={fill} className="h-1.5 overflow-hidden rounded-full bg-zinc-800">
-            <div className="h-full bg-zinc-400" style={{ width: `${fill}%` }} />
-          </div>
+          <MicMeter peak={take.level} />
         </div>
       )}
       <div aria-live="polite" className="text-center">

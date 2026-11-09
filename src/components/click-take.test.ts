@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { COUNT_IN_BEATS } from "~/audio/click/click"
 import type { ClickEvent } from "~/audio/click/engine"
 import { NEW_TAKE, takeStep } from "~/audio/click/take"
-import { hitTiles, meterFill, signedMs, takeStatus } from "./click-take"
+import { hitTiles, signedMs, takeStatus } from "./click-take"
 
 const fold = (events: ReadonlyArray<ClickEvent>) => events.reduce(takeStep, NEW_TAKE)
 
@@ -43,12 +43,5 @@ describe("Listen mode's words", () => {
     ])
     expect(signedMs(4.25)).toBe("+4.3 ms")
     expect(signedMs(0)).toBe("±0.0 ms")
-  })
-
-  test("the meter spans -60 to 0 dBFS", () => {
-    expect(meterFill(0)).toBe(0)
-    expect(meterFill(0.001)).toBe(0)
-    expect(meterFill(1)).toBe(1)
-    expect(meterFill(0.0316)).toBeCloseTo(0.5, 2)
   })
 })

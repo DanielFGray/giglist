@@ -42,11 +42,6 @@ export const signedMs = (ms: number): string => `${ms > 0 ? "+" : ms < 0 ? "−"
 
 export const judgement = (ms: number): string => (Math.abs(ms) < 1 ? "on the beat" : ms < 0 ? "early" : "late")
 
-/** The mic meter's fill, 0 to 1, over -60 to 0 dBFS. */
-export const meterFill = (peak: number): number => (peak <= 0 ? 0 : Math.min(1, Math.max(0, 1 + (20 * Math.log10(peak)) / -METER_FLOOR_DB)))
-
 const tendency = (meanMs: number): string => (Math.abs(meanMs) < 2 ? "centred" : meanMs < 0 ? "rushing" : "dragging")
-
-const METER_FLOOR_DB = -60
 
 const MISSED_CLICK = "The mic did not hear the click, so it cannot time your notes. Play the click through speakers, not headphones, and turn it up."
