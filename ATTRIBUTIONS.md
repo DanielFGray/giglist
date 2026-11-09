@@ -62,3 +62,5 @@ Every other runtime dependency in `package.json` uses the MIT or MIT-0 license.
 - **Nodemailer SMTP Server**: `smtp-server` provides the local SMTP listener used to verify delivery and recipient rejection in `worker/email/send-email.test.ts`. MIT-0 License. <https://github.com/nodemailer/smtp-server>
 
 - **"Amazing Grace"**: words by John Newton (1779), in the public domain. Used in `tests/fixtures/amazing-grace.*`.
+
+- **GeneralUser GS** by S. Christian Collins: the SoundFont that `scripts/checkOnsets.ts` was run with to choose the click listener's detection constants. The script takes the SoundFont path and renders the MIDI clips in `tests/fixtures/onsets/` with fluidsynth; the SoundFont is not in this repository. Its license allows use for music, personal or commercial. <https://schristiancollins.com/generaluser.php>
