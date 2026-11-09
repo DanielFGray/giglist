@@ -75,10 +75,13 @@ function SetlistPage() {
     await refresh()
   }
 
-  const songChoices = (query: string) =>
-    matchSongs(bandSongs, query)
+  // Songs already in the list are not offered again, so the choices shrink as the list grows.
+  const songChoices = (query: string) => {
+    const inList = new Set(entries.map((entry) => entry.song_id))
+    return matchSongs(bandSongs.filter((song) => !inList.has(song.id)), query)
       .slice(0, 20)
       .map((song) => ({ value: song.id, label: song.title, hint: song.artist ?? undefined }))
+  }
 
   const columns: ReadonlyArray<GridColumn<SetlistEntryInfo>> = [
     {
