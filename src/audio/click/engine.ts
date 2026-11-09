@@ -1,5 +1,5 @@
 import { Effect, Queue, Schedule, Schema, Scope, Stream } from "effect"
-import { ACCENT_GAIN, BEAT_GAIN, CLICK_ONSET_SECONDS, clickWaveform } from "./click"
+import { ACCENT_GAIN, BEAT_GAIN, BEATS_PER_BAR, CLICK_ONSET_SECONDS, clickWaveform, COUNT_IN_BEATS } from "./click"
 import { Session, type SessionEvent, type SessionPlan } from "./session"
 import captureUrl from "./capture.worklet.ts?worker&url"
 
@@ -18,11 +18,6 @@ export type ClickEvent =
   | { readonly _tag: "Listening"; readonly device: string }
   /** The loudest sample (0 to 1) heard since the last Level event. */
   | { readonly _tag: "Level"; readonly peak: number }
-
-/** Songs have no time signature, so a bar is four beats. */
-export const BEATS_PER_BAR = 4
-/** Two bars: the session needs at least four clicks to measure the speaker-to-mic delay. */
-export const COUNT_IN_BEATS = 2 * BEATS_PER_BAR
 
 /**
  * Plays the click from the first beat of the count-in until the stream is

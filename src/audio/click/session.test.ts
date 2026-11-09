@@ -1,5 +1,5 @@
 import { describe, expect, it, setDefaultTimeout } from "bun:test"
-import { ACCENT_GAIN, BEAT_GAIN } from "./click"
+import { ACCENT_GAIN, BEAT_GAIN, BEATS_PER_BAR, COUNT_IN_BEATS } from "./click"
 import { Session, type SessionEvent, type SessionPlan } from "./session"
 import { drum, keyNote, mix, mixClick, noise, pluck, SAMPLE_RATE } from "./synth"
 import type { Subdivision } from "./timing"
@@ -25,8 +25,6 @@ interface Take {
   readonly extra?: ReadonlyArray<readonly [sound: Float32Array, at: number]>
 }
 
-const BEATS_PER_BAR = 4
-const COUNT_IN_BEATS = 8
 /** The context frame of the first mic sample. A nonzero start checks that frames stay absolute. */
 const FIRST_FRAME = 12345
 

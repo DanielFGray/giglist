@@ -38,7 +38,7 @@ Read while planning key detection from chord symbols. `guessKey` in `src/charts/
 - **Temperley, D. and de Clercq, T.** (2013). "Statistical Analysis of Harmony and Melody in Rock Music." *Journal of New Music Research* 42(3): 187–204. Key finding from chord roots and metrical position. <https://doi.org/10.1080/09298215.2013.788039>. Author copy: <https://www.midside.com/publications/temperley_declercq_2013.pdf>
 - **Bunks, C. and Weyde, T.** (2022). "Jazz Contrafact Detection." arXiv:2208.00792. Picks the key signature whose diatonic chords hold the most beats. <https://arxiv.org/abs/2208.00792>
 
-The click's listener (`src/audio/click/listener.ts`) follows two onset papers:
+The click's listener (`src/audio/click/listener.ts`) follows four onset papers:
 
 - **Böck, S. and Widmer, G.** (2013). "Maximum Filter Vibrato Suppression for Onset Detection." Proc. 16th DAFx, Maynooth, 55–61. SuperFlux: the detection stage's flux against a maximum-filtered earlier frame. <https://www.dafx.de/paper-archive/2013/papers/09.dafx2013_submission_12.pdf>. Reference implementation: <https://github.com/CPJKU/SuperFlux>
 - **Glover, J., Lazzarini, V. and Timoney, J.** (2011). "Real-time detection of musical onsets with linear prediction and sinusoidal modeling." *EURASIP Journal on Advances in Signal Processing* 2011:68. Linear-prediction error as the onset signal, used here to place each note. <https://doi.org/10.1186/1687-6180-2011-68>

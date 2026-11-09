@@ -1,6 +1,7 @@
 import { Effect, Fiber, Stream } from "effect"
 import { useEffect, useState } from "react"
-import { BEATS_PER_BAR, clickTrack } from "~/audio/click/engine"
+import { BEATS_PER_BAR } from "~/audio/click/click"
+import { clickTrack } from "~/audio/click/engine"
 
 /**
  * A button that plays a click at `bpm`, with the first beat of each bar
