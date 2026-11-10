@@ -2,6 +2,7 @@ import { Context, Effect, Layer, Ref } from "effect"
 import { Cookies, FetchHttpClient, HttpRouter, HttpServer } from "effect/http"
 import { HttpApiLive } from "../runtime"
 import { Worker } from "../../../worker/main"
+import { RateLimiterMemory } from "../services/rate-limiter"
 
 /**
  * In-process API harness: the server's HttpApiLive with no TCP listener.
@@ -13,6 +14,7 @@ import { Worker } from "../../../worker/main"
 const web = HttpRouter.toWebHandler(
   HttpApiLive.pipe(
     Layer.provideMerge(Layer.succeed(Worker, Worker.of({ start: Effect.void, isRunning: Effect.succeed(false) }))),
+    Layer.provide(RateLimiterMemory),
     Layer.provide(HttpServer.layerServices),
   ),
   { disableLogger: true },

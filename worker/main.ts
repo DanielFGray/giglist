@@ -1,11 +1,11 @@
 import { Config, Context, Effect, Layer, Redacted, Ref, Schema } from "effect"
-import { BunRuntime, BunServices } from "@effect/platform-bun"
+import { BunRedis, BunRuntime, BunServices } from "@effect/platform-bun"
 import { FileSystem } from "effect/FileSystem"
 import { getTasks, run, type Task } from "graphile-worker"
 import { Mailer } from "./email/mailer"
 import { sendEmail } from "./email/send-email"
 import { RateLimiter } from "effect/persistence/RateLimiter"
-import { RateLimiterLive } from "../src/server/services/rate-limiter"
+import { RateLimiterValkey } from "../src/server/services/rate-limiter"
 import { TelemetryLive } from "../src/server/telemetry"
 
 class WorkerError extends Schema.TaggedError<WorkerError, { readonly brand: unique symbol }>()("WorkerError", {
@@ -78,7 +78,7 @@ export class Worker extends Context.Service<Worker, {
   })
 
   static readonly layer = Layer.effect(this, this.make).pipe(
-    Layer.provide(Layer.mergeAll(MailerLive, RateLimiterLive, TelemetryLive).pipe(Layer.provideMerge(BunServices.layer))),
+    Layer.provide(Layer.mergeAll(MailerLive, TelemetryLive).pipe(Layer.provideMerge(BunServices.layer))),
   )
 }
 
@@ -87,5 +87,11 @@ if (import.meta.main) {
     const worker = yield* Worker
     yield* worker.start
     return yield* Effect.never
-  })).pipe(Effect.provide(Worker.layer), BunRuntime.runMain)
+  })).pipe(
+    Effect.provide(Worker.layer.pipe(
+      Layer.provide(RateLimiterValkey),
+      Layer.provide(BunRedis.layerConfig({ url: Config.String("VALKEY_URL") })),
+    )),
+    BunRuntime.runMain,
+  )
 }

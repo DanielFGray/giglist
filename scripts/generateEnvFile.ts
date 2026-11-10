@@ -46,6 +46,8 @@ const fields: [string, FieldDef][] = [
   ["VITE_ROOT_URL", { derive: (c) => `http://localhost:${c.CLIENT_PORT}` }],
   ["SECRET", { generate: genSecret }],
   ["VALKEY_URL", { derive: (c) => `redis://${c.DATABASE_HOST}:6380` }],
+  // The platform sets `<cartridge name>:` in production; keys outside it are refused there.
+  ["VALKEY_KEY_PREFIX", { default: "giglist:" }],
   ["RESEND_API_KEY", { default: "" }],
   ["ADMIN_EMAIL", { default: "danielfgray@gmail.com" }],
 ];

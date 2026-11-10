@@ -1,9 +1,10 @@
 import { Config, Context, Effect, Layer } from "effect";
-import { BunRuntime } from "@effect/platform-bun";
+import { BunRedis, BunRuntime } from "@effect/platform-bun";
 import * as BunHttpServer from "@effect/platform-bun/BunHttpServer";
 import { HttpRouter } from "effect/http";
 import { AppLayer, HttpApiLive } from "./runtime";
 import { TelemetryLive } from "./telemetry";
+import { RateLimiterValkey } from "./services/rate-limiter";
 import { Worker } from "../../worker/main";
 
 const ServerLive = HttpRouter.serve(HttpApiLive).pipe(
@@ -18,6 +19,10 @@ const ServerLive = HttpRouter.serve(HttpApiLive).pipe(
   // keeps the exporters in every handler's context.
   Layer.provideMerge(TelemetryLive),
   Layer.provideMerge(Worker.layer),
+  // One limiter for the API middleware and the worker's mail cap.
+  Layer.provide(RateLimiterValkey),
+  // Bun's client connects on first use, so the server starts while Valkey is down.
+  Layer.provide(BunRedis.layerConfig({ url: Config.String("VALKEY_URL") })),
 );
 
 // Bind the HTTP server first, then start the worker in the same scope. Scope
