@@ -90,7 +90,13 @@ if (import.meta.main) {
   })).pipe(
     Effect.provide(Worker.layer.pipe(
       Layer.provide(RateLimiterValkey),
-      Layer.provide(BunRedis.layerConfig({ url: Config.String("VALKEY_URL") })),
+      // The same client options as src/server/main.ts: keep reconnecting, and fail
+      // a command at once while Valkey is down.
+      Layer.provide(BunRedis.layerConfig({
+        url: Config.String("VALKEY_URL"),
+        maxRetries: Config.succeed(1_000_000),
+        enableOfflineQueue: Config.succeed(false),
+      })),
     )),
     BunRuntime.runMain,
   )

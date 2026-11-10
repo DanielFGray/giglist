@@ -22,7 +22,15 @@ const ServerLive = HttpRouter.serve(HttpApiLive).pipe(
   // One limiter for the API middleware and the worker's mail cap.
   Layer.provide(RateLimiterValkey),
   // Bun's client connects on first use, so the server starts while Valkey is down.
-  Layer.provide(BunRedis.layerConfig({ url: Config.String("VALKEY_URL") })),
+  // By default the client stops after a few reconnect attempts and stays closed
+  // when Valkey returns, and it holds commands while it reconnects. With these
+  // options it keeps reconnecting, and a command fails at once while Valkey is
+  // down, so each rate-limit rule applies its policy for a store that is down.
+  Layer.provide(BunRedis.layerConfig({
+    url: Config.String("VALKEY_URL"),
+    maxRetries: Config.succeed(1_000_000),
+    enableOfflineQueue: Config.succeed(false),
+  })),
 );
 
 // Bind the HTTP server first, then start the worker in the same scope. Scope
