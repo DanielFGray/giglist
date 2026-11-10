@@ -7,8 +7,8 @@ import { bandsHandlers } from "./httpapi/bands";
 import { publicBandsHandlers } from "./httpapi/public-bands";
 import { publicUsersHandlers } from "./httpapi/public-users";
 import { SongsApiGroupLive } from "./httpapi/songs";
-import { setlistsHandlers } from "./httpapi/setlists";
-import { gigsHandlers } from "./httpapi/gigs";
+import { SetlistsApiGroupLive } from "./httpapi/setlists";
+import { GigsApiGroupLive } from "./httpapi/gigs";
 import { ChartsApiGroupLive, ScoresApiGroupLive } from "./httpapi/charts";
 import { MarksApiGroupLive, StampsApiGroupLive } from "./httpapi/marks";
 import { LiveHub } from "./services/live-hub";
@@ -19,12 +19,14 @@ import { PublicUsers } from "./services/public-user";
 import { Songs } from "./services/songs";
 import { Marks } from "./services/marks";
 import { Charts } from "./services/charts";
+import { Setlists } from "./services/setlists";
+import { Gigs } from "./services/gigs";
 import { SessionMiddlewareLive } from "./httpapi/session";
 import { RateLimitMiddlewareLive } from "./httpapi/rate-limit";
 import { HealthLive } from "./httpapi/health";
 
 const ApiLive = HttpApiBuilder.layer(GigListApi).pipe(
-  Layer.provide(Layer.mergeAll(authHandlers, bandsHandlers, publicBandsHandlers, publicUsersHandlers, SongsApiGroupLive, setlistsHandlers, gigsHandlers, ChartsApiGroupLive, ScoresApiGroupLive, MarksApiGroupLive, StampsApiGroupLive)),
+  Layer.provide(Layer.mergeAll(authHandlers, bandsHandlers, publicBandsHandlers, publicUsersHandlers, SongsApiGroupLive, SetlistsApiGroupLive, GigsApiGroupLive, ChartsApiGroupLive, ScoresApiGroupLive, MarksApiGroupLive, StampsApiGroupLive)),
   Layer.provide(SessionMiddlewareLive),
   Layer.provide(RateLimitMiddlewareLive),
 );
@@ -60,6 +62,8 @@ export const AppLayer = Layer.empty.pipe(
   Layer.provideMerge(Songs.layer),
   Layer.provideMerge(Marks.layer),
   Layer.provideMerge(Charts.layer),
+  Layer.provideMerge(Setlists.layer),
+  Layer.provideMerge(Gigs.layer),
 );
 
 /**

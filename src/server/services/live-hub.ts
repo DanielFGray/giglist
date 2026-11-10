@@ -8,6 +8,16 @@ export type Viewer = S.Schema.Type<typeof LiveViewer>
 /** How often an idle connection hears something, so a client can tell a dead one from a quiet one. */
 const PING_EVERY = "20 seconds"
 
+/**
+ * A write to a setlist or a gig, read inside its transaction: what it returns,
+ * the rooms that show what it changed, and the username of who wrote it.
+ */
+export interface Written<A> {
+  readonly result: A
+  readonly rooms: ReadonlyArray<string>
+  readonly by: string | null
+}
+
 type Room = {
   readonly events: PubSub.PubSub<LiveEventData>
   readonly viewers: Map<string, { userId: string; viewer: Viewer }>
@@ -97,8 +107,22 @@ export class LiveHub extends Context.Service<LiveHub>()("setlist/LiveHub", {
         return true
       })
 
-    return { changed, watch, report }
+    /** Tells every room of a committed write who wrote it, and gives back the write's result. */
+    const afterWrite = <A>(written: Written<A>) =>
+      Effect.forEach(written.rooms, (roomId) => changed(roomId, written.by), { discard: true }).pipe(
+        Effect.as(written.result),
+      )
+
+    return { changed, watch, report, afterWrite }
   }),
 }) {
   static readonly layer = Layer.effect(this, this.make)
 }
+
+/**
+ * Runs a write, then tells its rooms who wrote and answers with its result.
+ * Apply it outside the write's transaction, so a viewer that reloads on the
+ * event reads the committed rows.
+ */
+export const announced = <A, E, R>(write: Effect.Effect<Written<A>, E, R>) =>
+  write.pipe(Effect.flatMap((written) => LiveHub.use((hub) => hub.afterWrite(written))))
