@@ -2,10 +2,10 @@ import { Config, Effect, Layer } from "effect";
 import { HttpApiBuilder } from "effect/http-api";
 import { AuthDb, AuthVisitor, Db } from "./db";
 import { GigListApi } from "../api/contracts";
-import { authHandlers } from "./httpapi/auth";
-import { bandsHandlers } from "./httpapi/bands";
-import { publicBandsHandlers } from "./httpapi/public-bands";
-import { publicUsersHandlers } from "./httpapi/public-users";
+import { AuthApiGroupLive } from "./httpapi/auth";
+import { BandsApiGroupLive } from "./httpapi/bands";
+import { PublicBandsApiGroupLive } from "./httpapi/public-bands";
+import { PublicUsersApiGroupLive } from "./httpapi/public-users";
 import { SongsApiGroupLive } from "./httpapi/songs";
 import { SetlistsApiGroupLive } from "./httpapi/setlists";
 import { GigsApiGroupLive } from "./httpapi/gigs";
@@ -26,7 +26,7 @@ import { RateLimitMiddlewareLive } from "./httpapi/rate-limit";
 import { HealthLive } from "./httpapi/health";
 
 const ApiLive = HttpApiBuilder.layer(GigListApi).pipe(
-  Layer.provide(Layer.mergeAll(authHandlers, bandsHandlers, publicBandsHandlers, publicUsersHandlers, SongsApiGroupLive, SetlistsApiGroupLive, GigsApiGroupLive, ChartsApiGroupLive, ScoresApiGroupLive, MarksApiGroupLive, StampsApiGroupLive)),
+  Layer.provide(Layer.mergeAll(AuthApiGroupLive, BandsApiGroupLive, PublicBandsApiGroupLive, PublicUsersApiGroupLive, SongsApiGroupLive, SetlistsApiGroupLive, GigsApiGroupLive, ChartsApiGroupLive, ScoresApiGroupLive, MarksApiGroupLive, StampsApiGroupLive)),
   Layer.provide(SessionMiddlewareLive),
   Layer.provide(RateLimitMiddlewareLive),
 );

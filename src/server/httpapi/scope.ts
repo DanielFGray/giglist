@@ -1,19 +1,26 @@
 import { Effect } from "effect"
 import { withAuthContext } from "../db"
-import { CurrentSession, type SessionData } from "../../api/contracts"
+import { CurrentSession } from "../../api/contracts"
+
+/**
+ * Runs `effect` only for a signed-in request; a signed-out one gets
+ * `signedOut` instead. A session always names a user (`sessions.user_id` is
+ * not null), so the session id alone decides.
+ */
+export const ifSignedIn =
+  <B, E2, R2>(signedOut: Effect.Effect<B, E2, R2>) =>
+  <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+    Effect.gen(function* () {
+      const session = yield* CurrentSession
+      if (!session.sessionId) return yield* signedOut
+      return yield* effect
+    })
 
 /**
  * Runs `effect` only for a signed-in request; one with no session fails with
  * `unauthorized()` (each API group has its own 403 error).
  */
-export const requireSession =
-  <E2>(unauthorized: () => E2) =>
-  <A, E, R>(effect: Effect.Effect<A, E, R>) =>
-    Effect.gen(function* () {
-      const session = yield* CurrentSession
-      if (!session.sessionId) return yield* Effect.fail(unauthorized())
-      return yield* effect
-    })
+export const requireSession = <E2>(unauthorized: () => E2) => ifSignedIn(Effect.failSync(unauthorized))
 
 /**
  * Runs `effect` as the request's user, in one transaction. A request with no
@@ -23,19 +30,3 @@ export const asSignedIn =
   <E2>(unauthorized: () => E2) =>
   <A, E, R>(effect: Effect.Effect<A, E, R>) =>
     withAuthContext(effect).pipe(requireSession(unauthorized))
-
-/**
- * Run `query` as the session's user. With no session, fail with `unauthorized()`
- * (each API group has its own 403 error).
- */
-export const asSessionOr = <A, E, E2, R>(
-  unauthorized: () => E2,
-  query: (session: SessionData) => Effect.Effect<A, E, R>,
-) =>
-  Effect.gen(function* () {
-    const session = yield* CurrentSession
-    if (!session.sessionId) {
-      return yield* Effect.fail(unauthorized())
-    }
-    return yield* query(session).pipe(withAuthContext)
-  })

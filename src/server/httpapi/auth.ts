@@ -2,31 +2,112 @@ import { Effect } from "effect"
 import { HttpApiBuilder } from "effect/http-api"
 import { Auth } from "../services/auth"
 import { withAuthContext } from "../db"
-import {
-  GigListApi,
-  AuthError,
-  CurrentSession,
-  sessionCookie,
-} from "../../api/contracts"
+import { asSignedIn, ifSignedIn } from "./scope"
+import { GigListApi, AuthError, CurrentSession, sessionCookie } from "../../api/contracts"
 
 const isSecure = process.env.NODE_ENV === "production"
 
-const requireSession = Effect.fnUntraced(function* () {
-  const session = yield* CurrentSession
-  if (!session.sessionId || !session.userId) {
-    return yield* new AuthError({ message: "You must be signed in" })
-  }
-  return session
-})
+const ok = { ok: true as const }
 
-const setSessionCookie = Effect.fnUntraced(function* (sessionId: string) {
-  yield* HttpApiBuilder.securitySetCookie(sessionCookie, sessionId, {
+/** Answers a service failure with its message, as the 4xx the browser shows. */
+const asAuthError = Effect.mapError((e: { readonly message: string }) => new AuthError({ message: e.message }))
+
+const asUser = asSignedIn(() => new AuthError({ message: "You must be signed in" }))
+
+export const AuthApiGroupLive = HttpApiBuilder.group(GigListApi, "auth", (handlers) =>
+  handlers
+    .handle("login", ({ payload }) =>
+      Auth.use((auth) => auth.login(payload)).pipe(
+        Effect.flatMap((result) => setSessionCookie(result.sessionId)),
+        Effect.as(ok),
+        asAuthError,
+      ),
+    )
+    .handle("register", ({ payload }) =>
+      Auth.use((auth) => auth.register(payload)).pipe(
+        Effect.flatMap((result) => setSessionCookie(result.sessionId)),
+        Effect.as(ok),
+        asAuthError,
+      ),
+    )
+    .handle("forgotPassword", ({ payload }) =>
+      Auth.use((auth) => auth.forgotPassword(payload.email)).pipe(Effect.orDie, Effect.as(ok)),
+    )
+    .handle("resetPassword", ({ payload }) =>
+      Auth.use((auth) => auth.resetPassword(payload)).pipe(
+        asAuthError,
+        Effect.flatMap((result) => setSessionCookie(result.sessionId)),
+        Effect.as(ok),
+      ),
+    )
+    .handle("logout", () =>
+      Effect.gen(function* () {
+        const session = yield* CurrentSession
+        if (session.sessionId) {
+          yield* Auth.use((auth) => auth.logout(session.sessionId)).pipe(Effect.orDie)
+        }
+        yield* clearSessionCookie
+        return ok
+      }),
+    )
+    .handle("me", () => Auth.use((auth) => auth.getMe()).pipe(withAuthContext, ifSignedIn(Effect.succeed(null))))
+    .handle("updateMe", ({ payload }) => Auth.use((auth) => auth.updateProfile(payload)).pipe(asAuthError, asUser))
+    .handle("changePassword", ({ payload }) =>
+      Auth.use((auth) =>
+        auth.changePassword({ oldPassword: payload.old_password, newPassword: payload.new_password }),
+      ).pipe(asAuthError, Effect.as(ok), asUser),
+    )
+    .handle("listEmails", () =>
+      Auth.use((auth) => auth.listEmails()).pipe(
+        Effect.mapError(() => new AuthError({ message: "Could not load emails" })),
+        Effect.map((rows) => rows.map(toUserEmail)),
+        asUser,
+      ),
+    )
+    .handle("addEmail", ({ payload }) =>
+      Auth.use((auth) => auth.addEmail(payload.email)).pipe(asAuthError, Effect.map(toUserEmail), asUser),
+    )
+    .handle("verifyEmail", ({ payload }) =>
+      Auth.use((auth) => auth.verifyEmail(payload)).pipe(asAuthError, Effect.as(ok)),
+    )
+    .handle("removeEmail", ({ params: { id } }) =>
+      Auth.use((auth) => auth.removeEmail(id)).pipe(asAuthError, Effect.as(ok), asUser),
+    )
+    .handle("makeEmailPrimary", ({ params: { id } }) =>
+      Auth.use((auth) => auth.makeEmailPrimary(id)).pipe(asAuthError, Effect.map(toUserEmail), asUser),
+    )
+    .handle("resendEmailVerification", ({ params: { id } }) =>
+      Auth.use((auth) => auth.resendEmailVerification(id)).pipe(asAuthError, Effect.as(ok), asUser),
+    )
+    .handle("requestAccountDeletion", () =>
+      Auth.use((auth) => auth.requestAccountDeletion()).pipe(asAuthError, Effect.as(ok), asUser),
+    )
+    .handle("confirmAccountDeletion", ({ payload }) =>
+      Auth.use((auth) => auth.confirmAccountDeletion(payload.token)).pipe(
+        asAuthError,
+        asUser,
+        // The user row is gone; drop the cookie so the browser is signed out.
+        Effect.andThen(clearSessionCookie),
+        Effect.as(ok),
+      ),
+    ),
+)
+
+const setSessionCookie = (sessionId: string) =>
+  HttpApiBuilder.securitySetCookie(sessionCookie, sessionId, {
     httpOnly: true,
     sameSite: "lax",
     secure: isSecure,
     path: "/",
     maxAge: "30 days",
   })
+
+const clearSessionCookie = HttpApiBuilder.securitySetCookie(sessionCookie, "", {
+  httpOnly: true,
+  sameSite: "lax",
+  secure: isSecure,
+  path: "/",
+  maxAge: "0 seconds",
 })
 
 const toUserEmail = (row: { id: string; email: string; is_verified: boolean; is_primary: boolean; created_at: Date }) => ({
@@ -36,156 +117,3 @@ const toUserEmail = (row: { id: string; email: string; is_verified: boolean; is_
   is_primary: row.is_primary,
   created_at: row.created_at,
 })
-
-export const authHandlers = HttpApiBuilder.group(GigListApi, "auth", (handlers) =>
-  Effect.gen(function* () {
-    const auth = yield* Auth
-    return handlers
-      .handle("login", Effect.fnUntraced(function*({ payload }) {
-          const result = yield* auth.login(payload)
-          yield* setSessionCookie(result.sessionId)
-          return { ok: true as const }
-        },
-          Effect.mapError((e) => new AuthError({ message: e.message })),
-        ),
-      )
-      .handle("register", Effect.fnUntraced(function*({ payload }) {
-          const result = yield* auth.register(payload)
-          yield* setSessionCookie(result.sessionId)
-          return { ok: true as const }
-        },
-          Effect.mapError((e) => new AuthError({ message: e.message })),
-        ),
-      )
-      .handle("forgotPassword", Effect.fnUntraced(function* ({ payload }) {
-        yield* auth.forgotPassword(payload.email).pipe(Effect.orDie)
-        return { ok: true as const }
-      }))
-      .handle("resetPassword", Effect.fnUntraced(function* ({ payload }) {
-        const result = yield* auth.resetPassword(payload).pipe(
-          Effect.mapError((error) => new AuthError({ message: error.message })),
-        )
-        yield* setSessionCookie(result.sessionId)
-        return { ok: true as const }
-      }))
-      .handle("logout", Effect.fnUntraced(function*() {
-          const session = yield* CurrentSession
-          if (session.sessionId) {
-            yield* auth.logout(session.sessionId).pipe(Effect.orDie)
-          }
-          yield* HttpApiBuilder.securitySetCookie(sessionCookie, "", {
-            httpOnly: true,
-            sameSite: "lax",
-            secure: isSecure,
-            path: "/",
-            maxAge: "0 seconds",
-          })
-          return { ok: true as const }
-        }),
-      )
-      .handle("me", Effect.fnUntraced(function*() {
-          const session = yield* CurrentSession
-          if (!session.sessionId || !session.userId) return null
-          return yield* auth.getMe().pipe(withAuthContext)
-        }),
-      )
-      .handle("updateMe", Effect.fnUntraced(function*({ payload }) {
-          yield* requireSession()
-          return yield* auth.updateProfile(payload).pipe(
-            withAuthContext,
-            Effect.mapError((e) => new AuthError({ message: e.message })),
-          )
-        }),
-      )
-      .handle("changePassword", Effect.fnUntraced(function*({ payload }) {
-          yield* requireSession()
-          yield* auth.changePassword({
-            oldPassword: payload.old_password,
-            newPassword: payload.new_password,
-          }).pipe(
-            withAuthContext,
-            Effect.mapError((e) => new AuthError({ message: e.message })),
-          )
-          return { ok: true as const }
-        }),
-      )
-      .handle("listEmails", Effect.fnUntraced(function*() {
-          yield* requireSession()
-          const rows = yield* auth.listEmails().pipe(
-            withAuthContext,
-            Effect.mapError(() => new AuthError({ message: "Could not load emails" })),
-          )
-          return rows.map(toUserEmail)
-        }),
-      )
-      .handle("addEmail", Effect.fnUntraced(function*({ payload }) {
-          yield* requireSession()
-          const row = yield* auth.addEmail(payload.email).pipe(
-            withAuthContext,
-            Effect.mapError((e) => new AuthError({ message: e.message })),
-          )
-          return toUserEmail(row)
-        }),
-      )
-      .handle("verifyEmail", Effect.fnUntraced(function*({ payload }) {
-          yield* auth.verifyEmail(payload).pipe(
-            Effect.mapError((e) => new AuthError({ message: e.message })),
-          )
-          return { ok: true as const }
-        }),
-      )
-      .handle("removeEmail", Effect.fnUntraced(function*({ params: { id } }) {
-          yield* requireSession()
-          yield* auth.removeEmail(id).pipe(
-            withAuthContext,
-            Effect.mapError((e) => new AuthError({ message: e.message })),
-          )
-          return { ok: true as const }
-        }),
-      )
-      .handle("makeEmailPrimary", Effect.fnUntraced(function*({ params: { id } }) {
-          yield* requireSession()
-          const row = yield* auth.makeEmailPrimary(id).pipe(
-            withAuthContext,
-            Effect.mapError((e) => new AuthError({ message: e.message })),
-          )
-          return toUserEmail(row)
-        }),
-      )
-      .handle("resendEmailVerification", Effect.fnUntraced(function*({ params: { id } }) {
-          yield* requireSession()
-          yield* auth.resendEmailVerification(id).pipe(
-            withAuthContext,
-            Effect.mapError((e) => new AuthError({ message: e.message })),
-          )
-          return { ok: true as const }
-        }),
-      )
-      .handle("requestAccountDeletion", Effect.fnUntraced(function*() {
-          yield* requireSession()
-          yield* auth.requestAccountDeletion().pipe(
-            withAuthContext,
-            Effect.mapError((e) => new AuthError({ message: e.message })),
-          )
-          return { ok: true as const }
-        }),
-      )
-      .handle("confirmAccountDeletion", Effect.fnUntraced(function*({ payload }) {
-          yield* requireSession()
-          yield* auth.confirmAccountDeletion(payload.token).pipe(
-            withAuthContext,
-            Effect.mapError((e) => new AuthError({ message: e.message })),
-          )
-          // The user row is gone; drop the cookie so the browser is signed out.
-          yield* HttpApiBuilder.securitySetCookie(sessionCookie, "", {
-            httpOnly: true,
-            sameSite: "lax",
-            secure: isSecure,
-            path: "/",
-            maxAge: "0 seconds",
-          })
-          return { ok: true as const }
-        }),
-      )
-  })
-)
