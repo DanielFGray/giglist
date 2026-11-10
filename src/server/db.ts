@@ -60,7 +60,10 @@ export class AuthVisitor extends Context.Service<AuthVisitor, string>()("AuthVis
 /**
  * The connection a visitor-scoped service queries. Only `withAuthContext`
  * provides it: the authenticator transaction, switched to the visitor role, for
- * one request.
+ * one request. A service method yields it per call, so the requirement is part
+ * of every visitor-scoped method by design.
+ *
+ * @effect-leakable-service
  */
 export class RequestDatabase extends Context.Service<RequestDatabase, KyselyDB>()("RequestDatabase") {}
 

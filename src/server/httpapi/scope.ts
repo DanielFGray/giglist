@@ -1,35 +1,20 @@
 import { Effect } from "effect"
-import { sql } from "kysely"
-import { RequestDatabase, withAuthContext } from "../db"
+import { withAuthContext } from "../db"
 import { CurrentSession, type SessionData } from "../../api/contracts"
 
 /**
- * `current_user_member_band_ids()` is a `setof uuid`, and `select * from
- * fn() as ids` names its single column after the table alias, so each row
- * carries the id under `ids` rather than `band_id` or the function name.
+ * Runs `effect` as the request's user, in one transaction. A request with no
+ * session fails with `unauthorized()` before it opens one (each API group has
+ * its own 403 error).
  */
-const memberBandIds = Effect.fnUntraced(function*() {
-  const db = yield* RequestDatabase
-  return yield* db
-    .selectFrom(sql<{ ids: string }>`app_public.current_user_member_band_ids()`.as("ids"))
-    .selectAll()
-    .pipe(
-      Effect.map((rows) => rows.map((r) => r.ids)),
-      Effect.orDie,
-    )
-})
-
-/**
- * Whether the session's user belongs to `bandId`.
- *
- * The RLS policies already refuse a non-member, so this exists to turn "the
- * query returned nothing" into a 403 the browser can show. Both run in the same
- * transaction, so they cannot disagree about who the user is.
- */
-export const isBandMember = Effect.fnUntraced(function*(bandId: string) {
-  const ids = yield* memberBandIds()
-  return ids.includes(bandId)
-})
+export const asSignedIn =
+  <E2>(unauthorized: () => E2) =>
+  <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+    Effect.gen(function* () {
+      const session = yield* CurrentSession
+      if (!session.sessionId) return yield* Effect.fail(unauthorized())
+      return yield* withAuthContext(effect)
+    })
 
 /**
  * Run `query` as the session's user. With no session, fail with `unauthorized()`

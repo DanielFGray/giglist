@@ -4,7 +4,8 @@ import { sql } from "kysely"
 import { RequestDatabase } from "../db"
 import { LiveHub } from "../services/live-hub"
 import { Auth } from "../services/auth"
-import { asSessionOr, isBandMember } from "./scope"
+import { asSessionOr } from "./scope"
+import { Bands } from "../services/band"
 import { between, placeAfter } from "../../components/position"
 import {
   GigListApi,
@@ -246,7 +247,7 @@ export const reportInRoom = <A, E, R>(
   })
 
 export const assertBandMember = Effect.fnUntraced(function*(bandId: string) {
-  if (!(yield* isBandMember(bandId))) {
+  if (!(yield* Bands.use((bands) => bands.isMember(bandId)))) {
     return yield* new SetlistForbidden({ message: "You are not a member of that band" })
   }
 })

@@ -34,8 +34,6 @@ const bandColumns = [
  * Band reads and writes, each run on the request's connection, `RequestDatabase`.
  * The methods yield it themselves rather than capturing one at layer build,
  * because only `withAuthContext` provides it, once per request.
- *
- * @effect-expect-leaking RequestDatabase
  */
 export class Bands extends Context.Service<Bands>()("setlist/Bands", {
   make: Effect.sync(() => {
@@ -477,7 +475,24 @@ export class Bands extends Context.Service<Bands>()("setlist/Bands", {
       ),
     );
 
+    /**
+     * Whether the request's user belongs to `bandId`. The policies already
+     * refuse a non-member; this lets a caller answer 403 instead of an empty
+     * result. It runs in the caller's transaction, so both agree on the user.
+     */
+    const isMember = Effect.fnUntraced(function* (bandId: string) {
+      const db = yield* RequestDatabase;
+      // `current_user_member_band_ids()` is a `setof uuid`; `select * from fn() as ids`
+      // names its one column after the alias.
+      const rows = yield* db
+        .selectFrom(sql<{ ids: string }>`app_public.current_user_member_band_ids()`.as("ids"))
+        .selectAll()
+        .pipe(Effect.orDie);
+      return rows.some((row) => row.ids === bandId);
+    });
+
     return {
+      isMember,
       getUserBands,
       getBandMembers,
       createBand,
