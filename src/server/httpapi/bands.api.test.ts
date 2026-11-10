@@ -2,23 +2,10 @@ import { describe, expect, it } from "@effect/vitest"
 import { Effect, Schema as S } from "effect"
 import { HttpClient, HttpClientResponse } from "effect/http"
 import { AcceptInvitationSuccess, BandInfo, BandMember } from "../../api/contracts"
-import { baseUrl, makeCookieJar, TestHttpClientLive } from "../test/apiHarness"
-import { postJson, register } from "../test/clients"
+import { baseUrl, TestHttpClientLive } from "../test/apiHarness"
+import { createBand, postJson, signedIn } from "../test/clients"
 
 const runId = Math.random().toString(36).slice(2, 8)
-
-/** A client with its own cookie jar, signed in as a new user. */
-const signedIn = (username: string) =>
-  Effect.gen(function* () {
-    const client = (yield* HttpClient.HttpClient).pipe(HttpClient.withCookiesRef(yield* makeCookieJar))
-    expect((yield* register(client, username)).status).toBe(200)
-    return client
-  })
-
-const createBand = (client: HttpClient.HttpClient, slug: string) =>
-  postJson(client, "/my/bands", { slug, name: `Band ${slug}` }).pipe(
-    Effect.flatMap(HttpClientResponse.schemaBodyJson(BandInfo)),
-  )
 
 const listBands = (client: HttpClient.HttpClient) =>
   client.get(`${baseUrl}/my/bands`).pipe(Effect.flatMap(HttpClientResponse.schemaBodyJson(S.Array(BandInfo))))
