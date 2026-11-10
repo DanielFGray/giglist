@@ -30,6 +30,17 @@ A service that reads or writes user data must `yield* Kysely` (the tag `withAuth
 
 An endpoint is limited when its contract adds `RateLimitMiddleware`, before `SessionMiddleware` so the limit can key on the signed-in user. The limit itself is a row of `rules` in `src/server/httpapi/rate-limit.ts`, found by the endpoint's name. Counts live in the shared Valkey instance (`VALKEY_URL`, keys `giglist:rl:*`); `RATE_LIMIT=off` disables the middleware, and Playwright sets it. The caller is `X-Real-IP` (set by the edge proxy, Traefik in production; IPv6 grouped by /64, `client-ip.ts`), or the socket address in development. Each recipient address also has a cap of 5 mails per hour, checked by the worker's `send_email` task (`worker/email/send-email.ts`), the one place every email passes; security notices (`account_activity.mjml`) are exempt. The worker shares the API's limiter (`src/server/services/rate-limiter.ts`), so it needs `VALKEY_URL` too.
 
+## Backend reference
+
+The backend follows ~/build/effect-web-template. Before you add or change a
+backend pattern (config, HTTP server, database access, errors, sessions, rate
+limits, Valkey, realtime, worker, tests), read how the template does it and do
+the same. Security code and auth SQL come from the ~/build/effect-backend
+packages.
+
+When the template has no pattern for what you need, file a task in
+effect-web-template and ask; do not invent a local one.
+
 ## Effect Patterns
 
 - Use @effect/sql-kysely for all queries — stay in Effect, no promise conversion
