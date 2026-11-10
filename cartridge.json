@@ -8,7 +8,7 @@
       "image": "registry.cluster:5000/giglist",
       "hostPort": "dynamic",
       "containerPort": 3000,
-      "healthCheck": { "type": "http", "path": "/api/health" },
+      "healthCheck": { "type": "http", "path": "/healthz" },
       "cpu": 300,
       "memoryMB": 384,
       "networkMode": "bridge",
