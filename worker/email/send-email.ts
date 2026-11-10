@@ -49,11 +49,11 @@ export const sendEmail = Effect.fn("sendEmail")(function* (input: unknown) {
   const fs = yield* FileSystem
   const source = yield* fs.readFileString(`${import.meta.dir}/../templates/${job.template}`)
   const now = yield* Clock.currentTimeMillis
-  const { html, text } = yield* Effect.try({
-    try: () => {
+  const { html, text } = yield* Effect.tryPromise({
+    try: async () => {
       const render = template(source, { escape: /\[\[([\s\S]+?)\]\]/g })
       const document = render({ projectName, legalText: `(C) ${new Date(now).getUTCFullYear()} ${projectName}`, ...job.variables })
-      const { html } = mjml(document, { validationLevel: "strict" })
+      const { html } = await mjml(document, { validationLevel: "strict" })
       return { html, text: convert(html.replace(/(<\/?)div/g, "$1p"), { wordwrap: 120 }).replace(/\n\s+\n/g, "\n\n") }
     },
     catch: (cause) => new EmailRenderError({ template: job.template, cause }),
