@@ -1,7 +1,7 @@
 import { Effect, Option, Schema as S, Struct } from "effect"
 import { HttpApiBuilder } from "effect/http-api"
 import { sql } from "kysely"
-import { Kysely } from "../db"
+import { RequestDatabase } from "../db"
 import { LiveHub } from "../services/live-hub"
 import { Auth } from "../services/auth"
 import { asSessionOr, isBandMember } from "./scope"
@@ -38,7 +38,7 @@ export const setlistsHandlers = HttpApiBuilder.group(GigListApi, "setlists", (ha
     .handle("createSetlist", ({ payload }) =>
       asSession(() =>
         Effect.gen(function* () {
-          const db = yield* Kysely
+          const db = yield* RequestDatabase
           yield* assertBandMember(payload.band_id)
           const inserted = yield* db
             .insertInto("app_public.setlists")
@@ -53,7 +53,7 @@ export const setlistsHandlers = HttpApiBuilder.group(GigListApi, "setlists", (ha
     .handle("updateSetlist", ({ params: { id }, payload }) =>
       asWriter(id, () =>
         Effect.gen(function* () {
-          const db = yield* Kysely
+          const db = yield* RequestDatabase
           yield* setlistOr404(id)
           // An empty SET is not valid SQL, and an empty payload changes nothing.
           if (Struct.keys(payload).length > 0) {
@@ -74,7 +74,7 @@ export const setlistsHandlers = HttpApiBuilder.group(GigListApi, "setlists", (ha
     .handle("deleteSetlist", ({ params: { id } }) =>
       asWriter(id, () =>
         Effect.gen(function* () {
-          const db = yield* Kysely
+          const db = yield* RequestDatabase
           yield* setlistOr404(id)
           yield* db.deleteFrom("app_public.setlists").where("id", "=", id).pipe(Effect.orDie)
         }),
@@ -91,7 +91,7 @@ export const setlistsHandlers = HttpApiBuilder.group(GigListApi, "setlists", (ha
     .handle("addEntry", ({ params: { id }, payload }) =>
       asWriter(id, () =>
         Effect.gen(function* () {
-          const db = yield* Kysely
+          const db = yield* RequestDatabase
           yield* lockSetlist(id)
           const setlist = yield* setlistOr404(id)
           yield* assertBandSong(payload.song_id, setlist.band_id)
@@ -115,7 +115,7 @@ export const setlistsHandlers = HttpApiBuilder.group(GigListApi, "setlists", (ha
     .handle("updateEntry", ({ params: { id, entryId }, payload }) =>
       asWriter(id, () =>
         Effect.gen(function* () {
-          const db = yield* Kysely
+          const db = yield* RequestDatabase
           const setlist = yield* setlistOr404(id)
           yield* entryOr404(entryId, id)
           if (payload.song_id !== undefined) yield* assertBandSong(payload.song_id, setlist.band_id)
@@ -135,7 +135,7 @@ export const setlistsHandlers = HttpApiBuilder.group(GigListApi, "setlists", (ha
     .handle("deleteEntry", ({ params: { id, entryId } }) =>
       asWriter(id, () =>
         Effect.gen(function* () {
-          const db = yield* Kysely
+          const db = yield* RequestDatabase
           yield* setlistOr404(id)
           yield* db
             .deleteFrom("app_public.setlist_entries")
@@ -148,7 +148,7 @@ export const setlistsHandlers = HttpApiBuilder.group(GigListApi, "setlists", (ha
     .handle("move", ({ params: { id }, payload }) =>
       asWriter(id, () =>
         Effect.gen(function* () {
-          const db = yield* Kysely
+          const db = yield* RequestDatabase
           yield* setlistOr404(id)
           // Serialise all moves for one setlist before reading neighbour keys.
           yield* lockSetlist(id)
@@ -184,7 +184,7 @@ export const setlistsHandlers = HttpApiBuilder.group(GigListApi, "setlists", (ha
 )
 
 /** Run `query` as the session's user, or answer 403 if there is no session. */
-export const asSession = <A, E>(query: (session: SessionData) => Effect.Effect<A, E, Kysely>) =>
+export const asSession = <A, E>(query: (session: SessionData) => Effect.Effect<A, E, RequestDatabase>) =>
   asSessionOr(() => new SetlistForbidden({ message: "You must be signed in" }), query)
 
 /**
@@ -192,10 +192,10 @@ export const asSession = <A, E>(query: (session: SessionData) => Effect.Effect<A
  * watching the setlist, and every gig that plays it, hears who wrote. The gigs
  * are read before the write, so deleting the setlist still reaches them.
  */
-const asWriter = <A, E>(setlistId: string, query: (session: SessionData) => Effect.Effect<A, E, Kysely>) =>
+const asWriter = <A, E>(setlistId: string, query: (session: SessionData) => Effect.Effect<A, E, RequestDatabase>) =>
   asSession((session) =>
     Effect.gen(function* () {
-      const db = yield* Kysely
+      const db = yield* RequestDatabase
       const gigs = yield* db
         .selectFrom("app_public.gig_setlists")
         .select("gig_id")
@@ -259,7 +259,7 @@ export const assertBandMember = Effect.fnUntraced(function*(bandId: string) {
  * foreign id is caught here before the resolved view could join its title.
  */
 const assertBandSong = Effect.fnUntraced(function*(songId: string, bandId: string) {
-  const db = yield* Kysely
+  const db = yield* RequestDatabase
   const forbidden = new SetlistForbidden({ message: "That song is not in this band" })
   const song = yield* db
     .selectFrom("app_public.songs")
@@ -270,7 +270,7 @@ const assertBandSong = Effect.fnUntraced(function*(songId: string, bandId: strin
 })
 
 const lockSetlist = Effect.fnUntraced(function*(setlistId: string) {
-  const db = yield* Kysely
+  const db = yield* RequestDatabase
   yield* db.selectFrom("app_public.setlists").select("id").where("id", "=", setlistId).forUpdate().pipe(Effect.orDie)
 })
 
@@ -280,7 +280,7 @@ const lockSetlist = Effect.fnUntraced(function*(setlistId: string) {
  * run under the caller's policies like the rest of the query.
  */
 const selectSetlists = Effect.fnUntraced(function*() {
-  const db = yield* Kysely
+  const db = yield* RequestDatabase
   return db
     .selectFrom("app_public.setlists as s")
     .select([
@@ -328,7 +328,7 @@ const setlistOrDie = (id: string) => setlistOr404(id).pipe(Effect.orDie)
 
 /** A new setlist named `name` with `source`'s songs and overrides, in no gig. Returns its id. */
 export const copySetlist = Effect.fn("Setlists.copySetlist")(function*(source: { id: string; band_id: string }, name: string) {
-  const db = yield* Kysely
+  const db = yield* RequestDatabase
   const copy = yield* db
     .insertInto("app_public.setlists")
     .values({ band_id: source.band_id, name })
@@ -361,7 +361,7 @@ export const copySetlist = Effect.fn("Setlists.copySetlist")(function*(source: {
  * inheritance itself.
  */
 const entriesFor = Effect.fnUntraced(function*(setlistId: string) {
-  const db = yield* Kysely
+  const db = yield* RequestDatabase
   return yield* db
     .selectFrom("app_public.setlist_entries_resolved")
     .selectAll()
@@ -373,7 +373,7 @@ const entriesFor = Effect.fnUntraced(function*(setlistId: string) {
 
 /** One entry, scoped to `setlistId` so the id alone cannot reach another band. */
 const entryOr404 = Effect.fnUntraced(function*(entryId: string, setlistId: string) {
-  const db = yield* Kysely
+  const db = yield* RequestDatabase
   return yield* db
     .selectFrom("app_public.setlist_entries_resolved")
     .selectAll()

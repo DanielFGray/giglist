@@ -1,6 +1,6 @@
 import { Effect, Schema as S } from "effect"
 import { HttpApiBuilder } from "effect/http-api"
-import { Kysely } from "../db"
+import { RequestDatabase } from "../db"
 import {
   ChartMarks,
   Mark,
@@ -25,7 +25,7 @@ const asSession = <A, E>(query: Parameters<typeof asSessionOr<A, E, MarkForbidde
  * the caller's bands, so a missing revision and a foreign one look the same.
  */
 const assertRevisionVisible = Effect.fnUntraced(function* (revisionId: string) {
-  const db = yield* Kysely
+  const db = yield* RequestDatabase
   const rows = yield* db.selectFrom("app_public.chart_revisions").select("id").where("id", "=", revisionId).pipe(Effect.orDie)
   if (rows.length === 0) {
     return yield* new MarkForbidden({ message: "You are not a member of that band" })
@@ -56,7 +56,7 @@ export const marksHandlers = HttpApiBuilder.group(GigListApi, "marks", (handlers
     .handle("listMarks", ({ params: { chartId } }) =>
       asSession(() =>
         Effect.gen(function* () {
-          const db = yield* Kysely
+          const db = yield* RequestDatabase
           const charts = yield* db.selectFrom("app_public.charts").select("id").where("id", "=", chartId).pipe(Effect.orDie)
           if (charts.length === 0) {
             return yield* new MarkForbidden({ message: "You are not a member of that band" })
@@ -92,7 +92,7 @@ export const marksHandlers = HttpApiBuilder.group(GigListApi, "marks", (handlers
     .handle("createMark", ({ payload }) =>
       asSession(() =>
         Effect.gen(function* () {
-          const db = yield* Kysely
+          const db = yield* RequestDatabase
           yield* assertRevisionVisible(payload.revision_id)
           // user_id is the session's user by default and cannot be set.
           const row = yield* db
@@ -107,7 +107,7 @@ export const marksHandlers = HttpApiBuilder.group(GigListApi, "marks", (handlers
     .handle("updateMark", ({ params: { id }, payload }) =>
       asSession(() =>
         Effect.gen(function* () {
-          const db = yield* Kysely
+          const db = yield* RequestDatabase
           yield* assertRevisionVisible(payload.revision_id)
           // The update policy limits this to the caller's own marks.
           const [row] = yield* db
@@ -124,7 +124,7 @@ export const marksHandlers = HttpApiBuilder.group(GigListApi, "marks", (handlers
     .handle("deleteMark", ({ params: { id } }) =>
       asSession(() =>
         Effect.gen(function* () {
-          const db = yield* Kysely
+          const db = yield* RequestDatabase
           const rows = yield* db.deleteFrom("app_public.marks").where("id", "=", id).returning("id").pipe(Effect.orDie)
           if (rows.length === 0) return yield* new MarkNotFound({ id })
         }),
@@ -137,7 +137,7 @@ export const stampsHandlers = HttpApiBuilder.group(GigListApi, "stamps", (handle
     .handle("listStamps", () =>
       asSession(() =>
         Effect.gen(function* () {
-          const db = yield* Kysely
+          const db = yield* RequestDatabase
           const rows = yield* db
             .selectFrom("app_public.stamps")
             .select(["id", "name", "body", "created_at"])
@@ -150,7 +150,7 @@ export const stampsHandlers = HttpApiBuilder.group(GigListApi, "stamps", (handle
     .handle("createStamp", ({ payload }) =>
       asSession(() =>
         Effect.gen(function* () {
-          const db = yield* Kysely
+          const db = yield* RequestDatabase
           const row = yield* db
             .insertInto("app_public.stamps")
             .values({ name: payload.name, body: JSON.stringify(payload.body) })
@@ -163,7 +163,7 @@ export const stampsHandlers = HttpApiBuilder.group(GigListApi, "stamps", (handle
     .handle("deleteStamp", ({ params: { id } }) =>
       asSession(() =>
         Effect.gen(function* () {
-          const db = yield* Kysely
+          const db = yield* RequestDatabase
           const rows = yield* db.deleteFrom("app_public.stamps").where("id", "=", id).returning("id").pipe(Effect.orDie)
           if (rows.length === 0) return yield* new MarkNotFound({ id })
         }),

@@ -1,8 +1,9 @@
-import { Config, Context, Effect, Layer } from "effect"
+import { Config, Context, Effect, Layer, Option } from "effect"
 import { PgClient } from "@effect/sql-pg"
 import * as PgKysely from "./effect-kysely"
 import { sql } from "kysely"
 import type { DB } from "../../generated/DB.js"
+import { CurrentSession } from "../api/contracts"
 
 export type KyselyDB = PgKysely.EffectKysely<DB>
 
@@ -57,17 +58,14 @@ export class AuthVisitor extends Context.Service<AuthVisitor, string>()("AuthVis
 }
 
 /**
- * The connection a service queries. It defaults to the owner pool so the
- * app_private code (auth, testing) keeps working unchanged, and
- * `withAuthContext` swaps it for the authenticated connection for the duration
- * of one request.
+ * The connection a visitor-scoped service queries. Only `withAuthContext`
+ * provides it: the authenticator transaction, switched to the visitor role, for
+ * one request.
  */
-export class Kysely extends Context.Service<Kysely, KyselyDB>()("Kysely") {
-  static Live = Layer.effect(this, Db)
-}
+export class RequestDatabase extends Context.Service<RequestDatabase, KyselyDB>()("RequestDatabase") {}
 
 /**
- * Make `effect` run as the current user.
+ * Make `effect` run as the request's user.
  *
  * It runs on the authenticator connection and sets two settings inside a
  * transaction: the role becomes the visitor role (transaction-scoped, so the
@@ -82,25 +80,29 @@ export class Kysely extends Context.Service<Kysely, KyselyDB>()("Kysely") {
  * anything with a SqlError, and letting it into an endpoint's error channel
  * would turn it into a 400 the client is expected to read.
  */
-export const withAuthContext =
-  (sessionId: string | undefined) =>
-  <A, E, R>(effect: Effect.Effect<A, E, R>) =>
-    Effect.gen(function* () {
-      const db = yield* AuthDb
-      const visitor = yield* AuthVisitor
-
-      return yield* db.withTransaction(
-        Effect.gen(function* () {
-          yield* db.selectNoFrom([
-            // Transaction-local, so the pooled connection returns to the
-            // authenticator when the request ends. The role is a trusted name
-            // from the environment, so it is inlined as a literal rather than
-            // bound. The session id is user input and stays a bound parameter.
-            sql<string>`set_config('role', ${sql.lit(visitor)}, true)`.as("_"),
-            sql<string>`set_config('my.session_id', ${sessionId ?? ""}, true)`.as("_"),
-          ])
-
-          return yield* effect.pipe(Effect.provideService(Kysely, db))
-        }),
-      ).pipe(Effect.catchTag("SqlError", Effect.die))
+export const withAuthContext = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+  Effect.gen(function* () {
+    const db = yield* AuthDb
+    const visitor = yield* AuthVisitor
+    // A request outside SessionMiddleware (the public pages) runs as an
+    // anonymous visitor, as does one whose cookie names no live session.
+    const sessionId = Option.match(yield* Effect.serviceOption(CurrentSession), {
+      onNone: () => "",
+      onSome: (session) => session.sessionId,
     })
+
+    return yield* db.withTransaction(
+      Effect.gen(function* () {
+        yield* db.selectNoFrom([
+          // Transaction-local, so the pooled connection returns to the
+          // authenticator when the request ends. The role is a trusted name
+          // from the environment, so it is inlined as a literal rather than
+          // bound. The session id is user input and stays a bound parameter.
+          sql<string>`set_config('role', ${sql.lit(visitor)}, true)`.as("_"),
+          sql<string>`set_config('my.session_id', ${sessionId}, true)`.as("_"),
+        ])
+
+        return yield* effect.pipe(Effect.provideService(RequestDatabase, db))
+      }),
+    ).pipe(Effect.catchTag("SqlError", Effect.die))
+  })

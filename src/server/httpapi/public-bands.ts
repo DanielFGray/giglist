@@ -18,7 +18,7 @@ export const publicBandsHandlers = HttpApiBuilder.group(
         "getPublicBand",
         Effect.fnUntraced(function* ({ params: { slug } }) {
           return yield* bands.getPublicBandProfile(slug).pipe(
-            withAuthContext(undefined),
+            withAuthContext,
             Effect.catchTag("PublicBandMissing", (e) => Effect.fail(new PublicBandNotFound({ slug: e.slug }))),
           )
         }),

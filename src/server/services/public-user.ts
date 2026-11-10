@@ -1,6 +1,6 @@
 import { Context, Effect, Layer, Schema } from "effect";
 import { sql } from "kysely";
-import { Kysely } from "../db";
+import { RequestDatabase } from "../db";
 
 export class PublicUserMissing extends Schema.TaggedError<
   PublicUserMissing,
@@ -16,7 +16,7 @@ export class PublicUserMissing extends Schema.TaggedError<
 export class PublicUsers extends Context.Service<PublicUsers>()("setlist/PublicUsers", {
   make: Effect.succeed({
     getPublicUserProfile: Effect.fn("PublicUsers.getProfile")(function* (username: string) {
-      const db = yield* Kysely;
+      const db = yield* RequestDatabase;
       const user = yield* db
         .selectFrom(
           sql<{

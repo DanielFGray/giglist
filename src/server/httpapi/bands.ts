@@ -38,7 +38,7 @@ export const bandsHandlers = HttpApiBuilder.group(GigListApi, "myBands", (handle
 
           return yield* bands.getUserBands().pipe(
             Effect.map((rows) => rows.map(toBandInfo)),
-            withAuthContext(session.sessionId),
+            withAuthContext,
           );
         }),
       )
@@ -50,16 +50,16 @@ export const bandsHandlers = HttpApiBuilder.group(GigListApi, "myBands", (handle
           return yield* bands.listInvitations().pipe(
             Effect.map((rows) => rows.map((r) => ({ id: r.id, band_id: r.band_id, band_name: r.band_name }))),
             Effect.orDie,
-            withAuthContext(session.sessionId),
+            withAuthContext,
           );
         }),
       )
       .handle(
         "acceptInvitation",
         Effect.fnUntraced(function* ({ params: { invitationId }, payload: { code } }) {
-          const session = yield* requireSession();
+          yield* requireSession();
           return yield* bands.acceptInvitation(invitationId, code).pipe(
-            withAuthContext(session.sessionId),
+            withAuthContext,
             Effect.mapError((e) => new BandError({ message: e.message })),
           );
         }),
@@ -67,9 +67,9 @@ export const bandsHandlers = HttpApiBuilder.group(GigListApi, "myBands", (handle
       .handle(
         "declineInvitation",
         Effect.fnUntraced(function* ({ params: { invitationId } }) {
-          const session = yield* requireSession();
+          yield* requireSession();
           return yield* bands.declineInvitation(invitationId).pipe(
-            withAuthContext(session.sessionId),
+            withAuthContext,
             Effect.mapError((e) => new BandError({ message: e.message })),
           );
         }),
@@ -77,7 +77,7 @@ export const bandsHandlers = HttpApiBuilder.group(GigListApi, "myBands", (handle
       .handle(
         "getBandMembers",
         Effect.fnUntraced(function* ({ params: { bandId } }) {
-          const session = yield* requireSession();
+          yield* requireSession();
           return yield* bands.getBandMembers(bandId).pipe(
             Effect.map((rows) =>
               rows.map((m) => ({
@@ -90,17 +90,17 @@ export const bandsHandlers = HttpApiBuilder.group(GigListApi, "myBands", (handle
                 avatar_url: m.avatar_url ?? null,
               })),
             ),
-            withAuthContext(session.sessionId),
+            withAuthContext,
           );
         }),
       )
       .handle(
         "createBand",
         Effect.fnUntraced(function* ({ payload }) {
-          const session = yield* requireSession();
+          yield* requireSession();
           return yield* bands.createBand(payload).pipe(
             Effect.map(toBandInfo),
-            withAuthContext(session.sessionId),
+            withAuthContext,
             Effect.mapError((e) => new BandError({ message: e.message })),
           );
         }),
@@ -108,9 +108,9 @@ export const bandsHandlers = HttpApiBuilder.group(GigListApi, "myBands", (handle
       .handle(
         "deleteBand",
         Effect.fnUntraced(function* ({ params: { bandId } }) {
-          const session = yield* requireSession();
+          yield* requireSession();
           yield* bands.deleteBand(bandId).pipe(
-            withAuthContext(session.sessionId),
+            withAuthContext,
             Effect.mapError((e) => new BandError({ message: e.message })),
           );
           return { ok: true as const };
@@ -119,10 +119,10 @@ export const bandsHandlers = HttpApiBuilder.group(GigListApi, "myBands", (handle
       .handle(
         "updateBand",
         Effect.fnUntraced(function* ({ params: { bandId }, payload }) {
-          const session = yield* requireSession();
+          yield* requireSession();
           return yield* bands.updateBand({ bandId, ...payload }).pipe(
             Effect.map(toBandInfo),
-            withAuthContext(session.sessionId),
+            withAuthContext,
             Effect.mapError((e) => new BandError({ message: e.message })),
           );
         }),
@@ -130,12 +130,12 @@ export const bandsHandlers = HttpApiBuilder.group(GigListApi, "myBands", (handle
       .handle(
         "leaveBand",
         Effect.fnUntraced(function* ({ params: { bandId }, payload }) {
-          const session = yield* requireSession();
+          yield* requireSession();
           yield* bands.leaveBand({
             bandId,
             transferTo: payload.transfer_to,
           }).pipe(
-            withAuthContext(session.sessionId),
+            withAuthContext,
             Effect.mapError((e) => new BandError({ message: e.message })),
           );
           return { ok: true as const };
@@ -144,12 +144,12 @@ export const bandsHandlers = HttpApiBuilder.group(GigListApi, "myBands", (handle
       .handle(
         "transferOwnership",
         Effect.fnUntraced(function* ({ params: { bandId }, payload }) {
-          const session = yield* requireSession();
+          yield* requireSession();
           yield* bands.transferOwnership({
             bandId,
             userId: payload.user_id,
           }).pipe(
-            withAuthContext(session.sessionId),
+            withAuthContext,
             Effect.mapError((e) => new BandError({ message: e.message })),
           );
           return { ok: true as const };
@@ -158,9 +158,9 @@ export const bandsHandlers = HttpApiBuilder.group(GigListApi, "myBands", (handle
       .handle(
         "removeMember",
         Effect.fnUntraced(function* ({ params: { bandId, userId } }) {
-          const session = yield* requireSession();
+          yield* requireSession();
           yield* bands.removeMember({ bandId, userId }).pipe(
-            withAuthContext(session.sessionId),
+            withAuthContext,
             Effect.mapError((e) => new BandError({ message: e.message })),
           );
           return { ok: true as const };
@@ -169,13 +169,13 @@ export const bandsHandlers = HttpApiBuilder.group(GigListApi, "myBands", (handle
       .handle(
         "inviteToBand",
         Effect.fnUntraced(function* ({ params: { bandId }, payload }) {
-          const session = yield* requireSession();
+          yield* requireSession();
           return yield* bands.inviteToBand({
             bandId,
             username: payload.username,
             email: payload.email,
           }).pipe(
-            withAuthContext(session.sessionId),
+            withAuthContext,
             Effect.mapError((e) => new BandError({ message: e.message })),
           );
         }),
@@ -183,7 +183,7 @@ export const bandsHandlers = HttpApiBuilder.group(GigListApi, "myBands", (handle
       .handle(
         "listPendingInvitations",
         Effect.fnUntraced(function* ({ params: { bandId } }) {
-          const session = yield* requireSession();
+          yield* requireSession();
           return yield* bands.listPendingInvitations(bandId).pipe(
             Effect.map((rows) =>
               rows.map((r) => ({
@@ -192,7 +192,7 @@ export const bandsHandlers = HttpApiBuilder.group(GigListApi, "myBands", (handle
                 email: r.email ?? null,
               })),
             ),
-            withAuthContext(session.sessionId),
+            withAuthContext,
             Effect.mapError((e) => new BandError({ message: e.message })),
           );
         }),
@@ -200,9 +200,9 @@ export const bandsHandlers = HttpApiBuilder.group(GigListApi, "myBands", (handle
       .handle(
         "cancelInvitation",
         Effect.fnUntraced(function* ({ params: { bandId, invitationId } }) {
-          const session = yield* requireSession();
+          yield* requireSession();
           yield* bands.cancelInvitation({ bandId, invitationId }).pipe(
-            withAuthContext(session.sessionId),
+            withAuthContext,
             Effect.mapError((e) => new BandError({ message: e.message })),
           );
           return { ok: true as const };

@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto"
 import { Effect } from "effect"
 import { HttpApiBuilder } from "effect/http-api"
-import { Kysely } from "../db"
+import { RequestDatabase } from "../db"
 import { ChartForbidden, ChartInvalid, GigListApi } from "../../api/contracts"
 import { MAX_SCORE_BYTES, scoreFormat } from "../../charts/score-file"
 import { asSession, assertSongVisible, decodeChart, withNewestRevision } from "./charts"
@@ -17,7 +17,7 @@ export const scoresHandlers = HttpApiBuilder.group(GigListApi, "scores", (handle
           if (scoreFormat(payload) === null) {
             return yield* new ChartInvalid({ message: "That is not a Guitar Pro file" })
           }
-          const db = yield* Kysely
+          const db = yield* RequestDatabase
           yield* assertSongVisible(query.song_id)
           const bytes = Buffer.from(payload.buffer, payload.byteOffset, payload.byteLength)
           // The chart, its revision and the file share the request's transaction. The database
@@ -48,7 +48,7 @@ export const scoresHandlers = HttpApiBuilder.group(GigListApi, "scores", (handle
     .handle("scoreFile", ({ params: { revisionId } }) =>
       asSession(() =>
         Effect.gen(function* () {
-          const db = yield* Kysely
+          const db = yield* RequestDatabase
           // RLS hides a file outside the caller's bands, so a miss is a 403.
           const rows = yield* db
             .selectFrom("app_public.score_files")

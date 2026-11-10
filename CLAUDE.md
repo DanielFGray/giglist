@@ -24,7 +24,7 @@ The app opens two pools, and which one a query uses decides whether RLS applies:
 - `Db` — `DATABASE_URL`, the table **owner**. PostgreSQL skips RLS policies for the owner, so this pool is only for `app_private` (sessions, user creation) and tooling that must ignore policies.
 - `AuthDb` — `AUTH_DATABASE_URL`, the **authenticator**. Requests run here, wrapped in `withAuthContext`, which sets the visitor role and `my.session_id` in a transaction. The role is transaction-local, so the connection returns to the authenticator when the request ends.
 
-A service that reads or writes user data must `yield* Kysely` (the tag `withAuthContext` provides). Yielding `Db` directly bypasses every policy.
+A service that reads or writes user data must `yield* RequestDatabase`, which only `withAuthContext` provides; with no request session (the public pages) it runs as an anonymous visitor. Yielding `Db` directly bypasses every policy.
 
 ## Rate limits
 
@@ -45,7 +45,7 @@ effect-web-template and ask; do not invent a local one.
 
 - Use @effect/sql-kysely for all queries — stay in Effect, no promise conversion
 - Services follow `Effect.Service` pattern (see postgres.garden for reference)
-- Database access via `Kysely` tag, backed by `Db` by default and swapped by `withAuthContext`
+- Database access via the `RequestDatabase` tag, which only `withAuthContext` provides
 - Use `withAuthContext` pattern to set RLS session context before queries
 
 ## Learning more about Effect

@@ -1,6 +1,6 @@
 import { Effect } from "effect"
 import { sql } from "kysely"
-import { Kysely, withAuthContext } from "../db"
+import { RequestDatabase, withAuthContext } from "../db"
 import { CurrentSession, type SessionData } from "../../api/contracts"
 
 /**
@@ -9,7 +9,7 @@ import { CurrentSession, type SessionData } from "../../api/contracts"
  * carries the id under `ids` rather than `band_id` or the function name.
  */
 const memberBandIds = Effect.fnUntraced(function*() {
-  const db = yield* Kysely
+  const db = yield* RequestDatabase
   return yield* db
     .selectFrom(sql<{ ids: string }>`app_public.current_user_member_band_ids()`.as("ids"))
     .selectAll()
@@ -37,12 +37,12 @@ export const isBandMember = Effect.fnUntraced(function*(bandId: string) {
  */
 export const asSessionOr = <A, E, E2>(
   unauthorized: () => E2,
-  query: (session: SessionData) => Effect.Effect<A, E, Kysely>,
+  query: (session: SessionData) => Effect.Effect<A, E, RequestDatabase>,
 ) =>
   Effect.gen(function* () {
     const session = yield* CurrentSession
     if (!session.sessionId) {
       return yield* Effect.fail(unauthorized())
     }
-    return yield* query(session).pipe(withAuthContext(session.sessionId))
+    return yield* query(session).pipe(withAuthContext)
   })

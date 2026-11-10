@@ -18,7 +18,7 @@ export const publicUsersHandlers = HttpApiBuilder.group(
         "getPublicUser",
         Effect.fnUntraced(function* ({ params: { username } }) {
           return yield* users.getPublicUserProfile(username).pipe(
-            withAuthContext(undefined),
+            withAuthContext,
             Effect.catchTag("PublicUserMissing", (e) => Effect.fail(new PublicUserNotFound({ username: e.username }))),
           )
         }),

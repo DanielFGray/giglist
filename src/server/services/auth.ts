@@ -1,6 +1,6 @@
 import { Context, Effect, Layer, Redacted, Schema as S } from "effect";
 import { sql } from "kysely";
-import { Db, Kysely } from "../db";
+import { Db, RequestDatabase } from "../db";
 import { pgError } from "./pg-error";
 import { gravatarUrl } from "../gravatar";
 
@@ -44,14 +44,14 @@ const emptyToNull = (value: string | null) => {
 /**
  * Account, session and email operations. Each method yields the connection it
  * needs itself: `Db` (the owner pool) for the token and session functions that
- * run without a signed-in user, and `Kysely` for everything a request does as the
- * user, so `withAuthContext` can swap in the visitor's connection per request.
+ * run without a signed-in user, and `RequestDatabase` for everything a request
+ * does as the user, which only `withAuthContext` provides.
  */
 export class Auth extends Context.Service<Auth>()("setlist/Auth", {
   make: Effect.sync(() => {
     /** Band owners must transfer or delete those bands before account deletion. */
     const requireNoOwnedBands = Effect.fn("Auth.requireNoOwnedBands")(function* () {
-      const db = yield* Kysely;
+      const db = yield* RequestDatabase;
       const owned = yield* db
         .selectFrom("app_public.band_memberships")
         .select(["band_id"])
@@ -205,7 +205,7 @@ export class Auth extends Context.Service<Auth>()("setlist/Auth", {
         page_theme?: string | null;
         page_options?: Record<string, string>;
       }) {
-        const db = yield* Kysely;
+        const db = yield* RequestDatabase;
         return yield* db
           .updateTable("app_public.users")
           .set({
@@ -247,7 +247,7 @@ export class Auth extends Context.Service<Auth>()("setlist/Auth", {
         oldPassword: Redacted.Redacted<string>;
         newPassword: Redacted.Redacted<string>;
       }) {
-        const db = yield* Kysely;
+        const db = yield* RequestDatabase;
         // A scalar `select * from fn() as alias` names the column after the alias.
         const ok = yield* db
           .selectFrom(
@@ -283,7 +283,7 @@ export class Auth extends Context.Service<Auth>()("setlist/Auth", {
     );
 
     const listEmails = Effect.fn("Auth.listEmails")(function* () {
-      const db = yield* Kysely;
+      const db = yield* RequestDatabase;
       return yield* db
         .selectFrom("app_public.user_emails")
         .select(["id", "email", "is_verified", "is_primary", "created_at"])
@@ -293,7 +293,7 @@ export class Auth extends Context.Service<Auth>()("setlist/Auth", {
 
     const addEmail = Effect.fn("Auth.addEmail")(
       function* (email: string) {
-        const db = yield* Kysely;
+        const db = yield* RequestDatabase;
         return yield* db
           .insertInto("app_public.user_emails")
           .values({ email })
@@ -318,7 +318,7 @@ export class Auth extends Context.Service<Auth>()("setlist/Auth", {
 
     const removeEmail = Effect.fn("Auth.removeEmail")(
       function* (emailId: string) {
-        const db = yield* Kysely;
+        const db = yield* RequestDatabase;
         const deleted = yield* db
           .deleteFrom("app_public.user_emails")
           .where("id", "=", emailId)
@@ -342,7 +342,7 @@ export class Auth extends Context.Service<Auth>()("setlist/Auth", {
 
     const makeEmailPrimary = Effect.fn("Auth.makeEmailPrimary")(
       function* (emailId: string) {
-        const db = yield* Kysely;
+        const db = yield* RequestDatabase;
         return yield* db
           .selectFrom(
             sql<{
@@ -378,7 +378,7 @@ export class Auth extends Context.Service<Auth>()("setlist/Auth", {
 
     const resendEmailVerification = Effect.fn("Auth.resendEmailVerification")(
       function* (emailId: string) {
-        const db = yield* Kysely;
+        const db = yield* RequestDatabase;
         const ok = yield* db
           .selectFrom(
             sql<{ ok: boolean }>`app_public.resend_email_verification_code(${emailId}::uuid)`.as("ok"),
@@ -433,7 +433,7 @@ export class Auth extends Context.Service<Auth>()("setlist/Auth", {
     const requestAccountDeletion = Effect.fn("Auth.requestAccountDeletion")(
       function* () {
         yield* requireNoOwnedBands();
-        const db = yield* Kysely;
+        const db = yield* RequestDatabase;
         const ok = yield* db
           .selectFrom(sql<{ ok: boolean }>`app_public.request_account_deletion()`.as("ok"))
           .selectAll()
@@ -461,7 +461,7 @@ export class Auth extends Context.Service<Auth>()("setlist/Auth", {
     const confirmAccountDeletion = Effect.fn("Auth.confirmAccountDeletion")(
       function* (token: string) {
         yield* requireNoOwnedBands();
-        const db = yield* Kysely;
+        const db = yield* RequestDatabase;
         const ok = yield* db
           .selectFrom(
             sql<{ ok: boolean }>`app_public.confirm_account_deletion(${token})`.as("ok"),

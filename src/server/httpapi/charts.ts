@@ -1,6 +1,6 @@
 import { Effect, Schema as S } from "effect"
 import { HttpApiBuilder } from "effect/http-api"
-import { Kysely, withAuthContext } from "../db"
+import { RequestDatabase, withAuthContext } from "../db"
 import { explains } from "../../charts/changes"
 import { anchorText, parseDoc } from "../../charts/doc"
 import { guessKey, importPasted } from "../../charts/lyrics"
@@ -20,10 +20,10 @@ export type ChartRow = {
 }
 
 /** Run `query` as the session's user, or answer 403 if there is no session. */
-export const asSession = <A, E>(query: (session: SessionData) => Effect.Effect<A, E, Kysely>) =>
+export const asSession = <A, E>(query: (session: SessionData) => Effect.Effect<A, E, RequestDatabase>) =>
   Effect.gen(function* () {
     const session = yield* signedIn
-    return yield* query(session).pipe(withAuthContext(session.sessionId))
+    return yield* query(session).pipe(withAuthContext)
   })
 
 /** The session, or 403 if the request has none. */
@@ -43,7 +43,7 @@ const signedIn = Effect.gen(function* () {
  * another band's catalog.
  */
 export const assertSongVisible = Effect.fnUntraced(function* (songId: string) {
-  const db = yield* Kysely
+  const db = yield* RequestDatabase
   const rows = yield* db.selectFrom("app_public.songs").select("id").where("id", "=", songId).pipe(Effect.orDie)
   if (rows.length === 0) {
     return yield* new ChartForbidden({ message: "You are not a member of that band" })
@@ -53,7 +53,7 @@ export const assertSongVisible = Effect.fnUntraced(function* (songId: string) {
 /** Joins each chart to the text of its newest revision, in the wire shape. */
 export const withNewestRevision = Effect.fn("Charts.withNewestRevision")(function* (charts: ReadonlyArray<ChartRow>) {
   if (charts.length === 0) return []
-  const db = yield* Kysely
+  const db = yield* RequestDatabase
   const revisions = yield* db
     .selectFrom("app_public.chart_revisions")
     .select(["id", "chart_id", "source"])
@@ -77,7 +77,7 @@ export const chartsHandlers = HttpApiBuilder.group(GigListApi, "charts", (handle
     .handle("listCharts", ({ params: { songId } }) =>
       asSession(() =>
         Effect.gen(function* () {
-          const db = yield* Kysely
+          const db = yield* RequestDatabase
           yield* assertSongVisible(songId)
           const charts = yield* db
             .selectFrom("app_public.charts")
@@ -101,7 +101,7 @@ export const chartsHandlers = HttpApiBuilder.group(GigListApi, "charts", (handle
     .handle("createLyricsChart", ({ payload }) =>
       asSession(() =>
         Effect.gen(function* () {
-          const db = yield* Kysely
+          const db = yield* RequestDatabase
           yield* assertSongVisible(payload.song_id)
           // Both inserts share the request's transaction, so a failed revision leaves no chart.
           const writtenKey = payload.written_key ?? guessKey(payload.pasted)
@@ -127,7 +127,7 @@ export const chartsHandlers = HttpApiBuilder.group(GigListApi, "charts", (handle
     .handle("saveRevision", ({ params: { id }, payload }) =>
       asSession(() =>
         Effect.gen(function* () {
-          const db = yield* Kysely
+          const db = yield* RequestDatabase
           // RLS hides a chart outside the caller's bands, so a miss is a 403.
           const [chart] = yield* db
             .selectFrom("app_public.charts")
@@ -165,7 +165,7 @@ export const chartsHandlers = HttpApiBuilder.group(GigListApi, "charts", (handle
     .handle("deleteChart", ({ params: { id } }) =>
       asSession(() =>
         Effect.gen(function* () {
-          const db = yield* Kysely
+          const db = yield* RequestDatabase
           // RLS limits the delete to charts on the caller's songs.
           yield* db.deleteFrom("app_public.charts").where("id", "=", id).pipe(Effect.asVoid, Effect.orDie)
         }),

@@ -1,7 +1,7 @@
 import { Effect, Option, Schema as S } from "effect"
 import { HttpApiBuilder } from "effect/http-api"
 import { sql } from "kysely"
-import { Kysely } from "../db"
+import { RequestDatabase } from "../db"
 import { between, placeAfter } from "../../components/position"
 import { Gig, GigEntry, GigListApi, GigNotFound, SetlistForbidden, type SessionData } from "../../api/contracts"
 import { announce, asSession, assertBandMember, copySetlist, reportInRoom, watchRoom } from "./setlists"
@@ -28,7 +28,7 @@ export const gigsHandlers = HttpApiBuilder.group(GigListApi, "gigs", (handlers) 
     .handle("createGig", ({ payload }) =>
       asSession(() =>
         Effect.gen(function* () {
-          const db = yield* Kysely
+          const db = yield* RequestDatabase
           yield* assertBandMember(payload.band_id)
           const inserted = yield* db.insertInto("app_public.gigs").values(payload).returning("id").pipe(Effect.head, Effect.orDie)
           return yield* gigOrDie(inserted.id)
@@ -39,7 +39,7 @@ export const gigsHandlers = HttpApiBuilder.group(GigListApi, "gigs", (handlers) 
     .handle("updateGig", ({ params: { id }, payload }) =>
       asGigWriter(id, () =>
         Effect.gen(function* () {
-          const db = yield* Kysely
+          const db = yield* RequestDatabase
           yield* gigOr404(id)
           yield* db.updateTable("app_public.gigs").set(payload).where("id", "=", id).pipe(Effect.orDie)
           return yield* gigOrDie(id)
@@ -49,7 +49,7 @@ export const gigsHandlers = HttpApiBuilder.group(GigListApi, "gigs", (handlers) 
     .handle("deleteGig", ({ params: { id } }) =>
       asGigWriter(id, () =>
         Effect.gen(function* () {
-          const db = yield* Kysely
+          const db = yield* RequestDatabase
           yield* gigOr404(id)
           yield* db.deleteFrom("app_public.gigs").where("id", "=", id).pipe(Effect.orDie)
         }),
@@ -58,7 +58,7 @@ export const gigsHandlers = HttpApiBuilder.group(GigListApi, "gigs", (handlers) 
     .handle("addGigSetlist", ({ params: { id }, payload }) =>
       asGigWriter(id, () =>
         Effect.gen(function* () {
-          const db = yield* Kysely
+          const db = yield* RequestDatabase
           yield* lockGig(id)
           const gig = yield* gigOr404(id)
           const forbidden = new SetlistForbidden({ message: "That setlist is not in this band" })
@@ -90,7 +90,7 @@ export const gigsHandlers = HttpApiBuilder.group(GigListApi, "gigs", (handlers) 
     .handle("removeGigSetlist", ({ params: { id, setlistId } }) =>
       asGigWriter(id, () =>
         Effect.gen(function* () {
-          const db = yield* Kysely
+          const db = yield* RequestDatabase
           yield* gigOr404(id)
           yield* db
             .deleteFrom("app_public.gig_setlists")
@@ -104,7 +104,7 @@ export const gigsHandlers = HttpApiBuilder.group(GigListApi, "gigs", (handlers) 
     .handle("copyGigSetlist", ({ params: { id, setlistId }, payload }) =>
       asGigWriter(id, () =>
         Effect.gen(function* () {
-          const db = yield* Kysely
+          const db = yield* RequestDatabase
           yield* lockGig(id)
           const gig = yield* gigOr404(id)
           if (!gig.setlists.some((played) => played.id === setlistId)) {
@@ -125,7 +125,7 @@ export const gigsHandlers = HttpApiBuilder.group(GigListApi, "gigs", (handlers) 
     .handle("moveGigSetlist", ({ params: { id }, payload }) =>
       asGigWriter(id, () =>
         Effect.gen(function* () {
-          const db = yield* Kysely
+          const db = yield* RequestDatabase
           yield* gigOr404(id)
           // Serialise all moves for one gig before reading neighbour keys.
           yield* lockGig(id)
@@ -157,7 +157,7 @@ export const gigsHandlers = HttpApiBuilder.group(GigListApi, "gigs", (handlers) 
     .handle("listGigEntries", ({ params: { id } }) =>
       asSession(() =>
         Effect.gen(function* () {
-          const db = yield* Kysely
+          const db = yield* RequestDatabase
           yield* gigOr404(id)
           return yield* db
             .selectFrom("app_public.setlist_entries_resolved as r")
@@ -185,7 +185,7 @@ export const gigsHandlers = HttpApiBuilder.group(GigListApi, "gigs", (handlers) 
  * watching the gig hears who wrote, and so does everyone watching a setlist
  * the gig played before or after the write, since a setlist's page lists its gigs.
  */
-const asGigWriter = <A, E>(gigId: string, query: (session: SessionData) => Effect.Effect<A, E, Kysely>) =>
+const asGigWriter = <A, E>(gigId: string, query: (session: SessionData) => Effect.Effect<A, E, RequestDatabase>) =>
   asSession((session) =>
     Effect.gen(function* () {
       const before = yield* playedBy(gigId)
@@ -200,13 +200,13 @@ const asGigWriter = <A, E>(gigId: string, query: (session: SessionData) => Effec
 
 /** The ids of the setlists a gig plays. */
 const playedBy = Effect.fnUntraced(function*(gigId: string) {
-  const db = yield* Kysely
+  const db = yield* RequestDatabase
   const rows = yield* db.selectFrom("app_public.gig_setlists").select("setlist_id").where("gig_id", "=", gigId).pipe(Effect.orDie)
   return rows.map((row) => row.setlist_id)
 })
 
 const lockGig = Effect.fnUntraced(function*(gigId: string) {
-  const db = yield* Kysely
+  const db = yield* RequestDatabase
   yield* db.selectFrom("app_public.gigs").select("id").where("id", "=", gigId).forUpdate().pipe(Effect.orDie)
 })
 
@@ -217,7 +217,7 @@ const lockGig = Effect.fnUntraced(function*(gigId: string) {
  * times stay the venue's wall-clock `HH:MM:SS`.
  */
 const selectGigs = Effect.fn("Gigs.select")(function*() {
-  const db = yield* Kysely
+  const db = yield* RequestDatabase
   return db
     .selectFrom("app_public.gigs as g")
     .select([
