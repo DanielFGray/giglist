@@ -2,6 +2,8 @@
 -- `stored != input` form skipped the reject branch when stored was NULL
 -- (IF NULL is false in PL/pgSQL), so login, reset_password and
 -- change_password accepted any input for users with no hash / no token.
+-- reset_password also refuses a token older than v_token_max_duration; before,
+-- an emailed reset token stayed valid until it was used.
 
 create or replace function app_private.login(username citext, password text) returns app_private.sessions as $$
 declare
@@ -102,10 +104,15 @@ begin
     raise exception 'Password reset locked - too many reset attempts' using errcode = 'LOCKD';
   end if;
 
-  -- Reject when there is no pending token or the token does not match.
+  -- Reject when there is no pending token, the token does not match, or the
+  -- token is older than its lifetime. The age test uses the same boundary as
+  -- forgot_password, so a token is refused exactly when a new one would be
+  -- issued. A NULL generated time rejects too.
   if v_user_secret.reset_password_token is null
-  or v_user_secret.reset_password_token is distinct from reset_token then
-    -- Wrong token, bump all the attempt tracking figures
+  or v_user_secret.reset_password_token is distinct from reset_token
+  or v_user_secret.reset_password_token_generated is null
+  or v_user_secret.reset_password_token_generated < now() - v_token_max_duration then
+    -- Wrong or expired token, bump all the attempt tracking figures
     update app_private.user_secrets
     set
       failed_reset_password_attempts = (case when first_failed_reset_password_attempt is null or first_failed_reset_password_attempt < now() - v_token_max_duration then 1 else failed_reset_password_attempts + 1 end),
