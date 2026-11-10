@@ -1,6 +1,6 @@
 import { Effect } from "effect"
 import { withAuthContext } from "../db"
-import { CurrentSession } from "../../api/contracts"
+import { CurrentSession } from "../../api/session"
 
 /**
  * Runs `effect` only for a signed-in request; a signed-out one gets

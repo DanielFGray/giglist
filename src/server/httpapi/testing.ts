@@ -5,11 +5,9 @@ import { sql } from "kysely";
 import { Db } from "../db";
 import { Auth } from "../services/auth";
 import { gravatarUrl } from "../gravatar";
-import {
-  TestingApi,
-  sessionCookie,
-  TestUser,
-} from "../../api/contracts";
+import { sessionCookie } from "../../api/session"
+import { TestingApi, TestUser } from "../../api/testing"
+;
 
 type TestUserRow = Schema.Schema.Type<typeof TestUser>;
 
@@ -19,7 +17,7 @@ if (process.env.NODE_ENV === "production") {
 
 const isSecure = process.env.NODE_ENV === "production";
 
-const testingHandlers = HttpApiBuilder.group(TestingApi, "testing", (handlers) =>
+const TestingApiGroupLive = HttpApiBuilder.group(TestingApi, "testing", (handlers) =>
   Effect.gen(function* () {
     const auth = yield* Auth
     return handlers
@@ -278,4 +276,4 @@ const testingHandlers = HttpApiBuilder.group(TestingApi, "testing", (handlers) =
   })
 );
 
-export const testingRoutes = HttpApiBuilder.layer(TestingApi).pipe(Layer.provide(testingHandlers));
+export const testingRoutes = HttpApiBuilder.layer(TestingApi).pipe(Layer.provide(TestingApiGroupLive));

@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react"
 import { useForm } from "@tanstack/react-form"
 import { Schema as S } from "effect"
-import { MusicalKeys, SongFields, type MusicalKeyType } from "~/api/contracts"
+import { MusicalKeys, SongFields, type MusicalKeyType } from "~/api/songs"
 import type { SongCreateData, SongInfo, SongUpdateData } from "~/api/client"
 import {
   NumberField,

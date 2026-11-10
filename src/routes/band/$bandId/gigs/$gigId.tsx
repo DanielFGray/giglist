@@ -15,7 +15,7 @@ import {
   type Key,
 } from "react-aria-components"
 import { gigs, setlists, type GigInfo, type SetlistInfo } from "~/api/client"
-import { GigDetails } from "~/api/contracts"
+import { GigDetails } from "~/api/gigs"
 import { SubmitButton, TextAreaField, TextField, errorMessage, fieldError } from "~/components/form"
 import { useAuth } from "~/components/AuthContext"
 import { gigLabel } from "~/components/gig-label"

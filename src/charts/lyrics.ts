@@ -10,7 +10,7 @@
  * Pure and free of the DOM, so the server and the browser share it.
  */
 import { Chord, ChordLyricsPair, ChordProParser, Literal, Tag } from "chordsheetjs"
-import type { MusicalKeyType } from "~/api/contracts"
+import type { MusicalKeyType } from "~/api/songs"
 import { anchorLine, enclosingSection, inPhrase, parseDoc } from "./doc"
 import { readScoreLink, type ScoreLinkReading } from "./score-link"
 

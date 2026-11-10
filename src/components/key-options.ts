@@ -1,4 +1,4 @@
-import { MusicalKeys, type MusicalKeyType } from "~/api/contracts"
+import { MusicalKeys, type MusicalKeyType } from "~/api/songs"
 
 /** The choices for the key a chart is written in, with "Not set" first. */
 export const keyOptions: ReadonlyArray<{ value: MusicalKeyType | ""; label: string }> = [

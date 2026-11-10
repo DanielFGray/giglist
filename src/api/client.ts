@@ -1,27 +1,15 @@
 import { Effect, ManagedRuntime, Schema as S } from "effect"
 import { FetchHttpClient, HttpClient } from "effect/http"
 import { HttpApiClient } from "effect/http-api"
-import {
-  GigListApi,
-  AuthUser as AuthUserSchema,
-  UserEmail as UserEmailSchema,
-  BandInfo as BandInfoSchema,
-  BandMember as BandMemberSchema,
-  BandInvitation as BandInvitationSchema,
-  PendingInvitation as PendingInvitationSchema,
-  PublicBandProfile as PublicBandProfileSchema,
-  PublicUserProfile as PublicUserProfileSchema,
-  PageTheme as PageThemeSchema,
-  Setlist as SetlistSchema,
-  SetlistEntry as SetlistEntrySchema,
-  Gig as GigSchema,
-  GigEntry as GigEntrySchema,
-  Song,
-  Chart as ChartSchema,
-  ChartMarks as ChartMarksSchema,
-  Mark as MarkSchema,
-  Stamp as StampSchema,
-} from "./contracts"
+import { AuthUser as AuthUserSchema, UserEmail as UserEmailSchema } from "./auth"
+import { BandInfo as BandInfoSchema, BandMember as BandMemberSchema, BandInvitation as BandInvitationSchema, PendingInvitation as PendingInvitationSchema, PublicBandProfile as PublicBandProfileSchema, PageTheme as PageThemeSchema } from "./bands"
+import { Chart as ChartSchema } from "./charts"
+import { GigListApi } from "./contracts"
+import { Gig as GigSchema, GigEntry as GigEntrySchema } from "./gigs"
+import { ChartMarks as ChartMarksSchema, Mark as MarkSchema, Stamp as StampSchema } from "./marks"
+import { PublicUserProfile as PublicUserProfileSchema } from "./public-users"
+import { Setlist as SetlistSchema, SetlistEntry as SetlistEntrySchema } from "./setlists"
+import { Song } from "./songs"
 
 // --- Types derived from contract schemas ---
 

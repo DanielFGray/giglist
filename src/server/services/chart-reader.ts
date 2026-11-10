@@ -3,7 +3,8 @@ import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
 import { ChildProcess, ChildProcessSpawner } from "effect/process";
 import * as BunServices from "@effect/platform-bun/BunServices";
-import { ChartInvalid } from "../../api/contracts";
+import { ChartInvalid } from "../../api/charts"
+;
 import {
   MAX_SCAN_BYTES,
   MAX_SCAN_PAGES,

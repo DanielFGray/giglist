@@ -1,7 +1,8 @@
 import { Context, Effect, Layer, Schema } from "effect";
 import { sql } from "kysely";
 import { RequestDatabase } from "../db";
-import type { UpdateBandPayload } from "../../api/contracts";
+import type { UpdateBandPayload } from "../../api/bands"
+;
 import { pgError } from "./pg-error";
 
 type BandUpdate = Schema.Schema.Type<typeof UpdateBandPayload>;

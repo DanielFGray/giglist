@@ -1,7 +1,7 @@
 import { describe, expect, it } from "@effect/vitest"
 import { Effect, Schema as S } from "effect"
 import { HttpClient, HttpClientResponse } from "effect/http"
-import { AcceptInvitationSuccess, BandInfo, BandMember } from "../../api/contracts"
+import { AcceptInvitationSuccess, BandInfo, BandMember } from "../../api/bands"
 import { baseUrl, TestHttpClientLive } from "../test/apiHarness"
 import { createBand, postJson, signedIn } from "../test/clients"
 

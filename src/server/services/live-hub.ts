@@ -1,6 +1,6 @@
 import { Context, Effect, Layer, PubSub, Ref, Stream } from "effect"
 import type { Schema as S } from "effect"
-import type { LiveEvent, LiveViewer } from "../../api/contracts"
+import type { LiveEvent, LiveViewer } from "../../api/setlists"
 
 export type LiveEventData = S.Schema.Type<typeof LiveEvent>
 export type Viewer = S.Schema.Type<typeof LiveViewer>

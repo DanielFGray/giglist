@@ -1,7 +1,7 @@
 import { describe, expect, it } from "@effect/vitest"
 import { Effect, Schema as S } from "effect"
 import { HttpClient, HttpClientResponse } from "effect/http"
-import { AuthUser, UserEmail } from "../../api/contracts"
+import { AuthUser, UserEmail } from "../../api/auth"
 import { baseUrl, TestHttpClientLive } from "../test/apiHarness"
 import { anonymous, login, postJson, register, sendJson, signedIn, testPassword } from "../test/clients"
 

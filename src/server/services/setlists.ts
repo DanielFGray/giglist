@@ -5,18 +5,7 @@ import { Auth } from "./auth"
 import { Bands } from "./band"
 import { LiveHub, type Written } from "./live-hub"
 import { between, placeAfter } from "../../components/position"
-import {
-  LivePresence,
-  Setlist,
-  SetlistEntry,
-  SetlistForbidden,
-  SetlistNotFound,
-  type Move,
-  type SetlistEntryInsert,
-  type SetlistEntryUpdate,
-  type SetlistInsert,
-  type SetlistUpdate,
-} from "../../api/contracts"
+import { LivePresence, Setlist, SetlistEntry, SetlistForbidden, SetlistNotFound, type Move, type SetlistEntryInsert, type SetlistEntryUpdate, type SetlistInsert, type SetlistUpdate } from "../../api/setlists"
 
 const decodeSetlist = S.decodeUnknownEffect(Setlist)
 const decodeSetlists = S.decodeUnknownEffect(S.Array(Setlist))

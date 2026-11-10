@@ -1,5 +1,5 @@
 import { useState } from "react"
-import type { SetlistStatusType } from "~/api/contracts"
+import type { SetlistStatusType } from "~/api/setlists"
 import { formatDuration } from "./duration"
 import { errorMessage } from "./form"
 

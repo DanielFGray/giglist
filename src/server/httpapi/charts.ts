@@ -3,7 +3,8 @@ import { HttpApiBuilder } from "effect/http-api"
 import { Charts } from "../services/charts"
 import { ChartReader } from "../services/chart-reader"
 import { asSignedIn, requireSession } from "./scope"
-import { ChartForbidden, GigListApi } from "../../api/contracts"
+import { ChartForbidden } from "../../api/charts"
+import { GigListApi } from "../../api/contracts"
 
 const unauthorized = () => new ChartForbidden({ message: "You must be signed in" })
 const asMember = asSignedIn(unauthorized)

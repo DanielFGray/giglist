@@ -5,15 +5,7 @@ import { explains } from "../../charts/changes"
 import { anchorText, parseDoc } from "../../charts/doc"
 import { guessKey, importPasted } from "../../charts/lyrics"
 import { MAX_SCORE_BYTES, scoreFormat } from "../../charts/score-file"
-import {
-  Chart,
-  ChartConflict,
-  ChartForbidden,
-  ChartInvalid,
-  type ChartRevisionInsert,
-  type LyricsChartInsert,
-  type ScoreUploadQuery,
-} from "../../api/contracts"
+import { Chart, ChartConflict, ChartForbidden, ChartInvalid, type ChartRevisionInsert, type LyricsChartInsert, type ScoreUploadQuery } from "../../api/charts"
 
 const decodeChart = S.decodeUnknownEffect(Chart)
 const decodeCharts = S.decodeUnknownEffect(S.Array(Chart))

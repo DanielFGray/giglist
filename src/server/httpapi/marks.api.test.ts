@@ -1,7 +1,8 @@
 import { describe, expect, it } from "@effect/vitest"
 import { Effect, Schema as S } from "effect"
 import { HttpClientResponse } from "effect/http"
-import { Chart, ChartMarks, Mark, Stamp } from "../../api/contracts"
+import { Chart } from "../../api/charts"
+import { ChartMarks, Mark, Stamp } from "../../api/marks"
 import { baseUrl, TestHttpClientLive } from "../test/apiHarness"
 import { addMember, anonymous, createBand, createSong, postJson, sendJson, signedIn } from "../test/clients"
 

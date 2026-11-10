@@ -2,7 +2,8 @@ import { HttpApiBuilder } from "effect/http-api"
 import { announced } from "../services/live-hub"
 import { Setlists } from "../services/setlists"
 import { asSignedIn } from "./scope"
-import { GigListApi, SetlistForbidden } from "../../api/contracts"
+import { GigListApi } from "../../api/contracts"
+import { SetlistForbidden } from "../../api/setlists"
 
 /** Setlists and gigs answer a signed-out request with the same 403. */
 export const asMember = asSignedIn(() => new SetlistForbidden({ message: "You must be signed in" }))

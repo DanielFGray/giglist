@@ -4,17 +4,8 @@ import { RequestDatabase } from "../db"
 import { LiveHub, type Written } from "./live-hub"
 import { Setlists, viewing } from "./setlists"
 import { between, placeAfter } from "../../components/position"
-import {
-  Gig,
-  GigEntry,
-  GigNotFound,
-  SetlistForbidden,
-  type GigDetails,
-  type GigInsert,
-  type GigSetlistInsert,
-  type LivePresence,
-  type Move,
-} from "../../api/contracts"
+import { Gig, GigEntry, GigNotFound, type GigDetails, type GigInsert, type GigSetlistInsert } from "../../api/gigs"
+import { SetlistForbidden, type LivePresence, type Move } from "../../api/setlists"
 
 const decodeGig = S.decodeUnknownEffect(Gig)
 const decodeGigs = S.decodeUnknownEffect(S.Array(Gig))

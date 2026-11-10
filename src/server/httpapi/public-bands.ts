@@ -2,7 +2,8 @@ import { Effect } from "effect"
 import { HttpApiBuilder } from "effect/http-api"
 import { Bands } from "../services/band"
 import { withAuthContext } from "../db"
-import { GigListApi, PublicBandNotFound } from "../../api/contracts"
+import { PublicBandNotFound } from "../../api/bands"
+import { GigListApi } from "../../api/contracts"
 
 /**
  * Signed-out visitors still run as the visitor role, with no session id, so the

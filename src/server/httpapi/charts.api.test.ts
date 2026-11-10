@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs"
 import { describe, expect, it } from "@effect/vitest"
 import { Effect, Schema as S } from "effect"
 import { HttpClientResponse } from "effect/http"
-import { Chart } from "../../api/contracts"
+import { Chart } from "../../api/charts"
 import { baseUrl, TestHttpClientLive } from "../test/apiHarness"
 import { anonymous, createBand, createSong, postBytes, postJson, sendJson, signedIn } from "../test/clients"
 

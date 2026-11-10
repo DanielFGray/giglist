@@ -1,7 +1,8 @@
 import { HttpApiBuilder } from "effect/http-api"
 import { Marks } from "../services/marks"
 import { asSignedIn } from "./scope"
-import { GigListApi, MarkForbidden } from "../../api/contracts"
+import { GigListApi } from "../../api/contracts"
+import { MarkForbidden } from "../../api/marks"
 
 const asPlayer = asSignedIn(() => new MarkForbidden({ message: "You must be signed in" }))
 

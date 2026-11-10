@@ -3,7 +3,8 @@ import { HttpApiBuilder } from "effect/http-api"
 import { Bands } from "../services/band"
 import { withAuthContext } from "../db"
 import { asSignedIn, ifSignedIn } from "./scope"
-import { GigListApi, BandError } from "../../api/contracts"
+import { BandError } from "../../api/bands"
+import { GigListApi } from "../../api/contracts"
 
 const ok = { ok: true as const }
 

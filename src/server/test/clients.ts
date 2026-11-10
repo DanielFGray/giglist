@@ -1,7 +1,9 @@
 import { Array as Arr, Effect, Option, Stream } from "effect"
 import { Sse } from "effect/encoding"
 import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/http"
-import { BandInfo, LiveEvent, Song } from "../../api/contracts"
+import { BandInfo } from "../../api/bands"
+import { LiveEvent } from "../../api/setlists"
+import { Song } from "../../api/songs"
 import type { LiveEventData } from "../services/live-hub"
 import { baseUrl, makeCookieJar } from "./apiHarness"
 

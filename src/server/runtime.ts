@@ -1,7 +1,8 @@
 import { Config, Effect, Layer } from "effect";
 import { HttpApiBuilder } from "effect/http-api";
 import { AuthDb, AuthVisitor, Db } from "./db";
-import { GigListApi } from "../api/contracts";
+import { GigListApi } from "../api/contracts"
+;
 import { AuthApiGroupLive } from "./httpapi/auth";
 import { BandsApiGroupLive } from "./httpapi/bands";
 import { PublicBandsApiGroupLive } from "./httpapi/public-bands";

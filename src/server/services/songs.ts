@@ -1,7 +1,7 @@
 import { Context, Effect, Layer, Schema as S, Struct } from "effect"
 import { RequestDatabase } from "../db"
 import { Bands } from "./band"
-import { Song, SongForbidden, type SongInsert, type SongUpdate } from "../../api/contracts"
+import { Song, SongForbidden, type SongInsert, type SongUpdate } from "../../api/songs"
 import { songCreate, songDelete, songFindByBandId, songFindById } from "../../../generated/queries.js"
 
 const decodeSong = S.decodeUnknownEffect(Song)

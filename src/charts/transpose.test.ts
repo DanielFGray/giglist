@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { ChordProParser } from "chordsheetjs"
-import { MusicalKeys } from "../api/contracts"
+import { MusicalKeys } from "../api/songs"
 import { renderLyrics } from "./lyrics"
 
 /**

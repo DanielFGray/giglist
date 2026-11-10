@@ -3,7 +3,7 @@ import { PgClient } from "@effect/sql-pg"
 import * as PgKysely from "./effect-kysely"
 import { sql } from "kysely"
 import type { DB } from "../../generated/DB.js"
-import { CurrentSession } from "../api/contracts"
+import { CurrentSession } from "../api/session"
 
 export type KyselyDB = PgKysely.EffectKysely<DB>
 

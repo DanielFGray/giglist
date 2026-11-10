@@ -1,6 +1,6 @@
 import { Context, Effect, Layer, Schema as S } from "effect"
 import { RequestDatabase } from "../db"
-import { ChartMarks, Mark, MarkForbidden, MarkNotFound, Stamp, type MarkInsert, type MarkUpdate, type StampInsert } from "../../api/contracts"
+import { ChartMarks, Mark, MarkForbidden, MarkNotFound, Stamp, type MarkInsert, type MarkUpdate, type StampInsert } from "../../api/marks"
 
 const decodeMark = S.decodeUnknownEffect(Mark)
 const decodeChartMarks = S.decodeUnknownEffect(ChartMarks)

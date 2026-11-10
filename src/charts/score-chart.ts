@@ -11,7 +11,7 @@
  * line is instrumental and goes on a chord-only line.
  */
 import type { model } from "@coderline/alphatab"
-import type { MusicalKeyType } from "~/api/contracts"
+import type { MusicalKeyType } from "~/api/songs"
 import { keyOfChords } from "./lyrics"
 import { noteInKey } from "./numeral"
 import { inferChords } from "./score-chords"

@@ -3,7 +3,9 @@ import { HttpApiBuilder } from "effect/http-api"
 import { Auth } from "../services/auth"
 import { withAuthContext } from "../db"
 import { asSignedIn, ifSignedIn } from "./scope"
-import { GigListApi, AuthError, CurrentSession, sessionCookie } from "../../api/contracts"
+import { AuthError } from "../../api/auth"
+import { GigListApi } from "../../api/contracts"
+import { CurrentSession, sessionCookie } from "../../api/session"
 
 const isSecure = process.env.NODE_ENV === "production"
 

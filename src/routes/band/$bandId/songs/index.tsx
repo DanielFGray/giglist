@@ -8,7 +8,7 @@ import { BLANK_SONG } from "~/components/SongForm"
 import { Grid, type GridColumn } from "~/components/Grid"
 import { keepOrder } from "~/components/grid-keys"
 import { matchKeys } from "~/components/key-options"
-import { MusicalKeys } from "~/api/contracts"
+import { MusicalKeys } from "~/api/songs"
 
 const SortKey = S.Literals(["added", "title", "artist", "key", "tempo"])
 type SortKey = (typeof SortKey)["Type"]

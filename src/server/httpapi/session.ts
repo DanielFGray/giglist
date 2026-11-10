@@ -1,11 +1,7 @@
 import { Effect, Layer, Redacted } from "effect"
 import { sql } from "kysely"
 import { Db } from "../db"
-import {
-  CurrentSession,
-  SessionMiddleware,
-  type SessionData,
-} from "../../api/contracts"
+import { CurrentSession, SessionMiddleware, type SessionData } from "../../api/session"
 
 const noSession: SessionData = { sessionId: "", userId: null }
 
