@@ -66,7 +66,8 @@ guide doesn't cover, search through the source code in `node_modules/effect/src`
 - `bun run test` — Playwright specs in `tests/`; builds the client and serves it on `vite preview` (needs the database and the API on `PORT`, which Playwright starts if it is down)
 - `bun run test:clean` — deletes the `test_*` users and bands the specs left behind (run it when no suite is running)
 - `bun run test:unit` — pure-module tests next to the code in `src/`
-- `bun run test:db` — RLS checks in `tests/db/` as the authenticator, on a scratch database `giglist_test` (`ops dev db reset`)
+- `bun run test:db` — RLS checks in `tests/db/` as the authenticator, on a scratch database `giglist_dev_test` (`ops dev db reset`)
+- `bun run test:api` — HTTP API tests in `src/**/*.api.test.ts`, run in-process by vitest on `giglist_dev_test` (it recreates that database, so do not run it at the same time as `test:db`)
 
 ## Reaching the dev server from another machine
 
