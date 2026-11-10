@@ -77,6 +77,8 @@ describe("charts and scores over HTTP", () => {
         yield* sendJson(client, "DELETE", `/charts/${chart.id}`, {})
       }
       expect((yield* nobody.get(`${baseUrl}/scores/${chart.revision_id}/file`)).status).toBe(403)
+      // Reading a file costs the server OCR time, so a signed-out caller cannot.
+      expect((yield* postBytes(nobody, "/charts/read", score)).status).toBe(403)
       const kept = yield* member.get(`${baseUrl}/charts/song/${song.id}`).pipe(Effect.flatMap(HttpClientResponse.schemaBodyJson(S.Array(Chart))))
       expect(kept.map((c) => c.revision_id)).toEqual([chart.revision_id])
     }).pipe(Effect.provide(TestHttpClientLive)))
