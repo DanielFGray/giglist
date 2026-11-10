@@ -2,7 +2,8 @@ import { Config, Duration, Effect, Layer, Match, Option } from "effect"
 import { HttpServerRequest } from "effect/http"
 import { RateLimiter } from "effect/persistence/RateLimiter"
 import type { RateLimiterError } from "effect/persistence/RateLimiter"
-import { CurrentSession, RateLimitMiddleware, TooManyRequests } from "../../api/contracts"
+import { HttpApi, HttpApiEndpoint, HttpApiGroup } from "effect/http-api"
+import { CurrentSession, GigListApi, RateLimitMiddleware, TooManyRequests } from "../../api/contracts"
 import { storeTimeout } from "../services/rate-limiter"
 import { networkOf } from "./client-ip"
 
@@ -26,7 +27,12 @@ interface Rule {
   readonly whenStoreDown: "allow" | "deny"
 }
 
-const rules: Readonly<Record<string, Rule>> = {
+/**
+ * One rule for each endpoint that declares `RateLimitMiddleware`, and none for
+ * any other name, so the compiler refuses a renamed or unlimited endpoint
+ * instead of letting its requests through unlimited.
+ */
+const limits = {
   login: { by: "ip", limit: 10, window: "5 minutes", whenStoreDown: "allow" },
   register: { by: "ip", limit: 5, window: "1 hour", whenStoreDown: "deny" },
   forgotPassword: { by: "ip", limit: 5, window: "1 hour", whenStoreDown: "deny" },
@@ -37,7 +43,18 @@ const rules: Readonly<Record<string, Rule>> = {
   resendEmailVerification: { by: "user", limit: 5, window: "1 day", whenStoreDown: "deny" },
   requestAccountDeletion: { by: "user", limit: 3, window: "1 day", whenStoreDown: "deny" },
   inviteToBand: { by: "user", limit: 20, window: "1 day", whenStoreDown: "deny" },
-}
+} satisfies { readonly [Name in LimitedEndpoint]: Rule }
+
+/** The same rules, looked up by the name of the endpoint a request reached. */
+const rules: Readonly<Record<string, Rule>> = limits
+
+type ApiEndpoint = HttpApiGroup.Endpoints<typeof GigListApi extends HttpApi.HttpApi<string, infer Groups> ? Groups : never>
+
+type LimitedEndpoint = ApiEndpoint extends infer Endpoint
+  ? Endpoint extends { readonly identifier: infer Name extends string }
+    ? RateLimitMiddleware extends HttpApiEndpoint.Middleware<Endpoint> ? Name : never
+    : never
+  : never
 
 /**
  * Applies the rule for each endpoint that declares `RateLimitMiddleware`.
