@@ -1,4 +1,4 @@
-import { Config, Effect, Layer, Redacted, Schema } from "effect"
+import { Config, Context, Effect, Layer, Redacted, Ref, Schema } from "effect"
 import { BunRuntime, BunServices } from "@effect/platform-bun"
 import { FileSystem } from "effect/FileSystem"
 import { getTasks, run, type Task } from "graphile-worker"
@@ -28,32 +28,64 @@ const MailerLive = Layer.unwrap(Effect.gen(function* () {
   }
 }))
 
-const program = Effect.gen(function* () {
-  const connection = yield* Config.Redacted("DATABASE_URL")
-  const context = yield* Effect.context<Mailer | FileSystem | RateLimiter>()
-  const tasks = yield* Effect.acquireRelease(
-    Effect.tryPromise({ try: () => getTasks({}, `${import.meta.dir}/tasks`), catch: (cause) => new WorkerError({ message: "Could not load worker tasks", cause }) }),
-    (tasks) => Effect.sync(() => tasks.release()),
-  )
-  // Graphile owns retry scheduling. A rejected delivery must reject this callback.
-  const deliver: Task = (payload, helpers) => Effect.runPromiseWith(context)(sendEmail(payload), { signal: helpers.abortSignal })
-  const runner = yield* Effect.acquireRelease(
-    Effect.tryPromise({
-      try: () => run({
-        connectionString: Redacted.value(connection),
-        taskList: { ...tasks.tasks, send_email: deliver },
-        crontabFile: `${import.meta.dir}/crontab`,
-        noHandleSignals: true,
-      }),
-      catch: (cause) => new WorkerError({ message: "Could not start the worker", cause }),
-    }),
-    (runner) => Effect.promise(() => runner.stop()),
-  )
-  yield* Effect.tryPromise({ try: () => runner.promise, catch: (cause) => new WorkerError({ message: "Worker stopped with an error", cause }) })
-})
+export class Worker extends Context.Service<Worker, {
+  readonly start: Effect.Effect<void, WorkerError, import("effect/Scope").Scope>
+  readonly isRunning: Effect.Effect<boolean>
+}>()("giglist/Worker") {
+  static readonly make = Effect.gen(function* () {
+    const connection = yield* Config.Redacted("DATABASE_URL")
+    const context = yield* Effect.context<Mailer | FileSystem | RateLimiter>()
+    const running = yield* Ref.make(false)
 
-program.pipe(
-  Effect.scoped,
-  Effect.provide(Layer.mergeAll(MailerLive, RateLimiterLive, TelemetryLive).pipe(Layer.provideMerge(BunServices.layer))),
-  BunRuntime.runMain,
-)
+    const start = Effect.gen(function* () {
+      const tasks = yield* Effect.acquireRelease(
+        Effect.tryPromise({ try: () => getTasks({}, `${import.meta.dir}/tasks`), catch: (cause) => new WorkerError({ message: "Could not load worker tasks", cause }) }),
+        (tasks) => Effect.sync(() => tasks.release()),
+      )
+      // Graphile owns retry scheduling. A rejected delivery must reject this callback.
+      const deliver: Task = (payload, helpers) => Effect.runPromiseWith(context)(sendEmail(payload), { signal: helpers.abortSignal })
+      const runner = yield* Effect.acquireRelease(
+        Effect.tryPromise({
+          try: () => run({
+            connectionString: Redacted.value(connection),
+            taskList: { ...tasks.tasks, send_email: deliver },
+            crontabFile: `${import.meta.dir}/crontab`,
+            noHandleSignals: true,
+          }),
+          catch: (cause) => new WorkerError({ message: "Could not start the worker", cause }),
+        }),
+        (runner) => Effect.tryPromise({ try: () => runner.stop(), catch: (cause) => new WorkerError({ message: "Could not stop the worker", cause }) }).pipe(
+          Effect.tapError((error) => Effect.logError("Could not stop the worker", error)),
+          Effect.ignore,
+          Effect.andThen(Ref.set(running, false)),
+        ),
+      )
+      yield* Ref.set(running, true)
+      const monitor = Effect.tryPromise({
+        try: () => runner.promise,
+        catch: (cause) => new WorkerError({ message: "Worker stopped with an error", cause }),
+      }).pipe(
+        Effect.matchEffect({
+          onFailure: (error) => Effect.logError("Worker stopped with an error", error),
+          onSuccess: () => Effect.logError("Worker stopped unexpectedly"),
+        }),
+        Effect.andThen(Ref.set(running, false)),
+      )
+      yield* Effect.forkScoped(monitor)
+    })
+
+    return Worker.of({ start, isRunning: Ref.get(running) })
+  })
+
+  static readonly layer = Layer.effect(this, this.make).pipe(
+    Layer.provide(Layer.mergeAll(MailerLive, RateLimiterLive, TelemetryLive).pipe(Layer.provideMerge(BunServices.layer))),
+  )
+}
+
+if (import.meta.main) {
+  Effect.scoped(Effect.gen(function* () {
+    const worker = yield* Worker
+    yield* worker.start
+    return yield* Effect.never
+  })).pipe(Effect.provide(Worker.layer), BunRuntime.runMain)
+}

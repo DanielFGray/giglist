@@ -1,4 +1,4 @@
-import { Config, Effect, Layer } from "effect";
+import { Config, Context, Effect, Layer } from "effect";
 import { BunRuntime } from "@effect/platform-bun";
 import * as BunHttpServer from "@effect/platform-bun/BunHttpServer";
 import { HttpRouter } from "effect/http";
@@ -26,6 +26,7 @@ import { SessionMiddlewareLive } from "./httpapi/session";
 import { RateLimitMiddlewareLive } from "./httpapi/rate-limit";
 import { HealthLive } from "./httpapi/health";
 import { TelemetryLive } from "./telemetry";
+import { Worker } from "../../worker/main";
 
 const ApiLive = HttpApiBuilder.layer(GigListApi).pipe(
   Layer.provide(Layer.mergeAll(authHandlers, bandsHandlers, publicBandsHandlers, publicUsersHandlers, songsHandlers, setlistsHandlers, gigsHandlers, chartsHandlers, scoresHandlers, marksHandlers, stampsHandlers)),
@@ -65,9 +66,19 @@ const ServerLive = HttpRouter.serve(Layer.mergeAll(ApiLive, TestingLive, HealthL
   // with defaults, so they are not requirements of the server layer. Merging
   // keeps the exporters in every handler's context.
   Layer.provideMerge(TelemetryLive),
+  Layer.provideMerge(Worker.layer),
 );
 
-// Launch
-Layer.launch(ServerLive).pipe(
+// Bind the HTTP server first, then start the worker in the same scope. Scope
+// finalizers stop the worker before the server's database pools close.
+Effect.scoped(Effect.gen(function* () {
+  const context = yield* Layer.build(ServerLive)
+  const worker = Context.get(context, Worker)
+  yield* worker.start.pipe(
+    Effect.tapError((error) => Effect.logError("Could not start the worker", error)),
+    Effect.ignore,
+  )
+  return yield* Effect.never
+})).pipe(
   BunRuntime.runMain,
 );
