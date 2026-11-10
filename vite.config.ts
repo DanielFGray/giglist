@@ -48,10 +48,8 @@ export default defineConfig({
     },
   },
   plugins: [
-    TanStackRouterVite({
-      routesDirectory: "src/routes",
-      generatedRouteTree: "src/routeTree.gen.ts",
-    }),
+    // Reads tsr.config.json, which scripts/generateRouteTree.ts reads too.
+    TanStackRouterVite(),
     tailwindcss(),
     alphaTabAssetsPlugin(),
     licenseNoticesPlugin(),
