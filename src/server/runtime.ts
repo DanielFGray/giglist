@@ -1,4 +1,4 @@
-import { Config, Effect, Layer } from "effect";
+import { Effect, Layer } from "effect";
 import { HttpRouter } from "effect/http";
 import { HttpApiBuilder } from "effect/http-api";
 import { AuthDb, AuthVisitor, Db } from "./db";
@@ -26,6 +26,7 @@ import { SessionMiddlewareLive } from "./httpapi/session";
 import { RateLimitMiddlewareLive } from "./httpapi/rate-limit";
 import { HealthLive } from "./httpapi/health";
 import { TelemetryLive } from "./telemetry";
+import { nodeEnv } from "./config";
 import { RateLimiterValkey } from "./services/rate-limiter";
 import { Worker } from "../../worker/main";
 
@@ -38,7 +39,7 @@ const ApiLive = HttpApiBuilder.layer(GigListApi).pipe(
 // Adapted from postgres.garden's conditional testing import. Production never
 // loads the module that can create users and expose account secrets.
 const TestingLive = Layer.unwrap(Effect.gen(function* () {
-  const mode = yield* Config.Literals(["development", "test", "production"], "NODE_ENV").pipe(Config.withDefault("development"));
+  const mode = yield* nodeEnv;
   if (mode === "production") return Layer.empty;
   const { testingRoutes } = yield* Effect.promise(() => import("./httpapi/testing"));
   return testingRoutes;

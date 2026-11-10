@@ -5,21 +5,20 @@ import { sql } from "kysely";
 import { Db } from "../db";
 import { Auth } from "../services/auth";
 import { gravatarUrl } from "../gravatar";
+import { nodeEnv } from "../config"
+import { sessionCookiePolicy } from "./session"
 import { sessionCookie } from "../../api/session"
 import { TestingApi, TestUser } from "../../api/testing"
-;
 
 type TestUserRow = Schema.Schema.Type<typeof TestUser>;
 
-if (process.env.NODE_ENV === "production") {
-  throw new Error("Testing API must not be loaded in production");
-}
-
-const isSecure = process.env.NODE_ENV === "production";
-
 const TestingApiGroupLive = HttpApiBuilder.group(TestingApi, "testing", (handlers) =>
   Effect.gen(function* () {
+    // runtime.ts never imports this module in production; this refusal holds
+    // even if something else does.
+    if ((yield* nodeEnv) === "production") return yield* Effect.die(new Error("Testing API must not run in production"))
     const auth = yield* Auth
+    const cookie = yield* sessionCookiePolicy
     return handlers
       .handle(
         "clear",
@@ -99,13 +98,7 @@ const TestingApiGroupLive = HttpApiBuilder.group(TestingApi, "testing", (handler
             }).pipe(Effect.ignore);
 
             const result = yield* auth.login({ id: payload.username, password: Redacted.make(payload.password) });
-            yield* HttpApiBuilder.securitySetCookie(sessionCookie, result.sessionId, {
-              httpOnly: true,
-              sameSite: "lax",
-              secure: isSecure,
-              path: "/",
-              maxAge: "30 days",
-            });
+            yield* HttpApiBuilder.securitySetCookie(sessionCookie, result.sessionId, cookie);
             return { success: true };
           },
           // Say why it failed: a fixture that answers only `false` turns a test
@@ -117,8 +110,8 @@ const TestingApiGroupLive = HttpApiBuilder.group(TestingApi, "testing", (handler
         // Dev convenience: log in by opening a URL, then land back in the app.
         //
         // A GET that changes state, and credentials in the query string, are both
-        // off-spec — acceptable only because this group is test-only (this module
-        // throws at import under NODE_ENV=production) and the user is a fake one.
+        // off-spec — acceptable only because this group is test-only (its layer dies
+        // at build under NODE_ENV=production) and the user is a fake one.
         "testLoginRedirect",
         Effect.fnUntraced(
           function* ({ query }) {
@@ -137,7 +130,7 @@ const TestingApiGroupLive = HttpApiBuilder.group(TestingApi, "testing", (handler
               HttpServerResponse.redirect("/"),
               sessionCookie.key,
               result.sessionId,
-              { httpOnly: true, sameSite: "lax", secure: isSecure, path: "/", maxAge: "30 days" },
+              cookie,
             ).pipe(Effect.orDie);
           },
           Effect.catch((e) =>

@@ -7,6 +7,7 @@ import { sendEmail } from "./email/send-email"
 import type { RateLimiter } from "effect/persistence/RateLimiter"
 import { RateLimiterValkey } from "../src/server/services/rate-limiter"
 import { TelemetryLive } from "../src/server/telemetry"
+import { nodeEnv } from "../src/server/config"
 
 class WorkerError extends Schema.TaggedError<WorkerError, { readonly brand: unique symbol }>()("WorkerError", {
   message: Schema.String,
@@ -39,7 +40,7 @@ export class Worker extends Context.Service<Worker>()("giglist/Worker", {
 
 // The provider is chosen once. Every email job requires the same Mailer service.
 const MailerLive = Layer.unwrap(Effect.gen(function* () {
-  const mode = yield* Config.Literals(["development", "test", "production"], "NODE_ENV").pipe(Config.withDefault("development"))
+  const mode = yield* nodeEnv
   const configured = Config.Literals(["development", "ses", "cloudflare"], "MAIL_PROVIDER")
   // A test worker needs an explicit provider before it can contact a mail server.
   const provider = yield* (mode === "test" ? configured : configured.pipe(

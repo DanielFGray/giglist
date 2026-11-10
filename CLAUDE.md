@@ -85,8 +85,9 @@ Two things to know:
 
 - Pick a username that does NOT start with `test_` or `testuser` — `POST
   /api/testing/clear` (and `bun run test:clean`) deletes exactly those.
-- This exists only while the testing API is mounted; `src/server/httpapi/testing.ts`
-  throws at import under `NODE_ENV=production`.
+- This exists only while the testing API is mounted: `src/server/runtime.ts` does not
+  import `src/server/httpapi/testing.ts` under `NODE_ENV=production`, and the testing
+  group's layer dies at build if anything else does.
 
 Scripts can use the JSON form instead: `POST /api/testing/login` with
 `{ "username": ..., "password": ... }`.
