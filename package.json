@@ -23,6 +23,7 @@
     "dev:server": "bun --watch src/server/main.ts",
     "env:init": "bun scripts/generateEnvFile.ts",
     "gm": "bun --env-file=.env -b graphile-migrate",
+    "migrate": "graphile-migrate migrate",
     "init": "NOCONFIRM=1 run-s env:init db:setup",
     "lint": "oxlint --type-aware",
     "prepare": "run-s prepare:patch prepare:hooks",

@@ -36,11 +36,19 @@ database, Valkey and OpenBao secrets under `secrets`. Set a new OpenBao key with
 Production applies only `migrations/committed/`. Commit the work in `migrations/current/`
 with `bun run gm commit` before a release that needs it.
 
-The cartridge has no `migrate` step yet, so a release does not apply migrations. Before
-one is added, confirm that production's `graphile_migrate.migrations` table records
-release 1. If it does not, `graphile-migrate migrate` runs release 1 again, and release 1
-starts by dropping the app schemas. `.gmrc` also reads `DATABASE_AUTHENTICATOR` from the
-environment, so the step needs that value.
+The cartridge's `migrate` task runs `bun run migrate` (`graphile-migrate migrate`) before
+the API starts, on every deploy. It applies the committed migrations that production's
+`graphile_migrate.migrations` table does not record yet. If it fails, the deploy fails and
+Nomad keeps the previous version. `.gmrc.cjs` reads `DATABASE_OWNER`, `DATABASE_VISITOR`
+and `DATABASE_AUTHENTICATOR` from the environment, so the task gets the migration login
+as `DATABASE_URL` and the api login's name.
+
+graphile-migrate refuses to continue when a recorded migration's hash differs from the
+committed file. Production was built from an earlier draft of release 1, so its table
+records `000001.sql` with hash `sha1:2b63ba71f746910ed3c809ebbd577eb430006571`, not the
+committed `sha1:a74fdf8bdd8c08e9cf8069affcad2103eb43360c`. The schemas are the same apart
+from the `songs.created_by` default, which release 2 adds. Before the first deploy that
+runs migrations, update that row's hash to the committed one.
 
 Never run `db:init`, `db:setup`, `db:reset` or `db:latest` against production. They
 drop databases, roles and schemas.
