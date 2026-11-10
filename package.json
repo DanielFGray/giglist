@@ -18,7 +18,7 @@
     "db:up": "ops dev db up",
     "db:watch": "bun --env-file=.env -b graphile-migrate watch",
     "predev": "run-s -s db:ensure",
-    "dev": "run-p -s dev:client dev:server db:watch worker",
+    "dev": "run-p -s dev:client dev:server db:watch",
     "dev:client": "bun --env-file=.env -b vite",
     "dev:server": "bun --watch src/server/main.ts",
     "env:init": "bun scripts/generateEnvFile.ts",
@@ -37,8 +37,6 @@
     "test:ui": "bunx playwright test --ui",
     "test:unit": "bun test src --path-ignore-patterns='**/*.api.test.ts'",
     "typecheck": "tsc --noEmit",
-    "worker": "bun --env-file=.env worker/main.ts",
-    "worker:prod": "NODE_ENV=production bun worker/main.ts",
     "worker:schema": "cd worker && bun --env-file=../.env graphile-worker --schema-only",
     "prepare:patch": "effect-tsgo patch --typescript --oxlint",
     "prepare:hooks": "git rev-parse --git-dir >/dev/null 2>&1 || exit 0; lefthook install --reset-hooks-path"

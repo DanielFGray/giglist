@@ -1,11 +1,10 @@
 import { Config, Context, Effect, Layer, Redacted, Ref, Schema } from "effect"
-import { BunRedis, BunRuntime, BunServices } from "@effect/platform-bun"
+import { BunServices } from "@effect/platform-bun"
 import type { FileSystem } from "effect/FileSystem"
 import { getTasks, run, type Runner, type Task } from "graphile-worker"
 import { Mailer } from "./email/mailer"
 import { sendEmail } from "./email/send-email"
 import type { RateLimiter } from "effect/persistence/RateLimiter"
-import { RateLimiterValkey } from "../src/server/services/rate-limiter"
 import { TelemetryLive } from "../src/server/telemetry"
 import { nodeEnv } from "../src/server/config"
 
@@ -111,18 +110,3 @@ const stop = Effect.fnUntraced(function* (runner: Runner, running: Ref.Ref<boole
   }).pipe(Effect.catch((error) => Effect.logError(error.message, error.cause)))
   yield* Ref.set(running, false)
 })
-
-if (import.meta.main) {
-  Worker.layer.pipe(
-    Layer.provide(RateLimiterValkey),
-    // The same client options as src/server/main.ts: keep reconnecting, and fail
-    // a command at once while Valkey is down.
-    Layer.provide(BunRedis.layerConfig({
-      url: Config.String("VALKEY_URL"),
-      maxRetries: Config.succeed(1_000_000),
-      enableOfflineQueue: Config.succeed(false),
-    })),
-    Layer.launch,
-    BunRuntime.runMain,
-  )
-}

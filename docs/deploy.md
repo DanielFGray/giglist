@@ -3,8 +3,8 @@
 GigList runs on the homelab cluster that `~/build/server-ansible` manages, at
 <https://giglist.dfg.rocks>. Traefik is the public edge, and it splits each request by path:
 
-- `/api` goes to the `giglist-api` Nomad job, which `cartridge.json` declares. The
-  `giglist-worker` job runs from the same image.
+- `/api` goes to the `giglist-api` Nomad job, which `cartridge.json` declares. The same
+  process runs the graphile-worker runner, and `/healthz` reports it.
 - Every other path goes to the static-sites Caddy on atheist, which serves a release folder
   of `dist/`.
 
@@ -14,7 +14,7 @@ build that is older or newer than the API can call endpoints that the API does n
 Live setlist events stay in one API process's memory (`services/live-hub.ts`), so keep
 `giglist-api` at one instance.
 
-## Release the API and worker
+## Release the API
 
 From this repository, with the commit to release at `HEAD`:
 
@@ -119,5 +119,5 @@ no account and sends no mail.
 
 `GET /api/health` returns 200 only when both database connections can run a query, and
 503 after a failed query or a five-second timeout. The response's `x-commit` header names the
-commit the deploy runs, which the platform sets as `GIT_COMMIT`, or `unknown` when it is unset. The API and worker send traces and logs
+commit the deploy runs, which the platform sets as `GIT_COMMIT`, or `unknown` when it is unset. The API sends traces and logs
 over OTLP to OpenObserve. Nothing alerts on a 503 or a failed job yet.
