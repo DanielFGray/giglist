@@ -41,8 +41,8 @@ const ApiLive = HttpApiBuilder.layer(GigListApi).pipe(
 const TestingLive = Layer.unwrap(Effect.gen(function* () {
   const mode = yield* nodeEnv;
   if (mode === "production") return Layer.empty;
-  const { testingRoutes } = yield* Effect.promise(() => import("./httpapi/testing"));
-  return testingRoutes;
+  const { TestingHttpApiLive } = yield* Effect.promise(() => import("./httpapi/testing"));
+  return TestingHttpApiLive;
 }));
 
 /**

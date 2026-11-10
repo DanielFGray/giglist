@@ -269,4 +269,4 @@ const TestingApiGroupLive = HttpApiBuilder.group(TestingApi, "testing", (handler
   })
 );
 
-export const testingRoutes = HttpApiBuilder.layer(TestingApi).pipe(Layer.provide(TestingApiGroupLive));
+export const TestingHttpApiLive = HttpApiBuilder.layer(TestingApi).pipe(Layer.provide(TestingApiGroupLive));
