@@ -14,6 +14,24 @@
       "networkMode": "bridge",
       "command": "bun",
       "args": ["run", "start"],
+      "migrate": {
+        "command": "bun",
+        "args": ["run", "migrate"],
+        "secrets": [
+          {
+            "_tag": "PostgresCredentials",
+            "database": "giglist",
+            "login": "migration",
+            "urlEnv": "DATABASE_URL"
+          },
+          {
+            "_tag": "PostgresCredentials",
+            "database": "giglist",
+            "login": "api",
+            "urlEnv": "AUTH_DATABASE_URL", "usernameEnv": "DATABASE_AUTHENTICATOR"
+          }
+        ]
+      },
       "routes": [
         {
           "host": "giglist.dfg.rocks",

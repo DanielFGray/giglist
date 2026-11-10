@@ -29,7 +29,7 @@ COPY src ./src
 COPY generated ./generated
 COPY worker ./worker
 COPY migrations ./migrations
-COPY .gmrc ./
+COPY .gmrc.cjs ./
 
 # The browser assets, for the static host that serves dist/
 COPY --from=builder /app/dist ./dist

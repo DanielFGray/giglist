@@ -1,6 +1,7 @@
 /*
  * NULL-unsafe secret comparisons in login, reset_password and change_password:
- * a stored NULL must reject, and a matching secret must still succeed. Run as
+ * a stored NULL must reject, and a matching secret must still succeed.
+ * reset_password must also refuse a token older than its 3-day lifetime. Run as
  * the owner by tests/db/run.sh (app_private.login / reset_password are not
  * granted to the visitor). Uses fixtures from charts-seed.sql.
  */
@@ -84,6 +85,51 @@ select pg_temp.check(
      from app_private.user_secrets
      where user_id = '00000000-0000-0000-0000-0000000000a1'),
   'reset_password stores the new hash and clears the token'
+);
+rollback;
+
+-- reset_password: a matching token past its 3-day lifetime must not reset
+begin;
+update app_private.user_secrets
+  set password_hash = crypt('before-reset', gen_salt('bf')),
+      reset_password_token = 'expired-reset-token',
+      reset_password_token_generated = now() - interval '3 days 1 minute',
+      failed_reset_password_attempts = 0,
+      first_failed_reset_password_attempt = null
+  where user_id = '00000000-0000-0000-0000-0000000000a1';
+select pg_temp.check(
+  app_private.reset_password(
+    '00000000-0000-0000-0000-0000000000a1',
+    'expired-reset-token',
+    'new-password-ok'
+  ) is null,
+  'reset_password rejects an expired token'
+);
+select pg_temp.check(
+  (select password_hash = crypt('before-reset', password_hash)
+      and reset_password_token = 'expired-reset-token'
+      and failed_reset_password_attempts = 1
+     from app_private.user_secrets
+     where user_id = '00000000-0000-0000-0000-0000000000a1'),
+  'an expired token leaves the password, keeps the token and counts a failed attempt'
+);
+rollback;
+
+-- reset_password: a matching token with no generated time must not reset
+begin;
+update app_private.user_secrets
+  set reset_password_token = 'undated-reset-token',
+      reset_password_token_generated = null,
+      failed_reset_password_attempts = 0,
+      first_failed_reset_password_attempt = null
+  where user_id = '00000000-0000-0000-0000-0000000000a1';
+select pg_temp.check(
+  app_private.reset_password(
+    '00000000-0000-0000-0000-0000000000a1',
+    'undated-reset-token',
+    'new-password-ok'
+  ) is null,
+  'reset_password rejects a token with a NULL generated time'
 );
 rollback;
 

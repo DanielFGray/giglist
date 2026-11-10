@@ -77,7 +77,7 @@ export const songsHandlers = HttpApiBuilder.group(GigListApi, "songs", (handlers
       Effect.fnUntraced(function* ({ payload }) {
         const db = yield* Kysely;
         yield* assertBandMember(payload.band_id);
-        // created_by has no default and no trigger sets it.
+        // The column default sets created_by to the caller.
         return yield* songCreate(db)({ ...payload }).pipe(
           Effect.head,
           Effect.andThen(decodeSong),

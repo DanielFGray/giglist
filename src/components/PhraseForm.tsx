@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react"
 import { readPhrase } from "~/charts/phrase"
 import { Phrase } from "./Phrase"
+import { RecordTake } from "./RecordTake"
 
 const EXAMPLE = ":8 0.6 3.6 5.5 3.5 | 5.5 3.5 0.5 5.6"
 
@@ -45,6 +46,11 @@ export function PhraseForm({
         </span>
         <textarea data-pwid="phrase-tex" value={tex} onChange={(e) => setTex(e.target.value)} rows={4} placeholder={EXAMPLE} className={field} />
       </label>
+      {tempo === null ? (
+        <p className="text-xs text-zinc-500">Give the song a tempo to record a take to its click.</p>
+      ) : (
+        <RecordTake bpm={tempo} onTex={setTex} className={button} />
+      )}
       {tex.trim() !== "" && <Phrase tex={tex} tempo={tempo} />}
       <div className="flex gap-2">
         <button data-pwid="phrase-save" type="button" disabled={!readable || name.trim() === ""} onClick={() => onSave(name, tex)} className={button}>

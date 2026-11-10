@@ -13,6 +13,26 @@ const rows = (page: Page) => getPw(page, "setlist-grid").locator('[data-pwid="gr
 const column = (page: Page, key: string) => rows(page).locator(`[data-pwid="cell-${key}"]`)
 
 test.describe("setlists", () => {
+  test("the song picker leaves out songs already in the list, so its choices shrink", async ({ page, testing }) => {
+    await testing.login()
+    const bandId = await createBand(page, `test-setlist-pick-${Date.now()}`)
+    await createSong(page, bandId, "Alpha")
+    await createSong(page, bandId, "Alto")
+
+    await page.goto(`/band/${bandId}/setlists`)
+    await getPw(page, "setlist-form-name").fill("Pick")
+    await getPw(page, "setlist-form-submit").click()
+    await expect(getPw(page, "setlist-label")).toHaveValue("Pick", { timeout: 10000 })
+
+    await getPw(page, "grid-new-row").locator('[data-pwid="cell-title"]').click()
+    await page.keyboard.type("al")
+    await expect(getPw(page, "grid-choice")).toHaveText([/^Alpha/, /^Alto/])
+    await page.keyboard.press("Enter")
+    await expect(column(page, "title")).toHaveText(["Alpha"], { timeout: 10000 })
+    await page.keyboard.type("al")
+    await expect(getPw(page, "grid-choice")).toHaveText([/^Alto/])
+  })
+
   test("builds a setlist in the grid: pick songs by typing, override this list only, move and remove by keyboard", async ({ page, testing }) => {
     await testing.login()
     const bandId = await createBand(page, `test-setlist-${Date.now()}`)
