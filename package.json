@@ -29,12 +29,13 @@
     "prepare": "run-s prepare:patch prepare:hooks",
     "start": "NODE_ENV=production bun src/server/main.ts",
     "test": "bunx playwright test",
+    "test:api": "bun --env-file=.env -b vitest run",
     "test:clean": "bun scripts/testClean.ts",
     "test:client": "bun run build && bun --env-file=.env -b vite preview",
     "test:db": "bash tests/db/run.sh",
     "test:mail": "bun test worker",
     "test:ui": "bunx playwright test --ui",
-    "test:unit": "bun test src",
+    "test:unit": "bun test src --path-ignore-patterns='**/*.api.test.ts'",
     "typecheck": "tsc --noEmit",
     "worker": "bun --env-file=.env worker/main.ts",
     "worker:prod": "NODE_ENV=production bun worker/main.ts",
@@ -74,6 +75,7 @@
   },
   "devDependencies": {
     "@effect/tsgo": "^0.54.0",
+    "@effect/vitest": "4.1.0",
     "@playwright/test": "^1.64.1",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/router-generator": "1.167.45",
@@ -93,7 +95,8 @@
     "oxlint-tsgolint": "^7.0.2004",
     "smtp-server": "^3.20.2",
     "tailwindcss": "^4.3.3",
-    "typescript": "~7.0.2"
+    "typescript": "~7.0.2",
+    "vitest": "^5.1.0"
   },
   "patchedDependencies": {
     "@coderline/alphatab@1.9.0-alpha.1891": "patches/@coderline%2Falphatab@1.9.0-alpha.1891.patch"
