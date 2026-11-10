@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react"
 import { AlphaTabApi, LayoutMode, NotationElement, PlayerMode } from "@coderline/alphatab"
 import { readPhrase, type PhraseProblem } from "~/charts/phrase"
-import { alphaTabAssets, inkFrom } from "./alphatab"
+import { alphaTabAssetUrls } from "alphatab-kit"
+import { inkFrom } from "./alphatab"
 import { useThemeInk } from "./useThemeInk"
 import { PlayControls } from "./PlayControls"
 import { usePlayback } from "./playback"
@@ -28,7 +29,7 @@ export function Phrase({ tex, tempo }: { tex: string; tempo: number | null }) {
   useEffect(() => {
     const element = host.current
     if (!element) return
-    const { scriptFile, fontDirectory, soundFont } = alphaTabAssets()
+    const { scriptFile, fontDirectory, soundFont } = alphaTabAssetUrls()
     const view = new AlphaTabApi(element, {
       core: { engine: "svg", useWorkers: false, scriptFile, fontDirectory },
       display: { layoutMode: LayoutMode.Page, scale: 0.8, stretchForce: stretchForWidth(element.clientWidth) },

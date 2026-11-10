@@ -1,5 +1,5 @@
 diff --git a/dist/alphaTab.core.mjs b/dist/alphaTab.core.mjs
-index dfa2244db66667b885929c9d71e45554873e75f4..86dfa893f1b3ebd4880d23380a2159f132749de4 100644
+index dfa2244..3d1fd85 100644
 --- a/dist/alphaTab.core.mjs
 +++ b/dist/alphaTab.core.mjs
 @@ -12901,7 +12901,7 @@ class Track {
@@ -19,8 +19,101 @@ index dfa2244db66667b885929c9d71e45554873e75f4..86dfa893f1b3ebd4880d23380a2159f1
  			newNote.fret = NaN;
  		}
  		if (swapAccidentals) {
+@@ -30566,14 +30567,30 @@ class HtmlElementContainer {
+ 	element;
+ 	constructor(element) {
+ 		this.element = element;
++		const supportsPointerEvents = typeof globalThis.PointerEvent !== "undefined";
++		let activePointerId = null;
++		const isActivePointer = (e) => !supportsPointerEvents || activePointerId === null || e.pointerId === activePointerId;
++		const capturePointer = (e) => {
++			if (!supportsPointerEvents || !e.isPrimary || typeof e.pointerId !== "number") return;
++			activePointerId = e.pointerId;
++			if (typeof this.element.setPointerCapture === "function") this.element.setPointerCapture(e.pointerId);
++		};
++		const releasePointer = (e) => {
++			if (!supportsPointerEvents || typeof e.pointerId !== "number") return;
++			if (activePointerId !== null && e.pointerId !== activePointerId) return;
++			if (typeof this.element.hasPointerCapture === "function" && this.element.hasPointerCapture(e.pointerId) && typeof this.element.releasePointerCapture === "function") this.element.releasePointerCapture(e.pointerId);
++			activePointerId = null;
++		};
+ 		this.mouseDown = {
+ 			on: (value) => {
+ 				const nativeListener = (e) => {
++					if (supportsPointerEvents && !e.isPrimary) return;
++					capturePointer(e);
+ 					value(new BrowserMouseEventArgs(e));
+ 				};
+-				this.element.addEventListener("mousedown", nativeListener, true);
++				this.element.addEventListener(supportsPointerEvents ? "pointerdown" : "mousedown", nativeListener, true);
+ 				return () => {
+-					this.element.removeEventListener("mousedown", nativeListener, true);
++					this.element.removeEventListener(supportsPointerEvents ? "pointerdown" : "mousedown", nativeListener, true);
+ 				};
+ 			},
+ 			off: (_value) => {}
+@@ -30581,11 +30598,15 @@ class HtmlElementContainer {
+ 		this.mouseUp = {
+ 			on: (value) => {
+ 				const nativeListener = (e) => {
++					if (!isActivePointer(e)) return;
+ 					value(new BrowserMouseEventArgs(e));
++					releasePointer(e);
+ 				};
+-				this.element.addEventListener("mouseup", nativeListener, true);
++				this.element.addEventListener(supportsPointerEvents ? "pointerup" : "mouseup", nativeListener, true);
++						if (supportsPointerEvents) this.element.addEventListener("pointercancel", nativeListener, true);
+ 				return () => {
+-					this.element.removeEventListener("mouseup", nativeListener, true);
++					this.element.removeEventListener(supportsPointerEvents ? "pointerup" : "mouseup", nativeListener, true);
++						if (supportsPointerEvents) this.element.removeEventListener("pointercancel", nativeListener, true);
+ 				};
+ 			},
+ 			off: (_value) => {}
+@@ -30593,11 +30614,12 @@ class HtmlElementContainer {
+ 		this.mouseMove = {
+ 			on: (value) => {
+ 				const nativeListener = (e) => {
++					if (!isActivePointer(e)) return;
+ 					value(new BrowserMouseEventArgs(e));
+ 				};
+-				this.element.addEventListener("mousemove", nativeListener, true);
++				this.element.addEventListener(supportsPointerEvents ? "pointermove" : "mousemove", nativeListener, true);
+ 				return () => {
+-					this.element.removeEventListener("mousemove", nativeListener, true);
++					this.element.removeEventListener(supportsPointerEvents ? "pointermove" : "mousemove", nativeListener, true);
+ 				};
+ 			},
+ 			off: (_) => {}
+@@ -36086,14 +36108,18 @@ class MidiFileSequencer {
+ 		let bpm = 120;
+ 		let timeSignatureNumerator = 4;
+ 		let timeSignatureDenominator = 4;
+-		if (this._mainState.eventIndex === 0) {
+-			bpm = this._mainState.tempoChanges[0].bpm;
+-			timeSignatureNumerator = this._mainState.firstTimeSignatureNumerator;
+-			timeSignatureDenominator = this._mainState.firstTimeSignatureDenominator;
+-		} else {
+-			bpm = this._synthesizer.currentTempo;
+-			timeSignatureNumerator = this._synthesizer.timeSignatureNumerator;
+-			timeSignatureDenominator = this._synthesizer.timeSignatureDenominator;
++		bpm = this._mainState.tempoChanges[0].bpm;
++		timeSignatureNumerator = this._mainState.firstTimeSignatureNumerator;
++		timeSignatureDenominator = this._mainState.firstTimeSignatureDenominator;
++		if (this._mainState.currentTime > 0) {
++			for (const synthEvent of this._mainState.synthData) {
++				if (synthEvent.time > this._mainState.currentTime) break;
++				if (synthEvent.event.type === MidiEventType.TempoChange) bpm = MidiFileSequencer._sanitizeBpm(synthEvent.event.beatsPerMinute);
++				else if (synthEvent.event.type === MidiEventType.TimeSignature) {
++					timeSignatureNumerator = synthEvent.event.numerator;
++					timeSignatureDenominator = Math.pow(2, synthEvent.event.denominatorIndex);
++				}
++			}
+ 		}
+ 		state.tempoChanges.push(new MidiFileSequencerTempoChange(bpm, 0, 0));
+ 		const metronomeLengthInTicks = state.division * (4 / timeSignatureDenominator) | 0;
 diff --git a/dist/alphaTab.js b/dist/alphaTab.js
-index da95311941487f7d9b624f1dbed9652ae27d5f9c..712f1955c25faaf141a154a5c154374830be03c6 100644
+index da95311..67c1a39 100644
 --- a/dist/alphaTab.js
 +++ b/dist/alphaTab.js
 @@ -12905,7 +12905,7 @@
@@ -40,3 +133,96 @@ index da95311941487f7d9b624f1dbed9652ae27d5f9c..712f1955c25faaf141a154a5c1543748
  				newNote.fret = NaN;
  			}
  			if (swapAccidentals) {
+@@ -30565,14 +30566,30 @@
+ 		element;
+ 		constructor(element) {
+ 			this.element = element;
++			const supportsPointerEvents = typeof globalThis.PointerEvent !== "undefined";
++			let activePointerId = null;
++			const isActivePointer = (e) => !supportsPointerEvents || activePointerId === null || e.pointerId === activePointerId;
++			const capturePointer = (e) => {
++				if (!supportsPointerEvents || !e.isPrimary || typeof e.pointerId !== "number") return;
++				activePointerId = e.pointerId;
++				if (typeof this.element.setPointerCapture === "function") this.element.setPointerCapture(e.pointerId);
++			};
++			const releasePointer = (e) => {
++				if (!supportsPointerEvents || typeof e.pointerId !== "number") return;
++				if (activePointerId !== null && e.pointerId !== activePointerId) return;
++				if (typeof this.element.hasPointerCapture === "function" && this.element.hasPointerCapture(e.pointerId) && typeof this.element.releasePointerCapture === "function") this.element.releasePointerCapture(e.pointerId);
++				activePointerId = null;
++			};
+ 			this.mouseDown = {
+ 				on: (value) => {
+ 					const nativeListener = (e) => {
++						if (supportsPointerEvents && !e.isPrimary) return;
++						capturePointer(e);
+ 						value(new BrowserMouseEventArgs(e));
+ 					};
+-					this.element.addEventListener("mousedown", nativeListener, true);
++					this.element.addEventListener(supportsPointerEvents ? "pointerdown" : "mousedown", nativeListener, true);
+ 					return () => {
+-						this.element.removeEventListener("mousedown", nativeListener, true);
++						this.element.removeEventListener(supportsPointerEvents ? "pointerdown" : "mousedown", nativeListener, true);
+ 					};
+ 				},
+ 				off: (_value) => {}
+@@ -30580,11 +30597,15 @@
+ 			this.mouseUp = {
+ 				on: (value) => {
+ 					const nativeListener = (e) => {
++						if (!isActivePointer(e)) return;
+ 						value(new BrowserMouseEventArgs(e));
++						releasePointer(e);
+ 					};
+-					this.element.addEventListener("mouseup", nativeListener, true);
++					this.element.addEventListener(supportsPointerEvents ? "pointerup" : "mouseup", nativeListener, true);
++							if (supportsPointerEvents) this.element.addEventListener("pointercancel", nativeListener, true);
+ 					return () => {
+-						this.element.removeEventListener("mouseup", nativeListener, true);
++						this.element.removeEventListener(supportsPointerEvents ? "pointerup" : "mouseup", nativeListener, true);
++							if (supportsPointerEvents) this.element.removeEventListener("pointercancel", nativeListener, true);
+ 					};
+ 				},
+ 				off: (_value) => {}
+@@ -30592,11 +30613,12 @@
+ 			this.mouseMove = {
+ 				on: (value) => {
+ 					const nativeListener = (e) => {
++						if (!isActivePointer(e)) return;
+ 						value(new BrowserMouseEventArgs(e));
+ 					};
+-					this.element.addEventListener("mousemove", nativeListener, true);
++					this.element.addEventListener(supportsPointerEvents ? "pointermove" : "mousemove", nativeListener, true);
+ 					return () => {
+-						this.element.removeEventListener("mousemove", nativeListener, true);
++						this.element.removeEventListener(supportsPointerEvents ? "pointermove" : "mousemove", nativeListener, true);
+ 					};
+ 				},
+ 				off: (_) => {}
+@@ -36085,14 +36107,18 @@
+ 			let bpm = 120;
+ 			let timeSignatureNumerator = 4;
+ 			let timeSignatureDenominator = 4;
+-			if (this._mainState.eventIndex === 0) {
+-				bpm = this._mainState.tempoChanges[0].bpm;
+-				timeSignatureNumerator = this._mainState.firstTimeSignatureNumerator;
+-				timeSignatureDenominator = this._mainState.firstTimeSignatureDenominator;
+-			} else {
+-				bpm = this._synthesizer.currentTempo;
+-				timeSignatureNumerator = this._synthesizer.timeSignatureNumerator;
+-				timeSignatureDenominator = this._synthesizer.timeSignatureDenominator;
++			bpm = this._mainState.tempoChanges[0].bpm;
++			timeSignatureNumerator = this._mainState.firstTimeSignatureNumerator;
++			timeSignatureDenominator = this._mainState.firstTimeSignatureDenominator;
++			if (this._mainState.currentTime > 0) {
++				for (const synthEvent of this._mainState.synthData) {
++					if (synthEvent.time > this._mainState.currentTime) break;
++					if (synthEvent.event.type === MidiEventType.TempoChange) bpm = MidiFileSequencer._sanitizeBpm(synthEvent.event.beatsPerMinute);
++					else if (synthEvent.event.type === MidiEventType.TimeSignature) {
++						timeSignatureNumerator = synthEvent.event.numerator;
++						timeSignatureDenominator = Math.pow(2, synthEvent.event.denominatorIndex);
++					}
++				}
+ 			}
+ 			state.tempoChanges.push(new MidiFileSequencerTempoChange(bpm, 0, 0));
+ 			const metronomeLengthInTicks = state.division * (4 / timeSignatureDenominator) | 0;

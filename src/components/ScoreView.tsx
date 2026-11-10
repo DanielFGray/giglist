@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react"
 import { AlphaTabApi, importer, LayoutMode, model, PlayerMode, Settings, StaveProfile } from "@coderline/alphatab"
-import { alphaTabAssets, inkFrom } from "./alphatab"
+import { alphaTabAssetUrls } from "alphatab-kit"
+import { inkFrom } from "./alphatab"
 import { useThemeInk } from "./useThemeInk"
 import { PlayControls } from "./PlayControls"
 import { usePlayback } from "./playback"
@@ -69,7 +70,7 @@ export function ScoreView({
   useEffect(() => {
     const element = host.current
     if (!element) return
-    const { scriptFile, fontDirectory, soundFont } = alphaTabAssets()
+    const { scriptFile, fontDirectory, soundFont } = alphaTabAssetUrls()
     const view = new AlphaTabApi(element, {
       core: { engine: "svg", useWorkers: false, scriptFile, fontDirectory },
       display: { padding: [0, 0], layoutMode: LayoutMode.Page, scale: 0.8, staveProfile: StaveProfile.ScoreTab, stretchForce: stretchForWidth(element.clientWidth) },

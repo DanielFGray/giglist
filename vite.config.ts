@@ -2,7 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { TanStackRouterVite } from "@tanstack/router-plugin/vite";
 import tailwindcss from "@tailwindcss/vite";
-import { alphaTabAssetsPlugin } from "./scripts/alphaTabAssetsPlugin";
+import { alphaTabAssets } from "alphatab-kit/vite";
 import { licenseNoticesPlugin } from "./scripts/licenseNoticesPlugin";
 import path from "node:path";
 
@@ -40,8 +40,6 @@ export default defineConfig({
     host,
     proxy: apiProxy,
   },
-  // alphaTab starts its own workers from URLs; keep Vite from pre-bundling it.
-  optimizeDeps: { exclude: ["@coderline/alphatab"] },
   resolve: {
     alias: {
       "~": path.resolve(__dirname, "src"),
@@ -51,7 +49,7 @@ export default defineConfig({
     // Reads tsr.config.json, which scripts/generateRouteTree.ts reads too.
     TanStackRouterVite(),
     tailwindcss(),
-    alphaTabAssetsPlugin(),
+    alphaTabAssets(),
     licenseNoticesPlugin(),
     react(),
   ],

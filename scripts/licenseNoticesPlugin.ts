@@ -13,7 +13,7 @@ export const LICENSE_NOTICES_PATH = "third-party-licenses.txt"
  * with every copy, and the bundle a browser downloads is a copy. The list comes
  * from the modules the bundler actually included, not from package.json, so a
  * dependency used only by the server or the tests is not listed, and a new
- * client dependency cannot be missed. The files alphaTabAssetsPlugin serves
+ * client dependency cannot be missed. The files alphatab-kit serves
  * under `/alphatab/` come from a package the bundle also imports, so its
  * notice is listed; the fonts inside it are covered in ATTRIBUTIONS.md.
  */

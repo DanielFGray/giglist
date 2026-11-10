@@ -2,7 +2,7 @@ import { degreeName } from "~/charts/degrees"
 import { numeral } from "~/charts/numeral"
 import type { Spelling } from "~/charts/spelling"
 import { staffNotes, staffSides, staffStep, type StaffNote } from "~/charts/staff"
-import { alphaTabAssets } from "./alphatab"
+import { alphaTabAssetUrls } from "alphatab-kit"
 
 /**
  * One chord as stacked whole notes on a treble staff: no bar lines, no time
@@ -12,7 +12,7 @@ import { alphaTabAssets } from "./alphatab"
  */
 export function ChordStaff({ spelling }: { spelling: Spelling }) {
   const notes = staffNotes(spelling)
-  const fontDirectory = alphaTabAssets().fontDirectory
+  const fontDirectory = alphaTabAssetUrls().fontDirectory
   const layout = layOut(notes, spelling)
   return (
     <svg
