@@ -1,0 +1,9 @@
+#!/bin/bash
+# What "checked" means for GigList: `ops signoff` runs this on an exported tree, which has no
+# .git, no .env and no database. So it runs the checks that need none of them. The database
+# and browser tests run in `bun run test:db` and `bun run test`.
+set -euo pipefail
+
+bun run typecheck
+bun run lint
+bun run test:unit

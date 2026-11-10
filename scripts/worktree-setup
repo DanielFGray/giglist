@@ -1,0 +1,7 @@
+#!/bin/bash
+# A fresh worktree, or the tree `ops signoff` exports, has no installed dependencies and no
+# generated route tree. Both steps are safe to run again.
+set -euo pipefail
+
+bun install --frozen-lockfile
+bun scripts/generateRouteTree.ts
