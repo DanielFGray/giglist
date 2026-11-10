@@ -35,9 +35,9 @@ export const isBandMember = Effect.fnUntraced(function*(bandId: string) {
  * Run `query` as the session's user. With no session, fail with `unauthorized()`
  * (each API group has its own 403 error).
  */
-export const asSessionOr = <A, E, E2>(
+export const asSessionOr = <A, E, E2, R>(
   unauthorized: () => E2,
-  query: (session: SessionData) => Effect.Effect<A, E, RequestDatabase>,
+  query: (session: SessionData) => Effect.Effect<A, E, R>,
 ) =>
   Effect.gen(function* () {
     const session = yield* CurrentSession

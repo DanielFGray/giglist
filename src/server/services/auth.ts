@@ -179,16 +179,13 @@ export class Auth extends Context.Service<Auth>()("setlist/Auth", {
       yield* db.deleteFrom("app_private.sessions").where("uuid", "=", sessionId);
     });
 
-    const getMe = Effect.fn("Auth.getMe")(function* (sessionId: string) {
-      const db = yield* Db;
+    /** The request's user, or null for an anonymous visitor. */
+    const getMe = Effect.fn("Auth.getMe")(function* () {
+      const db = yield* RequestDatabase;
       return yield* db
         .selectFrom("app_public.users")
         .select(["id", "username", "name", "bio", "avatar_url", "is_public", "page_theme", "page_options", "role", "is_verified"])
-        .where(
-          "id",
-          "=",
-          sql<string>`(select user_id from app_private.sessions where uuid = ${sessionId}::uuid)`,
-        )
+        .where("id", "=", sql<string>`app_public.current_user_id()`)
         .pipe(
           Effect.head,
           Effect.catchTag("NoSuchElementError", () => Effect.succeed(null)),

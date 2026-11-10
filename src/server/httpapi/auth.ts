@@ -86,9 +86,7 @@ export const authHandlers = HttpApiBuilder.group(GigListApi, "auth", (handlers) 
       .handle("me", Effect.fnUntraced(function*() {
           const session = yield* CurrentSession
           if (!session.sessionId || !session.userId) return null
-          return yield* auth.getMe(session.sessionId).pipe(
-            Effect.orElseSucceed(() => null),
-          )
+          return yield* auth.getMe().pipe(withAuthContext)
         }),
       )
       .handle("updateMe", Effect.fnUntraced(function*({ payload }) {

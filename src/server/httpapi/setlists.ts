@@ -176,7 +176,7 @@ export const setlistsHandlers = HttpApiBuilder.group(GigListApi, "setlists", (ha
       ),
     )
     .handle("watchSetlist", ({ params: { id }, query: { client } }) =>
-      watchRoom(id, client, asSession(() => setlistOr404(id))),
+      watchRoom(id, client, setlistOr404(id)),
     )
     .handle("reportPresence", ({ params: { id }, payload }) =>
       reportInRoom(id, payload, asSession(() => setlistOr404(id))),
@@ -184,7 +184,7 @@ export const setlistsHandlers = HttpApiBuilder.group(GigListApi, "setlists", (ha
 )
 
 /** Run `query` as the session's user, or answer 403 if there is no session. */
-export const asSession = <A, E>(query: (session: SessionData) => Effect.Effect<A, E, RequestDatabase>) =>
+export const asSession = <A, E, R>(query: (session: SessionData) => Effect.Effect<A, E, R>) =>
   asSessionOr(() => new SetlistForbidden({ message: "You must be signed in" }), query)
 
 /**
@@ -192,7 +192,7 @@ export const asSession = <A, E>(query: (session: SessionData) => Effect.Effect<A
  * watching the setlist, and every gig that plays it, hears who wrote. The gigs
  * are read before the write, so deleting the setlist still reaches them.
  */
-const asWriter = <A, E>(setlistId: string, query: (session: SessionData) => Effect.Effect<A, E, RequestDatabase>) =>
+const asWriter = <A, E, R>(setlistId: string, query: (session: SessionData) => Effect.Effect<A, E, R>) =>
   asSession((session) =>
     Effect.gen(function* () {
       const db = yield* RequestDatabase
@@ -202,30 +202,27 @@ const asWriter = <A, E>(setlistId: string, query: (session: SessionData) => Effe
         .where("setlist_id", "=", setlistId)
         .pipe(Effect.orDie)
       const result = yield* query(session)
-      return { result, rooms: [setlistId, ...gigs.map((gig) => gig.gig_id)] }
+      return { result, rooms: [setlistId, ...gigs.map((gig) => gig.gig_id)], by: yield* writerName }
     }),
   ).pipe(
-    Effect.tap(({ rooms }) => announce(rooms)),
+    Effect.tap(({ rooms, by }) => announce(rooms, by)),
     Effect.map(({ result }) => result),
   )
 
-/** Tells everyone watching each room that the session's user wrote it. */
-export const announce = Effect.fn("Setlists.announce")(function*(rooms: ReadonlyArray<string>) {
+/** The username of the request's user, read in the write's own transaction. */
+export const writerName = Auth.use((auth) => auth.getMe()).pipe(Effect.map((me) => me?.username ?? null))
+
+/** Tells everyone watching each room that `by` wrote it. */
+export const announce = Effect.fn("Setlists.announce")(function*(rooms: ReadonlyArray<string>, by: string | null) {
   const hub = yield* LiveHub
-  const auth = yield* Auth
-  const session = yield* CurrentSession
-  const me = yield* auth.getMe(session.sessionId).pipe(Effect.orElseSucceed(() => null))
-  yield* Effect.forEach(rooms, (room) => hub.changed(room, me?.username ?? null))
+  yield* Effect.forEach(rooms, (room) => hub.changed(room, by))
 })
 
 /** The event stream of a setlist or gig. `visible` is the read that proves the caller may see it. */
-export const watchRoom = <A, E, R>(roomId: string, client: string, visible: Effect.Effect<A, E, R>) =>
+export const watchRoom = <A, E>(roomId: string, client: string, visible: Effect.Effect<A, E, RequestDatabase>) =>
   Effect.gen(function* () {
-    const session = yield* CurrentSession
     // Opening the stream is the visibility check; after that it holds no database connection.
-    yield* visible
-    const auth = yield* Auth
-    const me = yield* auth.getMe(session.sessionId).pipe(Effect.orElseSucceed(() => null))
+    const me = yield* asSession(() => visible.pipe(Effect.andThen(Auth.use((auth) => auth.getMe()))))
     if (!me) return yield* new SetlistForbidden({ message: "You must be signed in" })
     const hub = yield* LiveHub
     return hub.watch(roomId, {

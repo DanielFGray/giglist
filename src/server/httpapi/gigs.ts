@@ -4,7 +4,7 @@ import { sql } from "kysely"
 import { RequestDatabase } from "../db"
 import { between, placeAfter } from "../../components/position"
 import { Gig, GigEntry, GigListApi, GigNotFound, SetlistForbidden, type SessionData } from "../../api/contracts"
-import { announce, asSession, assertBandMember, copySetlist, reportInRoom, watchRoom } from "./setlists"
+import { announce, asSession, assertBandMember, copySetlist, reportInRoom, watchRoom, writerName } from "./setlists"
 
 export const gigsHandlers = HttpApiBuilder.group(GigListApi, "gigs", (handlers) =>
   handlers
@@ -174,7 +174,7 @@ export const gigsHandlers = HttpApiBuilder.group(GigListApi, "gigs", (handlers) 
         }),
       ),
     )
-    .handle("watchGig", ({ params: { id }, query: { client } }) => watchRoom(id, client, asSession(() => gigOr404(id))))
+    .handle("watchGig", ({ params: { id }, query: { client } }) => watchRoom(id, client, gigOr404(id)))
     .handle("reportGigPresence", ({ params: { id }, payload }) =>
       reportInRoom(id, payload, asSession(() => gigOr404(id))),
     ),
@@ -185,16 +185,16 @@ export const gigsHandlers = HttpApiBuilder.group(GigListApi, "gigs", (handlers) 
  * watching the gig hears who wrote, and so does everyone watching a setlist
  * the gig played before or after the write, since a setlist's page lists its gigs.
  */
-const asGigWriter = <A, E>(gigId: string, query: (session: SessionData) => Effect.Effect<A, E, RequestDatabase>) =>
+const asGigWriter = <A, E, R>(gigId: string, query: (session: SessionData) => Effect.Effect<A, E, R>) =>
   asSession((session) =>
     Effect.gen(function* () {
       const before = yield* playedBy(gigId)
       const result = yield* query(session)
       const after = yield* playedBy(gigId)
-      return { result, rooms: [...new Set([gigId, ...before, ...after])] }
+      return { result, rooms: [...new Set([gigId, ...before, ...after])], by: yield* writerName }
     }),
   ).pipe(
-    Effect.tap(({ rooms }) => announce(rooms)),
+    Effect.tap(({ rooms, by }) => announce(rooms, by)),
     Effect.map(({ result }) => result),
   )
 

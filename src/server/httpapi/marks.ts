@@ -17,7 +17,7 @@ const decodeChartMarks = S.decodeUnknownEffect(ChartMarks)
 const decodeStamp = S.decodeUnknownEffect(Stamp)
 const decodeStamps = S.decodeUnknownEffect(S.Array(Stamp))
 
-const asSession = <A, E>(query: Parameters<typeof asSessionOr<A, E, MarkForbidden>>[1]) =>
+const asSession = <A, E, R>(query: Parameters<typeof asSessionOr<A, E, MarkForbidden, R>>[1]) =>
   asSessionOr(() => new MarkForbidden({ message: "You must be signed in" }), query)
 
 /**
