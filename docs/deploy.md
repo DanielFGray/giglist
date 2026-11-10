@@ -43,12 +43,7 @@ Nomad keeps the previous version. `.gmrc.cjs` reads `DATABASE_OWNER`, `DATABASE_
 and `DATABASE_AUTHENTICATOR` from the environment, so the task gets the migration login
 as `DATABASE_URL` and the api login's name.
 
-graphile-migrate refuses to continue when a recorded migration's hash differs from the
-committed file. Production was built from an earlier draft of release 1, so its table
-records `000001.sql` with hash `sha1:2b63ba71f746910ed3c809ebbd577eb430006571`, not the
-committed `sha1:a74fdf8bdd8c08e9cf8069affcad2103eb43360c`. The schemas are the same apart
-from the `songs.created_by` default, which release 2 adds. Before the first deploy that
-runs migrations, update that row's hash to the committed one.
+Production's migration record is built only by the migrate task, from the committed files.
 
 Never run `db:init`, `db:setup`, `db:reset` or `db:latest` against production. They
 drop databases, roles and schemas.
