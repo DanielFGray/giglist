@@ -15,11 +15,11 @@ export interface SessionData {
   readonly userId: string | null
 }
 
-export class CurrentSession extends Context.Service<CurrentSession, SessionData>()("CurrentSession") {}
+export class CurrentSession extends Context.Service<CurrentSession, SessionData>()("giglist/CurrentSession") {}
 
 export class SessionMiddleware extends HttpApiMiddleware.Service<
   SessionMiddleware,
   { provides: CurrentSession }
->()("SessionMiddleware", {
+>()("giglist/SessionMiddleware", {
   security: { session: sessionCookie },
 }) {}

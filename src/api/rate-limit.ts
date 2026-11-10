@@ -16,6 +16,6 @@ export class TooManyRequests extends S.TaggedError<TooManyRequests, { readonly b
  * inside the session and can key a rule on the signed-in user.
  */
 export class RateLimitMiddleware extends HttpApiMiddleware.Service<RateLimitMiddleware>()(
-  "RateLimitMiddleware",
+  "giglist/RateLimitMiddleware",
   { error: TooManyRequests.pipe(HttpApiSchema.status(429)) },
 ) {}

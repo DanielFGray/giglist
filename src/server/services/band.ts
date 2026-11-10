@@ -36,7 +36,7 @@ const bandColumns = [
  * The methods yield it themselves rather than capturing one at layer build,
  * because only `withAuthContext` provides it, once per request.
  */
-export class Bands extends Context.Service<Bands>()("setlist/Bands", {
+export class Bands extends Context.Service<Bands>()("giglist/Bands", {
   make: Effect.sync(() => {
     /** Owner-only: moves ownership to another member, failing with a BandError when either side is wrong. */
     const transferOwnership = Effect.fn("Bands.transferOwnership")(

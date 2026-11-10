@@ -21,7 +21,7 @@ const decodeEntries = S.decodeUnknownEffect(S.Array(SetlistEntry))
  * commits — the setlist and every gig that plays it. A setlist and a gig are
  * each a room of the LiveHub; `watch` opens one and `report` updates a viewer.
  */
-export class Setlists extends Context.Service<Setlists>()("setlist/Setlists", {
+export class Setlists extends Context.Service<Setlists>()("giglist/Setlists", {
   make: Effect.gen(function* () {
     const bands = yield* Bands
     const auth = yield* Auth

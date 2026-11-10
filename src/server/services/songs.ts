@@ -12,7 +12,7 @@ const decodeSongs = S.decodeUnknownEffect(S.Array(Song))
  * security scopes every query; the member checks turn "nothing visible" into a
  * 403 the browser can show.
  */
-export class Songs extends Context.Service<Songs>()("setlist/Songs", {
+export class Songs extends Context.Service<Songs>()("giglist/Songs", {
   make: Effect.gen(function* () {
     const bands = yield* Bands
 

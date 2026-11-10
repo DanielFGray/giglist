@@ -32,7 +32,7 @@ type Room = {
  * other's viewers or writes; running more than one needs the same events sent
  * through the database (LISTEN/NOTIFY) instead.
  */
-export class LiveHub extends Context.Service<LiveHub>()("setlist/LiveHub", {
+export class LiveHub extends Context.Service<LiveHub>()("giglist/LiveHub", {
   make: Effect.gen(function* () {
     const rooms = yield* Ref.make(new Map<string, Room>())
 

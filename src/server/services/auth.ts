@@ -47,7 +47,7 @@ const emptyToNull = (value: string | null) => {
  * run without a signed-in user, and `RequestDatabase` for everything a request
  * does as the user, which only `withAuthContext` provides.
  */
-export class Auth extends Context.Service<Auth>()("setlist/Auth", {
+export class Auth extends Context.Service<Auth>()("giglist/Auth", {
   make: Effect.sync(() => {
     /** Band owners must transfer or delete those bands before account deletion. */
     const requireNoOwnedBands = Effect.fn("Auth.requireNoOwnedBands")(function* () {

@@ -16,7 +16,7 @@ export type KyselyDB = PgKysely.EffectKysely<DB>
  * a user identity may run on it: RLS is the only thing keeping one band's songs
  * out of another band's result set.
  */
-export class Db extends Context.Service<Db, KyselyDB>()("Db") {
+export class Db extends Context.Service<Db, KyselyDB>()("giglist/Db") {
   static Conn = Layer.unwrap(
     Config.Redacted("DATABASE_URL").pipe(
       Effect.map((url) =>
@@ -35,7 +35,7 @@ export class Db extends Context.Service<Db, KyselyDB>()("Db") {
  * it holds none of the grants until a request says `SET ROLE` to the visitor
  * role — see `withAuthContext`.
  */
-export class AuthDb extends Context.Service<AuthDb, KyselyDB>()("AuthDb") {
+export class AuthDb extends Context.Service<AuthDb, KyselyDB>()("giglist/AuthDb") {
   static Conn = Layer.unwrap(
     Config.Redacted("AUTH_DATABASE_URL").pipe(
       Effect.map((url) =>
@@ -50,7 +50,7 @@ export class AuthDb extends Context.Service<AuthDb, KyselyDB>()("AuthDb") {
 }
 
 /** The visitor role that the authenticator must set. */
-export class AuthVisitor extends Context.Service<AuthVisitor, string>()("AuthVisitor") {
+export class AuthVisitor extends Context.Service<AuthVisitor, string>()("giglist/AuthVisitor") {
   static Live = Layer.effect(
     this,
     Config.String("DATABASE_VISITOR"),
@@ -65,7 +65,7 @@ export class AuthVisitor extends Context.Service<AuthVisitor, string>()("AuthVis
  *
  * @effect-leakable-service
  */
-export class RequestDatabase extends Context.Service<RequestDatabase, KyselyDB>()("RequestDatabase") {}
+export class RequestDatabase extends Context.Service<RequestDatabase, KyselyDB>()("giglist/RequestDatabase") {}
 
 /**
  * Make `effect` run as the request's user.
