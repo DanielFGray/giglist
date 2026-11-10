@@ -3,7 +3,7 @@ import { HttpServerRequest } from "effect/http"
 import { RateLimiter } from "effect/persistence/RateLimiter"
 import type { RateLimiterError } from "effect/persistence/RateLimiter"
 import { CurrentSession, RateLimitMiddleware, TooManyRequests } from "../../api/contracts"
-import { RateLimiterLive, storeTimeout } from "../services/rate-limiter"
+import { storeTimeout } from "../services/rate-limiter"
 import { networkOf } from "./client-ip"
 
 /**
@@ -42,7 +42,8 @@ const rules: Readonly<Record<string, Rule>> = {
 /**
  * Applies the rule for each endpoint that declares `RateLimitMiddleware`.
  * `RATE_LIMIT=off` passes every request, for the Playwright suite, whose
- * specs register more users per hour than a person would.
+ * specs register more users per hour than a person would. The entry point
+ * provides the `RateLimiter`: Valkey in the server, memory in the API tests.
  */
 export const RateLimitMiddlewareLive = Layer.unwrap(
   Config.Literals(["on", "off"], "RATE_LIMIT").pipe(
@@ -80,7 +81,7 @@ const enforce = Layer.effect(
           ),
       })
   }),
-).pipe(Layer.provide(RateLimiterLive))
+)
 
 const caller = Effect.fnUntraced(function* (rule: Rule) {
   if (rule.by === "user") {

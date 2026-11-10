@@ -2,7 +2,8 @@ import { describe, expect, test } from "bun:test"
 import { Effect, Layer, Option } from "effect"
 import { BunServices } from "@effect/platform-bun"
 import { SMTPServer } from "smtp-server"
-import { RateLimiterError, RateLimiterStore, RateLimitStoreError, layer as rateLimiterLayer, layerStoreMemory } from "effect/persistence/RateLimiter"
+import { RateLimiterError, RateLimiterStore, RateLimitStoreError } from "effect/persistence/RateLimiter"
+import { RateLimiterMemory, rateLimiterWithStore } from "../../src/server/services/rate-limiter"
 import { Mailer, MailMessage, SmtpSettings } from "./mailer"
 import { sendEmail } from "./send-email"
 
@@ -11,9 +12,6 @@ const verification = {
   template: "verify_email.mjml",
   variables: { token: "verification-code", verifyLink: "https://giglist.example/verify-email", username: "player", name: null },
 }
-
-// A fresh in-memory limiter per use, so counts never carry between tests.
-const memoryLimiter = rateLimiterLayer.pipe(Layer.provide(layerStoreMemory))
 
 describe("queued email delivery", () => {
   test("renders all account emails through the supplied Mailer", async () => {
@@ -27,7 +25,7 @@ describe("queued email delivery", () => {
       { options: { ...verification.options, to: ["one@example.invalid", "two@example.invalid"] }, template: "account_activity.mjml", variables: { actionDescription: "You changed your password." } },
     ]
     await Effect.runPromise(Effect.forEach(jobs, sendEmail).pipe(
-      Effect.provide(Layer.mergeAll(capture, BunServices.layer, memoryLimiter)),
+      Effect.provide(Layer.mergeAll(capture, BunServices.layer, RateLimiterMemory)),
     ))
     expect(delivered).toHaveLength(5)
     expect(delivered[0]).toMatchObject({ to: ["player@example.invalid"], subject: "Verify your GigList account" })
@@ -50,7 +48,7 @@ describe("queued email delivery", () => {
       options: { to: "newcomer@example.invalid", subject: "You have been invited to The Setlisters" },
       template: "band_invite.mjml",
       variables: { bandName: "The <Setlisters>", link },
-    }).pipe(Effect.provide(Layer.mergeAll(capture, BunServices.layer, memoryLimiter))))
+    }).pipe(Effect.provide(Layer.mergeAll(capture, BunServices.layer, RateLimiterMemory))))
     expect(delivered).toHaveLength(1)
     expect(delivered[0]?.html).toContain(`href="${link.replaceAll("&", "&amp;")}"`)
     expect(delivered[0]?.html).toContain("The &lt;Setlisters&gt;")
@@ -61,7 +59,7 @@ describe("queued email delivery", () => {
     const delivered: MailMessage[] = []
     const capture = Layer.succeed(Mailer, { send: (message) => Effect.sync(() => { delivered.push(message) }) })
     const error = await Effect.runPromise(sendEmail({ ...verification, variables: { token: "missing-link" } }).pipe(
-      Effect.provide(Layer.mergeAll(capture, BunServices.layer, memoryLimiter)), Effect.flip,
+      Effect.provide(Layer.mergeAll(capture, BunServices.layer, RateLimiterMemory)), Effect.flip,
     ))
     expect(error._tag).toBe("SchemaError")
     expect(delivered).toHaveLength(0)
@@ -91,7 +89,7 @@ describe("queued email delivery", () => {
       yield* sendEmail(verification)
       const error = yield* Effect.flip(sendEmail({ ...verification, options: { ...verification.options, to: "reject@example.invalid" } }))
       expect(error._tag).toBe("MailDeliveryError")
-    }).pipe(Effect.provide(Layer.mergeAll(layer, BunServices.layer, memoryLimiter)), Effect.scoped))
+    }).pipe(Effect.provide(Layer.mergeAll(layer, BunServices.layer, RateLimiterMemory)), Effect.scoped))
     expect(received).toContain("Subject: Verify your GigList account")
     expect(received).toContain("sender@example.invalid")
     expect(received).toContain("Content-Type: text/plain")
@@ -107,7 +105,7 @@ describe("queued email delivery", () => {
     const shouted = { ...reset, options: { ...reset.options, to: "PLAYER@example.invalid" } }
     const other = { ...reset, options: { ...reset.options, to: "other@example.invalid" } }
     await Effect.runPromise(Effect.forEach([reset, reset, reset, shouted, reset, reset, shouted, other], sendEmail).pipe(
-      Effect.provide(Layer.mergeAll(capture, BunServices.layer, memoryLimiter)),
+      Effect.provide(Layer.mergeAll(capture, BunServices.layer, RateLimiterMemory)),
     ))
     expect(delivered.map((mail) => mail.to)).toEqual([
       ["player@example.invalid"], ["player@example.invalid"], ["player@example.invalid"], ["PLAYER@example.invalid"], ["player@example.invalid"],
@@ -121,7 +119,7 @@ describe("queued email delivery", () => {
     const reset = { options: verification.options, template: "password_reset_unregistered.mjml", variables: { url: "https://giglist.example" } }
     const notice = { options: verification.options, template: "account_activity.mjml", variables: { actionDescription: "You changed your password." } }
     await Effect.runPromise(Effect.forEach([reset, reset, reset, reset, reset, reset, notice], sendEmail).pipe(
-      Effect.provide(Layer.mergeAll(capture, BunServices.layer, memoryLimiter)),
+      Effect.provide(Layer.mergeAll(capture, BunServices.layer, RateLimiterMemory)),
     ))
     expect(delivered).toHaveLength(6)
     expect(delivered[5]?.text).toContain("You changed your password.")
@@ -131,9 +129,9 @@ describe("queued email delivery", () => {
     const delivered: MailMessage[] = []
     const capture = Layer.succeed(Mailer, { send: (message) => Effect.sync(() => { delivered.push(message) }) })
     const down = Effect.fail(new RateLimiterError({ reason: new RateLimitStoreError({ message: "Valkey is down" }) }))
-    const storeDown = rateLimiterLayer.pipe(Layer.provide(Layer.succeed(RateLimiterStore, {
+    const storeDown = rateLimiterWithStore(Layer.succeed(RateLimiterStore, {
       fixedWindow: () => down, tokenBucket: () => down, adaptiveConsume: () => down, adaptiveFeedback: () => down,
-    })))
+    }))
     const error = await Effect.runPromise(sendEmail(verification).pipe(
       Effect.provide(Layer.mergeAll(capture, BunServices.layer, storeDown)), Effect.flip,
     ))
