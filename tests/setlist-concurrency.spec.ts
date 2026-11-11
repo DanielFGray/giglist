@@ -58,7 +58,6 @@ test("parallel adds get distinct keys and a following move lands after its ancho
 })
 
 test("rebalances entry and gig setlist keys after repeated neighbour moves", async ({ page, testing }) => {
-  test.setTimeout(240_000)
   await testing.login()
   const band = await post(page, "/api/my/bands", { slug: `test-rebalance-${Date.now()}`, name: "Rebalance" })
   const setlist = await post(page, "/api/setlists", { band_id: band.id, name: "Rebalance" })
@@ -74,13 +73,24 @@ test("rebalances entry and gig setlist keys after repeated neighbour moves", asy
     await post(page, `/api/gigs/${gig.id}/setlists`, { setlist_id: set.id })
     sets.push(set)
   }
+  // Keys at the 32-character limit with no room between neighbours, so the
+  // first move in each group must renumber it. Growing keys this long by
+  // moves alone takes hundreds of requests.
+  const longKey = (last: string) => `${"V".repeat(31)}${last}`
+  const seeded = await page.request.put("/api/testing/position-keys", {
+    data: {
+      entries: entries.map((entry, at) => ({ id: entry.id, position_key: longKey(String(at + 1)) })),
+      gig_setlists: sets.map((set, at) => ({ gig_id: gig.id, setlist_id: set.id, position_key: longKey(String(at + 1)) })),
+    },
+  })
+  expect(seeded.ok(), await seeded.text()).toBe(true)
   const move = async (url: string, id: string, previous: string) => {
     const response = await page.request.put(url, { data: { id, previous } })
     expect(response.ok(), await response.text()).toBe(true)
   }
   const moveEntry = `/api/setlists/${setlist.id}/move`
   const moveSet = `/api/gigs/${gig.id}/setlists/move`
-  for (let index = 0; index < 100; index += 1) {
+  for (let index = 0; index < 3; index += 1) {
     await move(moveEntry, entries[0].id, entries[1].id)
     await move(moveEntry, entries[1].id, entries[0].id)
     await move(moveSet, sets[0].id, sets[1].id)
@@ -88,7 +98,8 @@ test("rebalances entry and gig setlist keys after repeated neighbour moves", asy
   }
   const finalEntries = await (await page.request.get(`/api/setlists/${setlist.id}/entries`)).json()
   expect(finalEntries.map((entry: { id: string }) => entry.id)).toEqual(entries.map((entry: { id: string }) => entry.id))
-  expect(Math.max(...finalEntries.map((entry: { position_key: string }) => entry.position_key.length))).toBeLessThanOrEqual(32)
+  // The third entry never moves, so only a renumber gives it a new key.
+  expect(finalEntries.map((entry: { position_key: string }) => entry.position_key.startsWith(longKey("")))).toEqual([false, false, false])
   const finalGig = await (await page.request.get(`/api/gigs/${gig.id}`)).json()
   expect(finalGig.setlists.map((set: { id: string }) => set.id)).toEqual(sets.map((set: { id: string }) => set.id))
 })

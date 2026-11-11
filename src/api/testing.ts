@@ -16,6 +16,20 @@ export const AddBandMemberPayload = S.Struct({
   username: S.String,
 })
 
+/**
+ * Test-only: write position keys directly, so a spec can start from keys near
+ * the length that makes a move renumber its group, instead of making hundreds
+ * of moves to grow them.
+ */
+export const SetPositionKeysPayload = S.Struct({
+  entries: S.Array(S.Struct({ id: S.String.check(S.isUUID()), position_key: S.String })),
+  gig_setlists: S.Array(S.Struct({
+    gig_id: S.String.check(S.isUUID()),
+    setlist_id: S.String.check(S.isUUID()),
+    position_key: S.String,
+  })),
+})
+
 export const TestingLoginPayload = S.Struct({
   username: S.String,
   password: S.String,
@@ -103,6 +117,12 @@ export const TestingApiGroup = HttpApiGroup.make("testing")
   .add(
     HttpApiEndpoint.post("addBandMember", "/band-member", {
       payload: AddBandMemberPayload,
+      success: TestingSuccess,
+    }),
+  )
+  .add(
+    HttpApiEndpoint.put("setPositionKeys", "/position-keys", {
+      payload: SetPositionKeysPayload,
       success: TestingSuccess,
     }),
   )
