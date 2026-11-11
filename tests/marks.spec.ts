@@ -167,7 +167,9 @@ test.describe("marks", () => {
     await page.mouse.move(from.x, from.y)
     await page.mouse.down()
     await page.mouse.move(to.x, to.y, { steps: 6 })
+    const saved = page.waitForResponse((response) => response.request().method() === "PUT" && response.url().includes("/api/marks/"))
     await page.mouse.up()
+    await saved
     await expect.poll(async () => Math.abs((await center(mark)).y - to.y)).toBeLessThan(6)
     // The mark stays with its word. The mark tools take a strip above the chart while
     // annotating, so the word moves when the reload turns annotate off: compare to the word.

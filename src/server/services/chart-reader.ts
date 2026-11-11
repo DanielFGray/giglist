@@ -3,7 +3,8 @@ import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
 import { ChildProcess, ChildProcessSpawner } from "effect/process";
 import * as BunServices from "@effect/platform-bun/BunServices";
-import { ChartInvalid } from "../../api/contracts";
+import { ChartInvalid } from "../../api/charts"
+;
 import {
   MAX_SCAN_BYTES,
   MAX_SCAN_PAGES,
@@ -34,7 +35,7 @@ const MAX_CONCURRENT_READS = 2;
  * to images with `pdftoppm` first. The server needs poppler and tesseract with English
  * data installed; a missing program is a defect, not the player's error.
  */
-export class ChartReader extends Context.Service<ChartReader>()("setlist/ChartReader", {
+export class ChartReader extends Context.Service<ChartReader>()("giglist/ChartReader", {
   make: Effect.gen(function* () {
     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
     const fs = yield* FileSystem;

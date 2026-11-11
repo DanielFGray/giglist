@@ -1,6 +1,6 @@
 import { Context, Effect, Layer, Schema } from "effect";
 import { sql } from "kysely";
-import { Kysely } from "../db";
+import { RequestDatabase } from "../db";
 
 export class PublicUserMissing extends Schema.TaggedError<
   PublicUserMissing,
@@ -13,10 +13,10 @@ export class PublicUserMissing extends Schema.TaggedError<
  * row only while the user keeps their profile on, plus `public_user_bands`
  * for the bands they play in whose own pages are on (docs/adr/0011).
  */
-export class PublicUsers extends Context.Service<PublicUsers>()("setlist/PublicUsers", {
+export class PublicUsers extends Context.Service<PublicUsers>()("giglist/PublicUsers", {
   make: Effect.succeed({
     getPublicUserProfile: Effect.fn("PublicUsers.getProfile")(function* (username: string) {
-      const db = yield* Kysely;
+      const db = yield* RequestDatabase;
       const user = yield* db
         .selectFrom(
           sql<{

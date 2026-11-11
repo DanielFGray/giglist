@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { Schema as S } from "effect"
 import { gigs, setlists } from "~/api/client"
-import { LiveEvent, type LiveViewer } from "~/api/contracts"
+import { LiveEvent, type LiveViewer } from "~/api/setlists"
 
 export type Viewer = S.Schema.Type<typeof LiveViewer>
 

@@ -36,7 +36,7 @@ import {
 import type { Compilable, KyselyConfig, KyselyPlugin, QueryResult, Simplify } from "kysely";
 
 /** Where the Proxy installs a builder's execution effect. */
-const Commit = Symbol.for("setlist/effect-kysely/commit");
+const Commit = Symbol.for("giglist/effect-kysely/commit");
 
 /**
  * The Effect protocol assigned to Kysely builder prototypes. Evaluating a

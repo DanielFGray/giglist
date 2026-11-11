@@ -10,11 +10,7 @@ import {
   type BandMember,
   type UserEmailInfo,
 } from "~/api/client"
-import {
-  UpdateProfilePayload,
-  ChangePasswordPayload,
-  AddEmailPayload,
-} from "~/api/contracts"
+import { UpdateProfilePayload, ChangePasswordPayload, AddEmailPayload } from "~/api/auth"
 import {
   SubmitButton,
   TextField,

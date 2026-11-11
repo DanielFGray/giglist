@@ -3,7 +3,7 @@ import { Link, createFileRoute, useRouter } from "@tanstack/react-router"
 import { useForm } from "@tanstack/react-form"
 import { Schema as S } from "effect"
 import { auth } from "~/api/client"
-import { LoginPayload } from "~/api/contracts"
+import { LoginPayload } from "~/api/auth"
 import { SubmitButton, TextField, errorMessage, fieldError } from "~/components/form"
 import { safeRedirect } from "~/components/safe-redirect"
 

@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useRouter } from "@tanstack/react-router"
 import { songs, type ChartInfo, type SongInfo, type SongUpdateData } from "~/api/client"
-import { type MusicalKeyType } from "~/api/contracts"
+import { type MusicalKeyType } from "~/api/songs"
 import { ClickTrack } from "./ClickTrack"
 import { songFromScore } from "~/charts/score-meta"
 import { SongCharts } from "./SongCharts"

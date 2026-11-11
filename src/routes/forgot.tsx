@@ -3,7 +3,7 @@ import { Link, createFileRoute } from "@tanstack/react-router"
 import { useForm } from "@tanstack/react-form"
 import { Schema as S } from "effect"
 import { auth } from "~/api/client"
-import { ForgotPasswordPayload } from "~/api/contracts"
+import { ForgotPasswordPayload } from "~/api/auth"
 import { SubmitButton, TextField, errorMessage, fieldError } from "~/components/form"
 
 export const Route = createFileRoute("/forgot")({

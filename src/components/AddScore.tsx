@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { charts, scores } from "~/api/client"
-import type { MusicalKeyType } from "~/api/contracts"
+import type { MusicalKeyType } from "~/api/songs"
 import { MAX_SCORE_BYTES, chartNameFromFile, scoreFormat } from "~/charts/score-file"
 import { scoreMeta, type ScoreMeta } from "~/charts/score-meta"
 import type { ScoreChart } from "~/charts/score-chart"

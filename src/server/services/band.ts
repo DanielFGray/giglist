@@ -1,7 +1,8 @@
 import { Context, Effect, Layer, Schema } from "effect";
 import { sql } from "kysely";
-import { Kysely } from "../db";
-import type { UpdateBandPayload } from "../../api/contracts";
+import { RequestDatabase } from "../db";
+import type { UpdateBandPayload } from "../../api/bands"
+;
 import { pgError } from "./pg-error";
 
 type BandUpdate = Schema.Schema.Type<typeof UpdateBandPayload>;
@@ -31,18 +32,16 @@ const bandColumns = [
 ] as const;
 
 /**
- * Band reads and writes, each run on the connection the caller provides through
- * `Kysely`. The methods yield `Kysely` themselves rather than capturing one at
- * layer build, so `withAuthContext` can swap in the visitor's connection per request.
- *
- * @effect-expect-leaking Kysely
+ * Band reads and writes, each run on the request's connection, `RequestDatabase`.
+ * The methods yield it themselves rather than capturing one at layer build,
+ * because only `withAuthContext` provides it, once per request.
  */
-export class Bands extends Context.Service<Bands>()("setlist/Bands", {
+export class Bands extends Context.Service<Bands>()("giglist/Bands", {
   make: Effect.sync(() => {
     /** Owner-only: moves ownership to another member, failing with a BandError when either side is wrong. */
     const transferOwnership = Effect.fn("Bands.transferOwnership")(
       function* (args: { bandId: string; userId: string }) {
-        const db = yield* Kysely;
+        const db = yield* RequestDatabase;
         const band = yield* db
           .selectFrom(
             sql<{ id: string }>`app_public.transfer_band_ownership(
@@ -83,7 +82,7 @@ export class Bands extends Context.Service<Bands>()("setlist/Bands", {
      * through `app_public.public_band`, never through a policy.
      */
     const getUserBands = Effect.fn("Bands.getUserBands")(function* () {
-      const db = yield* Kysely;
+      const db = yield* RequestDatabase;
       return yield* db
         .selectFrom("app_public.band_memberships")
         .innerJoin("app_public.bands", "app_public.bands.id", "app_public.band_memberships.band_id")
@@ -93,7 +92,7 @@ export class Bands extends Context.Service<Bands>()("setlist/Bands", {
     });
 
     const getBandMembers = Effect.fn("Bands.getBandMembers")(function* (bandId: string) {
-      const db = yield* Kysely;
+      const db = yield* RequestDatabase;
       return yield* db
         .selectFrom("app_public.band_memberships")
         .innerJoin("app_public.users", "app_public.users.id", "app_public.band_memberships.user_id")
@@ -113,7 +112,7 @@ export class Bands extends Context.Service<Bands>()("setlist/Bands", {
 
     const createBand = Effect.fn("Bands.createBand")(
       function* (args: { slug: string; name: string }) {
-        const db = yield* Kysely;
+        const db = yield* RequestDatabase;
         const created = yield* db
           .selectFrom(
             sql<{ id: string | null }>`app_public.create_band(
@@ -150,7 +149,7 @@ export class Bands extends Context.Service<Bands>()("setlist/Bands", {
 
     const inviteToBand = Effect.fn("Bands.inviteToBand")(
       function* (args: { bandId: string; username?: string; email?: string }) {
-        const db = yield* Kysely;
+        const db = yield* RequestDatabase;
         yield* db.selectNoFrom([
           sql`app_public.invite_to_band(
             band_id => ${args.bandId}::uuid,
@@ -188,7 +187,7 @@ export class Bands extends Context.Service<Bands>()("setlist/Bands", {
 
     /** The invitations addressed to the current user. */
     const listInvitations = Effect.fn("Bands.listInvitations")(function* () {
-      const db = yield* Kysely;
+      const db = yield* RequestDatabase;
       return yield* db
         .selectFrom(sql<{ id: string; band_id: string; band_name: string }>`app_public.my_band_invitations()`.as("i"))
         .selectAll();
@@ -196,7 +195,7 @@ export class Bands extends Context.Service<Bands>()("setlist/Bands", {
 
     const acceptInvitation = Effect.fn("Bands.acceptInvitation")(
       function* (invitationId: string, code: string | null) {
-        const db = yield* Kysely;
+        const db = yield* RequestDatabase;
         const [row] = yield* db.selectNoFrom([
           sql<string>`app_public.accept_invitation_to_band(${invitationId}::uuid, ${code}::text)`.as("band_id"),
         ]);
@@ -215,7 +214,7 @@ export class Bands extends Context.Service<Bands>()("setlist/Bands", {
 
     const declineInvitation = Effect.fn("Bands.declineInvitation")(
       function* (invitationId: string) {
-        const db = yield* Kysely;
+        const db = yield* RequestDatabase;
         yield* db.selectNoFrom([sql`app_public.decline_invitation_to_band(${invitationId}::uuid)`.as("_")]);
       },
       Effect.catch((e) =>
@@ -228,7 +227,7 @@ export class Bands extends Context.Service<Bands>()("setlist/Bands", {
     /** Pending invitations for a band. Only the owner may call this. */
     const listPendingInvitations = Effect.fn("Bands.listPendingInvitations")(
       function* (bandId: string) {
-        const db = yield* Kysely;
+        const db = yield* RequestDatabase;
         return yield* db
           .selectFrom(
             sql<{ id: string; username: string | null; email: string | null }>`app_public.band_pending_invitations(${bandId}::uuid)`.as(
@@ -250,7 +249,7 @@ export class Bands extends Context.Service<Bands>()("setlist/Bands", {
     /** Delete a pending invitation. Only the band's owner may cancel it. */
     const cancelInvitation = Effect.fn("Bands.cancelInvitation")(
       function* (args: { bandId: string; invitationId: string }) {
-        const db = yield* Kysely;
+        const db = yield* RequestDatabase;
         yield* db.selectNoFrom([
           sql`app_public.cancel_invitation(${args.bandId}::uuid, ${args.invitationId}::uuid)`.as("_"),
         ]);
@@ -268,7 +267,7 @@ export class Bands extends Context.Service<Bands>()("setlist/Bands", {
 
     const deleteBand = Effect.fn("Bands.deleteBand")(
       function* (bandId: string) {
-        const db = yield* Kysely;
+        const db = yield* RequestDatabase;
         const mine = yield* db
           .selectFrom("app_public.band_memberships")
           .select(["is_owner"])
@@ -293,7 +292,7 @@ export class Bands extends Context.Service<Bands>()("setlist/Bands", {
 
     const updateBand = Effect.fn("Bands.updateBand")(
       function* ({ bandId, page_options, ...fields }: { bandId: string } & BandUpdate) {
-        const db = yield* Kysely;
+        const db = yield* RequestDatabase;
         const mine = yield* db
           .selectFrom("app_public.band_memberships")
           .select(["is_owner"])
@@ -344,7 +343,7 @@ export class Bands extends Context.Service<Bands>()("setlist/Bands", {
      * that list hidden.
      */
     const getPublicBandProfile = Effect.fn("Bands.getPublicBandProfile")(function* (slug: string) {
-      const db = yield* Kysely;
+      const db = yield* RequestDatabase;
       const band = yield* db
         .selectFrom(
           sql<{
@@ -396,7 +395,7 @@ export class Bands extends Context.Service<Bands>()("setlist/Bands", {
 
     const removeMember = Effect.fn("Bands.removeMember")(
       function* (args: { bandId: string; userId: string }) {
-        const db = yield* Kysely;
+        const db = yield* RequestDatabase;
         const [me] = yield* db.selectNoFrom([
           sql<string>`app_public.current_user_id()`.as("user_id"),
         ]);
@@ -429,7 +428,7 @@ export class Bands extends Context.Service<Bands>()("setlist/Bands", {
      */
     const leaveBand = Effect.fn("Bands.leaveBand")(
       function* (args: { bandId: string; transferTo: string | undefined }) {
-        const db = yield* Kysely;
+        const db = yield* RequestDatabase;
         const me = yield* db
           .selectFrom("app_public.band_memberships")
           .select(["user_id", "is_owner"])
@@ -477,7 +476,24 @@ export class Bands extends Context.Service<Bands>()("setlist/Bands", {
       ),
     );
 
+    /**
+     * Whether the request's user belongs to `bandId`. The policies already
+     * refuse a non-member; this lets a caller answer 403 instead of an empty
+     * result. It runs in the caller's transaction, so both agree on the user.
+     */
+    const isMember = Effect.fnUntraced(function* (bandId: string) {
+      const db = yield* RequestDatabase;
+      // `current_user_member_band_ids()` is a `setof uuid`; `select * from fn() as ids`
+      // names its one column after the alias.
+      const rows = yield* db
+        .selectFrom(sql<{ ids: string }>`app_public.current_user_member_band_ids()`.as("ids"))
+        .selectAll()
+        .pipe(Effect.orDie);
+      return rows.some((row) => row.ids === bandId);
+    });
+
     return {
+      isMember,
       getUserBands,
       getBandMembers,
       createBand,

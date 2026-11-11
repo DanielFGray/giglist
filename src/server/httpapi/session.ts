@@ -1,11 +1,8 @@
 import { Effect, Layer, Redacted } from "effect"
 import { sql } from "kysely"
+import { nodeEnv } from "../config"
 import { Db } from "../db"
-import {
-  CurrentSession,
-  SessionMiddleware,
-  type SessionData,
-} from "../../api/contracts"
+import { CurrentSession, SessionMiddleware, type SessionData } from "../../api/session"
 
 const noSession: SessionData = { sessionId: "", userId: null }
 
@@ -26,8 +23,8 @@ export const SessionMiddlewareLive = Layer.effect(
         // One statement: `candidate` is the session only while it is live,
         // and `refreshed` slides its window only when it is over an hour
         // old, so an accepted session writes at most once an hour. The
-        // 30-day interval matches the session cookie's `maxAge: "30 days"`
-        // in src/server/httpapi/auth.ts (setSessionCookie); keep them equal.
+        // 30-day interval matches `maxAge` in sessionCookiePolicy below; keep
+        // them equal.
         return db
           .with("candidate", (qb) =>
             qb
@@ -66,3 +63,17 @@ export const SessionMiddlewareLive = Layer.effect(
     }
   }),
 )
+
+/**
+ * The session cookie's browser attributes, stated once for every write and
+ * clear. `maxAge` is the 30-day window the middleware above accepts.
+ */
+export const sessionCookiePolicy = Effect.gen(function* () {
+  return {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: (yield* nodeEnv) === "production",
+    path: "/",
+    maxAge: "30 days",
+  } as const
+})

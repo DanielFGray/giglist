@@ -3,7 +3,7 @@ import { createFileRoute, useRouter } from "@tanstack/react-router"
 import { useForm } from "@tanstack/react-form"
 import { Schema as S } from "effect"
 import { bands } from "~/api/client"
-import { CreateBandPayload } from "~/api/contracts"
+import { CreateBandPayload } from "~/api/bands"
 import { SubmitButton, TextField, errorMessage, fieldError } from "~/components/form"
 
 export const Route = createFileRoute("/band/new")({

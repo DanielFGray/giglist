@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { Schema as S } from "effect"
-import { ChartChange } from "../api/contracts"
+import { ChartChange } from "../api/charts"
 import { composeChanges, explains, isChangeSet, lengthAfter, type Change } from "./changes"
 import { mapRange } from "./follow"
 

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { charts, songs } from "~/api/client"
-import { MusicalKeys, type MusicalKeyType } from "~/api/contracts"
+import { MusicalKeys, type MusicalKeyType } from "~/api/songs"
 import { SongEditor } from "~/components/SongEditor"
 
 export const Route = createFileRoute("/band/$bandId/songs/$songId")({

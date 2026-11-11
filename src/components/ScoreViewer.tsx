@@ -5,7 +5,8 @@ import { trackOptions } from "~/charts/score-tracks"
 import { clampSpeed, nextSpeed, type StepMode } from "~/charts/speed-trainer"
 import { BOTH_NOTATIONS, staffNotation, toggleNotation, type Notation } from "~/charts/score-notation"
 import { clampZoom } from "~/charts/score-zoom"
-import { alphaTabAssets, inkFrom } from "./alphatab"
+import { alphaTabAssetUrls } from "alphatab-kit"
+import { inkFrom } from "./alphatab"
 import { useThemeInk } from "./useThemeInk"
 import { errorMessage } from "./form"
 import { barsLabel, barTicksOf, selectedBars, type BarSpan } from "./score-bars"
@@ -66,7 +67,7 @@ export function ScoreViewer({ revisionId, compact = false }: { revisionId: strin
       setError(message)
       setStatus("error")
     }
-    const { scriptFile, fontDirectory, soundFont } = alphaTabAssets()
+    const { scriptFile, fontDirectory, soundFont } = alphaTabAssetUrls()
     const view = new AlphaTabApi(element, {
       // alphaTab pads the notation by 35 by default; the card's padding is the only margin.
       display: { padding: [0, 0], scale: storedZoom() },
