@@ -113,11 +113,13 @@ giglist from it.
 bun run check:production https://giglist.dfg.rocks
 ```
 
-The check reads only. It probes the health endpoint, the five headers, the page and
+The check reads only. It probes the API as a signed-out visitor (`/api/auth/me`), the five headers, the page and
 its script, alphaTab's files, and 404s for the testing API and missing assets. It changes
 no account and sends no mail.
 
-`GET /api/health` returns 200 only when both database connections can run a query, and
-503 after a failed query or a five-second timeout. The response's `x-commit` header names the
-commit the deploy runs, which the platform sets as `GIT_COMMIT`, or `unknown` when it is unset. The API sends traces and logs
-over OTLP to OpenObserve. Nothing alerts on a 503 or a failed job yet.
+`GET /healthz` is the platform's health check (`healthCheck` in `cartridge.json`); Traefik routes
+only `/api`, so the release check cannot reach it. It returns 200 `{status, commit}` only when
+both database connections can run a query and the worker runs, and 503 with `failed` naming
+`database` or `worker` after a failed query, a two-second timeout, or a stopped worker. `commit`
+is the commit the deploy runs, which the platform sets as `GIT_COMMIT`, or `unknown` when it
+is unset. The API sends traces and logs over OTLP to OpenObserve. Nothing alerts on a 503 or a failed job yet.

@@ -34,10 +34,8 @@ expect_headers() {
   done
 }
 
-expect_status 200 GET /api/health
-expect_headers
-[[ $(cat "$scratch/body") == ok ]]
 expect_status 200 GET /api/auth/me
+expect_headers
 [[ $(cat "$scratch/body") == null ]]
 
 # These requests are harmless if a deployment accidentally enables the test API.
