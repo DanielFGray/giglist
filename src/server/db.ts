@@ -1,9 +1,11 @@
-import { Config, Context, Effect, Layer, Option } from "effect"
+import { Cause, Config, Context, Effect, Layer, Option } from "effect"
 import { PgClient } from "@effect/sql-pg"
 import * as PgKysely from "./effectKysely"
 import { sql } from "kysely"
 import type { DB } from "../../generated/DB.js"
 import { CurrentSession } from "../api/session"
+import { ServiceUnavailable } from "../api/errors"
+import type { DatabaseError } from "./databaseError"
 
 export type KyselyDB = PgKysely.EffectKysely<DB>
 
@@ -67,9 +69,10 @@ export class RequestDatabase extends Context.Service<RequestDatabase, KyselyDB>(
  * is undone at commit, so nothing leaks into the next request that borrows the
  * connection.
  *
- * Database failures become defects rather than errors. A caller cannot do
- * anything with a SqlError, and letting it into an endpoint's error channel
- * would turn it into a 400 the client is expected to read.
+ * A failed database call stays a DatabaseError in the error channel. The
+ * endpoint answers it through toHttpError (dbErrors.ts), except a refused
+ * switch to the visitor role, which is a fault in the server's settings and
+ * answers 503 (refusedRoleSwitch).
  */
 export const withAuthContext = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
   Effect.gen(function* () {
@@ -84,16 +87,38 @@ export const withAuthContext = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
 
     return yield* db.withTransaction(
       Effect.gen(function* () {
-        yield* db.selectNoFrom([
-          // Transaction-local, so the pooled connection returns to the
-          // authenticator when the request ends. The role is a trusted name
-          // from the environment, so it is inlined as a literal rather than
-          // bound. The session id is user input and stays a bound parameter.
-          sql<string>`set_config('role', ${sql.lit(visitor)}, true)`.as("_"),
-          sql<string>`set_config('my.session_id', ${sessionId}, true)`.as("_"),
-        ])
+        yield* db
+          .selectNoFrom([
+            // Transaction-local, so the pooled connection returns to the
+            // authenticator when the request ends. The role is a trusted name
+            // from the environment, so it is inlined as a literal rather than
+            // bound. The session id is user input and stays a bound parameter.
+            sql<string>`set_config('role', ${sql.lit(visitor)}, true)`.as("_"),
+            sql<string>`set_config('my.session_id', ${sessionId}, true)`.as("_"),
+          ])
+          .pipe(Effect.catchTag("DatabaseError", refusedRoleSwitch(visitor)))
 
         return yield* effect.pipe(Effect.provideService(RequestDatabase, db))
       }),
-    ).pipe(Effect.catchTag("SqlError", Effect.die))
+    )
   })
+
+/**
+ * A refused switch to the visitor role is a fault in the server's settings:
+ * `DATABASE_VISITOR` names no role (22023), or a role the authenticator is not
+ * a member of (42501). It answers 503 misconfigured and logs at Error with the
+ * role name. Any other failure passes on to toHttpError, whose table would read
+ * 42501 as a row that row-level security refused (403).
+ */
+const refusedRoleSwitch = (role: string) =>
+  Effect.fnUntraced(function* (error: DatabaseError) {
+    const refused = Option.exists(error.report, ({ code }) => roleSwitchRefusals.has(code))
+    if (!refused) return yield* error
+    yield* Effect.logError(`Could not switch to the visitor role '${role}'`, Cause.fail(error))
+    return yield* new ServiceUnavailable({
+      message: "The service is not available right now.",
+      reason: "misconfigured",
+    })
+  })
+
+const roleSwitchRefusals = new Set(["42501", "22023"])

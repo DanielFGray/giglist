@@ -1,9 +1,9 @@
-import { Context, Effect, Layer, Schema } from "effect";
+import { Context, Effect, Layer, Option, Schema } from "effect";
 import { sql } from "kysely";
 import { RequestDatabase } from "../db";
 import type { UpdateBandPayload } from "../../api/bands"
 ;
-import { pgError } from "./pgError";
+import { type DatabaseError, hasSqlState } from "../databaseError";
 
 type BandUpdate = Schema.Schema.Type<typeof UpdateBandPayload>;
 
@@ -134,16 +134,12 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
           .selectFrom("app_public.bands")
           .select(bandColumns)
           .where("app_public.bands.id", "=", id)
-          .pipe(Effect.head);
+          .pipe(Effect.head, Effect.catchTag("NoSuchElementError", Effect.die));
       },
-      Effect.catch((e) => {
-        if (e._tag === "BandRefused") return Effect.fail(e);
-        const info = pgError(e);
-        if (info?.constraint === "bands_slug_key")
+      Effect.catchTag("DatabaseError", (e): Effect.Effect<never, BandRefused | DatabaseError> => {
+        if (Option.exists(e.report, (r) => Option.contains(r.constraint, "bands_slug_key")))
           return Effect.fail(new BandRefused({ message: "A band with that slug already exists" }));
-        return Effect.logError("createBand failed", e).pipe(
-          Effect.andThen(Effect.fail(new BandRefused({ message: "Could not create band" }))),
-        );
+        return Effect.fail(e);
       }),
     );
 
@@ -158,30 +154,25 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
           )`.as("_"),
         ]);
       },
-      Effect.catch((e) => {
-        const code = pgError(e)?.code;
-        if (code === "LOGIN")
+      Effect.catchTag("DatabaseError", (e): Effect.Effect<never, BandRefused | DatabaseError> => {
+        if (hasSqlState(e, "LOGIN"))
           return Effect.fail(new BandRefused({ message: "You must be logged in" }));
-        if (code === "DNIED")
+        if (hasSqlState(e, "DNIED"))
           return Effect.fail(new BandRefused({ message: "You must be the band owner to invite" }));
-        if (code === "ISMBR")
+        if (hasSqlState(e, "ISMBR"))
           return Effect.fail(new BandRefused({ message: "That person is already a member" }));
-        if (code === "NTFND")
+        if (hasSqlState(e, "NTFND"))
           return Effect.fail(new BandRefused({ message: "Could not find that person" }));
         // band_invitations is unique on (band, user) and on (band, email).
-        if (code === "23505")
-          return Effect.fail(
-            new BandRefused({ message: "That person already has an invitation to this band" }),
-          );
-        if (code === "VRFY2")
+        if (hasSqlState(e, "23505"))
+          return Effect.fail(new BandRefused({ message: "That person already has an invitation to this band" }));
+        if (hasSqlState(e, "VRFY2"))
           return Effect.fail(
             new BandRefused({
               message: "That account has not verified its email yet, so it cannot be invited",
             }),
           );
-        return Effect.logError("inviteToBand failed", e).pipe(
-          Effect.andThen(Effect.fail(new BandRefused({ message: "Failed to send invite" }))),
-        );
+        return Effect.fail(e);
       }),
     );
 
@@ -201,14 +192,12 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
         ]);
         return { bandId: row.band_id };
       },
-      Effect.catch((e) => {
-        const code = pgError(e)?.code;
-        if (code === "NTFND") return Effect.fail(new BandRefused({ message: "That invitation no longer exists" }));
-        if (code === "DNIED") return Effect.fail(new BandRefused({ message: "That invitation is not for you" }));
-        if (code === "INCOD") return Effect.fail(new BandRefused({ message: "That code does not match this invitation" }));
-        return Effect.logError("acceptInvitation failed", e).pipe(
-          Effect.andThen(Effect.fail(new BandRefused({ message: "Could not accept the invitation" }))),
-        );
+      Effect.catchTag("DatabaseError", (e): Effect.Effect<never, BandRefused | DatabaseError> => {
+        if (hasSqlState(e, "NTFND")) return Effect.fail(new BandRefused({ message: "That invitation no longer exists" }));
+        if (hasSqlState(e, "DNIED")) return Effect.fail(new BandRefused({ message: "That invitation is not for you" }));
+        if (hasSqlState(e, "INCOD"))
+          return Effect.fail(new BandRefused({ message: "That code does not match this invitation" }));
+        return Effect.fail(e);
       }),
     );
 
@@ -217,11 +206,6 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
         const db = yield* RequestDatabase;
         yield* db.selectNoFrom([sql`app_public.decline_invitation_to_band(${invitationId}::uuid)`.as("_")]);
       },
-      Effect.catch((e) =>
-        Effect.logError("Could not decline the invitation", e).pipe(
-          Effect.andThen(Effect.fail(new BandRefused({ message: "Could not decline the invitation" }))),
-        ),
-      ),
     );
 
     /** Pending invitations for a band. Only the owner may call this. */
@@ -236,13 +220,10 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
           )
           .selectAll();
       },
-      Effect.catch((e) => {
-        const code = pgError(e)?.code;
-        if (code === "DNIED")
+      Effect.catchTag("DatabaseError", (e): Effect.Effect<never, BandRefused | DatabaseError> => {
+        if (hasSqlState(e, "DNIED"))
           return Effect.fail(new BandRefused({ message: "You must be the band owner to see invitations" }));
-        return Effect.logError("listPendingInvitations failed", e).pipe(
-          Effect.andThen(Effect.fail(new BandRefused({ message: "Could not load invitations" }))),
-        );
+        return Effect.fail(e);
       }),
     );
 
@@ -254,14 +235,11 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
           sql`app_public.cancel_invitation(${args.bandId}::uuid, ${args.invitationId}::uuid)`.as("_"),
         ]);
       },
-      Effect.catch((e) => {
-        const code = pgError(e)?.code;
-        if (code === "NTFND") return Effect.fail(new BandRefused({ message: "That invitation no longer exists" }));
-        if (code === "DNIED")
+      Effect.catchTag("DatabaseError", (e): Effect.Effect<never, BandRefused | DatabaseError> => {
+        if (hasSqlState(e, "NTFND")) return Effect.fail(new BandRefused({ message: "That invitation no longer exists" }));
+        if (hasSqlState(e, "DNIED"))
           return Effect.fail(new BandRefused({ message: "You must be the band owner to cancel an invitation" }));
-        return Effect.logError("cancelInvitation failed", e).pipe(
-          Effect.andThen(Effect.fail(new BandRefused({ message: "Could not cancel the invitation" }))),
-        );
+        return Effect.fail(e);
       }),
     );
 
@@ -411,14 +389,10 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
           )`.as("_"),
         ]);
       },
-      Effect.catchIf(
-        (e): e is Exclude<typeof e, BandRefused> => e._tag !== "BandRefused",
-        (e) =>
-          pgError(e)?.code === "DNIED"
-            ? Effect.fail(new BandRefused({ message: "You cannot remove that member" }))
-            : Effect.logError("Could not remove member", e).pipe(
-                Effect.andThen(Effect.fail(new BandRefused({ message: "Could not remove member" }))),
-              ),
+      Effect.catchTag("DatabaseError", (e): Effect.Effect<never, BandRefused | DatabaseError> =>
+        hasSqlState(e, "DNIED")
+          ? Effect.fail(new BandRefused({ message: "You cannot remove that member" }))
+          : Effect.fail(e),
       ),
     );
 
@@ -487,8 +461,7 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
       // names its one column after the alias.
       const rows = yield* db
         .selectFrom(sql<{ ids: string }>`app_public.current_user_member_band_ids()`.as("ids"))
-        .selectAll()
-        .pipe(Effect.orDie);
+        .selectAll();
       return rows.some((row) => row.ids === bandId);
     });
 

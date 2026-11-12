@@ -1,5 +1,5 @@
 import { HttpApiMiddleware } from "effect/http-api"
-import { InternalError, InvalidOperation } from "./errors"
+import { DatabaseRefusals, InternalError, InvalidOperation } from "./errors"
 
 /**
  * Wraps every endpoint of the contract, so it declares the errors any endpoint
@@ -7,5 +7,5 @@ import { InternalError, InvalidOperation } from "./errors"
  * (src/server/failureBoundary.ts).
  */
 export class FailureBoundary extends HttpApiMiddleware.Service<FailureBoundary>()("giglist/FailureBoundary", {
-  error: [InternalError, InvalidOperation],
+  error: [InternalError, InvalidOperation, ...DatabaseRefusals],
 }) {}

@@ -2,6 +2,8 @@ import { Effect } from "effect"
 import { HttpApiBuilder } from "effect/http-api"
 import { Bands, BandRefused } from "../services/bands"
 import { withAuthContext } from "../db"
+import { toHttpError } from "../dbErrors"
+import { type DatabaseError, isDatabaseError } from "../databaseError"
 import { asSignedIn, ifSignedIn } from "./scope"
 import { BandError } from "../../api/bands"
 import { GigListApi } from "../../api/contracts"
@@ -9,7 +11,7 @@ import { GigListApi } from "../../api/contracts"
 const ok = { ok: true as const }
 
 /** Answers a service failure with its message, as the 4xx the browser shows. */
-const asBandError = <A, R>(effect: Effect.Effect<A, BandRefused, R>) =>
+const asBandError = <A, R>(effect: Effect.Effect<A, BandRefused | DatabaseError, R>) =>
   effect.pipe(Effect.catchTag("BandRefused", (e) => Effect.fail(new BandError({ message: e.message }))))
 
 /**
@@ -25,7 +27,7 @@ const asMember = asSignedIn(() => new BandError({ message: "You must be signed i
  * role's policies cannot name a user without a session id.
  */
 const asMemberOrNone = <A, E, R>(effect: Effect.Effect<ReadonlyArray<A>, E, R>) =>
-  effect.pipe(withAuthContext, ifSignedIn(Effect.succeed([])))
+  effect.pipe(withAuthContext, Effect.catchIf(isDatabaseError, toHttpError), ifSignedIn(Effect.succeed([])))
 
 export const BandsApiGroupLive = HttpApiBuilder.group(GigListApi, "myBands", (handlers) =>
   handlers
@@ -35,7 +37,6 @@ export const BandsApiGroupLive = HttpApiBuilder.group(GigListApi, "myBands", (ha
     .handle("listInvitations", () =>
       Bands.use((bands) => bands.listInvitations()).pipe(
         Effect.map((rows) => rows.map((r) => ({ id: r.id, band_id: r.band_id, band_name: r.band_name }))),
-        Effect.orDie,
         asMemberOrNone,
       ),
     )

@@ -42,7 +42,7 @@ export class Charts extends Context.Service<Charts>()("giglist/charts", {
     /** Require that the song is visible to the caller. */
     const requireSong = Effect.fnUntraced(function* (songId: string) {
       const db = yield* RequestDatabase
-      const rows = yield* db.selectFrom("app_public.songs").select("id").where("id", "=", songId).pipe(Effect.orDie)
+      const rows = yield* db.selectFrom("app_public.songs").select("id").where("id", "=", songId)
       if (rows.length === 0) return yield* notMember()
     })
 
@@ -57,7 +57,6 @@ export class Charts extends Context.Service<Charts>()("giglist/charts", {
         .distinctOn("chart_id")
         .orderBy("chart_id")
         .orderBy("created_at", "desc")
-        .pipe(Effect.orDie)
       const newest = new Map(revisions.map((r) => [r.chart_id, r]))
       return charts.flatMap((chart) => {
         const revision = newest.get(chart.id)
@@ -68,7 +67,7 @@ export class Charts extends Context.Service<Charts>()("giglist/charts", {
 
     /** The chart as the wire shape, with its newest revision. */
     const present = (chart: ChartRow) =>
-      withNewestRevision([chart]).pipe(Effect.flatMap(([created]) => decodeChart(created)), Effect.orDie)
+      withNewestRevision([chart]).pipe(Effect.flatMap(([created]) => decodeChart(created).pipe(Effect.orDie)))
 
     const listForSong = Effect.fn("Charts.listForSong")(function* (songId: string) {
       const db = yield* RequestDatabase
@@ -78,8 +77,7 @@ export class Charts extends Context.Service<Charts>()("giglist/charts", {
         .select(CHART_COLUMNS)
         .where("song_id", "=", songId)
         .orderBy("created_at")
-        .pipe(Effect.orDie)
-      return yield* withNewestRevision(charts).pipe(Effect.flatMap(decodeCharts), Effect.orDie)
+      return yield* withNewestRevision(charts).pipe(Effect.flatMap((rows) => decodeCharts(rows).pipe(Effect.orDie)))
     })
 
     const createLyrics = Effect.fn("Charts.createLyrics")(function* (payload: typeof LyricsChartInsert.Type) {
@@ -91,17 +89,16 @@ export class Charts extends Context.Service<Charts>()("giglist/charts", {
         .insertInto("app_public.charts")
         .values({ song_id: payload.song_id, kind: "lyrics", name: payload.name, written_key: writtenKey })
         .returning(CHART_COLUMNS)
-        .pipe(Effect.head, Effect.orDie)
+        .pipe(Effect.head, Effect.catchTag("NoSuchElementError", Effect.die))
       yield* db
         .insertInto("app_public.chart_revisions")
         .values({ chart_id: chart.id, source: importPasted(payload.pasted, writtenKey) })
-        .pipe(Effect.orDie)
       return yield* present(chart)
     })
 
     const saveRevision = Effect.fn("Charts.saveRevision")(function* (id: string, payload: typeof ChartRevisionInsert.Type) {
       const db = yield* RequestDatabase
-      const [chart] = yield* db.selectFrom("app_public.charts").select(CHART_COLUMNS).where("id", "=", id).pipe(Effect.orDie)
+      const [chart] = yield* db.selectFrom("app_public.charts").select(CHART_COLUMNS).where("id", "=", id)
       if (!chart) return yield* notMember()
       if (chart.kind !== "lyrics") return yield* new ChartRejected({ message: "Only a lyrics chart is edited here" })
       const [newest] = yield* withNewestRevision([chart])
@@ -124,14 +121,13 @@ export class Charts extends Context.Service<Charts>()("giglist/charts", {
           source: payload.source,
           changes: payload.changes === null ? null : JSON.stringify(payload.changes),
         })
-        .pipe(Effect.orDie)
       return yield* present(chart)
     })
 
     const remove = Effect.fn("Charts.remove")(function* (id: string) {
       const db = yield* RequestDatabase
       // RLS limits the delete to charts on the caller's songs.
-      yield* db.deleteFrom("app_public.charts").where("id", "=", id).pipe(Effect.orDie)
+      yield* db.deleteFrom("app_public.charts").where("id", "=", id)
     })
 
     /** Stores a Guitar Pro file byte for byte as a new score chart's only revision. */
@@ -151,13 +147,13 @@ export class Charts extends Context.Service<Charts>()("giglist/charts", {
         .insertInto("app_public.charts")
         .values({ song_id: upload.song_id, kind: "score", name: upload.name, written_key: null })
         .returning(CHART_COLUMNS)
-        .pipe(Effect.head, Effect.orDie)
+        .pipe(Effect.head, Effect.catchTag("NoSuchElementError", Effect.die))
       const revision = yield* db
         .insertInto("app_public.chart_revisions")
         .values({ chart_id: chart.id, file_key: upload.file_name, file_sha256: createHash("sha256").update(bytes).digest() })
         .returning("id")
-        .pipe(Effect.head, Effect.orDie)
-      yield* db.insertInto("app_public.score_files").values({ revision_id: revision.id, bytes }).pipe(Effect.orDie)
+        .pipe(Effect.head, Effect.catchTag("NoSuchElementError", Effect.die))
+      yield* db.insertInto("app_public.score_files").values({ revision_id: revision.id, bytes })
       return yield* present(chart)
     })
 
@@ -168,7 +164,6 @@ export class Charts extends Context.Service<Charts>()("giglist/charts", {
         .selectFrom("app_public.score_files")
         .select("bytes")
         .where("revision_id", "=", revisionId)
-        .pipe(Effect.orDie)
       if (!file) return yield* notMember()
       return new Uint8Array(file.bytes)
     })

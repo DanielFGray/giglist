@@ -51,15 +51,14 @@ export class Gigs extends Context.Service<Gigs>()("giglist/gigs", {
             .orderBy(sql`g.gig_date desc nulls last`)
             .orderBy("g.created_at", "desc"),
         ),
-        Effect.flatMap(decodeGigs),
-        Effect.orDie,
+        Effect.flatMap((rows) => decodeGigs(rows).pipe(Effect.orDie)),
       )
     })
 
     const create = Effect.fn("Gigs.create")(function* (payload: typeof GigInsert.Type) {
       const db = yield* RequestDatabase
       yield* setlists.requireMember(payload.band_id)
-      const inserted = yield* db.insertInto("app_public.gigs").values(payload).returning("id").pipe(Effect.head, Effect.orDie)
+      const inserted = yield* db.insertInto("app_public.gigs").values(payload).returning("id").pipe(Effect.head, Effect.catchTag("NoSuchElementError", Effect.die))
       return yield* gigOrDie(inserted.id)
     })
 
@@ -69,7 +68,7 @@ export class Gigs extends Context.Service<Gigs>()("giglist/gigs", {
         Effect.gen(function* () {
           const db = yield* RequestDatabase
           yield* gigOr404(id)
-          yield* db.updateTable("app_public.gigs").set(payload).where("id", "=", id).pipe(Effect.orDie)
+          yield* db.updateTable("app_public.gigs").set(payload).where("id", "=", id)
           return yield* gigOrDie(id)
         }),
       )
@@ -81,7 +80,7 @@ export class Gigs extends Context.Service<Gigs>()("giglist/gigs", {
         Effect.gen(function* () {
           const db = yield* RequestDatabase
           yield* gigOr404(id)
-          yield* db.deleteFrom("app_public.gigs").where("id", "=", id).pipe(Effect.orDie)
+          yield* db.deleteFrom("app_public.gigs").where("id", "=", id)
         }),
       )
     })
@@ -118,7 +117,6 @@ export class Gigs extends Context.Service<Gigs>()("giglist/gigs", {
           yield* db
             .insertInto("app_public.gig_setlists")
             .values({ band_id: gig.band_id, gig_id: id, setlist_id: payload.setlist_id, position_key: between(last, null) })
-            .pipe(Effect.orDie)
           return yield* gigOrDie(id)
         }),
       )
@@ -134,7 +132,6 @@ export class Gigs extends Context.Service<Gigs>()("giglist/gigs", {
             .deleteFrom("app_public.gig_setlists")
             .where("gig_id", "=", id)
             .where("setlist_id", "=", setlistId)
-            .pipe(Effect.orDie)
           return yield* gigOrDie(id)
         }),
       )
@@ -158,7 +155,6 @@ export class Gigs extends Context.Service<Gigs>()("giglist/gigs", {
             .set({ setlist_id: copy })
             .where("gig_id", "=", id)
             .where("setlist_id", "=", setlistId)
-            .pipe(Effect.orDie)
           return yield* gigOrDie(id)
         }),
       )
@@ -178,7 +174,6 @@ export class Gigs extends Context.Service<Gigs>()("giglist/gigs", {
             .where("gig_id", "=", id)
             .orderBy("position_key", "asc")
             .orderBy("setlist_id", "asc")
-            .pipe(Effect.orDie)
           const writes = rows.some((row) => row.id === payload.id)
             ? placeAfter(rows.filter((row) => row.id !== payload.id), payload.id, payload.previous)
             : Option.none()
@@ -190,8 +185,7 @@ export class Gigs extends Context.Service<Gigs>()("giglist/gigs", {
               .updateTable("app_public.gig_setlists")
               .set({ position_key: write.position_key })
               .where("gig_id", "=", id)
-              .where("setlist_id", "=", write.id)
-              .pipe(Effect.orDie),
+              .where("setlist_id", "=", write.id),
           )
           return yield* gigOrDie(id)
         }),
@@ -213,7 +207,7 @@ export class Gigs extends Context.Service<Gigs>()("giglist/gigs", {
         .orderBy("gs.setlist_id")
         .orderBy("r.position_key")
         .orderBy("r.id")
-        .pipe(Effect.flatMap(decodeGigEntries), Effect.orDie)
+        .pipe(Effect.flatMap((rows) => decodeGigEntries(rows).pipe(Effect.orDie)))
     })
 
     /** The gig's event stream; see `Setlists.watch`. */
@@ -250,13 +244,13 @@ export class Gigs extends Context.Service<Gigs>()("giglist/gigs", {
 /** The ids of the setlists a gig plays. */
 const playedBy = Effect.fnUntraced(function* (gigId: string) {
   const db = yield* RequestDatabase
-  const rows = yield* db.selectFrom("app_public.gig_setlists").select("setlist_id").where("gig_id", "=", gigId).pipe(Effect.orDie)
+  const rows = yield* db.selectFrom("app_public.gig_setlists").select("setlist_id").where("gig_id", "=", gigId)
   return rows.map((row) => row.setlist_id)
 })
 
 const lockGig = Effect.fnUntraced(function* (gigId: string) {
   const db = yield* RequestDatabase
-  yield* db.selectFrom("app_public.gigs").select("id").where("id", "=", gigId).forUpdate().pipe(Effect.orDie)
+  yield* db.selectFrom("app_public.gigs").select("id").where("id", "=", gigId).forUpdate()
 })
 
 /**
@@ -309,4 +303,4 @@ const gigOr404 = Effect.fnUntraced(function* (id: string) {
 })
 
 /** A gig that was just written: a miss here is a server defect, not a caller error. */
-const gigOrDie = (id: string) => gigOr404(id).pipe(Effect.orDie)
+const gigOrDie = (id: string) => gigOr404(id).pipe(Effect.catchTag("GigMissing", Effect.die))

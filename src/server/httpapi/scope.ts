@@ -1,5 +1,7 @@
 import { Effect } from "effect"
 import { withAuthContext } from "../db"
+import { toHttpError } from "../dbErrors"
+import { isDatabaseError } from "../databaseError"
 import { CurrentSession } from "../../api/session"
 
 /**
@@ -24,9 +26,10 @@ export const requireSession = <E2>(unauthorized: () => E2) => ifSignedIn(Effect.
 
 /**
  * Runs `effect` as the request's user, in one transaction. A request with no
- * session fails with `unauthorized()` before it opens one.
+ * session fails with `unauthorized()` before it opens one. A refused query is
+ * answered outside the transaction, so a failed COMMIT is answered too.
  */
 export const asSignedIn =
   <E2>(unauthorized: () => E2) =>
   <A, E, R>(effect: Effect.Effect<A, E, R>) =>
-    withAuthContext(effect).pipe(requireSession(unauthorized))
+    withAuthContext(effect).pipe(Effect.catchIf(isDatabaseError, toHttpError), requireSession(unauthorized))

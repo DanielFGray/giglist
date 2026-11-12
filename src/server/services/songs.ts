@@ -46,14 +46,20 @@ export class Songs extends Context.Service<Songs>()("giglist/songs", {
     const listByBand = Effect.fn("Songs.listByBand")(function* (bandId: string) {
       const db = yield* RequestDatabase
       yield* requireMember(bandId)
-      return yield* songFindByBandId(db)({ band_id: bandId }).pipe(Effect.andThen(decodeSongs), Effect.orDie)
+      return yield* songFindByBandId(db)({ band_id: bandId }).pipe(
+        Effect.andThen((rows) => decodeSongs(rows).pipe(Effect.orDie)),
+      )
     })
 
     const create = Effect.fn("Songs.create")(function* (payload: typeof SongInsert.Type) {
       const db = yield* RequestDatabase
       yield* requireMember(payload.band_id)
       // The column default sets created_by to the caller.
-      return yield* songCreate(db)({ ...payload }).pipe(Effect.head, Effect.andThen(decodeSong), Effect.orDie)
+      return yield* songCreate(db)({ ...payload }).pipe(
+        Effect.head,
+        Effect.catchTag("NoSuchElementError", Effect.die),
+        Effect.andThen((created) => decodeSong(created).pipe(Effect.orDie)),
+      )
     })
 
     const update = Effect.fn("Songs.update")(function* (id: string, payload: typeof SongUpdate.Type) {
@@ -70,14 +76,18 @@ export class Songs extends Context.Service<Songs>()("giglist/songs", {
         .set(payload)
         .where("id", "=", id)
         .returningAll()
-        .pipe(Effect.head, Effect.andThen(decodeSong), Effect.orDie)
+        .pipe(
+          Effect.head,
+          Effect.catchTag("NoSuchElementError", Effect.die),
+          Effect.andThen((updated) => decodeSong(updated).pipe(Effect.orDie)),
+        )
     })
 
     const remove = Effect.fn("Songs.remove")(function* (id: string) {
       const db = yield* RequestDatabase
       const existing = yield* row(id)
       yield* requireMember(existing.band_id)
-      yield* songDelete(db)({ id }).pipe(Effect.orDie)
+      yield* songDelete(db)({ id })
     })
 
     return { byId, listByBand, create, update, remove }

@@ -2,6 +2,7 @@ import { Effect } from "effect"
 import { HttpApiBuilder } from "effect/http-api"
 import { PublicUsers } from "../services/publicUsers"
 import { withAuthContext } from "../db"
+import { toHttpError } from "../dbErrors"
 import { GigListApi } from "../../api/contracts"
 import { PublicUserNotFound } from "../../api/public-users"
 
@@ -13,7 +14,10 @@ export const PublicUsersApiGroupLive = HttpApiBuilder.group(GigListApi, "publicU
   handlers.handle("getPublicUser", ({ params: { username } }) =>
     PublicUsers.use((users) => users.getPublicUserProfile(username)).pipe(
       withAuthContext,
-      Effect.catchTag("PublicUserMissing", (e) => Effect.fail(new PublicUserNotFound({ message: "That user has no public page", username: e.username }))),
+      Effect.catchTags({
+        DatabaseError: toHttpError,
+        PublicUserMissing: (e) => Effect.fail(new PublicUserNotFound({ message: "That user has no public page", username: e.username })),
+      }),
     ),
   ),
 )

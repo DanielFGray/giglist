@@ -53,7 +53,6 @@ export class Setlists extends Context.Service<Setlists>()("giglist/setlists", {
           .selectFrom("app_public.gig_setlists")
           .select("gig_id")
           .where("setlist_id", "=", setlistId)
-          .pipe(Effect.orDie)
         const result = yield* write
         return {
           result,
@@ -80,7 +79,7 @@ export class Setlists extends Context.Service<Setlists>()("giglist/setlists", {
         .insertInto("app_public.setlists")
         .values({ band_id: payload.band_id, name: payload.name })
         .returning("id")
-        .pipe(Effect.head, Effect.orDie)
+        .pipe(Effect.head, Effect.catchTag("NoSuchElementError", Effect.die))
       return yield* setlistOrDie(inserted.id)
     })
 
@@ -92,7 +91,7 @@ export class Setlists extends Context.Service<Setlists>()("giglist/setlists", {
           yield* setlistOr404(id)
           // An empty SET is not valid SQL, and an empty payload changes nothing.
           if (Struct.keys(payload).length > 0) {
-            yield* db.updateTable("app_public.setlists").set(payload).where("id", "=", id).pipe(Effect.orDie)
+            yield* db.updateTable("app_public.setlists").set(payload).where("id", "=", id)
           }
           return yield* setlistOrDie(id)
         }),
@@ -118,7 +117,7 @@ export class Setlists extends Context.Service<Setlists>()("giglist/setlists", {
         .insertInto("app_public.setlists")
         .values({ band_id: source.band_id, name })
         .returning("id")
-        .pipe(Effect.head, Effect.orDie)
+        .pipe(Effect.head, Effect.catchTag("NoSuchElementError", Effect.die))
       // The entries keep their keys, so the copy plays in the same order.
       yield* db
         .insertInto("app_public.setlist_entries")
@@ -136,7 +135,6 @@ export class Setlists extends Context.Service<Setlists>()("giglist/setlists", {
             ])
             .where("setlist_id", "=", source.id),
         )
-        .pipe(Effect.orDie)
       return created.id
     })
 
@@ -146,7 +144,7 @@ export class Setlists extends Context.Service<Setlists>()("giglist/setlists", {
         Effect.gen(function* () {
           const db = yield* RequestDatabase
           yield* setlistOr404(id)
-          yield* db.deleteFrom("app_public.setlists").where("id", "=", id).pipe(Effect.orDie)
+          yield* db.deleteFrom("app_public.setlists").where("id", "=", id)
         }),
       )
     })
@@ -180,7 +178,7 @@ export class Setlists extends Context.Service<Setlists>()("giglist/setlists", {
             .insertInto("app_public.setlist_entries")
             .values({ setlist_id: id, song_id: payload.song_id, position_key: between(last, null) })
             .returning("id")
-            .pipe(Effect.head, Effect.orDie)
+            .pipe(Effect.head, Effect.catchTag("NoSuchElementError", Effect.die))
           return yield* entryOr404(inserted.id, id)
         }),
       )
@@ -205,7 +203,6 @@ export class Setlists extends Context.Service<Setlists>()("giglist/setlists", {
               .set(payload)
               .where("id", "=", entryId)
               .where("setlist_id", "=", id)
-              .pipe(Effect.orDie)
           }
           return yield* entryOr404(entryId, id)
         }),
@@ -222,7 +219,6 @@ export class Setlists extends Context.Service<Setlists>()("giglist/setlists", {
             .deleteFrom("app_public.setlist_entries")
             .where("id", "=", entryId)
             .where("setlist_id", "=", id)
-            .pipe(Effect.orDie)
         }),
       )
     })
@@ -241,7 +237,6 @@ export class Setlists extends Context.Service<Setlists>()("giglist/setlists", {
             .where("setlist_id", "=", id)
             .orderBy("position_key", "asc")
             .orderBy("id", "asc")
-            .pipe(Effect.orDie)
           const writes = rows.some((row) => row.id === payload.id)
             ? placeAfter(rows.filter((row) => row.id !== payload.id), payload.id, payload.previous)
             : Option.none()
@@ -252,8 +247,7 @@ export class Setlists extends Context.Service<Setlists>()("giglist/setlists", {
             db
               .updateTable("app_public.setlist_entries")
               .set({ position_key: write.position_key })
-              .where("id", "=", write.id)
-              .pipe(Effect.orDie),
+              .where("id", "=", write.id),
           )
         }),
       )
@@ -327,7 +321,7 @@ const requireBandSong = Effect.fnUntraced(function* (songId: string, bandId: str
 
 const lockSetlist = Effect.fnUntraced(function* (setlistId: string) {
   const db = yield* RequestDatabase
-  yield* db.selectFrom("app_public.setlists").select("id").where("id", "=", setlistId).forUpdate().pipe(Effect.orDie)
+  yield* db.selectFrom("app_public.setlists").select("id").where("id", "=", setlistId).forUpdate()
 })
 
 /**
@@ -380,7 +374,7 @@ const setlistOr404 = Effect.fnUntraced(function* (id: string) {
 })
 
 /** A setlist that was just written: a miss here is a server defect, not a caller error. */
-const setlistOrDie = (id: string) => setlistOr404(id).pipe(Effect.orDie)
+const setlistOrDie = (id: string) => setlistOr404(id).pipe(Effect.catchTag("SetlistMissing", Effect.die))
 
 /**
  * The resolved view rows for one setlist, ordered for display. The view applies

@@ -1,10 +1,11 @@
 import { describe, expect, it } from "@effect/vitest"
-import { Cause, Effect, Layer, Logger, References, Schema as S } from "effect"
+import { Effect, Layer, Schema as S } from "effect"
 import { HttpRouter, HttpServer } from "effect/http"
 import { HttpApi, HttpApiBuilder, HttpApiEndpoint, HttpApiGroup } from "effect/http-api"
 import { ChartConflict } from "../api/charts"
 import { FailureBoundary } from "../api/failure-boundary"
 import { FailureBoundaryLive } from "./failureBoundary"
+import { answerRequest, collectLogs, type LogLine } from "./test/probe"
 
 /** One endpoint that dies, one that fails with a declared error, and one that decodes a payload. */
 const ProbeApi = HttpApi.make("probe")
@@ -36,44 +37,13 @@ const served = HttpApiBuilder.layer(ProbeApi).pipe(
   Layer.provide(HttpServer.layerServices),
 )
 
-/** One line the probe logged. `traceId` is the log annotation the boundary sets. */
-type LogLine = {
-  readonly level: string
-  readonly message: unknown
-  readonly cause: string
-  readonly traceId: unknown
-}
-
-/**
- * Answers the probe API for one request, and returns the response with every
- * line logged while it was answered. The HTTP logger is on, as in `serve`, so
- * the response line is among them.
- */
 const probe = (method: "GET" | "POST", path: string, body?: unknown) =>
   Effect.acquireUseRelease(
     Effect.sync(() => {
       const lines: Array<LogLine> = []
-      const recordLines = Logger.layer([
-        Logger.make((options) => {
-          lines.push({
-            level: options.logLevel,
-            message: options.message,
-            cause: Cause.pretty(options.cause),
-            traceId: options.fiber.getRef(References.CurrentLogAnnotations).traceId,
-          })
-        }),
-      ])
-      const web = HttpRouter.toWebHandler(served.pipe(Layer.provideMerge(recordLines)))
-      return { web, lines }
+      return { lines, web: HttpRouter.toWebHandler(served.pipe(Layer.provideMerge(collectLogs(lines)))) }
     }),
-    ({ web, lines }) =>
-      Effect.promise(async () => {
-        const init: RequestInit = body === undefined
-          ? { method }
-          : { method, headers: { "content-type": "application/json" }, body: JSON.stringify(body) }
-        const response = await web.handler(new Request(`http://localhost${path}`, init))
-        return { status: response.status, body: await response.text(), lines }
-      }),
+    ({ web, lines }) => answerRequest(web, lines, method, path, body),
     ({ web }) => Effect.promise(() => web.dispose()),
   )
 

@@ -2,6 +2,8 @@ import { Effect } from "effect"
 import { HttpApiBuilder } from "effect/http-api"
 import { Auth, type AuthFailure, AccountError } from "../services/auth"
 import { withAuthContext } from "../db"
+import { toHttpError } from "../dbErrors"
+import type { DatabaseError } from "../databaseError"
 import { asSignedIn, ifSignedIn } from "./scope"
 import { sessionCookiePolicy } from "./session"
 import { AuthError } from "../../api/auth"
@@ -15,10 +17,11 @@ const ok = { ok: true as const }
 const toAuthError = (e: { readonly message: string }) => Effect.fail(new AuthError({ message: e.message }))
 
 /** A rejected sign-in answers 401 with the service's message. */
-const toUnauthorized = (e: { readonly message: string }) => Effect.fail(new Unauthorized({ message: e.message }))
+const toUnauthorized = (e: { readonly message: string }) =>
+  Effect.fail(new Unauthorized({ message: e.message, reason: "invalid_credentials" }))
 
 /** Each service failure answers the one contract class, with the service's message. */
-const asAuthError = <A, R>(effect: Effect.Effect<A, AuthFailure | AccountError, R>) =>
+const asAuthError = <A, R>(effect: Effect.Effect<A, AuthFailure | AccountError | DatabaseError, R>) =>
   effect.pipe(Effect.catchTags({
   AccountError: toAuthError,
   AccountLocked: toAuthError,
@@ -26,6 +29,7 @@ const asAuthError = <A, R>(effect: Effect.Effect<A, AuthFailure | AccountError, 
   InvalidCredentials: toAuthError,
   RegistrationFailed: toAuthError,
   WeakPassword: toAuthError,
+  DatabaseError: toHttpError,
 }))
 
 const asUser = asSignedIn(() => new AuthError({ message: "You must be signed in" }))
@@ -40,7 +44,7 @@ export const AuthApiGroupLive = HttpApiBuilder.group(GigListApi, "auth", (handle
         Auth.use((auth) => auth.login(payload)).pipe(
           Effect.flatMap((result) => setSessionCookie(result.sessionId)),
           Effect.as(ok),
-          Effect.catchTags({ AccountLocked: toUnauthorized, InvalidCredentials: toUnauthorized }),
+          Effect.catchTags({ AccountLocked: toUnauthorized, InvalidCredentials: toUnauthorized, DatabaseError: toHttpError }),
         ),
       )
       .handle("register", ({ payload }) =>
@@ -51,7 +55,7 @@ export const AuthApiGroupLive = HttpApiBuilder.group(GigListApi, "auth", (handle
         ),
       )
       .handle("forgotPassword", ({ payload }) =>
-        Auth.use((auth) => auth.forgotPassword(payload.email)).pipe(Effect.orDie, Effect.as(ok)),
+        Auth.use((auth) => auth.forgotPassword(payload.email)).pipe(Effect.catchTag("DatabaseError", toHttpError), Effect.as(ok)),
       )
       .handle("resetPassword", ({ payload }) =>
         Auth.use((auth) => auth.resetPassword(payload)).pipe(
@@ -64,13 +68,13 @@ export const AuthApiGroupLive = HttpApiBuilder.group(GigListApi, "auth", (handle
         Effect.gen(function* () {
           const session = yield* CurrentSession
           if (session.sessionId) {
-            yield* Auth.use((auth) => auth.logout(session.sessionId)).pipe(Effect.orDie)
+            yield* Auth.use((auth) => auth.logout(session.sessionId)).pipe(Effect.catchTag("DatabaseError", toHttpError))
           }
           yield* clearSessionCookie
           return ok
         }),
       )
-      .handle("me", () => Auth.use((auth) => auth.getMe()).pipe(withAuthContext, ifSignedIn(Effect.succeed(null))))
+      .handle("me", () => Auth.use((auth) => auth.getMe()).pipe(withAuthContext, Effect.catchTag("DatabaseError", toHttpError), ifSignedIn(Effect.succeed(null))))
       .handle("updateMe", ({ payload }) => Auth.use((auth) => auth.updateProfile(payload)).pipe(asAuthError, asUser))
       .handle("changePassword", ({ payload }) =>
         Auth.use((auth) =>
@@ -79,7 +83,6 @@ export const AuthApiGroupLive = HttpApiBuilder.group(GigListApi, "auth", (handle
       )
       .handle("listEmails", () =>
         Auth.use((auth) => auth.listEmails()).pipe(
-          Effect.mapError(() => new AuthError({ message: "Could not load emails" })),
           Effect.map((rows) => rows.map(toUserEmail)),
           asUser,
         ),

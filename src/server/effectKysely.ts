@@ -8,9 +8,10 @@
  * `SqlClient`. A `Proxy` supplies the per-query execution effect, which is why
  * plugin tracking and `withTransaction` survive the builder chain.
  */
-import { Effect, Effectable } from "effect";
+import { Effect, Effectable, Option } from "effect";
 import * as SqlClient from "effect/sql/SqlClient";
-import { SqlError, UnknownError } from "effect/sql/SqlError";
+import { isSqlError, SqlError, UnknownError } from "effect/sql/SqlError";
+import { type DatabaseError, toDatabaseError } from "./databaseError";
 import {
   AlterTableColumnAlteringBuilder,
   CreateIndexBuilder,
@@ -45,7 +46,7 @@ const Commit = Symbol.for("giglist/effectKysely/commit");
  * The effect type is explicit so the protocol carries a typed error channel
  * rather than the `any` the options callback's dynamic `this` would infer.
  */
-const BuilderProto = Effectable.Prototype<Effect.Effect<ReadonlyArray<unknown>, SqlError>>({
+const BuilderProto = Effectable.Prototype<Effect.Effect<ReadonlyArray<unknown>, DatabaseError>>({
   label: "KyselyQuery",
   evaluate(this: any) {
     return this[Commit]();
@@ -96,7 +97,7 @@ patch(WheneableMergeQueryBuilder.prototype);
 
 function effectifyWith(
   obj: unknown,
-  commit: (plugins: ReadonlyArray<KyselyPlugin>) => Effect.Effect<ReadonlyArray<unknown>, SqlError>,
+  commit: (plugins: ReadonlyArray<KyselyPlugin>) => Effect.Effect<ReadonlyArray<unknown>, DatabaseError>,
   whitelist: Array<string>,
   plugins: ReadonlyArray<KyselyPlugin> = [],
 ): any {
@@ -148,12 +149,25 @@ function effectifyWith(
   });
 }
 
+/**
+ * Runs one compiled query in a `db.query` span. The enclosing span (the service
+ * method that built the query) is read before the span opens, so a refused
+ * query's log line names the method that ran it.
+ */
+const runQuery = <A>(execute: Effect.Effect<A, SqlError>) =>
+  Effect.flatMap(Effect.option(Effect.currentSpan), (enclosing) =>
+    execute.pipe(
+      Effect.mapError((error) => toDatabaseError(error, Option.map(enclosing, (span) => span.name))),
+      Effect.withSpan("db.query"),
+    ),
+  );
+
 const makeSqlCommit = (client: SqlClient.SqlClient) => {
   return function (this: Compilable, plugins: ReadonlyArray<KyselyPlugin>) {
     const { parameters, queryId, sql } = this.compile();
     const execute = client.unsafe<Record<string, unknown>>(sql, parameters);
-    if (plugins.length === 0) return execute;
-    return Effect.flatMap(execute, (rows) =>
+    if (plugins.length === 0) return runQuery(execute);
+    return runQuery(Effect.flatMap(execute, (rows) =>
       Effect.map(
         Effect.reduce(
           plugins,
@@ -166,7 +180,7 @@ const makeSqlCommit = (client: SqlClient.SqlClient) => {
         ),
         (result) => result.rows,
       ),
-    );
+    ));
   };
 };
 
@@ -187,7 +201,14 @@ const makeWithSql = <DB>(config: KyselyConfig) =>
     const client = yield* SqlClient.SqlClient;
 
     const db = new Kysely<DB>(config) as unknown as EffectKysely<DB>;
-    (db as any).withTransaction = client.withTransaction;
+    (db as any).withTransaction = <R, E, A>(self: Effect.Effect<A, E, R>) =>
+      client.withTransaction(self).pipe(
+        Effect.catchIf(isSqlError, (error) =>
+          Effect.flatMap(Effect.option(Effect.currentSpan), (enclosing) =>
+            Effect.fail(toDatabaseError(error, Option.map(enclosing, (span) => span.name))),
+          ),
+        ),
+      );
 
     // SelectQueryBuilder is not exported from "kysely", so its prototype is
     // patched from an instance.
@@ -216,27 +237,27 @@ export const makePg = <DB>(config?: Omit<KyselyConfig, "dialect">) =>
  * A Kysely instance whose query builders evaluate as Effects.
  */
 export interface EffectKysely<DB> extends Omit<Kysely<DB>, "transaction"> {
-  withTransaction: <R, E, A>(self: Effect.Effect<A, E, R>) => Effect.Effect<A, E | SqlError, R>;
+  withTransaction: <R, E, A>(self: Effect.Effect<A, E, R>) => Effect.Effect<A, E | DatabaseError, R>;
 }
 
 declare module "kysely" {
-  interface AlterTableColumnAlteringBuilder extends Effect.Effect<void, SqlError> {}
-  interface CreateIndexBuilder<C> extends Effect.Effect<void, SqlError> {}
-  interface CreateSchemaBuilder extends Effect.Effect<void, SqlError> {}
-  interface CreateTableBuilder<TB, C> extends Effect.Effect<void, SqlError> {}
-  interface CreateTypeBuilder extends Effect.Effect<void, SqlError> {}
-  interface CreateViewBuilder extends Effect.Effect<void, SqlError> {}
-  interface DropIndexBuilder extends Effect.Effect<void, SqlError> {}
-  interface DropSchemaBuilder extends Effect.Effect<void, SqlError> {}
-  interface DropTableBuilder extends Effect.Effect<void, SqlError> {}
-  interface DropTypeBuilder extends Effect.Effect<void, SqlError> {}
-  interface DropViewBuilder extends Effect.Effect<void, SqlError> {}
-  interface SelectQueryBuilder<DB, TB, O> extends Effect.Effect<Array<Simplify<O>>, SqlError> {}
-  interface InsertQueryBuilder<DB, TB, O> extends Effect.Effect<Array<Simplify<O>>, SqlError> {}
-  interface UpdateQueryBuilder<DB, UT, TB, O> extends Effect.Effect<Array<Simplify<O>>, SqlError> {}
-  interface DeleteQueryBuilder<DB, TB, O> extends Effect.Effect<Array<Simplify<O>>, SqlError> {}
+  interface AlterTableColumnAlteringBuilder extends Effect.Effect<void, DatabaseError> {}
+  interface CreateIndexBuilder<C> extends Effect.Effect<void, DatabaseError> {}
+  interface CreateSchemaBuilder extends Effect.Effect<void, DatabaseError> {}
+  interface CreateTableBuilder<TB, C> extends Effect.Effect<void, DatabaseError> {}
+  interface CreateTypeBuilder extends Effect.Effect<void, DatabaseError> {}
+  interface CreateViewBuilder extends Effect.Effect<void, DatabaseError> {}
+  interface DropIndexBuilder extends Effect.Effect<void, DatabaseError> {}
+  interface DropSchemaBuilder extends Effect.Effect<void, DatabaseError> {}
+  interface DropTableBuilder extends Effect.Effect<void, DatabaseError> {}
+  interface DropTypeBuilder extends Effect.Effect<void, DatabaseError> {}
+  interface DropViewBuilder extends Effect.Effect<void, DatabaseError> {}
+  interface SelectQueryBuilder<DB, TB, O> extends Effect.Effect<Array<Simplify<O>>, DatabaseError> {}
+  interface InsertQueryBuilder<DB, TB, O> extends Effect.Effect<Array<Simplify<O>>, DatabaseError> {}
+  interface UpdateQueryBuilder<DB, UT, TB, O> extends Effect.Effect<Array<Simplify<O>>, DatabaseError> {}
+  interface DeleteQueryBuilder<DB, TB, O> extends Effect.Effect<Array<Simplify<O>>, DatabaseError> {}
   interface WheneableMergeQueryBuilder<DB, TT, ST, O> extends Effect.Effect<
     Array<Simplify<O>>,
-    SqlError
+    DatabaseError
   > {}
 }
