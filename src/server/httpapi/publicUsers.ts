@@ -1,6 +1,6 @@
 import { Effect } from "effect"
 import { HttpApiBuilder } from "effect/http-api"
-import { PublicUsers } from "../services/public-user"
+import { PublicUsers } from "../services/publicUsers"
 import { withAuthContext } from "../db"
 import { GigListApi } from "../../api/contracts"
 import { PublicUserNotFound } from "../../api/public-users"

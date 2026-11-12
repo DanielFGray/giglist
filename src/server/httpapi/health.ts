@@ -2,7 +2,7 @@ import { Config, Effect, Layer } from "effect"
 import { HttpRouter, HttpServerResponse } from "effect/http"
 import { sql } from "kysely"
 import { AuthDb, Db } from "../db"
-import { Worker } from "../../../worker/main"
+import { Worker } from "../../../worker/worker"
 
 /**
  * The platform health contract: `GET /healthz` answers 200 `{status, commit}`

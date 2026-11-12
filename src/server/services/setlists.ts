@@ -2,8 +2,8 @@ import { Context, Effect, Layer, Option, Predicate, Schema as S, Struct } from "
 import { sql } from "kysely"
 import { RequestDatabase } from "../db"
 import { Auth } from "./auth"
-import { Bands } from "./band"
-import { LiveHub, type Written } from "./live-hub"
+import { Bands } from "./bands"
+import { LiveHub, type Written } from "./liveHub"
 import { between, placeAfter } from "../../components/position"
 import { LivePresence, Setlist, SetlistEntry, SetlistForbidden, SetlistNotFound, type Move, type SetlistEntryInsert, type SetlistEntryUpdate, type SetlistInsert, type SetlistUpdate } from "../../api/setlists"
 
@@ -21,7 +21,7 @@ const decodeEntries = S.decodeUnknownEffect(S.Array(SetlistEntry))
  * commits — the setlist and every gig that plays it. A setlist and a gig are
  * each a room of the LiveHub; `watch` opens one and `report` updates a viewer.
  */
-export class Setlists extends Context.Service<Setlists>()("giglist/Setlists", {
+export class Setlists extends Context.Service<Setlists>()("giglist/setlists", {
   make: Effect.gen(function* () {
     const bands = yield* Bands
     const auth = yield* Auth

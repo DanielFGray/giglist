@@ -1,6 +1,6 @@
 import { Context, Effect, Layer, Schema as S, Struct } from "effect"
 import { RequestDatabase } from "../db"
-import { Bands } from "./band"
+import { Bands } from "./bands"
 import { Song, SongForbidden, type SongInsert, type SongUpdate } from "../../api/songs"
 import { songCreate, songDelete, songFindByBandId, songFindById } from "../../../generated/queries.js"
 
@@ -12,7 +12,7 @@ const decodeSongs = S.decodeUnknownEffect(S.Array(Song))
  * security scopes every query; the member checks turn "nothing visible" into a
  * 403 the browser can show.
  */
-export class Songs extends Context.Service<Songs>()("giglist/Songs", {
+export class Songs extends Context.Service<Songs>()("giglist/songs", {
   make: Effect.gen(function* () {
     const bands = yield* Bands
 

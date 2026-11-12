@@ -1,7 +1,7 @@
 import { Context, Effect, Layer, Option, Schema as S } from "effect"
 import { sql } from "kysely"
 import { RequestDatabase } from "../db"
-import { LiveHub, type Written } from "./live-hub"
+import { LiveHub, type Written } from "./liveHub"
 import { Setlists, viewing } from "./setlists"
 import { between, placeAfter } from "../../components/position"
 import { Gig, GigEntry, GigNotFound, type GigDetails, type GigInsert, type GigSetlistInsert } from "../../api/gigs"
@@ -20,7 +20,7 @@ const decodeGigEntries = S.decodeUnknownEffect(S.Array(GigEntry))
  * commits — the gig, and every setlist it played before or after the write,
  * since a setlist's page lists its gigs.
  */
-export class Gigs extends Context.Service<Gigs>()("giglist/Gigs", {
+export class Gigs extends Context.Service<Gigs>()("giglist/gigs", {
   make: Effect.gen(function* () {
     const setlists = yield* Setlists
     const hub = yield* LiveHub

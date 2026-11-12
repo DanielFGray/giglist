@@ -2,7 +2,7 @@ import { Config, Effect, Layer } from "effect";
 import { BunRedis, BunRuntime } from "@effect/platform-bun";
 import * as BunHttpServer from "@effect/platform-bun/BunHttpServer";
 import { ServerLive } from "./runtime";
-import { storeTimeout } from "./services/rate-limiter";
+import { storeTimeout } from "./services/rateLimiter";
 
 /**
  * The Valkey client. By default Bun's client stops after a few reconnect

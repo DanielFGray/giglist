@@ -11,7 +11,7 @@ GigList runs on the homelab cluster that `~/build/server-ansible` manages, at
 The two halves are released separately, so release both from the same commit. A page
 build that is older or newer than the API can call endpoints that the API does not have.
 
-Live setlist events stay in one API process's memory (`services/live-hub.ts`), so keep
+Live setlist events stay in one API process's memory (`services/liveHub.ts`), so keep
 `giglist-api` at one instance.
 
 ## Release the API
@@ -89,7 +89,7 @@ for Email Sending and give the token `Email Sending: Edit`
 For SES, the worker uses the AWS SDK credential chain and `AWS_REGION`.
 
 `VITE_ROOT_URL` is the public origin in email links. The browser calls the API on its own
-origin, so the page build needs no domain setting. `worker/main.ts` provides the `Mailer`
+origin, so the page build needs no domain setting. `worker/worker.ts` provides the `Mailer`
 layer once. A provider failure rejects the job, so Graphile Worker retries it. Run the
 worker's tests with `bun run test:mail`.
 

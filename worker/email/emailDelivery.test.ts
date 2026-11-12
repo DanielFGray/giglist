@@ -3,9 +3,9 @@ import { Effect, Layer, Option } from "effect"
 import { BunServices } from "@effect/platform-bun"
 import { SMTPServer } from "smtp-server"
 import { RateLimiterError, RateLimiterStore, RateLimitStoreError } from "effect/persistence/RateLimiter"
-import { RateLimiterMemory, rateLimiterWithStore } from "../../src/server/services/rate-limiter"
+import { RateLimiterMemory, rateLimiterWithStore } from "../../src/server/services/rateLimiter"
 import { Mailer, MailMessage, SmtpSettings } from "./mailer"
-import { sendEmail } from "./send-email"
+import { sendEmail } from "./emailDelivery"
 
 const verification = {
   options: { to: "player@example.invalid", subject: "Verify your GigList account" },

@@ -63,7 +63,7 @@ Every other runtime dependency in `package.json` uses the MIT or MIT-0 license.
 
 ## Test material
 
-- **Nodemailer SMTP Server**: `smtp-server` provides the local SMTP listener used to verify delivery and recipient rejection in `worker/email/send-email.test.ts`. MIT-0 License. <https://github.com/nodemailer/smtp-server>
+- **Nodemailer SMTP Server**: `smtp-server` provides the local SMTP listener used to verify delivery and recipient rejection in `worker/email/emailDelivery.test.ts`. MIT-0 License. <https://github.com/nodemailer/smtp-server>
 
 - **"Amazing Grace"**: words by John Newton (1779), in the public domain. Used in `tests/fixtures/amazing-grace.*`.
 

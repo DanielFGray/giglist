@@ -29,7 +29,7 @@ type ScoreUpload = S.Struct.Type<typeof ScoreUploadQuery>
  * user; row-level security hides another band's charts, so a missing chart and
  * a foreign one both answer 403.
  */
-export class Charts extends Context.Service<Charts>()("giglist/Charts", {
+export class Charts extends Context.Service<Charts>()("giglist/charts", {
   make: Effect.sync(() => {
     const notMember = () => new ChartForbidden({ message: "You are not a member of that band" })
 

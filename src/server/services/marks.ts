@@ -17,7 +17,7 @@ const MARK_COLUMNS = [
  * written as the request's user. The policies limit marks to the caller's own
  * and the band's shared ones, and writes to the caller's own.
  */
-export class Marks extends Context.Service<Marks>()("giglist/Marks", {
+export class Marks extends Context.Service<Marks>()("giglist/marks", {
   make: Effect.sync(() => {
     const notMember = () => new MarkForbidden({ message: "You are not a member of that band" })
 

@@ -1,7 +1,7 @@
 import { Effect } from "effect"
 import { HttpApiBuilder } from "effect/http-api"
 import { Charts } from "../services/charts"
-import { ChartReader } from "../services/chart-reader"
+import { ChartReader } from "../services/chartReader"
 import { asSignedIn, requireSession } from "./scope"
 import { ChartForbidden } from "../../api/charts"
 import { GigListApi } from "../../api/contracts"
@@ -25,12 +25,4 @@ export const ChartsApiGroupLive = HttpApiBuilder.group(GigListApi, "charts", (ha
       Charts.use((charts) => charts.saveRevision(id, payload)).pipe(asMember),
     )
     .handle("deleteChart", ({ params: { id } }) => Charts.use((charts) => charts.remove(id)).pipe(asMember)),
-)
-
-export const ScoresApiGroupLive = HttpApiBuilder.group(GigListApi, "scores", (handlers) =>
-  handlers
-    .handle("uploadScore", ({ query, payload }) => Charts.use((charts) => charts.uploadScore(query, payload)).pipe(asMember))
-    .handle("scoreFile", ({ params: { revisionId } }) =>
-      Charts.use((charts) => charts.scoreFile(revisionId)).pipe(asMember),
-    ),
 )

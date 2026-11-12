@@ -5,7 +5,7 @@ import mjml from "mjml"
 import { convert } from "html-to-text"
 import { RateLimiter } from "effect/persistence/RateLimiter"
 import { Mailer, MailMessage } from "./mailer"
-import { storeTimeout } from "../../src/server/services/rate-limiter"
+import { storeTimeout } from "../../src/server/services/rateLimiter"
 import { projectName } from "../../package.json"
 
 const options = Schema.Struct({

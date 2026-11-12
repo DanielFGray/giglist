@@ -14,7 +14,7 @@ FROM oven/bun:1.4.4 AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 
-# `services/chart-reader.ts` runs pdftotext and pdftoppm (poppler-utils) and
+# `services/chartReader.ts` runs pdftotext and pdftoppm (poppler-utils) and
 # tesseract with English data to read an uploaded chart; without them
 # POST /api/charts/read fails with a server error.
 RUN apt-get update \

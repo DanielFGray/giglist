@@ -3,7 +3,7 @@ import { BunServices } from "@effect/platform-bun"
 import type { FileSystem } from "effect/FileSystem"
 import { getTasks, run, type Runner, type Task } from "graphile-worker"
 import { Mailer } from "./email/mailer"
-import { sendEmail } from "./email/send-email"
+import { sendEmail } from "./email/emailDelivery"
 import type { RateLimiter } from "effect/persistence/RateLimiter"
 import { TelemetryLive } from "../src/server/telemetry"
 import { nodeEnv } from "../src/server/config"
@@ -22,7 +22,7 @@ class WorkerError extends Schema.TaggedError<WorkerError, { readonly brand: uniq
  * The runner stops when the layer's scope closes, before the RateLimiter and
  * the database pools are released.
  */
-export class Worker extends Context.Service<Worker>()("giglist/Worker", {
+export class Worker extends Context.Service<Worker>()("giglist/worker", {
   make: Effect.gen(function* () {
     const running = yield* Ref.make(false)
     yield* start(running).pipe(

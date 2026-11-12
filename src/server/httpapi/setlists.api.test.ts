@@ -3,7 +3,7 @@ import { Effect, Schema as S } from "effect"
 import { HttpClient, HttpClientResponse } from "effect/http"
 import { Gig, GigEntry } from "../../api/gigs"
 import { Setlist, SetlistEntry } from "../../api/setlists"
-import type { LiveEventData } from "../services/live-hub"
+import type { LiveEventData } from "../services/liveHub"
 import { baseUrl, TestHttpClientLive } from "../test/apiHarness"
 import { anonymous, createBand, createSong, nextEvent, openRoom, postJson, sendJson, signedIn } from "../test/clients"
 

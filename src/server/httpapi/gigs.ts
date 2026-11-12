@@ -1,6 +1,6 @@
 import { HttpApiBuilder } from "effect/http-api"
 import { Gigs } from "../services/gigs"
-import { announced } from "../services/live-hub"
+import { announced } from "../services/liveHub"
 import { asMember } from "./setlists"
 import { GigListApi } from "../../api/contracts"
 

@@ -25,7 +25,7 @@ export class SmtpSettings extends Schema.Class<SmtpSettings, { readonly brand: u
 /** Jobs depend on delivery, while the worker supplies the selected provider. */
 export class Mailer extends Context.Service<Mailer, {
   readonly send: (message: MailMessage) => Effect.Effect<void, MailDeliveryError>
-}>()("giglist/Mailer", {
+}>()("giglist/mailer", {
   make: Effect.gen(function* () {
     const fs = yield* FileSystem
     const filename = yield* Config.NonEmptyString("ETHEREAL_ACCOUNT_FILE").pipe(

@@ -24,8 +24,13 @@
     "plugins": [
       {
         "name": "@effect/language-service",
+        "keyPatterns": [
+          { "target": "service", "pattern": "package-identifier" },
+          { "target": "custom", "pattern": "package-identifier" }
+        ],
         "diagnosticSeverity": {
-          "unstableApiUsage": "off"
+          "unstableApiUsage": "off",
+          "deterministicKeys": "error"
         }
       }
     ]

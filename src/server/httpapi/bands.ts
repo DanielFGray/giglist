@@ -1,6 +1,6 @@
 import { Effect } from "effect"
 import { HttpApiBuilder } from "effect/http-api"
-import { Bands } from "../services/band"
+import { Bands } from "../services/bands"
 import { withAuthContext } from "../db"
 import { asSignedIn, ifSignedIn } from "./scope"
 import { BandError } from "../../api/bands"

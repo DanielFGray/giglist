@@ -6,8 +6,8 @@ import { HttpApi, HttpApiEndpoint, HttpApiGroup } from "effect/http-api"
 import { GigListApi } from "../../api/contracts"
 import { RateLimitMiddleware, TooManyRequests } from "../../api/rate-limit"
 import { CurrentSession } from "../../api/session"
-import { storeTimeout } from "../services/rate-limiter"
-import { networkOf } from "./client-ip"
+import { storeTimeout } from "../services/rateLimiter"
+import { networkOf } from "./clientIp"
 
 /**
  * Per-caller limits on the endpoints that send email, check a secret or cost

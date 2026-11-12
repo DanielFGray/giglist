@@ -1,4 +1,4 @@
-/** @typedef { import("../email/send-email").QueuedEmail } SendEmailPayload */
+/** @typedef { import("../email/emailDelivery").QueuedEmail } SendEmailPayload */
 /** @typedef { import("graphile-worker").Task } Task */
 
 // At least 3 minutes between resending email verifications

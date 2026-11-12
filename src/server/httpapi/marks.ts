@@ -13,10 +13,3 @@ export const MarksApiGroupLive = HttpApiBuilder.group(GigListApi, "marks", (hand
     .handle("updateMark", ({ params: { id }, payload }) => Marks.use((marks) => marks.update(id, payload)).pipe(asPlayer))
     .handle("deleteMark", ({ params: { id } }) => Marks.use((marks) => marks.remove(id)).pipe(asPlayer)),
 )
-
-export const StampsApiGroupLive = HttpApiBuilder.group(GigListApi, "stamps", (handlers) =>
-  handlers
-    .handle("listStamps", () => Marks.use((marks) => marks.listStamps()).pipe(asPlayer))
-    .handle("createStamp", ({ payload }) => Marks.use((marks) => marks.createStamp(payload)).pipe(asPlayer))
-    .handle("deleteStamp", ({ params: { id } }) => Marks.use((marks) => marks.removeStamp(id)).pipe(asPlayer)),
-)

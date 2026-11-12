@@ -3,7 +3,7 @@ import { sql } from "kysely";
 import { RequestDatabase } from "../db";
 import type { UpdateBandPayload } from "../../api/bands"
 ;
-import { pgError } from "./pg-error";
+import { pgError } from "./pgError";
 
 type BandUpdate = Schema.Schema.Type<typeof UpdateBandPayload>;
 
@@ -36,7 +36,7 @@ const bandColumns = [
  * The methods yield it themselves rather than capturing one at layer build,
  * because only `withAuthContext` provides it, once per request.
  */
-export class Bands extends Context.Service<Bands>()("giglist/Bands", {
+export class Bands extends Context.Service<Bands>()("giglist/bands", {
   make: Effect.sync(() => {
     /** Owner-only: moves ownership to another member, failing with a BandError when either side is wrong. */
     const transferOwnership = Effect.fn("Bands.transferOwnership")(

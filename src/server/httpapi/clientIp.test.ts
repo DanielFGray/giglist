@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { networkOf } from "./client-ip"
+import { networkOf } from "./clientIp"
 
 describe("networkOf", () => {
   test("keeps an IPv4 address whole", () => {

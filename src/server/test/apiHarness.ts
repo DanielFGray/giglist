@@ -1,7 +1,7 @@
 import { Context, Layer, Ref } from "effect"
 import { Cookies, FetchHttpClient, HttpRouter, HttpServer } from "effect/http"
 import { HttpApiLive } from "../runtime"
-import { RateLimiterMemory } from "../services/rate-limiter"
+import { RateLimiterMemory } from "../services/rateLimiter"
 
 /**
  * In-process API harness: the server's HttpApiLive with no TCP listener.

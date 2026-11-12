@@ -1,7 +1,7 @@
 import { Context, Effect, Layer, Redacted, Schema as S } from "effect";
 import { sql } from "kysely";
 import { Db, RequestDatabase } from "../db";
-import { pgError } from "./pg-error";
+import { pgError } from "./pgError";
 import { gravatarUrl } from "../gravatar";
 
 export class InvalidCredentials extends S.TaggedError<InvalidCredentials, { readonly brand: unique symbol }>()("InvalidCredentials", {
@@ -47,7 +47,7 @@ const emptyToNull = (value: string | null) => {
  * run without a signed-in user, and `RequestDatabase` for everything a request
  * does as the user, which only `withAuthContext` provides.
  */
-export class Auth extends Context.Service<Auth>()("giglist/Auth", {
+export class Auth extends Context.Service<Auth>()("giglist/auth", {
   make: Effect.sync(() => {
     /** Band owners must transfer or delete those bands before account deletion. */
     const requireNoOwnedBands = Effect.fn("Auth.requireNoOwnedBands")(function* () {
