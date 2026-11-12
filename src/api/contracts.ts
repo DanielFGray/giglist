@@ -1,5 +1,6 @@
 import { HttpApi } from "effect/http-api"
 import { AuthApiGroup } from "./auth"
+import { FailureBoundary } from "./failure-boundary"
 import { BandsApiGroup, PublicBandsApiGroup } from "./bands"
 import { ChartsApiGroup, ScoresApiGroup } from "./charts"
 import { GigsApiGroup } from "./gigs"
@@ -22,3 +23,5 @@ export const GigListApi = HttpApi.make("GigListApi")
   .add(ScoresApiGroup)
   .add(MarksApiGroup)
   .add(StampsApiGroup)
+  // Added last, so it wraps every other middleware of the endpoints too.
+  .middleware(FailureBoundary)

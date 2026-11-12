@@ -1,6 +1,10 @@
 import { Context, Effect, Layer, Schema as S } from "effect"
 import { RequestDatabase } from "../db"
-import { ChartMarks, Mark, MarkForbidden, MarkNotFound, Stamp, type MarkInsert, type MarkUpdate, type StampInsert } from "../../api/marks"
+import { ChartMarks, Mark, Stamp, type MarkInsert, type MarkUpdate, type StampInsert } from "../../api/marks"
+
+export class MarkMissing extends S.TaggedError<MarkMissing, { readonly brand: unique symbol }>()("MarkMissing", { message: S.String, id: S.String }) {}
+
+export class MarkRefused extends S.TaggedError<MarkRefused, { readonly brand: unique symbol }>()("MarkRefused", { message: S.String }) {}
 
 const decodeMark = S.decodeUnknownEffect(Mark)
 const decodeChartMarks = S.decodeUnknownEffect(ChartMarks)
@@ -19,7 +23,7 @@ const MARK_COLUMNS = [
  */
 export class Marks extends Context.Service<Marks>()("giglist/marks", {
   make: Effect.sync(() => {
-    const notMember = () => new MarkForbidden({ message: "You are not a member of that band" })
+    const notMember = () => new MarkRefused({ message: "You are not a member of that band" })
 
     /**
      * Require that the revision is visible to the caller. RLS hides a chart outside
@@ -83,14 +87,14 @@ export class Marks extends Context.Service<Marks>()("giglist/marks", {
         .where("id", "=", id)
         .returning(MARK_COLUMNS)
         .pipe(Effect.orDie)
-      if (!row) return yield* new MarkNotFound({ id })
+      if (!row) return yield* new MarkMissing({ id, message: "That mark was not found" })
       return yield* decodeMark(row).pipe(Effect.orDie)
     })
 
     const remove = Effect.fn("Marks.remove")(function* (id: string) {
       const db = yield* RequestDatabase
       const rows = yield* db.deleteFrom("app_public.marks").where("id", "=", id).returning("id").pipe(Effect.orDie)
-      if (rows.length === 0) return yield* new MarkNotFound({ id })
+      if (rows.length === 0) return yield* new MarkMissing({ id, message: "That mark was not found" })
     })
 
     const listStamps = Effect.fn("Marks.listStamps")(function* () {
@@ -116,7 +120,7 @@ export class Marks extends Context.Service<Marks>()("giglist/marks", {
     const removeStamp = Effect.fn("Marks.removeStamp")(function* (id: string) {
       const db = yield* RequestDatabase
       const rows = yield* db.deleteFrom("app_public.stamps").where("id", "=", id).returning("id").pipe(Effect.orDie)
-      if (rows.length === 0) return yield* new MarkNotFound({ id })
+      if (rows.length === 0) return yield* new MarkMissing({ id, message: "That stamp was not found" })
     })
 
     return { listForChart, create, update, remove, listStamps, createStamp, removeStamp }

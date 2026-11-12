@@ -1,5 +1,6 @@
 import { Schema as S } from "effect"
 import { HttpApiEndpoint, HttpApiGroup, HttpApiSchema } from "effect/http-api"
+import { Unauthorized } from "./errors"
 import { RateLimitMiddleware } from "./rate-limit"
 import { SessionMiddleware } from "./session"
 
@@ -119,7 +120,7 @@ export const ConfirmAccountDeletionPayload = S.Struct({
 
 export const AuthSuccess = S.Struct({ ok: S.Literals([true]) })
 
-export class AuthError extends S.TaggedError<AuthError, { readonly brand: unique symbol }>()("AuthError", { message: S.String },) {}
+export class AuthError extends S.TaggedError<AuthError, { readonly brand: unique symbol }>()("AuthError", { message: S.String }, { httpApiStatus: 400 }) {}
 
 // --- Auth API group ---
 // NOTE: .prefix() must come AFTER .add() — prefix only applies to existing endpoints
@@ -129,14 +130,14 @@ export const AuthApiGroup = HttpApiGroup.make("auth")
     HttpApiEndpoint.post("login", "/login", {
       payload: LoginPayload,
       success: AuthSuccess,
-      error: AuthError.pipe(HttpApiSchema.status(401)),
+      error: Unauthorized,
     }).middleware(RateLimitMiddleware),
   )
   .add(
     HttpApiEndpoint.post("register", "/register", {
       payload: RegisterPayload,
       success: AuthSuccess,
-      error: AuthError.pipe(HttpApiSchema.status(400)),
+      error: AuthError,
     }).middleware(RateLimitMiddleware),
   )
   .add(
@@ -149,7 +150,7 @@ export const AuthApiGroup = HttpApiGroup.make("auth")
     HttpApiEndpoint.post("resetPassword", "/reset-password", {
       payload: ResetPasswordPayload,
       success: AuthSuccess,
-      error: AuthError.pipe(HttpApiSchema.status(400)),
+      error: AuthError,
     }).middleware(RateLimitMiddleware),
   )
   .add(
@@ -166,68 +167,68 @@ export const AuthApiGroup = HttpApiGroup.make("auth")
     HttpApiEndpoint.put("updateMe", "/me", {
       payload: UpdateProfilePayload,
       success: AuthUser,
-      error: AuthError.pipe(HttpApiSchema.status(400)),
+      error: AuthError,
     }).middleware(SessionMiddleware),
   )
   .add(
     HttpApiEndpoint.post("changePassword", "/password", {
       payload: ChangePasswordPayload,
       success: AuthSuccess,
-      error: AuthError.pipe(HttpApiSchema.status(400)),
+      error: AuthError,
     }).middleware(RateLimitMiddleware).middleware(SessionMiddleware),
   )
   .add(
     HttpApiEndpoint.get("listEmails", "/emails", {
       success: S.Array(UserEmail),
-      error: AuthError.pipe(HttpApiSchema.status(400)),
+      error: AuthError,
     }).middleware(SessionMiddleware),
   )
   .add(
     HttpApiEndpoint.post("addEmail", "/emails", {
       payload: AddEmailPayload,
       success: UserEmail.pipe(HttpApiSchema.status(201)),
-      error: AuthError.pipe(HttpApiSchema.status(400)),
+      error: AuthError,
     }).middleware(RateLimitMiddleware).middleware(SessionMiddleware),
   )
   .add(
     HttpApiEndpoint.post("verifyEmail", "/emails/verify", {
       payload: VerifyEmailPayload,
       success: AuthSuccess,
-      error: AuthError.pipe(HttpApiSchema.status(400)),
+      error: AuthError,
     }).middleware(RateLimitMiddleware),
   )
   .add(
     HttpApiEndpoint.delete("removeEmail", "/emails/:id", {
       params: { id: S.String.check(S.isUUID()) },
       success: AuthSuccess,
-      error: AuthError.pipe(HttpApiSchema.status(400)),
+      error: AuthError,
     }).middleware(SessionMiddleware),
   )
   .add(
     HttpApiEndpoint.post("makeEmailPrimary", "/emails/:id/primary", {
       params: { id: S.String.check(S.isUUID()) },
       success: UserEmail,
-      error: AuthError.pipe(HttpApiSchema.status(400)),
+      error: AuthError,
     }).middleware(SessionMiddleware),
   )
   .add(
     HttpApiEndpoint.post("resendEmailVerification", "/emails/:id/resend", {
       params: { id: S.String.check(S.isUUID()) },
       success: AuthSuccess,
-      error: AuthError.pipe(HttpApiSchema.status(400)),
+      error: AuthError,
     }).middleware(RateLimitMiddleware).middleware(SessionMiddleware),
   )
   .add(
     HttpApiEndpoint.post("requestAccountDeletion", "/account/delete-request", {
       success: AuthSuccess,
-      error: AuthError.pipe(HttpApiSchema.status(400)),
+      error: AuthError,
     }).middleware(RateLimitMiddleware).middleware(SessionMiddleware),
   )
   .add(
     HttpApiEndpoint.post("confirmAccountDeletion", "/account/delete", {
       payload: ConfirmAccountDeletionPayload,
       success: AuthSuccess,
-      error: AuthError.pipe(HttpApiSchema.status(400)),
+      error: AuthError,
     }).middleware(SessionMiddleware),
   )
   .prefix("/api/auth")

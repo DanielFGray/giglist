@@ -7,7 +7,7 @@ import { pgError } from "./pgError";
 
 type BandUpdate = Schema.Schema.Type<typeof UpdateBandPayload>;
 
-export class BandError extends Schema.TaggedError<BandError, { readonly brand: unique symbol }>()("BandError", {
+export class BandRefused extends Schema.TaggedError<BandRefused, { readonly brand: unique symbol }>()("BandRefused", {
   message: Schema.String,
 }) {}
 
@@ -38,7 +38,7 @@ const bandColumns = [
  */
 export class Bands extends Context.Service<Bands>()("giglist/bands", {
   make: Effect.sync(() => {
-    /** Owner-only: moves ownership to another member, failing with a BandError when either side is wrong. */
+    /** Owner-only: moves ownership to another member, failing with a BandRefused when either side is wrong. */
     const transferOwnership = Effect.fn("Bands.transferOwnership")(
       function* (args: { bandId: string; userId: string }) {
         const db = yield* RequestDatabase;
@@ -54,21 +54,21 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
             Effect.head,
             Effect.catchTag("NoSuchElementError", () =>
               Effect.fail(
-                new BandError({
+                new BandRefused({
                   message: "Could not transfer ownership — you must be the owner and the person a member",
                 }),
               ),
             ),
           );
         if (!band.id) {
-          return yield* new BandError({
+          return yield* new BandRefused({
             message: "Could not transfer ownership — you must be the owner and the person a member",
           });
         }
       },
       Effect.catchIf(
-        (e): e is Exclude<typeof e, BandError> => e._tag !== "BandError",
-        (e) => Effect.logError("Could not transfer ownership", e).pipe(Effect.andThen(Effect.fail(new BandError({ message: "Could not transfer ownership" })))),
+        (e): e is Exclude<typeof e, BandRefused> => e._tag !== "BandRefused",
+        (e) => Effect.logError("Could not transfer ownership", e).pipe(Effect.andThen(Effect.fail(new BandRefused({ message: "Could not transfer ownership" })))),
       ),
     );
 
@@ -124,12 +124,12 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
           .pipe(
             Effect.head,
             Effect.catchTag("NoSuchElementError", () =>
-              Effect.fail(new BandError({ message: "Failed to create band" })),
+              Effect.fail(new BandRefused({ message: "Failed to create band" })),
             ),
           );
 
         const id = created.id;
-        if (!id) return yield* new BandError({ message: "Failed to create band" });
+        if (!id) return yield* new BandRefused({ message: "Failed to create band" });
         return yield* db
           .selectFrom("app_public.bands")
           .select(bandColumns)
@@ -137,12 +137,12 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
           .pipe(Effect.head);
       },
       Effect.catch((e) => {
-        if (e._tag === "BandError") return Effect.fail(e);
+        if (e._tag === "BandRefused") return Effect.fail(e);
         const info = pgError(e);
         if (info?.constraint === "bands_slug_key")
-          return Effect.fail(new BandError({ message: "A band with that slug already exists" }));
+          return Effect.fail(new BandRefused({ message: "A band with that slug already exists" }));
         return Effect.logError("createBand failed", e).pipe(
-          Effect.andThen(Effect.fail(new BandError({ message: "Could not create band" }))),
+          Effect.andThen(Effect.fail(new BandRefused({ message: "Could not create band" }))),
         );
       }),
     );
@@ -161,26 +161,26 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
       Effect.catch((e) => {
         const code = pgError(e)?.code;
         if (code === "LOGIN")
-          return Effect.fail(new BandError({ message: "You must be logged in" }));
+          return Effect.fail(new BandRefused({ message: "You must be logged in" }));
         if (code === "DNIED")
-          return Effect.fail(new BandError({ message: "You must be the band owner to invite" }));
+          return Effect.fail(new BandRefused({ message: "You must be the band owner to invite" }));
         if (code === "ISMBR")
-          return Effect.fail(new BandError({ message: "That person is already a member" }));
+          return Effect.fail(new BandRefused({ message: "That person is already a member" }));
         if (code === "NTFND")
-          return Effect.fail(new BandError({ message: "Could not find that person" }));
+          return Effect.fail(new BandRefused({ message: "Could not find that person" }));
         // band_invitations is unique on (band, user) and on (band, email).
         if (code === "23505")
           return Effect.fail(
-            new BandError({ message: "That person already has an invitation to this band" }),
+            new BandRefused({ message: "That person already has an invitation to this band" }),
           );
         if (code === "VRFY2")
           return Effect.fail(
-            new BandError({
+            new BandRefused({
               message: "That account has not verified its email yet, so it cannot be invited",
             }),
           );
         return Effect.logError("inviteToBand failed", e).pipe(
-          Effect.andThen(Effect.fail(new BandError({ message: "Failed to send invite" }))),
+          Effect.andThen(Effect.fail(new BandRefused({ message: "Failed to send invite" }))),
         );
       }),
     );
@@ -203,11 +203,11 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
       },
       Effect.catch((e) => {
         const code = pgError(e)?.code;
-        if (code === "NTFND") return Effect.fail(new BandError({ message: "That invitation no longer exists" }));
-        if (code === "DNIED") return Effect.fail(new BandError({ message: "That invitation is not for you" }));
-        if (code === "INCOD") return Effect.fail(new BandError({ message: "That code does not match this invitation" }));
+        if (code === "NTFND") return Effect.fail(new BandRefused({ message: "That invitation no longer exists" }));
+        if (code === "DNIED") return Effect.fail(new BandRefused({ message: "That invitation is not for you" }));
+        if (code === "INCOD") return Effect.fail(new BandRefused({ message: "That code does not match this invitation" }));
         return Effect.logError("acceptInvitation failed", e).pipe(
-          Effect.andThen(Effect.fail(new BandError({ message: "Could not accept the invitation" }))),
+          Effect.andThen(Effect.fail(new BandRefused({ message: "Could not accept the invitation" }))),
         );
       }),
     );
@@ -219,7 +219,7 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
       },
       Effect.catch((e) =>
         Effect.logError("Could not decline the invitation", e).pipe(
-          Effect.andThen(Effect.fail(new BandError({ message: "Could not decline the invitation" }))),
+          Effect.andThen(Effect.fail(new BandRefused({ message: "Could not decline the invitation" }))),
         ),
       ),
     );
@@ -239,9 +239,9 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
       Effect.catch((e) => {
         const code = pgError(e)?.code;
         if (code === "DNIED")
-          return Effect.fail(new BandError({ message: "You must be the band owner to see invitations" }));
+          return Effect.fail(new BandRefused({ message: "You must be the band owner to see invitations" }));
         return Effect.logError("listPendingInvitations failed", e).pipe(
-          Effect.andThen(Effect.fail(new BandError({ message: "Could not load invitations" }))),
+          Effect.andThen(Effect.fail(new BandRefused({ message: "Could not load invitations" }))),
         );
       }),
     );
@@ -256,11 +256,11 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
       },
       Effect.catch((e) => {
         const code = pgError(e)?.code;
-        if (code === "NTFND") return Effect.fail(new BandError({ message: "That invitation no longer exists" }));
+        if (code === "NTFND") return Effect.fail(new BandRefused({ message: "That invitation no longer exists" }));
         if (code === "DNIED")
-          return Effect.fail(new BandError({ message: "You must be the band owner to cancel an invitation" }));
+          return Effect.fail(new BandRefused({ message: "You must be the band owner to cancel an invitation" }));
         return Effect.logError("cancelInvitation failed", e).pipe(
-          Effect.andThen(Effect.fail(new BandError({ message: "Could not cancel the invitation" }))),
+          Effect.andThen(Effect.fail(new BandRefused({ message: "Could not cancel the invitation" }))),
         );
       }),
     );
@@ -276,17 +276,17 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
           .pipe(
             Effect.head,
             Effect.catchTag("NoSuchElementError", () =>
-              Effect.fail(new BandError({ message: "You are not a member of that band" })),
+              Effect.fail(new BandRefused({ message: "You are not a member of that band" })),
             ),
           );
         if (!mine.is_owner) {
-          return yield* new BandError({ message: "Only the owner can delete the band" });
+          return yield* new BandRefused({ message: "Only the owner can delete the band" });
         }
         yield* db.selectNoFrom([sql`app_public.delete_band(${bandId}::uuid)`.as("_")]);
       },
       Effect.catchIf(
-        (e): e is Exclude<typeof e, BandError> => e._tag !== "BandError",
-        (e) => Effect.logError("Could not delete the band", e).pipe(Effect.andThen(Effect.fail(new BandError({ message: "Could not delete the band" })))),
+        (e): e is Exclude<typeof e, BandRefused> => e._tag !== "BandRefused",
+        (e) => Effect.logError("Could not delete the band", e).pipe(Effect.andThen(Effect.fail(new BandRefused({ message: "Could not delete the band" })))),
       ),
     );
 
@@ -301,11 +301,11 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
           .pipe(
             Effect.head,
             Effect.catchTag("NoSuchElementError", () =>
-              Effect.fail(new BandError({ message: "You are not a member of that band" })),
+              Effect.fail(new BandRefused({ message: "You are not a member of that band" })),
             ),
           );
         if (!mine.is_owner) {
-          return yield* new BandError({ message: "Only the owner can update the band" });
+          return yield* new BandRefused({ message: "Only the owner can update the band" });
         }
 
         // Kysely drops undefined fields from `set`, so the patch holds only what
@@ -325,13 +325,13 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
         return yield* row.pipe(
           Effect.head,
           Effect.catchTag("NoSuchElementError", () =>
-            Effect.fail(new BandError({ message: "Band not found" })),
+            Effect.fail(new BandRefused({ message: "Band not found" })),
           ),
         );
       },
       Effect.catchIf(
-        (e): e is Exclude<typeof e, BandError> => e._tag !== "BandError",
-        (e) => Effect.logError("Could not update the band", e).pipe(Effect.andThen(Effect.fail(new BandError({ message: "Could not update the band" })))),
+        (e): e is Exclude<typeof e, BandRefused> => e._tag !== "BandRefused",
+        (e) => Effect.logError("Could not update the band", e).pipe(Effect.andThen(Effect.fail(new BandRefused({ message: "Could not update the band" })))),
       ),
     );
 
@@ -401,7 +401,7 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
         ]);
 
         if (me.user_id === args.userId) {
-          return yield* new BandError({ message: "Use Leave to remove yourself" });
+          return yield* new BandRefused({ message: "Use Leave to remove yourself" });
         }
 
         yield* db.selectNoFrom([
@@ -412,12 +412,12 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
         ]);
       },
       Effect.catchIf(
-        (e): e is Exclude<typeof e, BandError> => e._tag !== "BandError",
+        (e): e is Exclude<typeof e, BandRefused> => e._tag !== "BandRefused",
         (e) =>
           pgError(e)?.code === "DNIED"
-            ? Effect.fail(new BandError({ message: "You cannot remove that member" }))
+            ? Effect.fail(new BandRefused({ message: "You cannot remove that member" }))
             : Effect.logError("Could not remove member", e).pipe(
-                Effect.andThen(Effect.fail(new BandError({ message: "Could not remove member" }))),
+                Effect.andThen(Effect.fail(new BandRefused({ message: "Could not remove member" }))),
               ),
       ),
     );
@@ -437,7 +437,7 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
           .pipe(
             Effect.head,
             Effect.catchTag("NoSuchElementError", () =>
-              Effect.fail(new BandError({ message: "You are not a member of that band" })),
+              Effect.fail(new BandRefused({ message: "You are not a member of that band" })),
             ),
           );
 
@@ -448,17 +448,17 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
             .where("band_id", "=", args.bandId)
             .where("user_id", "<>", me.user_id);
           if (others.length === 0) {
-            return yield* new BandError({
+            return yield* new BandRefused({
               message: "You are the only member — delete the band to remove its data",
             });
           }
           if (args.transferTo === undefined) {
-            return yield* new BandError({
+            return yield* new BandRefused({
               message: "Choose a member to take ownership before you leave",
             });
           }
           if (!others.some((m) => m.user_id === args.transferTo)) {
-            return yield* new BandError({ message: "That person is not a member of this band" });
+            return yield* new BandRefused({ message: "That person is not a member of this band" });
           }
           yield* transferOwnership({ bandId: args.bandId, userId: args.transferTo });
         }
@@ -471,8 +471,8 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
         ]);
       },
       Effect.catchIf(
-        (e): e is Exclude<typeof e, BandError> => e._tag !== "BandError",
-        (e) => Effect.logError("Could not leave the band", e).pipe(Effect.andThen(Effect.fail(new BandError({ message: "Could not leave the band" })))),
+        (e): e is Exclude<typeof e, BandRefused> => e._tag !== "BandRefused",
+        (e) => Effect.logError("Could not leave the band", e).pipe(Effect.andThen(Effect.fail(new BandRefused({ message: "Could not leave the band" })))),
       ),
     );
 

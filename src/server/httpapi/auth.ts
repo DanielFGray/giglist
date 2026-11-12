@@ -1,17 +1,32 @@
 import { Effect } from "effect"
 import { HttpApiBuilder } from "effect/http-api"
-import { Auth } from "../services/auth"
+import { Auth, type AuthFailure, AccountError } from "../services/auth"
 import { withAuthContext } from "../db"
 import { asSignedIn, ifSignedIn } from "./scope"
 import { sessionCookiePolicy } from "./session"
 import { AuthError } from "../../api/auth"
+import { Unauthorized } from "../../api/errors"
 import { GigListApi } from "../../api/contracts"
 import { CurrentSession, sessionCookie } from "../../api/session"
 
 const ok = { ok: true as const }
 
 /** Answers a service failure with its message, as the 4xx the browser shows. */
-const asAuthError = Effect.mapError((e: { readonly message: string }) => new AuthError({ message: e.message }))
+const toAuthError = (e: { readonly message: string }) => Effect.fail(new AuthError({ message: e.message }))
+
+/** A rejected sign-in answers 401 with the service's message. */
+const toUnauthorized = (e: { readonly message: string }) => Effect.fail(new Unauthorized({ message: e.message }))
+
+/** Each service failure answers the one contract class, with the service's message. */
+const asAuthError = <A, R>(effect: Effect.Effect<A, AuthFailure | AccountError, R>) =>
+  effect.pipe(Effect.catchTags({
+  AccountError: toAuthError,
+  AccountLocked: toAuthError,
+  DuplicateAccount: toAuthError,
+  InvalidCredentials: toAuthError,
+  RegistrationFailed: toAuthError,
+  WeakPassword: toAuthError,
+}))
 
 const asUser = asSignedIn(() => new AuthError({ message: "You must be signed in" }))
 
@@ -25,7 +40,7 @@ export const AuthApiGroupLive = HttpApiBuilder.group(GigListApi, "auth", (handle
         Auth.use((auth) => auth.login(payload)).pipe(
           Effect.flatMap((result) => setSessionCookie(result.sessionId)),
           Effect.as(ok),
-          asAuthError,
+          Effect.catchTags({ AccountLocked: toUnauthorized, InvalidCredentials: toUnauthorized }),
         ),
       )
       .handle("register", ({ payload }) =>

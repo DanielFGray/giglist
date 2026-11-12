@@ -1,11 +1,12 @@
 import { Schema as S } from "effect"
-import { HttpApiMiddleware, HttpApiSchema } from "effect/http-api"
+import { HttpApiMiddleware } from "effect/http-api"
 
 // --- Rate limiting ---
 
 export class TooManyRequests extends S.TaggedError<TooManyRequests, { readonly brand: unique symbol }>()(
   "TooManyRequests",
   { message: S.String, retryAfterSeconds: S.Int },
+  { httpApiStatus: 429 },
 ) {}
 
 /**
@@ -17,5 +18,5 @@ export class TooManyRequests extends S.TaggedError<TooManyRequests, { readonly b
  */
 export class RateLimitMiddleware extends HttpApiMiddleware.Service<RateLimitMiddleware>()(
   "giglist/RateLimitMiddleware",
-  { error: TooManyRequests.pipe(HttpApiSchema.status(429)) },
+  { error: TooManyRequests },
 ) {}

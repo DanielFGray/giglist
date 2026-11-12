@@ -28,7 +28,7 @@ export class AccountError extends S.TaggedError<AccountError, { readonly brand: 
   message: S.String,
 }) {}
 
-export type AuthError =
+export type AuthFailure =
   | InvalidCredentials
   | AccountLocked
   | DuplicateAccount
@@ -102,7 +102,7 @@ export class Auth extends Context.Service<Auth>()("giglist/auth", {
 
         return { user, sessionId: session.uuid as string };
       },
-      Effect.catch((e): Effect.Effect<never, AuthError> => {
+      Effect.catch((e): Effect.Effect<never, AuthFailure> => {
         if (e._tag === "RegistrationFailed") return Effect.fail(e);
         const info = pgError(e);
         if (info?.code === "23505")

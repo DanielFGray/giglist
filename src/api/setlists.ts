@@ -127,16 +127,16 @@ export const LivePresence = S.Struct({
 export class SetlistForbidden extends S.TaggedError<
   SetlistForbidden,
   { readonly brand: unique symbol }
->()("SetlistForbidden", { message: S.String }) {}
+>()("SetlistForbidden", { message: S.String }, { httpApiStatus: 403 }) {}
 
 export class SetlistNotFound extends S.TaggedError<
   SetlistNotFound,
   { readonly brand: unique symbol }
->()("SetlistNotFound", { id: uuid }) {}
+>()("SetlistNotFound", { message: S.String, id: uuid }, { httpApiStatus: 404 }) {}
 
 const setlistErrors = [
-  SetlistNotFound.pipe(HttpApiSchema.status(404)),
-  SetlistForbidden.pipe(HttpApiSchema.status(403)),
+  SetlistNotFound,
+  SetlistForbidden,
 ]
 
 export const SetlistsApiGroup = HttpApiGroup.make("setlists")
@@ -144,14 +144,14 @@ export const SetlistsApiGroup = HttpApiGroup.make("setlists")
     HttpApiEndpoint.get("listSetlists", "/band/:bandId", {
       params: { bandId: uuid },
       success: S.Array(Setlist),
-      error: SetlistForbidden.pipe(HttpApiSchema.status(403)),
+      error: SetlistForbidden,
     }),
   )
   .add(
     HttpApiEndpoint.post("createSetlist", "/", {
       payload: SetlistInsert,
       success: Setlist.pipe(HttpApiSchema.status(201)),
-      error: SetlistForbidden.pipe(HttpApiSchema.status(403)),
+      error: SetlistForbidden,
     }),
   )
   .add(HttpApiEndpoint.get("getSetlist", "/:id", { params: { id: uuid }, success: Setlist, error: setlistErrors }))

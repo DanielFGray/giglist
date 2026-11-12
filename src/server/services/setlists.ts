@@ -5,7 +5,11 @@ import { Auth } from "./auth"
 import { Bands } from "./bands"
 import { LiveHub, type Written } from "./liveHub"
 import { between, placeAfter } from "../../components/position"
-import { LivePresence, Setlist, SetlistEntry, SetlistForbidden, SetlistNotFound, type Move, type SetlistEntryInsert, type SetlistEntryUpdate, type SetlistInsert, type SetlistUpdate } from "../../api/setlists"
+import { LivePresence, Setlist, SetlistEntry, type Move, type SetlistEntryInsert, type SetlistEntryUpdate, type SetlistInsert, type SetlistUpdate } from "../../api/setlists"
+
+export class SetlistMissing extends S.TaggedError<SetlistMissing, { readonly brand: unique symbol }>()("SetlistMissing", { message: S.String, id: S.String }) {}
+
+export class SetlistRefused extends S.TaggedError<SetlistRefused, { readonly brand: unique symbol }>()("SetlistRefused", { message: S.String }) {}
 
 const decodeSetlist = S.decodeUnknownEffect(Setlist)
 const decodeSetlists = S.decodeUnknownEffect(S.Array(Setlist))
@@ -29,13 +33,13 @@ export class Setlists extends Context.Service<Setlists>()("giglist/setlists", {
 
     const requireMember = Effect.fnUntraced(function* (bandId: string) {
       if (!(yield* bands.isMember(bandId))) {
-        return yield* new SetlistForbidden({ message: "You are not a member of that band" })
+        return yield* new SetlistRefused({ message: "You are not a member of that band" })
       }
     })
 
     /** The signed-in user, read in the request's transaction. */
     const me = auth.getMe().pipe(
-      Effect.filterOrFail(Predicate.isNotNull, () => new SetlistForbidden({ message: "You must be signed in" })),
+      Effect.filterOrFail(Predicate.isNotNull, () => new SetlistRefused({ message: "You must be signed in" })),
     )
 
     /**
@@ -242,7 +246,7 @@ export class Setlists extends Context.Service<Setlists>()("giglist/setlists", {
             ? placeAfter(rows.filter((row) => row.id !== payload.id), payload.id, payload.previous)
             : Option.none()
           if (Option.isNone(writes)) {
-            return yield* new SetlistForbidden({ message: "That entry or neighbour is not in this setlist" })
+            return yield* new SetlistRefused({ message: "That entry or neighbour is not in this setlist" })
           }
           yield* Effect.forEach(writes.value, (write) =>
             db
@@ -275,7 +279,7 @@ export class Setlists extends Context.Service<Setlists>()("giglist/setlists", {
     const reportAs = Effect.fnUntraced(function* (roomId: string, payload: typeof LivePresence.Type) {
       const user = yield* auth.getMe()
       if (!user || !(yield* hub.report(roomId, user.id, payload))) {
-        return yield* new SetlistForbidden({ message: "That connection is not yours" })
+        return yield* new SetlistRefused({ message: "That connection is not yours" })
       }
     })
 
@@ -312,7 +316,7 @@ export class Setlists extends Context.Service<Setlists>()("giglist/setlists", {
  */
 const requireBandSong = Effect.fnUntraced(function* (songId: string, bandId: string) {
   const db = yield* RequestDatabase
-  const forbidden = new SetlistForbidden({ message: "That song is not in this band" })
+  const forbidden = new SetlistRefused({ message: "That song is not in this band" })
   const song = yield* db
     .selectFrom("app_public.songs")
     .select("band_id")
@@ -370,7 +374,7 @@ const setlistOr404 = Effect.fnUntraced(function* (id: string) {
   return yield* selectSetlists().pipe(
     Effect.flatMap((query) => query.where("s.id", "=", id)),
     Effect.head,
-    Effect.catchTag("NoSuchElementError", () => Effect.fail(new SetlistNotFound({ id }))),
+    Effect.catchTag("NoSuchElementError", () => Effect.fail(new SetlistMissing({ id, message: "That setlist was not found" }))),
     Effect.flatMap((row) => decodeSetlist(row).pipe(Effect.orDie)),
   )
 })
@@ -404,7 +408,7 @@ const entryOr404 = Effect.fnUntraced(function* (entryId: string, setlistId: stri
     .where("setlist_id", "=", setlistId)
     .pipe(
       Effect.head,
-      Effect.catchTag("NoSuchElementError", () => Effect.fail(new SetlistNotFound({ id: setlistId }))),
+      Effect.catchTag("NoSuchElementError", () => Effect.fail(new SetlistMissing({ id: setlistId, message: "That setlist was not found" }))),
       Effect.flatMap((row) => decodeEntry(row).pipe(Effect.orDie)),
     )
 })

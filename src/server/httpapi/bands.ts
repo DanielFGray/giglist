@@ -1,6 +1,6 @@
 import { Effect } from "effect"
 import { HttpApiBuilder } from "effect/http-api"
-import { Bands } from "../services/bands"
+import { Bands, BandRefused } from "../services/bands"
 import { withAuthContext } from "../db"
 import { asSignedIn, ifSignedIn } from "./scope"
 import { BandError } from "../../api/bands"
@@ -9,7 +9,8 @@ import { GigListApi } from "../../api/contracts"
 const ok = { ok: true as const }
 
 /** Answers a service failure with its message, as the 4xx the browser shows. */
-const asBandError = Effect.mapError((e: { readonly message: string }) => new BandError({ message: e.message }))
+const asBandError = <A, R>(effect: Effect.Effect<A, BandRefused, R>) =>
+  effect.pipe(Effect.catchTag("BandRefused", (e) => Effect.fail(new BandError({ message: e.message }))))
 
 /**
  * A band mutation needs a user. Without one the visitor role resolves no user,

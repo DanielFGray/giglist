@@ -5,7 +5,13 @@ import { explains } from "../../charts/changes"
 import { anchorText, parseDoc } from "../../charts/doc"
 import { guessKey, importPasted } from "../../charts/lyrics"
 import { MAX_SCORE_BYTES, scoreFormat } from "../../charts/score-file"
-import { Chart, ChartConflict, ChartForbidden, ChartInvalid, type ChartRevisionInsert, type LyricsChartInsert, type ScoreUploadQuery } from "../../api/charts"
+import { Chart, type ChartRevisionInsert, type LyricsChartInsert, type ScoreUploadQuery } from "../../api/charts"
+
+export class ChartRefused extends S.TaggedError<ChartRefused, { readonly brand: unique symbol }>()("ChartRefused", { message: S.String }) {}
+
+export class ChartRevisionConflict extends S.TaggedError<ChartRevisionConflict, { readonly brand: unique symbol }>()("ChartRevisionConflict", { message: S.String }) {}
+
+export class ChartRejected extends S.TaggedError<ChartRejected, { readonly brand: unique symbol }>()("ChartRejected", { message: S.String }) {}
 
 const decodeChart = S.decodeUnknownEffect(Chart)
 const decodeCharts = S.decodeUnknownEffect(S.Array(Chart))
@@ -31,7 +37,7 @@ type ScoreUpload = S.Struct.Type<typeof ScoreUploadQuery>
  */
 export class Charts extends Context.Service<Charts>()("giglist/charts", {
   make: Effect.sync(() => {
-    const notMember = () => new ChartForbidden({ message: "You are not a member of that band" })
+    const notMember = () => new ChartRefused({ message: "You are not a member of that band" })
 
     /** Require that the song is visible to the caller. */
     const requireSong = Effect.fnUntraced(function* (songId: string) {
@@ -97,10 +103,10 @@ export class Charts extends Context.Service<Charts>()("giglist/charts", {
       const db = yield* RequestDatabase
       const [chart] = yield* db.selectFrom("app_public.charts").select(CHART_COLUMNS).where("id", "=", id).pipe(Effect.orDie)
       if (!chart) return yield* notMember()
-      if (chart.kind !== "lyrics") return yield* new ChartInvalid({ message: "Only a lyrics chart is edited here" })
+      if (chart.kind !== "lyrics") return yield* new ChartRejected({ message: "Only a lyrics chart is edited here" })
       const [newest] = yield* withNewestRevision([chart])
       if (!newest || newest.revision_id !== payload.parent_id || newest.source === null) {
-        return yield* new ChartConflict({ message: "The chart changed since you opened it" })
+        return yield* new ChartRevisionConflict({ message: "The chart changed since you opened it" })
       }
       // A null change set is stored as null: a reader derives it from the two texts
       // when it follows a mark, and keeps the stricter slide check for derived steps.
@@ -108,7 +114,7 @@ export class Charts extends Context.Service<Charts>()("giglist/charts", {
         payload.changes !== null &&
         !explains(anchorText(parseDoc(newest.source)), anchorText(parseDoc(payload.source)), payload.changes)
       ) {
-        return yield* new ChartInvalid({ message: "The changes do not explain the new text" })
+        return yield* new ChartRejected({ message: "The changes do not explain the new text" })
       }
       yield* db
         .insertInto("app_public.chart_revisions")
@@ -131,10 +137,10 @@ export class Charts extends Context.Service<Charts>()("giglist/charts", {
     /** Stores a Guitar Pro file byte for byte as a new score chart's only revision. */
     const uploadScore = Effect.fn("Charts.uploadScore")(function* (upload: ScoreUpload, payload: Uint8Array) {
       if (payload.length > MAX_SCORE_BYTES) {
-        return yield* new ChartInvalid({ message: "That file is too large for a score" })
+        return yield* new ChartRejected({ message: "That file is too large for a score" })
       }
       if (scoreFormat(payload) === null) {
-        return yield* new ChartInvalid({ message: "That is not a Guitar Pro file" })
+        return yield* new ChartRejected({ message: "That is not a Guitar Pro file" })
       }
       const db = yield* RequestDatabase
       yield* requireSong(upload.song_id)

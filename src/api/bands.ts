@@ -1,5 +1,5 @@
 import { Schema as S } from "effect"
-import { HttpApiEndpoint, HttpApiGroup, HttpApiSchema } from "effect/http-api"
+import { HttpApiEndpoint, HttpApiGroup } from "effect/http-api"
 import { RateLimitMiddleware } from "./rate-limit"
 import { SessionMiddleware } from "./session"
 
@@ -134,7 +134,7 @@ export const TransferOwnershipPayload = S.Struct({
 
 export const BandSuccess = S.Struct({ ok: S.Literals([true]) })
 
-export class BandError extends S.TaggedError<BandError, { readonly brand: unique symbol }>()("BandError", { message: S.String },) {}
+export class BandError extends S.TaggedError<BandError, { readonly brand: unique symbol }>()("BandError", { message: S.String }, { httpApiStatus: 400 }) {}
 
 // --- Bands API group ---
 
@@ -148,21 +148,21 @@ export const BandsApiGroup = HttpApiGroup.make("myBands")
     HttpApiEndpoint.get("getBandMembers", "/:bandId/members", {
       params: { bandId: S.String.check(S.isUUID()) },
       success: S.Array(BandMember),
-      error: BandError.pipe(HttpApiSchema.status(400)),
+      error: BandError,
     }),
   )
   .add(
     HttpApiEndpoint.post("createBand", "/", {
       payload: CreateBandPayload,
       success: BandInfo,
-      error: BandError.pipe(HttpApiSchema.status(400)),
+      error: BandError,
     }),
   )
   .add(
     HttpApiEndpoint.delete("deleteBand", "/:bandId", {
       params: { bandId: S.String.check(S.isUUID()) },
       success: BandSuccess,
-      error: BandError.pipe(HttpApiSchema.status(400)),
+      error: BandError,
     }),
   )
   .add(
@@ -170,7 +170,7 @@ export const BandsApiGroup = HttpApiGroup.make("myBands")
       params: { bandId: S.String.check(S.isUUID()) },
       payload: UpdateBandPayload,
       success: BandInfo,
-      error: BandError.pipe(HttpApiSchema.status(400)),
+      error: BandError,
     }),
   )
   .add(
@@ -178,7 +178,7 @@ export const BandsApiGroup = HttpApiGroup.make("myBands")
       params: { bandId: S.String.check(S.isUUID()) },
       payload: LeaveBandPayload,
       success: BandSuccess,
-      error: BandError.pipe(HttpApiSchema.status(400)),
+      error: BandError,
     }),
   )
   .add(
@@ -186,7 +186,7 @@ export const BandsApiGroup = HttpApiGroup.make("myBands")
       params: { bandId: S.String.check(S.isUUID()) },
       payload: TransferOwnershipPayload,
       success: BandSuccess,
-      error: BandError.pipe(HttpApiSchema.status(400)),
+      error: BandError,
     }),
   )
   .add(
@@ -196,7 +196,7 @@ export const BandsApiGroup = HttpApiGroup.make("myBands")
         userId: S.String.check(S.isUUID()),
       },
       success: BandSuccess,
-      error: BandError.pipe(HttpApiSchema.status(400)),
+      error: BandError,
     }),
   )
   .add(
@@ -209,27 +209,27 @@ export const BandsApiGroup = HttpApiGroup.make("myBands")
       params: { invitationId: S.String.check(S.isUUID()) },
       payload: AcceptInvitationPayload,
       success: AcceptInvitationSuccess,
-      error: BandError.pipe(HttpApiSchema.status(400)),
+      error: BandError,
     }),
   )
   .add(
     HttpApiEndpoint.post("declineInvitation", "/invitations/:invitationId/decline", {
       params: { invitationId: S.String.check(S.isUUID()) },
-      error: BandError.pipe(HttpApiSchema.status(400)),
+      error: BandError,
     }),
   )
   .add(
     HttpApiEndpoint.post("inviteToBand", "/:bandId/invite", {
       params: { bandId: S.String.check(S.isUUID()) },
       payload: InvitePayload,
-      error: BandError.pipe(HttpApiSchema.status(400)),
+      error: BandError,
     }).middleware(RateLimitMiddleware),
   )
   .add(
     HttpApiEndpoint.get("listPendingInvitations", "/:bandId/invitations", {
       params: { bandId: S.String.check(S.isUUID()) },
       success: S.Array(PendingInvitation),
-      error: BandError.pipe(HttpApiSchema.status(400)),
+      error: BandError,
     }),
   )
   .add(
@@ -239,7 +239,7 @@ export const BandsApiGroup = HttpApiGroup.make("myBands")
         invitationId: S.String.check(S.isUUID()),
       },
       success: BandSuccess,
-      error: BandError.pipe(HttpApiSchema.status(400)),
+      error: BandError,
     }),
   )
   .middleware(SessionMiddleware)
@@ -248,14 +248,14 @@ export const BandsApiGroup = HttpApiGroup.make("myBands")
 export class PublicBandNotFound extends S.TaggedError<
   PublicBandNotFound,
   { readonly brand: unique symbol }
->()("PublicBandNotFound", { slug: S.String }) {}
+>()("PublicBandNotFound", { message: S.String, slug: S.String }, { httpApiStatus: 404 }) {}
 
 export const PublicBandsApiGroup = HttpApiGroup.make("publicBands")
   .add(
     HttpApiEndpoint.get("getPublicBand", "/:slug", {
       params: { slug: S.String.pipe(S.check(S.isMinLength(1))) },
       success: PublicBandProfile,
-      error: PublicBandNotFound.pipe(HttpApiSchema.status(404)),
+      error: PublicBandNotFound,
     }),
   )
   .prefix("/api/public/bands")

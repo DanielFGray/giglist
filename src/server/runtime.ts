@@ -26,6 +26,7 @@ import { Setlists } from "./services/setlists";
 import { Gigs } from "./services/gigs";
 import { SessionMiddlewareLive } from "./httpapi/session";
 import { RateLimitMiddlewareLive } from "./httpapi/rateLimit";
+import { FailureBoundaryLive } from "./failureBoundary";
 import { HealthLive } from "./httpapi/health";
 import { TelemetryLive } from "./telemetry";
 import { nodeEnv } from "./config";
@@ -36,6 +37,7 @@ const ApiLive = HttpApiBuilder.layer(GigListApi).pipe(
   Layer.provide(Layer.mergeAll(AuthApiGroupLive, BandsApiGroupLive, PublicBandsApiGroupLive, PublicUsersApiGroupLive, SongsApiGroupLive, SetlistsApiGroupLive, GigsApiGroupLive, ChartsApiGroupLive, ScoresApiGroupLive, MarksApiGroupLive, StampsApiGroupLive)),
   Layer.provide(SessionMiddlewareLive),
   Layer.provide(RateLimitMiddlewareLive),
+  Layer.provide(FailureBoundaryLive),
 );
 
 // Adapted from postgres.garden's conditional testing import. Production never

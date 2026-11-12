@@ -1,8 +1,10 @@
 import { Context, Effect, Layer, Schema as S, Struct } from "effect"
 import { RequestDatabase } from "../db"
 import { Bands } from "./bands"
-import { Song, SongForbidden, type SongInsert, type SongUpdate } from "../../api/songs"
+import { Song, type SongInsert, type SongUpdate } from "../../api/songs"
 import { songCreate, songDelete, songFindByBandId, songFindById } from "../../../generated/queries.js"
+
+export class SongRefused extends S.TaggedError<SongRefused, { readonly brand: unique symbol }>()("SongRefused", { message: S.String }) {}
 
 const decodeSong = S.decodeUnknownEffect(Song)
 const decodeSongs = S.decodeUnknownEffect(S.Array(Song))
@@ -16,7 +18,7 @@ export class Songs extends Context.Service<Songs>()("giglist/songs", {
   make: Effect.gen(function* () {
     const bands = yield* Bands
 
-    const notMember = () => new SongForbidden({ message: "You are not a member of that band" })
+    const notMember = () => new SongRefused({ message: "You are not a member of that band" })
 
     const requireMember = Effect.fnUntraced(function* (bandId: string) {
       if (!(yield* bands.isMember(bandId))) return yield* notMember()

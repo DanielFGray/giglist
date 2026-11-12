@@ -1,10 +1,8 @@
-import { Context, Effect, Layer, Semaphore, Stream } from "effect";
+import { Context, Effect, Layer, Schema as S, Semaphore, Stream } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
 import { ChildProcess, ChildProcessSpawner } from "effect/process";
 import * as BunServices from "@effect/platform-bun/BunServices";
-import { ChartInvalid } from "../../api/charts"
-;
 import {
   MAX_SCAN_BYTES,
   MAX_SCAN_PAGES,
@@ -13,6 +11,8 @@ import {
   wordsFromPdf,
   wordsFromTesseract,
 } from "../../charts/scanned";
+
+export class ChartFileRejected extends S.TaggedError<ChartFileRejected, { readonly brand: unique symbol }>()("ChartFileRejected", { message: S.String }) {}
 
 /** Longer than any one page takes; a program still running then is stuck. */
 const TOOL_TIMEOUT = "60 seconds";
@@ -51,14 +51,14 @@ export class ChartReader extends Context.Service<ChartReader>()("giglist/chartRe
           { concurrency: "unbounded" },
         );
         if (exitCode !== ChildProcessSpawner.ExitCode(0)) {
-          return yield* new ChartInvalid({ message: "That file could not be read" });
+          return yield* new ChartFileRejected({ message: "That file could not be read" });
         }
         return text;
       },
       Effect.scoped,
       Effect.timeoutOrElse({
         duration: TOOL_TIMEOUT,
-        orElse: () => Effect.fail(new ChartInvalid({ message: "Reading that file took too long" })),
+        orElse: () => Effect.fail(new ChartFileRejected({ message: "Reading that file took too long" })),
       }),
       Effect.catchTag("PlatformError", Effect.die),
     );
@@ -93,16 +93,16 @@ export class ChartReader extends Context.Service<ChartReader>()("giglist/chartRe
 
     const read = Effect.fn("ChartReader.read")(function* (bytes: Uint8Array) {
       if (bytes.length > MAX_SCAN_BYTES)
-        return yield* new ChartInvalid({ message: "That file is too large" });
+        return yield* new ChartFileRejected({ message: "That file is too large" });
       const format = scanFormat(bytes);
       if (format === null)
-        return yield* new ChartInvalid({ message: "That is not a PDF or an image" });
+        return yield* new ChartFileRejected({ message: "That is not a PDF or an image" });
       const dir = yield* fs.makeTempDirectoryScoped({ prefix: "setlist-scan-" }).pipe(Effect.orDie);
       const file = path.join(dir, format === "pdf" ? "upload.pdf" : "upload");
       yield* fs.writeFile(file, bytes).pipe(Effect.orDie);
       const text = format === "pdf" ? yield* readPdf(dir, file) : yield* ocr(file);
       if (!/\p{L}/u.test(text))
-        return yield* new ChartInvalid({ message: "No chords or lyrics were found in that file" });
+        return yield* new ChartFileRejected({ message: "No chords or lyrics were found in that file" });
       return text.trimEnd();
     }, Effect.scoped);
 

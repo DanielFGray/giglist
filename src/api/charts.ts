@@ -32,7 +32,7 @@ export const LyricsChartInsert = S.Struct({
 
 export class ChartForbidden extends S.TaggedError<ChartForbidden, { readonly brand: unique symbol }>()("ChartForbidden", {
   message: S.String,
-}) {}
+}, { httpApiStatus: 403 }) {}
 
 /** One replacement in a change set: `[from, to)` of the earlier anchor text became `insert` characters; optional `source` names the exact earlier anchor range copied as a move. */
 export const ChartChange = S.Struct({
@@ -57,12 +57,12 @@ export const ChartRevisionInsert = S.Struct({
 /** Someone saved a newer revision since the editor loaded the chart. */
 export class ChartConflict extends S.TaggedError<ChartConflict, { readonly brand: unique symbol }>()("ChartConflict", {
   message: S.String,
-}) {}
+}, { httpApiStatus: 409 }) {}
 
 /** The revision is not one the editor could have made from its parent. */
 export class ChartInvalid extends S.TaggedError<ChartInvalid, { readonly brand: unique symbol }>()("ChartInvalid", {
   message: S.String,
-}) {}
+}, { httpApiStatus: 400 }) {}
 
 /** An uploaded file as the raw request or response body. */
 const fileBytes = S.Uint8Array.pipe(HttpApiSchema.asUint8Array({ contentType: "application/octet-stream" }))
@@ -72,14 +72,14 @@ export const ChartsApiGroup = HttpApiGroup.make("charts")
     HttpApiEndpoint.get("listCharts", "/song/:songId", {
       params: { songId: S.String.check(S.isUUID()) },
       success: S.Array(Chart),
-      error: ChartForbidden.pipe(HttpApiSchema.status(403)),
+      error: ChartForbidden,
     }),
   )
   .add(
     HttpApiEndpoint.post("createLyricsChart", "/", {
       payload: LyricsChartInsert,
       success: Chart.pipe(HttpApiSchema.status(201)),
-      error: ChartForbidden.pipe(HttpApiSchema.status(403)),
+      error: ChartForbidden,
     }),
   )
   .add(
@@ -88,10 +88,7 @@ export const ChartsApiGroup = HttpApiGroup.make("charts")
     HttpApiEndpoint.post("readChartFile", "/read", {
       payload: fileBytes,
       success: S.Struct({ text: S.String }),
-      error: [
-        ChartForbidden.pipe(HttpApiSchema.status(403)),
-        ChartInvalid.pipe(HttpApiSchema.status(400)),
-      ],
+      error: [ChartForbidden, ChartInvalid],
     }),
   )
   .add(
@@ -100,16 +97,16 @@ export const ChartsApiGroup = HttpApiGroup.make("charts")
       payload: ChartRevisionInsert,
       success: Chart.pipe(HttpApiSchema.status(201)),
       error: [
-        ChartForbidden.pipe(HttpApiSchema.status(403)),
-        ChartConflict.pipe(HttpApiSchema.status(409)),
-        ChartInvalid.pipe(HttpApiSchema.status(400)),
+        ChartForbidden,
+        ChartConflict,
+        ChartInvalid,
       ],
     }),
   )
   .add(
     HttpApiEndpoint.delete("deleteChart", "/:id", {
       params: { id: S.String.check(S.isUUID()) },
-      error: ChartForbidden.pipe(HttpApiSchema.status(403)),
+      error: ChartForbidden,
     }),
   )
   .middleware(SessionMiddleware)
@@ -131,10 +128,7 @@ export const ScoresApiGroup = HttpApiGroup.make("scores")
       query: ScoreUploadQuery,
       payload: fileBytes,
       success: Chart.pipe(HttpApiSchema.status(201)),
-      error: [
-        ChartForbidden.pipe(HttpApiSchema.status(403)),
-        ChartInvalid.pipe(HttpApiSchema.status(400)),
-      ],
+      error: [ChartForbidden, ChartInvalid],
     }),
   )
   .add(
@@ -142,7 +136,7 @@ export const ScoresApiGroup = HttpApiGroup.make("scores")
     HttpApiEndpoint.get("scoreFile", "/:revisionId/file", {
       params: { revisionId: S.String.check(S.isUUID()) },
       success: fileBytes,
-      error: ChartForbidden.pipe(HttpApiSchema.status(403)),
+      error: ChartForbidden,
     }),
   )
   .middleware(SessionMiddleware)

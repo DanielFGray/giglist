@@ -64,12 +64,13 @@ export const GigEntry = S.Struct({
 })
 
 export class GigNotFound extends S.TaggedError<GigNotFound, { readonly brand: unique symbol }>()("GigNotFound", {
+  message: S.String,
   id: uuid,
-}) {}
+}, { httpApiStatus: 404 }) {}
 
 const gigErrors = [
-  GigNotFound.pipe(HttpApiSchema.status(404)),
-  SetlistForbidden.pipe(HttpApiSchema.status(403)),
+  GigNotFound,
+  SetlistForbidden,
 ]
 
 export const GigsApiGroup = HttpApiGroup.make("gigs")
@@ -77,14 +78,14 @@ export const GigsApiGroup = HttpApiGroup.make("gigs")
     HttpApiEndpoint.get("listGigs", "/band/:bandId", {
       params: { bandId: uuid },
       success: S.Array(Gig),
-      error: SetlistForbidden.pipe(HttpApiSchema.status(403)),
+      error: SetlistForbidden,
     }),
   )
   .add(
     HttpApiEndpoint.post("createGig", "/", {
       payload: GigInsert,
       success: Gig.pipe(HttpApiSchema.status(201)),
-      error: SetlistForbidden.pipe(HttpApiSchema.status(403)),
+      error: SetlistForbidden,
     }),
   )
   .add(HttpApiEndpoint.get("getGig", "/:id", { params: { id: uuid }, success: Gig, error: gigErrors }))

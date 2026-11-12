@@ -13,7 +13,7 @@ export const PublicBandsApiGroupLive = HttpApiBuilder.group(GigListApi, "publicB
   handlers.handle("getPublicBand", ({ params: { slug } }) =>
     Bands.use((bands) => bands.getPublicBandProfile(slug)).pipe(
       withAuthContext,
-      Effect.catchTag("PublicBandMissing", (e) => Effect.fail(new PublicBandNotFound({ slug: e.slug }))),
+      Effect.catchTag("PublicBandMissing", (e) => Effect.fail(new PublicBandNotFound({ message: "That band has no public page", slug: e.slug }))),
     ),
   ),
 )

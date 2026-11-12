@@ -13,7 +13,7 @@ export const PublicUsersApiGroupLive = HttpApiBuilder.group(GigListApi, "publicU
   handlers.handle("getPublicUser", ({ params: { username } }) =>
     PublicUsers.use((users) => users.getPublicUserProfile(username)).pipe(
       withAuthContext,
-      Effect.catchTag("PublicUserMissing", (e) => Effect.fail(new PublicUserNotFound({ username: e.username }))),
+      Effect.catchTag("PublicUserMissing", (e) => Effect.fail(new PublicUserNotFound({ message: "That user has no public page", username: e.username }))),
     ),
   ),
 )
