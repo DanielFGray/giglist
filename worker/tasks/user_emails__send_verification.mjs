@@ -9,7 +9,7 @@ const MIN_INTERVAL = 1000 * 60 * 3
 }} UserEmailsSendVerificationPayload */
 
 /** @type {Task} */
-export default async (inPayload, { addJob, withPgClient }) => {
+export default async (inPayload, { addJob, withPgClient, logger }) => {
   /** @type {UserEmailsSendVerificationPayload} */
   const payload = inPayload
   const { id: userEmailId } = payload
@@ -37,7 +37,7 @@ export default async (inPayload, { addJob, withPgClient }) => {
     ),
   )
   if (!userEmail) {
-    console.warn(
+    logger.warn(
       `user_emails__send_verification task for non-existent userEmail ignored (userEmailId = ${userEmailId})`,
     )
     // No longer relevant
@@ -48,7 +48,7 @@ export default async (inPayload, { addJob, withPgClient }) => {
     seconds_since_verification_sent != null &&
     seconds_since_verification_sent < MIN_INTERVAL / 1000
   ) {
-    console.log('Email sent too recently')
+    logger.info('Email sent too recently')
     return
   }
 

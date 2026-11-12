@@ -455,7 +455,7 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
      * refuse a non-member; this lets a caller answer 403 instead of an empty
      * result. It runs in the caller's transaction, so both agree on the user.
      */
-    const isMember = Effect.fnUntraced(function* (bandId: string) {
+    const isMember = Effect.fn("Bands.isMember")(function* (bandId: string) {
       const db = yield* RequestDatabase;
       // `current_user_member_band_ids()` is a `setof uuid`; `select * from fn() as ids`
       // names its one column after the alias.

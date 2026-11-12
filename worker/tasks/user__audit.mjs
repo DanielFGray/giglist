@@ -44,7 +44,7 @@ import packageJson from '../../package.json' with { type: 'json' }
 }} UserAuditPayload */
 
 /** @type {Task} */
-export default async (rawPayload, { addJob, withPgClient, job }) => {
+export default async (rawPayload, { addJob, withPgClient, job, logger }) => {
   /** @type {UserAuditPayload} */
   const payload = rawPayload
   /** @type string */
@@ -85,7 +85,7 @@ export default async (rawPayload, { addJob, withPgClient, job }) => {
     default: {
       // Ensure we've handled all cases above
       const neverPayload = payload
-      console.error(`Audit action '${neverPayload.type}' not understood; ignoring.`)
+      logger.error(`Audit action '${neverPayload.type}' not understood; ignoring.`)
       return
     }
   }
@@ -97,13 +97,13 @@ export default async (rawPayload, { addJob, withPgClient, job }) => {
   )
 
   if (!user) {
-    console.error(
+    logger.error(
       `User '${payload.user_id}' no longer exists. (Tried to audit: ${actionDescription})`,
     )
     return
   }
   if (Math.abs(Number(user.created_at) - Number(job.created_at)) < 2) {
-    console.info(
+    logger.info(
       `Not sending audit announcement for user '${payload.user_id}' because it occurred immediately after account creation. (Tried to audit: ${actionDescription})`,
     )
     return

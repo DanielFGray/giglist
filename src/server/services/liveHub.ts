@@ -55,11 +55,10 @@ export class LiveHub extends Context.Service<LiveHub>()("giglist/liveHub", {
       })
 
     /** Tells everyone watching `roomId` that `by` wrote it. */
-    const changed = (roomId: string, by: string | null): Effect.Effect<void> =>
-      Effect.gen(function* () {
-        const room = (yield* Ref.get(rooms)).get(roomId)
-        if (room) yield* PubSub.publish(room.events, { kind: "changed", by })
-      })
+    const changed = Effect.fn("LiveHub.changed")(function* (roomId: string, by: string | null) {
+      const room = (yield* Ref.get(rooms)).get(roomId)
+      if (room) yield* PubSub.publish(room.events, { kind: "changed", by })
+    })
 
     /**
      * The events of one connection. The viewer joins when the stream starts and
@@ -89,29 +88,28 @@ export class LiveHub extends Context.Service<LiveHub>()("giglist/liveHub", {
               }),
             ),
           )
-        }),
+        }).pipe(Effect.withSpan("LiveHub.watch")),
       )
 
     /** Updates what a connection is doing; false when `userId` has no connection `client` in this room. */
-    const report = (
+    const report = Effect.fn("LiveHub.report")(function* (
       roomId: string,
       userId: string,
       update: Pick<Viewer, "client" | "mode" | "at">,
-    ): Effect.Effect<boolean> =>
-      Effect.gen(function* () {
-        const room = (yield* Ref.get(rooms)).get(roomId)
-        const entry = room?.viewers.get(update.client)
-        if (!room || !entry || entry.userId !== userId) return false
-        entry.viewer = { ...entry.viewer, mode: update.mode, at: update.at }
-        yield* announce(room)
-        return true
-      })
+    ) {
+      const room = (yield* Ref.get(rooms)).get(roomId)
+      const entry = room?.viewers.get(update.client)
+      if (!room || !entry || entry.userId !== userId) return false
+      entry.viewer = { ...entry.viewer, mode: update.mode, at: update.at }
+      yield* announce(room)
+      return true
+    })
 
     /** Tells every room of a committed write who wrote it, and gives back the write's result. */
-    const afterWrite = <A>(written: Written<A>) =>
-      Effect.forEach(written.rooms, (roomId) => changed(roomId, written.by), { discard: true }).pipe(
-        Effect.as(written.result),
-      )
+    const afterWrite = Effect.fn("LiveHub.afterWrite")(function* <A>(written: Written<A>) {
+      yield* Effect.forEach(written.rooms, (roomId) => changed(roomId, written.by), { discard: true })
+      return written.result
+    })
 
     return { changed, watch, report, afterWrite }
   }),

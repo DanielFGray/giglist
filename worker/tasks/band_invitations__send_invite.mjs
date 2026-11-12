@@ -12,7 +12,7 @@
  * primary email.
  * @type {Task}
  */
-export default async (inPayload, { addJob, withPgClient }) => {
+export default async (inPayload, { addJob, withPgClient, logger }) => {
   /** @type {BandInvitationSendInvitePayload} */
   const payload = inPayload
   const {
@@ -35,11 +35,11 @@ export default async (inPayload, { addJob, withPgClient }) => {
   )
   // Accepted or declined before the job ran, so there is nothing to send.
   if (!invitation) {
-    console.error('Invitation not found; aborting')
+    logger.error('Invitation not found; aborting')
     return
   }
   if (!invitation.email) {
-    console.error('Invitation has no address to send to; aborting')
+    logger.error('Invitation has no address to send to; aborting')
     return
   }
 

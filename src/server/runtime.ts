@@ -28,7 +28,7 @@ import { SessionMiddlewareLive } from "./httpapi/session";
 import { RateLimitMiddlewareLive } from "./httpapi/rateLimit";
 import { FailureBoundaryLive } from "./failureBoundary";
 import { HealthLive } from "./httpapi/health";
-import { TelemetryLive } from "./telemetry";
+import { RequestSpanHeaders, TracingLayer } from "./tracing";
 import { nodeEnv } from "./config";
 import { RateLimiterValkey } from "./services/rateLimiter";
 import { Worker } from "../../worker/worker";
@@ -100,8 +100,10 @@ export const ServerLive = HttpRouter.serve(
   Layer.provide(AppLayer),
   // Merged rather than provided: telemetry services are references with
   // defaults, so they are not requirements of the server layer. Merging keeps
-  // the exporters in every handler's context.
-  Layer.provideMerge(TelemetryLive),
+  // the exporters, and the request span headers, in every handler's context.
+  // The worker is built under this layer too, so its jobs trace through the
+  // same exporter.
+  Layer.provideMerge(Layer.mergeAll(TracingLayer, RequestSpanHeaders)),
   // One limiter for the API middleware and the worker's mail cap.
   Layer.provide(RateLimiterValkey),
 );

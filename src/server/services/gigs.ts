@@ -38,7 +38,7 @@ export class Gigs extends Context.Service<Gigs>()("giglist/gigs", {
         return {
           result,
           rooms: [...new Set([gigId, ...before, ...after])],
-          by: yield* setlists.writerName,
+          by: yield* setlists.writerName(),
         } satisfies Written<A>
       })
 
@@ -213,7 +213,7 @@ export class Gigs extends Context.Service<Gigs>()("giglist/gigs", {
     /** The gig's event stream; see `Setlists.watch`. */
     const watch = Effect.fn("Gigs.watch")(function* (id: string, client: string) {
       yield* gigOr404(id)
-      return hub.watch(id, viewing(yield* setlists.me, client))
+      return hub.watch(id, viewing(yield* setlists.me(), client))
     })
 
     /** Records what one of the caller's connections to the gig is doing. */
@@ -222,10 +222,14 @@ export class Gigs extends Context.Service<Gigs>()("giglist/gigs", {
       yield* setlists.reportAs(id, payload)
     })
 
+    const get = Effect.fn("Gigs.get")(function* (id: string) {
+      return yield* gigOr404(id)
+    })
+
     return {
       list,
       create,
-      get: gigOr404,
+      get,
       update,
       remove,
       addSetlist,

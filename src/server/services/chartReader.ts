@@ -43,7 +43,7 @@ export class ChartReader extends Context.Service<ChartReader>()("giglist/chartRe
     const permits = yield* Semaphore.make(MAX_CONCURRENT_READS);
 
     /** The standard output of a program; a non-zero exit means it could not read the file. */
-    const output = Effect.fn(
+    const output = Effect.fnUntraced(
       function* (command: string, args: ReadonlyArray<string>) {
         const handle = yield* spawner.spawn(ChildProcess.make(command, args, { stderr: "ignore" }));
         const [text, exitCode] = yield* Effect.all(
@@ -91,7 +91,7 @@ export class ChartReader extends Context.Service<ChartReader>()("giglist/chartRe
       return texts.join("\n\n");
     });
 
-    const read = Effect.fn("ChartReader.read")(function* (bytes: Uint8Array) {
+    const scan = Effect.fnUntraced(function* (bytes: Uint8Array) {
       if (bytes.length > MAX_SCAN_BYTES)
         return yield* new ChartFileRejected({ message: "That file is too large" });
       const format = scanFormat(bytes);
@@ -106,7 +106,11 @@ export class ChartReader extends Context.Service<ChartReader>()("giglist/chartRe
       return text.trimEnd();
     }, Effect.scoped);
 
-    return { read: (bytes: Uint8Array) => permits.withPermit(read(bytes)) };
+    const read = Effect.fn("ChartReader.read")(function* (bytes: Uint8Array) {
+      return yield* permits.withPermit(scan(bytes));
+    });
+
+    return { read };
   }),
 }) {
   static readonly layer = Layer.effect(this, this.make).pipe(Layer.provide(BunServices.layer));

@@ -3,11 +3,15 @@ import sendInvite from "./band_invitations__send_invite.mjs"
 
 const INVITATION_ID = "22222222-2222-2222-2222-222222222222"
 
-/** Runs the task against one invitation row (or none) and returns the jobs it queued. */
-const run = async (row) => {
+/**
+ * Runs the task against one invitation row (or none) and returns the jobs it
+ * queued. Each line the task logs is pushed to `logged` as [level, message].
+ */
+const run = async (row, logged = []) => {
   const previousRootUrl = process.env.VITE_ROOT_URL
   process.env.VITE_ROOT_URL = "https://giglist.example"
   const jobs = []
+  const record = (level) => (message) => logged.push([level, message])
   try {
     await sendInvite(
       { id: INVITATION_ID },
@@ -19,6 +23,7 @@ const run = async (row) => {
           fn({
             query: async () => ({ rows: row ? [row] : [] }),
           }),
+        logger: { error: record("error"), warn: record("warn"), info: record("info") },
       },
     )
   } finally {
@@ -68,12 +73,16 @@ describe("band_invitations__send_invite", () => {
   })
 
   test("queues nothing when the invitation is gone, for example after it was declined", async () => {
-    expect(await run(null)).toEqual([])
+    const logged = []
+    expect(await run(null, logged)).toEqual([])
+    expect(logged).toEqual([["error", "Invitation not found; aborting"]])
   })
 
   test("queues nothing when the user has no primary email to send to", async () => {
+    const logged = []
     expect(
-      await run({ band_name: "The Setlisters", code: null, email: null }),
+      await run({ band_name: "The Setlisters", code: null, email: null }, logged),
     ).toEqual([])
+    expect(logged).toEqual([["error", "Invitation has no address to send to; aborting"]])
   })
 })

@@ -8,7 +8,7 @@
 }} UserForgotPasswordPayload */
 
 /** @type {Task} */
-export default async (inPayload, { addJob, withPgClient }) => {
+export default async (inPayload, { addJob, withPgClient, logger }) => {
   /** @type {UserForgotPasswordPayload} */
   const payload = inPayload
   const { id: userId, email, token } = payload
@@ -25,7 +25,7 @@ export default async (inPayload, { addJob, withPgClient }) => {
     ),
   )
   if (!user) {
-    console.error('User not found; aborting')
+    logger.error('User not found; aborting')
     return
   }
 

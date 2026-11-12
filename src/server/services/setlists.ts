@@ -31,16 +31,18 @@ export class Setlists extends Context.Service<Setlists>()("giglist/setlists", {
     const auth = yield* Auth
     const hub = yield* LiveHub
 
-    const requireMember = Effect.fnUntraced(function* (bandId: string) {
+    const requireMember = Effect.fn("Setlists.requireMember")(function* (bandId: string) {
       if (!(yield* bands.isMember(bandId))) {
         return yield* new SetlistRefused({ message: "You are not a member of that band" })
       }
     })
 
     /** The signed-in user, read in the request's transaction. */
-    const me = auth.getMe().pipe(
-      Effect.filterOrFail(Predicate.isNotNull, () => new SetlistRefused({ message: "You must be signed in" })),
-    )
+    const me = Effect.fn("Setlists.me")(function* () {
+      return yield* auth.getMe().pipe(
+        Effect.filterOrFail(Predicate.isNotNull, () => new SetlistRefused({ message: "You must be signed in" })),
+      )
+    })
 
     /**
      * Runs a write to the setlist, and names the rooms that show it. The gigs
@@ -57,12 +59,14 @@ export class Setlists extends Context.Service<Setlists>()("giglist/setlists", {
         return {
           result,
           rooms: [setlistId, ...gigs.map((gig) => gig.gig_id)],
-          by: yield* writerName,
+          by: yield* writerName(),
         } satisfies Written<A>
       })
 
     /** The username of the request's user, read in the write's own transaction. */
-    const writerName = auth.getMe().pipe(Effect.map((user) => user?.username ?? null))
+    const writerName = Effect.fn("Setlists.writerName")(function* () {
+      return (yield* auth.getMe())?.username ?? null
+    })
 
     const list = Effect.fn("Setlists.list")(function* (bandId: string) {
       yield* requireMember(bandId)
@@ -260,7 +264,7 @@ export class Setlists extends Context.Service<Setlists>()("giglist/setlists", {
      */
     const watch = Effect.fn("Setlists.watch")(function* (id: string, client: string) {
       yield* setlistOr404(id)
-      return hub.watch(id, viewing(yield* me, client))
+      return hub.watch(id, viewing(yield* me(), client))
     })
 
     /** Records what one of the caller's connections to the setlist is doing. */
@@ -270,11 +274,15 @@ export class Setlists extends Context.Service<Setlists>()("giglist/setlists", {
     })
 
     /** Records what the caller's connection to a room is doing; another user's connection is refused. */
-    const reportAs = Effect.fnUntraced(function* (roomId: string, payload: typeof LivePresence.Type) {
+    const reportAs = Effect.fn("Setlists.reportAs")(function* (roomId: string, payload: typeof LivePresence.Type) {
       const user = yield* auth.getMe()
       if (!user || !(yield* hub.report(roomId, user.id, payload))) {
         return yield* new SetlistRefused({ message: "That connection is not yours" })
       }
+    })
+
+    const get = Effect.fn("Setlists.get")(function* (id: string) {
+      return yield* setlistOr404(id)
     })
 
     return {
@@ -284,7 +292,7 @@ export class Setlists extends Context.Service<Setlists>()("giglist/setlists", {
       reportAs,
       list,
       create,
-      get: setlistOr404,
+      get,
       update,
       copy,
       duplicate,
