@@ -102,5 +102,9 @@
   "projectName": "GigList",
   "trustedDependencies": [
     "@ast-grep/cli"
+  ],
+  "templateCopies": [
+    "rules",
+    "rule-tests"
   ]
 }
