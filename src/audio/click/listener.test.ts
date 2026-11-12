@@ -1,4 +1,4 @@
-import { expect, it } from "bun:test"
+import { expect, it } from "vitest"
 import { Listener } from "./listener"
 import { bassNote, drum, keyNote, mix, noise, pluck, SAMPLE_RATE } from "./synth"
 import type { Placement } from "./placement"

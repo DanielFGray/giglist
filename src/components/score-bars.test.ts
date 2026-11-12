@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test"
+import { describe, expect, it } from "vitest"
 import { barsLabel, barsOfTicks, sameBars, selectedBars, ticksOfBars, type BarTicks } from "./score-bars"
 
 const bars: Array<BarTicks> = [0, 1, 2, 3].map((i) => ({ start: i * 100, end: (i + 1) * 100 }))

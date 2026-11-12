@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, test } from "vitest"
 import { ChordProParser } from "chordsheetjs"
 import { MusicalKeys } from "../api/songs"
 import { renderLyrics } from "./lyrics"

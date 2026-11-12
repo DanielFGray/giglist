@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, test } from "vitest"
 import sendInvite from "./band_invitations__send_invite.mjs"
 
 const INVITATION_ID = "22222222-2222-2222-2222-222222222222"

@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, test } from "vitest"
 import { readFileSync } from "node:fs"
 import { ChordLyricsPair, ChordProParser, Literal, Tag } from "chordsheetjs"
 import { composeChanges, explains, type Change } from "./changes"
@@ -66,7 +66,7 @@ describe("edits", () => {
 
   test("placing a chord on a chorded word replaces it", () => {
     const edit = placeChord(doc, i, 0, "D")
-    expect(serializeDoc(edit.doc).split("\n")[i]).toStartWith("[D]Amazing")
+    expect(serializeDoc(edit.doc).split("\n")[i]).toMatch(/^\[D\]Amazing/)
     expect(edit.changes).toHaveLength(1)
     expectExact(doc, edit)
   })

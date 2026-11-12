@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, test } from "vitest"
 import { readFileSync } from "node:fs"
 import { anchorText, deleteLine, insertLineAfter, parseDoc, placeChord, type Edit } from "./doc"
 import { follow, type Step } from "./follow"

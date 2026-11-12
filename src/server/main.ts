@@ -1,3 +1,4 @@
+// @entrypoint: the server process, which launches the layer that serves the API and runs the worker.
 import { Config, Effect, Layer } from "effect";
 import { BunRedis, BunRuntime } from "@effect/platform-bun";
 import * as BunHttpServer from "@effect/platform-bun/BunHttpServer";

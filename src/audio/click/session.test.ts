@@ -1,4 +1,4 @@
-import { describe, expect, it, setDefaultTimeout } from "bun:test"
+import { describe, expect, it, vi } from "vitest"
 import { ACCENT_GAIN, BEAT_GAIN, BEATS_PER_BAR, COUNT_IN_BEATS } from "./click"
 import { Session, type SessionEvent, type SessionPlan } from "./session"
 import { drum, keyNote, mix, mixClick, noise, pluck, SAMPLE_RATE } from "./synth"
@@ -63,7 +63,7 @@ const listen = ({ latencySeconds, notes, bpm = 100, subdivision = 1, clickLevel 
 const OFFSETS_MS = [-35, -20, -8, -3, 0, 0, 2, 5, 11, 18, 30, 0]
 
 // Each test analyses up to 25 s of audio, several times; under load that exceeds the 5 s default.
-setDefaultTimeout(30_000)
+vi.setConfig({ testTimeout: 30_000 })
 
 const latencyOf = (events: ReadonlyArray<SessionEvent>) => events.flatMap((event) => (event._tag === "MeasuredLatency" ? [event.latencyMs] : []))
 const notesOf = (events: ReadonlyArray<SessionEvent>) => events.flatMap((event) => (event._tag === "Note" ? [event.atMs] : []))

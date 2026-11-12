@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, test } from "vitest"
 import { anchorText, insertLineAfter, parseDoc, serializeDoc, deleteLine } from "./doc"
 import { boundsOf, inkPath, markResolver, near, type RevisionText } from "./marks"
 

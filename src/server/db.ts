@@ -16,18 +16,12 @@ export type KyselyDB = PgKysely.EffectKysely<DB>
  * a user identity may run on it: RLS is the only thing keeping one band's songs
  * out of another band's result set.
  */
-export class Db extends Context.Service<Db, KyselyDB>()("giglist/db") {
-  static Conn = Layer.unwrap(
-    Config.Redacted("DATABASE_URL").pipe(
-      Effect.map((url) =>
-        PgClient.layer({ url }),
-      ),
-    ),
+export class Db extends Context.Service<Db, KyselyDB>()("giglist/db", {
+  make: PgKysely.makePg<DB>(),
+}) {
+  static readonly layer = Layer.effect(this, this.make).pipe(
+    Layer.provide(PgClient.layerConfig({ url: Config.Redacted("DATABASE_URL") })),
   )
-
-  static Kysely = Layer.effect(this, PgKysely.makePg<DB>())
-
-  static Live = this.Kysely.pipe(Layer.provide(this.Conn))
 }
 
 /**
@@ -35,26 +29,19 @@ export class Db extends Context.Service<Db, KyselyDB>()("giglist/db") {
  * it holds none of the grants until a request says `SET ROLE` to the visitor
  * role — see `withAuthContext`.
  */
-export class AuthDb extends Context.Service<AuthDb, KyselyDB>()("giglist/db/AuthDb") {
-  static Conn = Layer.unwrap(
-    Config.Redacted("AUTH_DATABASE_URL").pipe(
-      Effect.map((url) =>
-        PgClient.layer({ url }),
-      ),
-    ),
+export class AuthDb extends Context.Service<AuthDb, KyselyDB>()("giglist/db/AuthDb", {
+  make: PgKysely.makePg<DB>(),
+}) {
+  static readonly layer = Layer.effect(this, this.make).pipe(
+    Layer.provide(PgClient.layerConfig({ url: Config.Redacted("AUTH_DATABASE_URL") })),
   )
-
-  static Kysely = Layer.effect(this, PgKysely.makePg<DB>())
-
-  static Live = this.Kysely.pipe(Layer.provide(this.Conn))
 }
 
 /** The visitor role that the authenticator must set. */
-export class AuthVisitor extends Context.Service<AuthVisitor, string>()("giglist/db/AuthVisitor") {
-  static Live = Layer.effect(
-    this,
-    Config.String("DATABASE_VISITOR"),
-  )
+export class AuthVisitor extends Context.Service<AuthVisitor, string>()("giglist/db/AuthVisitor", {
+  make: Config.String("DATABASE_VISITOR"),
+}) {
+  static readonly layer = Layer.effect(this, this.make)
 }
 
 /**
@@ -63,6 +50,7 @@ export class AuthVisitor extends Context.Service<AuthVisitor, string>()("giglist
  * one request. A service method yields it per call, so the requirement is part
  * of every visitor-scoped method by design.
  *
+ * @perRequest: withAuthContext provides it for each request.
  * @effect-leakable-service
  */
 export class RequestDatabase extends Context.Service<RequestDatabase, KyselyDB>()("giglist/db/RequestDatabase") {}

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test"
+import { describe, expect, it } from "vitest"
 import { exporter, importer, Settings } from "@coderline/alphatab"
 import { chartFromScore } from "./score-chart"
 

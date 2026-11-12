@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, test } from "vitest"
 import { degrees } from "./degrees"
 import { spell } from "./spelling"
 import type { Voicing } from "./fretting"

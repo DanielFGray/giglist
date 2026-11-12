@@ -1,0 +1,3 @@
+ruleDirs:
+  # The shared Effect service-shape rules; see effect-web-template/AGENTS.md "Service-shape rules".
+  - /home/dan/build/effect-web-template/rules

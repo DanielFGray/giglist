@@ -25,17 +25,16 @@
     "gm": "bun --env-file=.env -b graphile-migrate",
     "migrate": "graphile-migrate migrate",
     "init": "NOCONFIRM=1 run-s env:init db:setup",
-    "lint": "oxlint --type-aware",
+    "lint": "oxlint --type-aware && ast-grep scan",
     "prepare": "run-s prepare:patch prepare:hooks",
     "start": "NODE_ENV=production bun src/server/main.ts",
     "test": "bunx playwright test",
-    "test:api": "bun --env-file=.env -b vitest run",
+    "test:api": "bun --env-file=.env -b vitest run --project api",
     "test:clean": "bun scripts/testClean.ts",
     "test:client": "bun run build && bun --env-file=.env -b vite preview",
     "test:db": "bash tests/db/run.sh",
-    "test:mail": "bun test worker",
     "test:ui": "bunx playwright test --ui",
-    "test:unit": "bun test src --path-ignore-patterns='**/*.api.test.ts'",
+    "test:unit": "bun -b vitest run --project unit",
     "typecheck": "tsc --noEmit",
     "worker:schema": "cd worker && bun --env-file=../.env graphile-worker --schema-only",
     "prepare:patch": "effect-tsgo patch --typescript --oxlint",
@@ -73,6 +72,7 @@
     "react-dom": "^19.3.1"
   },
   "devDependencies": {
+    "@ast-grep/cli": "0.51.2",
     "@effect/tsgo": "^0.67.7",
     "@effect/vitest": "4.1.3",
     "@playwright/test": "^1.65.0",
@@ -99,5 +99,8 @@
   "patchedDependencies": {
     "@coderline/alphatab@1.9.0-alpha.1891": "patches/@coderline%2Falphatab@1.9.0-alpha.1891.patch"
   },
-  "projectName": "GigList"
+  "projectName": "GigList",
+  "trustedDependencies": [
+    "@ast-grep/cli"
+  ]
 }

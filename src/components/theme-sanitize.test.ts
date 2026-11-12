@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test"
+import { describe, expect, it } from "vitest"
 import { sanitizeThemeHtml } from "./theme-sanitize"
 
 describe("sanitizeThemeHtml", () => {
@@ -6,7 +6,7 @@ describe("sanitizeThemeHtml", () => {
     const html = sanitizeThemeHtml(
       '<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&display=swap"><style>a > b { color: #fff }</style></head><body><h1 class="x">Band</h1><img src="https://img.example/a.jpg" alt=""></body></html>',
     )
-    expect(html).toStartWith("<!DOCTYPE html>")
+    expect(html).toMatch(/^<!DOCTYPE html>/)
     expect(html).toContain("a > b { color: #fff }")
     expect(html).toContain("fonts.googleapis.com")
     expect(html).toContain('<img src="https://img.example/a.jpg" alt="">')

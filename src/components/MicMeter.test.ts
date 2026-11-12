@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test"
+import { expect, test } from "vitest"
 import { meterFill } from "./MicMeter"
 
 test("the mic meter spans -60 to 0 dBFS", () => {

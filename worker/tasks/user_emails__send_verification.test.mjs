@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, test } from "vitest"
 import sendVerification from "./user_emails__send_verification.mjs"
 
 describe("user_emails__send_verification", () => {

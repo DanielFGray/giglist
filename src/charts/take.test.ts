@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, test } from "vitest"
 import { readPhrase } from "./phrase"
 import { readTake, type TakeOptions } from "./take"
 

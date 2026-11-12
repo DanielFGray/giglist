@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, test } from "vitest"
 import { BOTH_NOTATIONS, staffNotation, toggleNotation } from "./score-notation"
 
 describe("toggleNotation", () => {

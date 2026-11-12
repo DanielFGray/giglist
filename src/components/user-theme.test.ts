@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test"
+import { describe, expect, it } from "vitest"
 import type { PublicUserProfileInfo } from "~/api/client"
 import { renderTheme, userScope } from "./band-theme"
 import { DEFAULT_USER_THEME } from "./user-theme"

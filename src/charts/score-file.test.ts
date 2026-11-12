@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, test } from "vitest"
 import { chartNameFromFile, scoreFormat } from "./score-file"
 
 const bytes = (...codes: ReadonlyArray<number>) => new Uint8Array(codes)

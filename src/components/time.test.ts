@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, test } from "vitest"
 import { formatTimeOfDay, timeInputValue } from "./time"
 
 describe("time of day", () => {

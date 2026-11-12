@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test"
+import { describe, expect, it } from "vitest"
 import { chordNumerals, numeral } from "./numeral"
 
 // Expected labels were checked against music21's romanNumeralFromChord. It agrees

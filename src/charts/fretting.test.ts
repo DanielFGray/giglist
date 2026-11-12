@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, test } from "vitest"
 import { barreOf, fingersNeeded, fretWindow, writeFrets } from "./fretting"
 
 const openC = [null, 3, 2, 0, 1, 0]

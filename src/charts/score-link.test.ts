@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test"
+import { describe, expect, it } from "vitest"
 import { drawnRange, excerpt, formatScoreLink, readScoreLink, sectionChoices, type ExcerptBar, type ScoreLink, type ScoreOutline } from "./score-link"
 
 const outline: ScoreOutline = {

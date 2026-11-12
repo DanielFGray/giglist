@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test"
+import { expect, test } from "vitest"
 import { trackOptions } from "./score-tracks"
 
 test("labels a track by its name, or by its place when the name is blank", () => {

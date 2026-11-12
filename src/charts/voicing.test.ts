@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, test } from "vitest"
 import { spell, type Spelling } from "./spelling"
 import { fingersNeeded, writeFrets, type Voicing } from "./fretting"
 import { STANDARD_TUNING, voicings } from "./voicing"
@@ -26,7 +26,7 @@ describe("voicings", () => {
       expect(shapes.length, name).toBeLessThanOrEqual(8)
       for (const shape of shapes) expect(brokenRule(shape, chord), `${name}: ${writeFrets(shape.frets)}`).toBeNull()
     }
-  })
+  }, 30_000) // Checks every shape of every chord; under the parallel unit run it takes longer than the 5 s default.
 
   test("the open shapes every guitarist learns first come first", () => {
     const first = { C: "x 3 2 0 1 0", A: "x 0 2 2 2 0", D: "x x 0 2 3 2", E: "0 2 2 1 0 0", G: "3 2 0 0 0 3",

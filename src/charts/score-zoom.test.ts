@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, test } from "vitest"
 import { MAX_ZOOM, MIN_ZOOM, clampZoom, stepZoom } from "./score-zoom"
 
 describe("clampZoom", () => {

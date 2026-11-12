@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, test } from "vitest"
 import { Schema as S } from "effect"
 import { ChartChange } from "../api/charts"
 import { composeChanges, explains, isChangeSet, lengthAfter, type Change } from "./changes"

@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, test } from "vitest"
 import { indexFromSearch, stepIndex, stepSize, swipeDirection, TEXT_SIZES } from "./perform"
 
 describe("stage navigation", () => {

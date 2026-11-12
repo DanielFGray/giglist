@@ -23,19 +23,8 @@ effect-web-template and ask; do not invent a local one.
 ## Effect Patterns
 
 - Use @effect/sql-kysely for all queries — stay in Effect, no promise conversion
-- Services follow `Effect.Service` pattern (see postgres.garden for reference)
 - Database access via the `RequestDatabase` tag, which only `withAuthContext` provides
 - Use `withAuthContext` pattern to set RLS session context before queries
-
-## Learning more about Effect
-
-This repository uses the Effect Typescript library.
-
-Before writing any Effect code, first read `node_modules/effect/AGENTS.md`
-**completely**, and follow the links in the file when required.
-
-If you need to learn more about particular Effect apis and concepts that the
-guide doesn't cover, search through the source code in `node_modules/effect/src`.
 
 ## Design references
 
@@ -51,7 +40,7 @@ guide doesn't cover, search through the source code in `node_modules/effect/src`
 - `bun run prepare` — re-patches `tsc` and `oxlint` binaries after install
 - `bun run test` — Playwright specs in `tests/`; builds the client and serves it on `vite preview` (needs the database and the API on `PORT`, which Playwright starts if it is down)
 - `bun run test:clean` — deletes the `test_*` users and bands the specs left behind (run it when no suite is running)
-- `bun run test:unit` — pure-module tests next to the code in `src/`
+- `bun run test:unit` — the vitest `unit` project: tests next to the code in `src/` and `worker/`, no database
 - `bun run test:db` — RLS checks in `tests/db/` as the authenticator, on a scratch database `giglist_dev_test` (`ops dev db reset`)
 - `bun run test:api` — HTTP API tests in `src/**/*.api.test.ts`, run in-process by vitest on `giglist_dev_test` (it recreates that database, so do not run it at the same time as `test:db`)
 

@@ -58,9 +58,9 @@ const TestingLive = Layer.unwrap(Effect.gen(function* () {
  * through the services that need app_private.
  */
 export const AppLayer = Layer.mergeAll(
-  AuthDb.Live,
-  AuthVisitor.Live,
-  Db.Live,
+  AuthDb.layer,
+  AuthVisitor.layer,
+  Db.layer,
   LiveHub.layer,
   ChartReader.layer,
   Auth.layer,

@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, test } from "vitest"
 import { readFileSync } from "node:fs"
 import { importPasted } from "./lyrics"
 import { scanFormat, textFromWords, wordsFromPdf, wordsFromTesseract, type WordBox } from "./scanned"

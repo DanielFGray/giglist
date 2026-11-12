@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, test } from "vitest"
 import sendDeleteAccountEmail from "./user__send_delete_account_email.mjs"
 import forgotPassword from "./user__forgot_password.mjs"
 

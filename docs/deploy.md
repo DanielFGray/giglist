@@ -91,7 +91,7 @@ For SES, the worker uses the AWS SDK credential chain and `AWS_REGION`.
 `VITE_ROOT_URL` is the public origin in email links. The browser calls the API on its own
 origin, so the page build needs no domain setting. `worker/worker.ts` provides the `Mailer`
 layer once. A provider failure rejects the job, so Graphile Worker retries it. Run the
-worker's tests with `bun run test:mail`.
+worker's tests with `bun run test:unit`.
 
 ## Rate limits
 

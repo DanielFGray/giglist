@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, test } from "vitest"
 import { readFileSync } from "node:fs"
 import { addSection, anchorText, parseDoc, renameSection, serializeDoc } from "./doc"
 import { chartChords, exportChords, importPasted, isChordName, isTabLine, renderLyrics, suggestedChords, type ChartItem } from "./lyrics"

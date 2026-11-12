@@ -1,6 +1,7 @@
-import { describe, expect, it } from "bun:test"
+import { describe, expect, it } from "vitest"
 import { readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
+import { fileURLToPath } from "node:url"
 import type { PublicBandProfileInfo } from "~/api/client"
 import { bandScope, renderTheme, themeOptions } from "./band-theme"
 
@@ -135,7 +136,7 @@ describe("theme options", () => {
 })
 
 describe("starter themes", () => {
-  const dir = join(import.meta.dir, "themes")
+  const dir = fileURLToPath(new URL("themes", import.meta.url))
   for (const file of readdirSync(dir)) {
     it(`${file} leaves no tag unfilled`, () => {
       const out = render(readFileSync(join(dir, file), "utf8"))
