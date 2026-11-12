@@ -1,14 +1,10 @@
 // @entrypoint: graphile-worker calls the send_email task, which runs its effect with the worker's context.
-import { Cause, Config, Context, Effect, Layer, Option, Record, Redacted, Ref, Schema } from "effect"
+import { Config, Context, Effect, Layer, Option, Record, Redacted, Ref } from "effect"
 import { BunServices } from "@effect/platform-bun"
-import { getTasks, type JobHelpers, Logger, run, type Runner, type Task } from "graphile-worker"
+import { getTasks, Logger, run, type Runner } from "graphile-worker"
 import { Path } from "effect/Path"
-import { EmailDelivery, QueuedEmail } from "./email/emailDelivery"
-
-class WorkerError extends Schema.TaggedError<WorkerError, { readonly brand: unique symbol }>()("WorkerError", {
-  message: Schema.String,
-  cause: Schema.Defect(),
-}) {}
+import { EmailDelivery } from "./email/emailDelivery"
+import { effectTask, promiseTask, sendEmail, WorkerError } from "./job"
 
 /**
  * The graphile-worker runner, inside the server process. Building the layer
@@ -61,35 +57,12 @@ const start = Effect.fnUntraced(function* (running: Ref.Ref<boolean>) {
     }),
     (loaded) => Effect.sync(() => loaded.release()),
   )
-  // Graphile owns retry scheduling: a failed job rejects its callback. An Effect
-  // job stops when graphile aborts it.
-  const effectTask: Task = (payload, helpers) =>
-    Effect.runPromiseWith(context)(
-      traced(Schema.decodeUnknownEffect(QueuedEmail)(payload).pipe(Effect.flatMap(delivery.send)), helpers),
-      { signal: helpers.abortSignal },
-    )
-  // Nothing outside a Promise task can stop it. It reads the abort signal from
-  // its own helpers, and its callback settles when the task does: if it
-  // rejected on abort while the task ran on, graphile would retry a job whose
-  // effects had already happened.
-  const promiseTask =
-    (task: Task): Task =>
-    (payload, helpers) =>
-      Effect.runPromiseWith(context)(
-        traced(
-          Effect.tryPromise({
-            try: async () => task(payload, helpers),
-            catch: (cause) => new WorkerError({ message: "The job failed", cause }),
-          }),
-          helpers,
-        ),
-      )
   const taskList = {
     ...Record.map(
       Record.getSomes(Record.map(loadedTasks.tasks, Option.fromNullishOr)),
-      promiseTask,
+      (task) => promiseTask(context, task),
     ),
-    send_email: effectTask,
+    send_email: effectTask(context, sendEmail(delivery.send)),
   }
   const runner = yield* Effect.acquireRelease(
     Effect.tryPromise({
@@ -138,26 +111,6 @@ const stop = Effect.fnUntraced(function* (runner: Runner, running: Ref.Ref<boole
   }).pipe(Effect.catch((error) => Effect.logError(error.message, error.cause)))
   yield* Ref.set(running, false)
 })
-
-/**
- * Runs one job in its Worker.job span. This is the worker's failure boundary:
- * a failure is logged here, once, inside the span, so the line carries the
- * trace id. A stop is not a failure, so an interrupt alone is not logged.
- */
-const traced = <A, E, R>(job: Effect.Effect<A, E, R>, helpers: JobHelpers) =>
-  job.pipe(
-    Effect.tapCauseIf(
-      (cause) => !Cause.hasInterruptsOnly(cause),
-      (cause) => Effect.logError("The job failed", cause),
-    ),
-    Effect.withSpan("Worker.job", {
-      attributes: {
-        "job.task": helpers.job.task_identifier,
-        "job.id": helpers.job.id,
-        "job.attempt": helpers.job.attempts,
-      },
-    }),
-  )
 
 /**
  * Graphile's log levels, as Effect log calls. Debug has no entry, so graphile's

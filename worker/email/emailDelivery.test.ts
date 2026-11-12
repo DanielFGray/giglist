@@ -1,11 +1,12 @@
 import { describe, expect, it } from "@effect/vitest"
-import { Effect, Layer, Option, Schema } from "effect"
+import { Effect, Layer, Option } from "effect"
 import { BunServices } from "@effect/platform-bun"
 import { SMTPServer } from "smtp-server"
 import { RateLimiterError, RateLimiterStore, RateLimitStoreError, type RateLimiter } from "effect/persistence/RateLimiter"
 import { RateLimiterMemory, rateLimiterWithStore } from "../../src/server/services/rateLimiter"
 import { Mailer, MailDeliveryError, MailMessage, SmtpSettings } from "./mailer"
 import { EmailDelivery, QueuedEmail } from "./emailDelivery"
+import { sendEmail } from "../job"
 
 const verification: QueuedEmail = {
   options: { to: "player@example.invalid", subject: "Verify your GigList account" },
@@ -64,14 +65,23 @@ describe("queued email delivery", () => {
     }).pipe(Effect.provide(deliveryWith(recording(delivered), RateLimiterMemory)))
   })
 
-  it.effect("rejects an invalid queued payload before delivery", () => {
+  it.effect("send_email rejects a malformed payload with a SchemaError and sends nothing", () => {
     const delivered: MailMessage[] = []
     return Effect.gen(function* () {
-      // The worker decodes each payload with QueuedEmail before EmailDelivery.send runs.
-      const error = yield* Effect.flip(Schema.decodeUnknownEffect(QueuedEmail)({ ...verification, variables: { token: "missing-link" } }))
+      const delivery = yield* EmailDelivery
+      const error = yield* Effect.flip(sendEmail(delivery.send)({ ...verification, variables: { token: "missing-link" } }))
       expect(error._tag).toBe("SchemaError")
       expect(delivered).toHaveLength(0)
-    })
+    }).pipe(Effect.provide(deliveryWith(recording(delivered), RateLimiterMemory)))
+  })
+
+  it.effect("send_email delivers a valid payload through the Mailer", () => {
+    const delivered: MailMessage[] = []
+    return Effect.gen(function* () {
+      const delivery = yield* EmailDelivery
+      yield* sendEmail(delivery.send)(verification)
+      expect(delivered.map((message) => message.to)).toEqual([[verification.options.to]])
+    }).pipe(Effect.provide(deliveryWith(recording(delivered), RateLimiterMemory)))
   })
 
   it.live("sends a rendered message to SMTP and reports a recipient rejection", () => {
