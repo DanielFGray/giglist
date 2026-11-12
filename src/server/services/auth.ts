@@ -351,10 +351,6 @@ export class Auth extends Context.Service<Auth>()("giglist/auth", {
           });
         }
       },
-      Effect.catchIf(
-        (e): e is Exclude<typeof e, AccountError> => e._tag !== "AccountError",
-        (e) => Effect.logError("Could not resend verification", e).pipe(Effect.andThen(Effect.fail(new AccountError({ message: "Could not resend verification" })))),
-      ),
     );
 
     /** Token-gated; runs as the table owner because no session is required. */
@@ -379,10 +375,6 @@ export class Auth extends Context.Service<Auth>()("giglist/auth", {
           return yield* new AccountError({ message: "Invalid or expired verification link" });
         }
       },
-      Effect.catchIf(
-        (e): e is Exclude<typeof e, AccountError> => e._tag !== "AccountError",
-        (e) => Effect.logError("Could not verify email", e).pipe(Effect.andThen(Effect.fail(new AccountError({ message: "Could not verify email" })))),
-      ),
     );
 
     const requestAccountDeletion = Effect.fn("Auth.requestAccountDeletion")(

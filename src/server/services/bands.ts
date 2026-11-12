@@ -66,10 +66,6 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
           });
         }
       },
-      Effect.catchIf(
-        (e): e is Exclude<typeof e, BandRefused> => e._tag !== "BandRefused",
-        (e) => Effect.logError("Could not transfer ownership", e).pipe(Effect.andThen(Effect.fail(new BandRefused({ message: "Could not transfer ownership" })))),
-      ),
     );
 
     /**
@@ -262,10 +258,6 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
         }
         yield* db.selectNoFrom([sql`app_public.delete_band(${bandId}::uuid)`.as("_")]);
       },
-      Effect.catchIf(
-        (e): e is Exclude<typeof e, BandRefused> => e._tag !== "BandRefused",
-        (e) => Effect.logError("Could not delete the band", e).pipe(Effect.andThen(Effect.fail(new BandRefused({ message: "Could not delete the band" })))),
-      ),
     );
 
     const updateBand = Effect.fn("Bands.updateBand")(
@@ -307,10 +299,6 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
           ),
         );
       },
-      Effect.catchIf(
-        (e): e is Exclude<typeof e, BandRefused> => e._tag !== "BandRefused",
-        (e) => Effect.logError("Could not update the band", e).pipe(Effect.andThen(Effect.fail(new BandRefused({ message: "Could not update the band" })))),
-      ),
     );
 
     /**
@@ -444,10 +432,6 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
           )`.as("_"),
         ]);
       },
-      Effect.catchIf(
-        (e): e is Exclude<typeof e, BandRefused> => e._tag !== "BandRefused",
-        (e) => Effect.logError("Could not leave the band", e).pipe(Effect.andThen(Effect.fail(new BandRefused({ message: "Could not leave the band" })))),
-      ),
     );
 
     /**
