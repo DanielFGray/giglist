@@ -25,7 +25,7 @@
     "gm": "bun --env-file=.env -b graphile-migrate",
     "migrate": "graphile-migrate migrate",
     "init": "NOCONFIRM=1 run-s env:init db:setup",
-    "lint": "oxlint --type-aware && ast-grep scan",
+    "lint": "oxlint --type-aware && ast-grep scan src scripts worker",
     "prepare": "run-s prepare:patch prepare:hooks",
     "start": "NODE_ENV=production bun src/server/main.ts",
     "test": "bunx playwright test",
