@@ -1,11 +1,17 @@
 import type { ReactNode } from "react"
+import { InternalError } from "~/api/errors"
 
 /**
- * One problem, as a message. A Standard Schema validator reports an object with
- * a `message`; a plain function validator reports a string.
+ * The one line that shows a failure to the user. A Standard Schema validator
+ * reports an object with a `message`; a plain function validator reports a
+ * string. An InternalError also carries the trace id the server logged the
+ * cause under, so the line includes it for the user to quote in a report.
  */
 export function errorMessage(error: unknown): string {
   if (typeof error === "string") return error
+  if (error instanceof InternalError) {
+    return `${error.message} (reference: ${error.traceId})`
+  }
   if (error !== null && typeof error === "object" && "message" in error) {
     return String(error.message)
   }

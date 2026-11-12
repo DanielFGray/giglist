@@ -10,6 +10,7 @@ import { useLive, type Room } from "./live"
 import { Viewers } from "./Viewers"
 import { formatDuration } from "./duration"
 import { MarkedChart } from "./MarkedChart"
+import { errorMessage } from "./form"
 import { TEXT_SIZES, stepIndex, stepSize, swipeDirection } from "./perform"
 
 const ScoreViewer = lazy(() => import("~/components/ScoreViewer").then((m) => ({ default: m.ScoreViewer })))
@@ -305,7 +306,7 @@ function useSongCharts(songId: string | null) {
     setError(null)
     charts.bySong(songId).then(
       (list) => current && setLoaded({ songId, list }),
-      (e) => current && setError(e instanceof Error ? e.message : String(e)),
+      (e) => current && setError(errorMessage(e)),
     )
     return () => {
       current = false
