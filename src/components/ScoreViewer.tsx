@@ -9,7 +9,7 @@ import { alphaTabAssetUrls } from "alphatab-kit"
 import { inkFrom } from "./alphatab"
 import { useThemeInk } from "./useThemeInk"
 import { errorMessage } from "./form"
-import { barsLabel, barTicksOf, selectedBars, type BarSpan } from "./score-bars"
+import { barsLabel, barTicksOf, selectedBars, type BarSpan } from "alphatab-kit/charts/score-bars"
 import { ScorePlayerBar } from "./ScorePlayerBar"
 
 type Status = "loading" | "ready" | "error"

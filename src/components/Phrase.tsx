@@ -6,7 +6,7 @@ import { inkFrom } from "./alphatab"
 import { useThemeInk } from "./useThemeInk"
 import { PlayControls } from "./PlayControls"
 import { usePlayback } from "./playback"
-import { stretchForWidth } from "./stretch"
+import { stretchForWidth } from "alphatab-kit/charts/score-layout"
 
 /**
  * A phrase drawn by alphaTab, with play, loop, count-in and speed. Systems wrap

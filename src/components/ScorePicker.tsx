@@ -6,7 +6,7 @@ import { trackOptions } from "alphatab-kit/charts/score-tracks"
 import { errorMessage } from "./form"
 import { outlineOf, ScoreLink } from "./ScoreLink"
 import { readScore, ScoreView } from "./ScoreView"
-import type { BarSpan } from "./score-bars"
+import type { BarSpan } from "alphatab-kit/charts/score-bars"
 
 /**
  * Writes a score link (docs/adr/0004): a score chart of the song, one of its

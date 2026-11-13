@@ -5,7 +5,7 @@ import { drawnRange, excerpt, type ScoreLinkReading, type ScoreOutline } from "a
 import { trackOptions } from "alphatab-kit/charts/score-tracks"
 import { errorMessage } from "./form"
 import { readScore, ScoreView } from "./ScoreView"
-import type { BarSpan } from "./score-bars"
+import type { BarSpan } from "alphatab-kit/charts/score-bars"
 
 /** A loaded score's tracks, section markers and bar count: what a link is checked against. */
 export function outlineOf(score: model.Score): ScoreOutline {

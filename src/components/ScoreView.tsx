@@ -5,8 +5,8 @@ import { inkFrom } from "./alphatab"
 import { useThemeInk } from "./useThemeInk"
 import { PlayControls } from "./PlayControls"
 import { usePlayback } from "./playback"
-import { barsLabel, barTicksOf, sameBars, selectedBars, ticksOfBars, type BarSpan } from "./score-bars"
-import { stretchForWidth } from "./stretch"
+import { barsLabel, barTicksOf, sameBars, selectedBars, ticksOfBars, type BarSpan } from "alphatab-kit/charts/score-bars"
+import { stretchForWidth } from "alphatab-kit/charts/score-layout"
 
 /**
  * Reads a Guitar Pro file for drawing as a tab. The staff profile is set before
