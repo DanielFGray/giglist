@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type DragEvent } from "react"
 import { charts, type ChartInfo } from "~/api/client"
-import { composeChanges } from "~/charts/changes"
+import { composeChanges } from "alphatab-kit/charts/changes"
 import {
   addPhrase, addScoreLink, addSection, anchorLine, blockRange, canMoveBlockTo, deleteBlock, deleteLine, directiveName, dropSlots, duplicateBlock, editLine, hasHandle, inPhrase,
   insertLineAfter, moveBlock, moveBlockTo, moveChord, parseDoc, phraseAt, placeChord, removeChord, removeSection, renameSection, segments, serializeDoc,

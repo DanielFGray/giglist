@@ -9,7 +9,7 @@
  * mark is orphaned as "uncertain" instead of guessed.
  */
 import DiffMatchPatch from "diff-match-patch"
-import type { Change } from "./changes"
+import type { Change } from "alphatab-kit/charts/changes"
 
 export type Range = { readonly start: number; readonly end: number }
 

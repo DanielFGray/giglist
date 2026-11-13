@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest"
 import { readFileSync } from "node:fs"
 import { ChordLyricsPair, ChordProParser, Literal, Tag } from "chordsheetjs"
-import { composeChanges, explains, type Change } from "./changes"
+import { composeChanges, explains, type Change } from "alphatab-kit/charts/changes"
 import {
   addPhrase, addScoreLink, addSection, anchorLine, blockRange, canMoveBlockTo, dropSlots, hasHandle, deleteBlock, duplicateBlock, inPhrase, moveBlock, moveBlockTo, phraseAt, removeSection, setPhrase,
   anchorText, deleteLine, editLine, insertLineAfter, moveChord, parseDoc, placeChord, removeChord,

@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto"
 import { Context, Effect, Layer, Schema as S } from "effect"
 import { RequestDatabase } from "../db"
-import { explains } from "../../charts/changes"
+import { explains } from "alphatab-kit/charts/changes"
 import { anchorText, parseDoc } from "../../charts/doc"
 import { guessKey, importPasted } from "../../charts/lyrics"
 import { MAX_SCORE_BYTES, scoreFormat } from "alphatab-kit/charts/score-file"

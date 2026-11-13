@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest"
 import { Schema as S } from "effect"
 import { ChartChange } from "../api/charts"
-import { composeChanges, explains, isChangeSet, lengthAfter, type Change } from "./changes"
+import { composeChanges, explains, isChangeSet, lengthAfter, type Change } from "alphatab-kit/charts/changes"
 import { mapRange } from "./follow"
 
 /** Applies a change set to labelled units; fresh units are labelled "+", moved ones keep their label. */

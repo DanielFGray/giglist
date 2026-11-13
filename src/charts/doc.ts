@@ -11,7 +11,7 @@
  * sits, lines joined by newlines; a section start contributes its label. It is
  * derived from the stored text, never stored.
  */
-import { composeChanges, rearranged, type Change, type Part } from "./changes"
+import { composeChanges, rearranged, type Change, type Part } from "alphatab-kit/charts/changes"
 import { isLiteralEnd, isLiteralStart, isPhraseStart } from "./lyrics"
 
 export type PlacedChord = { readonly at: number; readonly chord: string }

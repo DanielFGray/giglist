@@ -3,7 +3,7 @@
  * Pure and free of the DOM, so the view and the tests share it.
  */
 import { getStroke } from "perfect-freehand"
-import type { Change } from "./changes"
+import type { Change } from "alphatab-kit/charts/changes"
 import { anchorText, parseDoc } from "./doc"
 import { follow, type Resolution } from "./follow"
 
