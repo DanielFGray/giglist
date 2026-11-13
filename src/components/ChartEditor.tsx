@@ -8,7 +8,7 @@ import {
 } from "alphatab-kit/charts/doc"
 import { isChordName, isPhraseStart, isTabStart, suggestedChords } from "alphatab-kit/charts/lyrics"
 import { readScoreLink } from "alphatab-kit/charts/score-link"
-import { chartSlot, suggest, type Suggestion } from "~/charts/suggest"
+import { chartSlot, suggest, type Suggestion } from "alphatab-kit/charts/suggest"
 import { BlockHandle, type Point } from "./BlockHandle"
 import { ChordInput, type ChordEntry } from "./ChordInput"
 import { slotUnder, type DropRow, type DropSlot } from "./drop-slot"

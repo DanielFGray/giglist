@@ -4,7 +4,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "bench:voicing": "bun scripts/benchVoicing.ts",
     "build": "bun run client:build",
     "check:production": "bash scripts/checkProduction.sh",
     "client:build": "vite build",

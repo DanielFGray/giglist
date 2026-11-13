@@ -1,6 +1,6 @@
 import { useRef, useState, type CSSProperties } from "react"
 import { isChordName } from "alphatab-kit/charts/lyrics"
-import type { Suggestion } from "~/charts/suggest"
+import type { Suggestion } from "alphatab-kit/charts/suggest"
 import { placement } from "./ChordShapes"
 
 /** What the field asks the editor to do with the word's chord. */

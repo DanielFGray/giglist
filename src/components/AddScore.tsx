@@ -3,7 +3,7 @@ import { charts, scores } from "~/api/client"
 import type { MusicalKey } from "alphatab-kit/charts/key"
 import { MAX_SCORE_BYTES, chartNameFromFile, scoreFormat } from "alphatab-kit/charts/score-file"
 import { scoreMeta, type ScoreMeta } from "alphatab-kit/charts/score-meta"
-import type { ScoreChart } from "~/charts/score-chart"
+import type { ScoreChart } from "alphatab-kit/charts/score-chart"
 import { SelectField, SubmitButton, TextAreaField, TextField, errorMessage } from "./form"
 import { keyOptions } from "./key-options"
 
@@ -180,7 +180,7 @@ function ChartDraftFields({ draft, scoreSaved, onChange }: { draft: ChartDraft; 
  */
 async function readScore(bytes: Uint8Array): Promise<{ meta: ScoreMeta; chart: ScoreChart | null } | null> {
   try {
-    const [{ importer, Settings }, { chartFromScore }] = await Promise.all([import("@coderline/alphatab"), import("~/charts/score-chart")])
+    const [{ importer, Settings }, { chartFromScore }] = await Promise.all([import("@coderline/alphatab"), import("alphatab-kit/charts/score-chart")])
     const score = importer.ScoreLoader.loadScoreFromBytes(bytes, new Settings())
     return { meta: scoreMeta(score), chart: chartFromScore(score) }
   } catch {

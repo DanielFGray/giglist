@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react"
 import { marks as marksApi, stamps as stampsApi, type ChartInfo, type ChartMarksInfo, type MarkData, type MarkInfo, type StampInfo } from "~/api/client"
-import { boundsOf, inkPath, markResolver, near, type Box, type Stroke } from "~/charts/marks"
+import { boundsOf, inkPath, markResolver, near, type Box, type Stroke } from "alphatab-kit/charts/marks"
 import { renderLyrics, chartChords } from "alphatab-kit/charts/lyrics"
 import type { Resolution } from "alphatab-kit/charts/follow"
 import type { NumeralDisplay } from "alphatab-kit/charts/numeral"

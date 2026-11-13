@@ -10,7 +10,7 @@ import {
   textFromWords,
   wordsFromPdf,
   wordsFromTesseract,
-} from "../../charts/scanned";
+} from "alphatab-kit/charts/scanned";
 
 export class ChartFileRejected extends S.TaggedError<ChartFileRejected, { readonly brand: unique symbol }>()("ChartFileRejected", { message: S.String }) {}
 
