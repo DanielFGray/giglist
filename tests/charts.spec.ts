@@ -920,7 +920,10 @@ test.describe("phrases", () => {
     await expect.poll(() => shownLyrics(page)).toBe("Amazing grace, how sweetThe sound")
     // The speeds are worked out from the song's tempo.
     await phrase.hover()
-    await expect(phrase.locator("[data-pwid=phrase-speed] option").first()).toHaveText("50% (50 bpm)")
+    await expect(phrase.locator("[data-pwid=phrase-tempo]")).toHaveText("100 bpm")
+    await phrase.locator("[data-pwid=phrase-speed]").fill("0.5")
+    await phrase.locator("[data-pwid=phrase-speed]").blur()
+    await expect(phrase.locator("[data-pwid=phrase-tempo]")).toHaveText("50 bpm")
 
     await openSettings(page)
 
@@ -951,10 +954,10 @@ test.describe("phrases", () => {
     const play = getPw(page, "phrase-play")
     await play.click()
     // The first Play waits for the sound font, a download of about 1 MB.
-    await expect(play).toHaveText("Stop", { timeout: 30000 })
+    await expect(play).toHaveAccessibleName("Stop", { timeout: 30000 })
     // The Stop label means alphaTab has started playback and can be stopped safely.
     await play.click()
-    await expect(play).toHaveText("Play")
+    await expect(play).toHaveAccessibleName("Play")
   })
 
   test("changes a phrase's notation and removes it", async ({ page, testing }) => {
