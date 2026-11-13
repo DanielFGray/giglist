@@ -1,10 +1,12 @@
 import type { Notation } from "alphatab-kit/charts/score-notation"
-import type { StepMode } from "alphatab-kit/charts/speed-trainer"
 import { IconButton } from "alphatab-kit/player/icon-button"
 import { CountInIcon, MetronomeIcon, PauseIcon, PlayIcon, StopIcon } from "alphatab-kit/player/icons"
 import { NotationToggles } from "alphatab-kit/player/notation-toggles"
 import { SeekBar } from "alphatab-kit/player/seek-bar"
 import { SpeedInput } from "alphatab-kit/player/speed-input"
+import { TrackSelect } from "alphatab-kit/player/track-select"
+import { TrainerFields, type TrainerProps } from "alphatab-kit/player/trainer-fields"
+import { VolumeSlider } from "alphatab-kit/player/volume-slider"
 import { ZoomControl } from "alphatab-kit/player/zoom-control"
 import { SettingsPanel } from "./SettingsPanel"
 
@@ -42,22 +44,6 @@ export type ScorePlayerBarProps = {
   volume: number
   onVolume: (volume: number) => void
   trainer: TrainerProps
-}
-
-export type TrainerProps = {
-  loop: boolean
-  onLoop: (on: boolean) => void
-  loopCount: number
-  onLoopCount: (count: number) => void
-  stepMode: StepMode
-  onStepMode: (mode: StepMode) => void
-  stepValue: number
-  onStepValue: (value: number) => void
-  /** The song's tempo at the current speed, or null when the score names none. */
-  tempo: number | null
-  /** The bars a drag selected, as text such as "Bars 3–5", or null for the whole piece. */
-  selection: string | null
-  onClearSelection: () => void
 }
 
 export function ScorePlayerBar(props: ScorePlayerBarProps) {
@@ -108,22 +94,16 @@ export function ScorePlayerBar(props: ScorePlayerBarProps) {
       </div>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-zinc-400">
         {props.tracks.length > 1 && (
-          <label className="flex items-center gap-2">
-            Track
-            <select
-              data-pwid="score-track"
-              value={props.track}
-              disabled={props.trackDisabled}
-              onChange={(e) => props.onTrack(Number(e.target.value))}
-              className={`${field} max-w-48`}
-            >
-              {props.tracks.map((t) => (
-                <option key={t.index} value={t.index}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <TrackSelect
+            tracks={props.tracks}
+            track={props.track}
+            disabled={props.trackDisabled}
+            onTrack={props.onTrack}
+            parts={{
+              root: { className: "flex items-center gap-2" },
+              select: { className: `${field} max-w-48`, "data-pwid": "score-track" },
+            }}
+          />
         )}
         <SpeedInput
           speed={props.speed}
@@ -133,7 +113,21 @@ export function ScorePlayerBar(props: ScorePlayerBarProps) {
             input: { className: `${field} w-16 text-right`, "data-pwid": "score-speed" },
           }}
         />
-        <Trainer {...props.trainer} speed={props.speed} />
+        <SettingsPanel pwid="score-trainer" title="Speed trainer">
+          <TrainerFields
+            {...props.trainer}
+            speed={props.speed}
+            parts={{
+              intro: { className: "text-sm text-zinc-400" },
+              tempo: { className: "text-sm text-zinc-300", "data-pwid": "score-trainer-tempo" },
+              row: { className: "flex items-center gap-2 text-sm text-zinc-300" },
+              loop: { "data-pwid": "score-loop" },
+              loopCount: { className: `${field} w-16`, "data-pwid": "score-trainer-loops" },
+              step: { className: `${field} w-20`, "data-pwid": "score-trainer-step" },
+              stepMode: { className: field, "data-pwid": "score-trainer-mode" },
+            }}
+          />
+        </SettingsPanel>
         <NotationToggles
           notation={props.notation}
           onNotation={props.onNotation}
@@ -153,20 +147,15 @@ export function ScorePlayerBar(props: ScorePlayerBarProps) {
             zoomIn: { className: zoomStep, "data-pwid": "score-zoom-in" },
           }}
         />
-        <label className="flex items-center gap-2">
-          Volume
-          <input
-            data-pwid="score-volume"
-            type="range"
-            min={0}
-            max={1}
-            step={0.05}
-            value={props.volume}
-            disabled={!props.ready}
-            onChange={(e) => props.onVolume(Number(e.target.value))}
-            className="w-24"
-          />
-        </label>
+        <VolumeSlider
+          volume={props.volume}
+          disabled={!props.ready}
+          onVolume={props.onVolume}
+          parts={{
+            root: { className: "flex items-center gap-2" },
+            input: { className: "w-24", "data-pwid": "score-volume" },
+          }}
+        />
         {props.trainer.selection && (
           <span data-pwid="score-selection" className="flex items-center gap-2 text-zinc-300">
             {props.trainer.selection}
@@ -177,60 +166,6 @@ export function ScorePlayerBar(props: ScorePlayerBarProps) {
         )}
       </div>
     </div>
-  )
-}
-
-/** Loop a passage and speed it up after a number of rounds. The panel holds the settings; the bar shows only its button. */
-function Trainer(props: TrainerProps & { speed: number }) {
-  const tempo = props.tempo === null ? null : Number.parseFloat((props.tempo * props.speed).toFixed(1))
-  return (
-    <SettingsPanel pwid="score-trainer" title="Speed trainer">
-      <p className="text-sm text-zinc-400">
-        Drag across the score to pick a passage, or leave it alone to train the whole piece. Each time the passage has looped the chosen number of times, the speed goes up by one step.
-      </p>
-      <p data-pwid="score-trainer-tempo" className="text-sm text-zinc-300">
-        {props.selection ?? "Whole piece"} · {tempo === null ? `${props.speed}×` : `${tempo} BPM (${props.speed}×)`}
-      </p>
-      <label className="flex items-center gap-2 text-sm text-zinc-300">
-        <input data-pwid="score-loop" type="checkbox" checked={props.loop} onChange={(e) => props.onLoop(e.target.checked)} />
-        Loop
-      </label>
-      <label className="flex items-center gap-2 text-sm text-zinc-300">
-        After
-        <input
-          data-pwid="score-trainer-loops"
-          type="number"
-          min={1}
-          step={1}
-          value={props.loopCount}
-          onChange={(e) => props.onLoopCount(Number(e.target.value))}
-          className={`${field} w-16`}
-        />
-        {props.loopCount === 1 ? "loop" : "loops"}, speed up by
-      </label>
-      <div className="flex items-center gap-2 text-sm text-zinc-300">
-        <input
-          data-pwid="score-trainer-step"
-          type="number"
-          aria-label="Step"
-          min={0}
-          step={props.stepMode === "bpm" ? 1 : 0.5}
-          value={props.stepValue}
-          onChange={(e) => props.onStepValue(Number(e.target.value))}
-          className={`${field} w-20`}
-        />
-        <select
-          data-pwid="score-trainer-mode"
-          aria-label="Step unit"
-          value={props.stepMode}
-          onChange={(e) => props.onStepMode(e.target.value === "bpm" ? "bpm" : "percent")}
-          className={field}
-        >
-          <option value="percent">%</option>
-          <option value="bpm">BPM</option>
-        </select>
-      </div>
-    </SettingsPanel>
   )
 }
 
