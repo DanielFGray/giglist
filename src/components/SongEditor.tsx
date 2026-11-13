@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useRouter } from "@tanstack/react-router"
 import { songs, type ChartInfo, type SongInfo, type SongUpdateData } from "~/api/client"
-import { type MusicalKeyType } from "~/api/songs"
+import { type MusicalKey } from "alphatab-kit/charts/key"
 import { ClickTrack } from "./ClickTrack"
 import { songFromScore } from "./song-from-score"
 import { SongCharts } from "./SongCharts"
@@ -29,8 +29,8 @@ export function SongEditor({
   bandId: string
   song: SongInfo
   songCharts: ReadonlyArray<ChartInfo>
-  shownKey: MusicalKeyType | null
-  onShownKeyChange: (key: MusicalKeyType | null) => void
+  shownKey: MusicalKey | null
+  onShownKeyChange: (key: MusicalKey | null) => void
   editing: boolean
   onEditingChange: (editing: boolean) => void
 }) {

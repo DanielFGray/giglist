@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { charts, scores } from "~/api/client"
-import type { MusicalKeyType } from "~/api/songs"
+import type { MusicalKey } from "alphatab-kit/charts/key"
 import { MAX_SCORE_BYTES, chartNameFromFile, scoreFormat } from "alphatab-kit/charts/score-file"
 import { scoreMeta, type ScoreMeta } from "alphatab-kit/charts/score-meta"
 import type { ScoreChart } from "~/charts/score-chart"
@@ -120,7 +120,7 @@ export function AddScore({
 type ChartDraft = {
   /** Whether to add it beside the score. */
   readonly add: boolean
-  readonly key: MusicalKeyType | null
+  readonly key: MusicalKey | null
   readonly text: string
   /** True when the chords were worked out from the notes. */
   readonly inferred: boolean

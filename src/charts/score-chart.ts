@@ -11,7 +11,7 @@
  * line is instrumental and goes on a chord-only line.
  */
 import type { model } from "@coderline/alphatab"
-import type { MusicalKeyType } from "~/api/songs"
+import type { MusicalKey } from "alphatab-kit/charts/key"
 import { keyOfChords } from "./lyrics"
 import { noteInKey } from "./numeral"
 import { inferChords } from "./score-chords"
@@ -21,7 +21,7 @@ export type ScoreChart = {
   /** Chords over lyrics, in the form `importPasted` reads. */
   readonly text: string
   /** The key the chords suggest, which the chart is written in. */
-  readonly key: MusicalKeyType | null
+  readonly key: MusicalKey | null
   /** True when the chords were worked out from the notes, not named by the file's author. */
   readonly inferred: boolean
   /** True when the score has lyrics; without them the chart is chord-only lines. */
@@ -174,12 +174,12 @@ function namedChords(score: model.Score, played: ReadonlyArray<Played>): Array<C
 }
 
 /** Heard chords named in the key they suggest: Db in Ab, not C#. */
-function spelledInKey(heard: ReturnType<typeof inferChords>): { chords: Array<ChordAt>; key: MusicalKeyType | null } {
+function spelledInKey(heard: ReturnType<typeof inferChords>): { chords: Array<ChordAt>; key: MusicalKey | null } {
   const key = keyOfChords(heard.map((c) => ({ root: c.root, minor: c.quality === "m" })))
   return { chords: heard.map((c) => ({ at: c.at, name: noteInKey(c.root, key ?? "C") + c.quality })), key }
 }
 
-function keyOf(chords: ReadonlyArray<ChordAt>): MusicalKeyType | null {
+function keyOf(chords: ReadonlyArray<ChordAt>): MusicalKey | null {
   return keyOfChords(chords.flatMap((c) => {
     const s = spell(c.name)
     return s ? [{ root: s.root, minor: s.tones.get(3) === 3 }] : []

@@ -1,7 +1,8 @@
 import { useState, type ReactNode } from "react"
 import { useForm } from "@tanstack/react-form"
 import { Schema as S } from "effect"
-import { MusicalKeys, SongFields, type MusicalKeyType } from "~/api/songs"
+import { SongFields } from "~/api/songs"
+import { MUSICAL_KEYS, type MusicalKey } from "alphatab-kit/charts/key"
 import type { SongCreateData, SongInfo, SongUpdateData } from "~/api/client"
 import {
   NumberField,
@@ -52,9 +53,9 @@ export const songValues = (song: SongInfo): SongFormValues => ({
   notes: song.notes,
 })
 
-const keyOptions: ReadonlyArray<{ value: MusicalKeyType | ""; label: string }> = [
+const keyOptions: ReadonlyArray<{ value: MusicalKey | ""; label: string }> = [
   { value: "", label: "No key" },
-  ...MusicalKeys.map((key) => ({ value: key, label: key })),
+  ...MUSICAL_KEYS.map((key) => ({ value: key, label: key })),
 ]
 
 /**

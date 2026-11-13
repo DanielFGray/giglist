@@ -2,7 +2,7 @@ import { Suspense, lazy, useEffect, useState } from "react"
 import { charts, type ChartInfo } from "~/api/client"
 import { exportChords, hasLyricsChart } from "~/charts/lyrics"
 import type { NumeralDisplay } from "~/charts/numeral"
-import type { MusicalKeyType } from "~/api/songs"
+import type { MusicalKey } from "alphatab-kit/charts/key"
 import type { ScoreMeta } from "alphatab-kit/charts/score-meta"
 import { AddScore } from "./AddScore"
 import { ChartEditor } from "./ChartEditor"
@@ -48,11 +48,11 @@ export function SongCharts({
   pageEditing,
 }: {
   songId: string
-  songKey: MusicalKeyType | null
+  songKey: MusicalKey | null
   /** The song's tempo, which phrases in its charts play at. */
   tempo: number | null
-  shownKey: MusicalKeyType | null
-  onShownKeyChange: (key: MusicalKeyType | null) => void
+  shownKey: MusicalKey | null
+  onShownKeyChange: (key: MusicalKey | null) => void
   list: ReadonlyArray<ChartInfo>
   onChanged: () => Promise<void>
   /** Called with a new score's title, artist and tempo, before `onChanged`. */
@@ -232,7 +232,7 @@ function ChartCard({
 }: {
   chart: ChartInfo
   startEditing: boolean
-  shownKey: MusicalKeyType | null
+  shownKey: MusicalKey | null
   tempo: number | null
   onChanged: () => Promise<void>
   numeralDisplay: NumeralDisplay
@@ -375,12 +375,12 @@ function AddLyricsChart({
   onCancel,
 }: {
   songId: string
-  defaultKey: MusicalKeyType | null
+  defaultKey: MusicalKey | null
   onDone: () => Promise<void>
   onCancel: () => void
 }) {
   const [name, setName] = useState("Chords")
-  const [writtenKey, setWrittenKey] = useState<MusicalKeyType | null>(defaultKey)
+  const [writtenKey, setWrittenKey] = useState<MusicalKey | null>(defaultKey)
   const [pasted, setPasted] = useState("")
   // The file the text was read from, shown beside it so the player can check the reading.
   const [original, setOriginal] = useState<{ url: string; pdf: boolean } | null>(null)

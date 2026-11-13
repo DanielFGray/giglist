@@ -1,13 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { charts, songs } from "~/api/client"
-import { MusicalKeys, type MusicalKeyType } from "~/api/songs"
+import { MUSICAL_KEYS, type MusicalKey } from "alphatab-kit/charts/key"
 import { SongEditor } from "~/components/SongEditor"
 
 export const Route = createFileRoute("/band/$bandId/songs/$songId")({
   // `key` is the key to show the charts in, for example a setlist entry's key.
   // `edit` enables the metadata form; without it the song is read-only.
-  validateSearch: (search: Record<string, unknown>): { key?: MusicalKeyType; edit?: true } => {
-    const key = MusicalKeys.find((k) => k === search.key)
+  validateSearch: (search: Record<string, unknown>): { key?: MusicalKey; edit?: true } => {
+    const key = MUSICAL_KEYS.find((k) => k === search.key)
     return {
       ...(key ? { key } : {}),
       ...(search.edit === true ? { edit: true as const } : {}),

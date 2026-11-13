@@ -10,7 +10,7 @@
  * Pure and free of the DOM, so the server and the browser share it.
  */
 import { Chord, ChordLyricsPair, ChordProParser, Literal, Tag } from "chordsheetjs"
-import type { MusicalKeyType } from "~/api/songs"
+import type { MusicalKey } from "alphatab-kit/charts/key"
 import { anchorLine, enclosingSection, inPhrase, parseDoc } from "./doc"
 import { readScoreLink, type ScoreLinkReading } from "alphatab-kit/charts/score-link"
 
@@ -516,10 +516,10 @@ function collectChords(text: string): Array<{ root: string; minor: boolean }> {
 
 /**
  * One name per key, the one with fewer accidentals: Db, not C#, and C#m, not Dbm.
- * F# and Ebm, which tie, take the usual name. `MusicalKeys` holds both names, and
+ * F# and Ebm, which tie, take the usual name. `MUSICAL_KEYS` holds both names, and
  * scoring it would return whichever enharmonic comes first.
  */
-const KEY_NAMES: ReadonlyArray<MusicalKeyType> = [
+const KEY_NAMES: ReadonlyArray<MusicalKey> = [
   "C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B",
   "Cm", "C#m", "Dm", "Ebm", "Em", "Fm", "F#m", "Gm", "G#m", "Am", "Bbm", "Bm",
 ]
@@ -557,7 +557,7 @@ function pearson(xs: ReadonlyArray<number>, ys: ReadonlyArray<number>): number {
  * Krumhansl, C. L. (1990). Cognitive Foundations of Musical Pitch.
  * Oxford University Press.
  */
-export function guessKey(text: string): MusicalKeyType | null {
+export function guessKey(text: string): MusicalKey | null {
   return keyOfChords(collectChords(text).map((chord) => ({ root: NOTE_INDEX[chord.root]!, minor: chord.minor })))
 }
 
@@ -565,7 +565,7 @@ export function guessKey(text: string): MusicalKeyType | null {
  * The key `guessKey` finds for chords given as root pitch classes, named as
  * players write it (`KEY_NAMES`): Ab, not G#.
  */
-export function keyOfChords(chords: ReadonlyArray<{ readonly root: number; readonly minor: boolean }>): MusicalKeyType | null {
+export function keyOfChords(chords: ReadonlyArray<{ readonly root: number; readonly minor: boolean }>): MusicalKey | null {
   if (chords.length === 0) return null
   const histogram = Array.from({ length: 12 }, () => 0)
   for (const chord of chords) {
@@ -576,7 +576,7 @@ export function keyOfChords(chords: ReadonlyArray<{ readonly root: number; reado
     histogram[(root + thirdInterval) % 12]! += 2
     histogram[(root + fifthInterval) % 12]! += 2
   }
-  let best: { key: MusicalKeyType; score: number } | null = null
+  let best: { key: MusicalKey; score: number } | null = null
   for (const key of KEY_NAMES) {
     const isMinor = key.endsWith("m")
     const root = isMinor ? key.slice(0, -1) : key

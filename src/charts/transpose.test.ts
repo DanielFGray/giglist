@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest"
 import { ChordProParser } from "chordsheetjs"
-import { MusicalKeys } from "../api/songs"
+import { MUSICAL_KEYS } from "alphatab-kit/charts/key"
 import { renderLyrics } from "./lyrics"
 
 /**
@@ -42,8 +42,8 @@ const shownRoots = (source: string, key: string) =>
     .flat()
     .flatMap((item) => (item.kind === "pair" && item.chord ? [item.chord] : []))
 
-const pairs = MusicalKeys.flatMap((from) =>
-  MusicalKeys.filter((to) => to !== from && split(to).minor === split(from).minor).flatMap((to) => {
+const pairs = MUSICAL_KEYS.flatMap((from) =>
+  MUSICAL_KEYS.filter((to) => to !== from && split(to).minor === split(from).minor).flatMap((to) => {
     const [a, b] = [scaleRoots(from), scaleRoots(to)]
     return a && b ? [{ from, to, a, b }] : []
   }),
