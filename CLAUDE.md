@@ -14,8 +14,8 @@ Collaborative musical setlist manager for bands.
 The backend follows ~/build/effect-web-template. Before you add or change a
 backend pattern (config, HTTP server, database access, errors, sessions, rate
 limits, Valkey, realtime, worker, tests), read how the template does it and do
-the same. Security code and auth SQL come from the ~/build/effect-backend
-packages.
+the same. Security code and auth SQL will come from `@danielfgray/stompbox`
+(~/build/stompbox); this app does not depend on it yet.
 
 When the template has no pattern for what you need, file a task in
 effect-web-template and ask; do not invent a local one.
