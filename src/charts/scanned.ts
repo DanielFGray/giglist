@@ -14,7 +14,7 @@
  * Pure and free of the DOM; the server runs the programs and passes their output here.
  */
 import { isChordLine } from "./lyrics"
-import { startsWith } from "./score-file"
+import { startsWith } from "alphatab-kit/charts/score-file"
 
 /** One word on a page, as a box in the page's units with y growing downward. */
 export type WordBox = {

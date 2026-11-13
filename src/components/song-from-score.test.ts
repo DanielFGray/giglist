@@ -1,19 +1,9 @@
 import { describe, expect, test } from "vitest"
 import type { SongInfo } from "~/api/client"
-import { UNTITLED_SONG, scoreMeta, songFromScore } from "./score-meta"
+import { UNTITLED_SONG, songFromScore } from "./song-from-score"
 
 const song = (over: Partial<SongInfo>): SongInfo =>
   ({ id: "s", title: UNTITLED_SONG, artist: null, key: null, tempo_bpm: null, duration_seconds: null, capo: null, notes: null, ...over }) as SongInfo
-
-describe("scoreMeta", () => {
-  test("tidies the text and rounds the tempo", () => {
-    expect(scoreMeta({ title: "  Fixture Title ", artist: "The  Band", tempo: 119.6 })).toEqual({ title: "Fixture Title", artist: "The Band", tempo: 120 })
-  })
-
-  test("a blank field or an impossible tempo is null", () => {
-    expect(scoreMeta({ title: "  ", artist: "", tempo: 0 })).toEqual({ title: null, artist: null, tempo: null })
-  })
-})
 
 describe("songFromScore", () => {
   const meta = { title: "Blackbird", artist: "The Beatles", tempo: 94 }

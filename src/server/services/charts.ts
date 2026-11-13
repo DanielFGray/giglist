@@ -4,7 +4,7 @@ import { RequestDatabase } from "../db"
 import { explains } from "../../charts/changes"
 import { anchorText, parseDoc } from "../../charts/doc"
 import { guessKey, importPasted } from "../../charts/lyrics"
-import { MAX_SCORE_BYTES, scoreFormat } from "../../charts/score-file"
+import { MAX_SCORE_BYTES, scoreFormat } from "alphatab-kit/charts/score-file"
 import { Chart, type ChartRevisionInsert, type LyricsChartInsert, type ScoreUploadQuery } from "../../api/charts"
 
 export class ChartRefused extends S.TaggedError<ChartRefused, { readonly brand: unique symbol }>()("ChartRefused", { message: S.String }) {}

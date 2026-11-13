@@ -12,7 +12,7 @@ import {
   errorMessage,
   fieldError,
 } from "./form"
-import { UNTITLED_SONG } from "~/charts/score-meta"
+import { UNTITLED_SONG } from "./song-from-score"
 import { DURATION, formatDuration, parseDuration } from "./duration"
 import { HANGING_CARD } from "./card"
 
