@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { NotationElement, type Settings } from "@coderline/alphatab"
+import { NotationElement, type model, type Settings } from "@coderline/alphatab"
 import { readPhrase, type PhraseProblem } from "alphatab-kit/charts/phrase"
 import { IconButton } from "alphatab-kit/player/icon-button"
 import { CountInIcon, LoadingSpinner, PlayIcon, StopIcon } from "alphatab-kit/player/icons"
@@ -21,12 +21,12 @@ import { useScorePlayer, type UseScorePlayer } from "alphatab-kit/player/use-sco
  * last notation that read.
  */
 export function Phrase({ tex, tempo }: { tex: string; tempo: number | null }) {
-  const problems = useMemo(() => {
-    const read = readPhrase(tex, null)
-    return "problems" in read ? read.problems : []
-  }, [tex])
-  const [readable, setReadable] = useState<string | null>(null)
-  if (problems.length === 0 && readable !== tex) setReadable(tex)
+  // One parse per text and tempo: the player rebuilds when the score object changes. `readPhrase` starts the
+  // phrase at the song's tempo whatever its own text says.
+  const read = useMemo(() => readPhrase(tex, tempo), [tex, tempo])
+  const problems = "problems" in read ? read.problems : []
+  const [readable, setReadable] = useState<model.Score | null>(null)
+  if ("score" in read && readable !== read.score) setReadable(read.score)
 
   if (readable === null) {
     return (
@@ -35,13 +35,11 @@ export function Phrase({ tex, tempo }: { tex: string; tempo: number | null }) {
       </div>
     )
   }
-  return <PhrasePlayer tex={readable} tempo={tempo} problems={problems} />
+  return <PhrasePlayer score={readable} problems={problems} />
 }
 
-function PhrasePlayer({ tex, tempo, problems }: { tex: string; tempo: number | null; problems: ReadonlyArray<PhraseProblem> }) {
-  // alphaTex takes a tempo as `\tempo N` at the start. The phrase's own `\tempo` header, if it has one, comes later and wins.
-  const source = { tex: tempo ? `\\tempo ${tempo}\n${tex}` : tex }
-  const { host, state, actions } = useScorePlayer({ source, zoom: PHRASE_ZOOM, configure: configurePhrase })
+function PhrasePlayer({ score, problems }: { score: model.Score; problems: ReadonlyArray<PhraseProblem> }) {
+  const { host, state, actions } = useScorePlayer({ source: { score }, zoom: PHRASE_ZOOM, configure: configurePhrase })
   const disabled = problems.length > 0 || state.status !== "ready"
   return (
     <div data-pwid="phrase" data-rendered={state.rendered} className="group relative space-y-1">

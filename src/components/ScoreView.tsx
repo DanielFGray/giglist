@@ -1,12 +1,9 @@
-import { useEffect, useRef } from "react"
-import { AlphaTabApi, importer, LayoutMode, model, PlayerMode, Settings, StaveProfile } from "@coderline/alphatab"
-import { alphaTabAssetUrls } from "alphatab-kit"
-import { inkFrom } from "./alphatab"
-import { useThemeInk } from "./useThemeInk"
-import { PlayControls } from "./PlayControls"
-import { usePlayback } from "./playback"
-import { barsLabel, barTicksOf, sameBars, selectedBars, ticksOfBars, type BarSpan } from "alphatab-kit/charts/score-bars"
-import { stretchForWidth } from "alphatab-kit/charts/score-layout"
+import { useEffect, useMemo, useRef } from "react"
+import { importer, model, Settings, StaveProfile } from "@coderline/alphatab"
+import { barsOfBeatSpan, selectionLabel, type BarSpan } from "alphatab-kit/charts/score-bars"
+import { createMixer, setSolo } from "alphatab-kit/charts/score-mixer"
+import { SpeedInput } from "alphatab-kit/player/speed-input"
+import { useScorePlayer, type UseScorePlayer } from "alphatab-kit/player/use-score-player"
 
 /**
  * Reads a Guitar Pro file for drawing as a tab. The staff profile is set before
@@ -18,126 +15,156 @@ export function readScore(bytes: Uint8Array): model.Score {
   return importer.ScoreLoader.loadScoreFromBytes(bytes, settings)
 }
 
-/** What the view draws and plays. `selected` is the passage the user chose; `range` is the drawn bars. */
-type Shown = {
+type ScoreViewProps = {
+  /** A parsed score (`readScore`). The view draws it; the app may draw the same score elsewhere too. */
   score: model.Score
+  /** The track drawn and played. A view draws one track for its whole life: another track is another view. */
   track: number
+  /** The bars drawn, zero-based and inclusive; null draws the whole score. */
   range: BarSpan | null
-  selected: BarSpan | null
-  onSelect: (span: BarSpan | null) => void
+  /**
+   * The passage the owner holds, in whole bars. When it is given, the view selects it, and `onSelect`
+   * receives each change a drag or a key makes, as the bars the selection touches. Without it the view
+   * keeps its own selection.
+   */
+  selected?: BarSpan | null
+  onSelect?: (span: BarSpan | null) => void
   onError?: (message: string) => void
+  /** Prefixes the test ids of the view's parts. */
+  pwid: string
 }
 
 /**
  * A score's bars drawn by alphaTab in page layout. A drag across the bars
  * selects a passage, and a selection is the playback range: it plays, loops and
- * clears from the hover bar. The owner holds the selection in `selected`, so a
+ * clears from the hover bar. The owner may hold the selection in `selected`, so a
  * typed bar range and a drag set the same passage.
  *
  * `range` limits the drawn bars. Playback covers the selection when there is
- * one, else the drawn bars, else the whole score (`range` null).
- *
- * alphaTab 1.8.4 needs an enabled player for built-in drag selection.
- * External-media mode supplies the cursors without loading audio. Play starts
- * the synthesizer and applies the selected passage once it is ready.
+ * one, else the drawn bars, else the whole score (`range` null), and only the
+ * drawn track sounds. The kit's `useScorePlayer` runs the player: the sound
+ * font loads on the first Play, and the notation takes the color of the text
+ * around the view.
  */
-export function ScoreView({
-  score,
-  track,
-  range,
-  selected,
-  pwid,
-  onSelect,
-  onError,
-}: Shown & {
-  /** Prefixes the test ids of the view's parts. */
-  pwid: string
-}) {
-  const host = useRef<HTMLDivElement>(null)
-  const viewRef = useRef<AlphaTabApi | null>(null)
-  // The latest props, for alphaTab's handlers, which are bound once.
-  const shown = useRef<Shown>({ score, track, range, selected, onSelect, onError })
-  useEffect(() => {
-    shown.current = { score, track, range, selected, onSelect, onError }
+export function ScoreView(props: ScoreViewProps) {
+  // The player solos the drawn track when it is built, so a new track is a new player.
+  return <DrawnScore key={props.track} {...props} />
+}
+
+function DrawnScore({ score, track, range, selected, pwid, onSelect, onError }: ScoreViewProps) {
+  const mixer = useMemo(() => soloed(score, track), [score, track])
+  const { host, state, actions } = useScorePlayer({
+    source: { score },
+    bars: range,
+    defaultTrack: track,
+    mixer,
+    zoom: SCORE_ZOOM,
+    // Loop plays the passage again at the same speed: no speed trainer step.
+    stepValue: 0,
+    configure: configureScore,
+    onSelectionChange: (span) => onSelect?.(span && barsOfBeatSpan(span)),
   })
-  const playback = usePlayback()
-  // The bounds as numbers, so that an equal range given as a new object does not redraw the view.
-  const first = range?.first ?? null
-  const last = range?.last ?? null
-  const picked = selected?.first ?? null
-  const pickedLast = selected?.last ?? null
 
+  // The owner's passage becomes the selection once the score is drawn, and again when the owner changes it.
+  const owned = selected !== undefined
+  const first = selected?.first ?? null
+  const last = selected?.last ?? null
   useEffect(() => {
-    const element = host.current
-    if (!element) return
-    const { scriptFile, fontDirectory, soundFont } = alphaTabAssetUrls()
-    const view = new AlphaTabApi(element, {
-      core: { engine: "svg", useWorkers: false, scriptFile, fontDirectory },
-      display: { padding: [0, 0], layoutMode: LayoutMode.Page, scale: 0.8, staveProfile: StaveProfile.ScoreTab, stretchForce: stretchForWidth(element.clientWidth) },
-      player: { playerMode: PlayerMode.EnabledExternalMedia, enableCursor: true, soundFont },
-    })
-    viewRef.current = view
-    inkFrom(view.settings, getComputedStyle(element).color)
-    view.updateSettings()
-    view.resize.on((e) => {
-      if (e.settings) e.settings.display.stretchForce = stretchForWidth(e.newWidth)
-    })
-    view.error.on((e) => shown.current.onError?.(e.message))
-    // Fires for a drag, and for the range the view sets itself. A range that is already the selection is not reported again.
-    view.playbackRangeChanged.on((e) => {
-      const { score, range, selected, onSelect } = shown.current
-      const span = selectedBars(barTicksOf(score.masterBars), e.playbackRange, range)
-      if (!sameBars(span, selected)) onSelect(span)
-    })
-    playback.attach(view, () => applyPlayback(view, shown.current))
-    return () => {
-      viewRef.current = null
-      playback.detach()
-      view.destroy()
-    }
-  }, [])
+    if (owned && state.rendered) actions.selectBars(first === null || last === null ? null : { first, last })
+  }, [owned, first, last, state.rendered, actions])
 
-  useThemeInk(viewRef, host)
-
+  const reportError = useRef(onError)
   useEffect(() => {
-    const view = viewRef.current
-    if (!view) return
-    const drawn = first === null || last === null ? null : { first, last }
-    view.settings.display.startBar = drawn ? drawn.first + 1 : 1
-    view.settings.display.barCount = drawn ? drawn.last - drawn.first + 1 : -1
-    view.updateSettings()
-    view.renderScore(score, [track])
-  }, [score, track, first, last])
-
+    reportError.current = onError
+  })
   useEffect(() => {
-    const view = viewRef.current
-    if (view) applyPlayback(view, shown.current)
-  }, [score, track, first, last, picked, pickedLast, playback.status])
+    if (state.error) reportError.current?.(state.error)
+  }, [state.error])
 
-  // The tempo shown is the one the passage starts at.
-  const passage = selected ?? range
-  const label = selected ? barsLabel(selected) : null
-
+  const bars = state.selection && barsOfBeatSpan(state.selection)
   return (
     <div className="group relative">
-      <div ref={host} data-pwid={`${pwid}-render`} data-selection={selected ? `${selected.first}-${selected.last}` : undefined} />
-      <PlayControls
+      <div ref={host} data-pwid={`${pwid}-render`} data-selection={bars ? `${bars.first}-${bars.last}` : undefined} />
+      <ScoreControls
         pwid={pwid}
-        playback={playback}
-        tempo={score.masterBars[passage?.first ?? 0]?.tempoAutomations[0]?.value ?? score.tempo}
-        selection={label}
-        onClear={selected ? () => onSelect(null) : undefined}
+        state={state}
+        actions={actions}
+        onClear={() => {
+          actions.clearSelection()
+          onSelect?.(null)
+        }}
       />
     </div>
   )
 }
 
 /**
- * Plays the drawn bars of one track: the other tracks are soloed out, and the
- * playback range is the selection, else the drawn bars, else the whole score.
+ * The hover bar over a score: the passage's bars with a Clear button when one is selected, play or stop, loop,
+ * count-in, speed and the tempo at that speed. The parent must be `group relative`; the bar shows while it is
+ * hovered or focused.
  */
-function applyPlayback(view: AlphaTabApi, { score, track, range, selected }: Shown) {
-  view.changeTrackSolo([score.tracks[track]!], true)
-  const span = selected ?? range
-  view.playbackRange = span ? ticksOfBars(barTicksOf(score.masterBars), span) : null
+function ScoreControls({
+  pwid,
+  state,
+  actions,
+  onClear,
+}: Pick<UseScorePlayer, "state" | "actions"> & { pwid: string; onClear: () => void }) {
+  const control = "rounded-md border border-[var(--color-border-subtle)] px-2 py-0.5 text-xs cursor-pointer disabled:opacity-40"
+  const field = "rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] px-1 py-0.5 text-xs text-zinc-200"
+  return (
+    <div className="pointer-events-none absolute top-0 right-0 z-10 flex flex-wrap items-center gap-3 rounded-md bg-[var(--color-surface)]/80 px-2 py-1 font-sans text-xs text-zinc-500 opacity-0 backdrop-blur-sm transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100">
+      {state.selection && (
+        <span data-pwid={`${pwid}-selection`} className="text-zinc-300">
+          {selectionLabel(state.selection)}
+        </span>
+      )}
+      <button
+        data-pwid={`${pwid}-play`}
+        type="button"
+        disabled={state.status !== "ready" || state.sound === "loading"}
+        onClick={state.playing ? actions.stop : actions.play}
+        className={control}
+      >
+        {state.playing ? "Stop" : state.sound === "loading" ? "Loading…" : "Play"}
+      </button>
+      <label className="flex items-center gap-1">
+        <input data-pwid={`${pwid}-loop`} type="checkbox" checked={state.trainer.loop} onChange={(e) => actions.setLoop(e.target.checked)} />
+        Loop
+      </label>
+      <label className="flex items-center gap-1">
+        <input data-pwid={`${pwid}-count-in`} type="checkbox" checked={state.countIn} onChange={(e) => actions.setCountIn(e.target.checked)} />
+        Count in
+      </label>
+      <SpeedInput
+        speed={state.speed}
+        onSpeed={actions.setSpeed}
+        parts={{ root: { className: "flex items-center gap-1" }, input: { className: `${field} w-14 text-right`, "data-pwid": `${pwid}-speed` } }}
+      />
+      {state.tempo !== null && (
+        <span data-pwid={`${pwid}-tempo`} className="tabular-nums">
+          {state.tempo} bpm
+        </span>
+      )}
+      {state.selection && (
+        <button data-pwid={`${pwid}-clear`} type="button" onClick={onClear} className={control}>
+          Clear
+        </button>
+      )}
+    </div>
+  )
+}
+
+/** A score in a chart draws smaller than the score page: the kit's zoom on top of the width's own base scale. */
+const SCORE_ZOOM = 0.8
+
+/** Page-thread drawing, because a chart can hold several scores; the card's padding is the only margin. */
+function configureScore(settings: Settings) {
+  settings.core.useWorkers = false
+  settings.display.padding = [0, 0]
+}
+
+/** Only the drawn track sounds: the other tracks are soloed out. */
+function soloed(score: model.Score, track: number) {
+  const mixer = createMixer(score.tracks.map((t) => t.playbackInfo.volume / 16))
+  return score.tracks[track] ? setSolo(mixer, track, true) : mixer
 }

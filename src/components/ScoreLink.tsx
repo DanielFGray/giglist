@@ -27,8 +27,6 @@ export function outlineOf(score: model.Score): ScoreOutline {
 export function ScoreLink({ reading, revisionId }: { reading: ScoreLinkReading; revisionId: string | undefined }) {
   const [drawn, setDrawn] = useState<{ score: model.Score; track: number; span: BarSpan } | null>(null)
   const [problem, setProblem] = useState<string | null>(null)
-  // A passage the reader drags across the drawn bars. It plays and loops; null plays the drawn bars.
-  const [selected, setSelected] = useState<BarSpan | null>(null)
 
   useEffect(() => {
     if ("problem" in reading) return fail(reading.problem)
@@ -37,7 +35,6 @@ export function ScoreLink({ reading, revisionId }: { reading: ScoreLinkReading; 
     let disposed = false
     setDrawn(null)
     setProblem(null)
-    setSelected(null)
     scores
       .file(revisionId)
       .then((bytes) => {
@@ -73,8 +70,6 @@ export function ScoreLink({ reading, revisionId }: { reading: ScoreLinkReading; 
           score={drawn.score}
           track={drawn.track}
           range={drawn.span}
-          selected={selected}
-          onSelect={setSelected}
           pwid="score-link"
           onError={(message) => {
             setProblem(`The score cannot be drawn: ${message}`)
