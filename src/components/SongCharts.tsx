@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect, useState } from "react"
 import { charts, type ChartInfo } from "~/api/client"
 import { exportChords, hasLyricsChart } from "~/charts/lyrics"
-import type { NumeralDisplay } from "~/charts/numeral"
+import type { NumeralDisplay } from "alphatab-kit/charts/numeral"
 import type { MusicalKey } from "alphatab-kit/charts/key"
 import type { ScoreMeta } from "alphatab-kit/charts/score-meta"
 import { AddScore } from "./AddScore"

@@ -10,7 +10,7 @@
  */
 import { readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
-import { keyScale } from "../src/charts/numeral"
+import { keyScale } from "alphatab-kit/charts/numeral"
 import { chordClass, type Prior } from "../src/charts/suggest"
 
 /** One chord of an analysis: the expert's numeral, and the chord it names in the song's key. */

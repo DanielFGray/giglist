@@ -13,8 +13,8 @@
 import type { model } from "@coderline/alphatab"
 import type { MusicalKey } from "alphatab-kit/charts/key"
 import { keyOfChords } from "./lyrics"
-import { noteInKey } from "./numeral"
-import { inferChords } from "./score-chords"
+import { noteInKey } from "alphatab-kit/charts/numeral"
+import { inferChords } from "alphatab-kit/charts/score-chords"
 import { spell } from "alphatab-kit/charts/spelling"
 
 export type ScoreChart = {

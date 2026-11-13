@@ -1,6 +1,6 @@
 import { useEffect, useMemo, type CSSProperties } from "react"
 import { degrees } from "alphatab-kit/charts/degrees"
-import { numeral } from "~/charts/numeral"
+import { numeral } from "alphatab-kit/charts/numeral"
 import { spell } from "alphatab-kit/charts/spelling"
 import { voicings } from "alphatab-kit/charts/voicing"
 import { writeFrets } from "alphatab-kit/charts/fretting"

@@ -4,7 +4,7 @@
  * where they agree, and gives the two experts' agreement with each other as the
  * ceiling. Usage: bun scripts/checkNumerals.ts <dir of rs200 expanded .txt files>
  */
-import { numeral } from "../src/charts/numeral"
+import { numeral } from "alphatab-kit/charts/numeral"
 import { readCorpus, type CorpusChord } from "./rockCorpus"
 
 const dir = process.argv[2]

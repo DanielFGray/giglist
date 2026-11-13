@@ -14,7 +14,7 @@
  * Usage: bun scripts/checkSuggestions.ts <dir of rs200 expanded .txt files> [--fit]
  */
 import { suggestedChords } from "../src/charts/lyrics"
-import { keyScale } from "../src/charts/numeral"
+import { keyScale } from "alphatab-kit/charts/numeral"
 import { changes, chordClass, rankClasses, WEIGHTS, type Prior } from "../src/charts/suggest"
 import { corpusRuns, priorFrom, readCorpus } from "./rockCorpus"
 

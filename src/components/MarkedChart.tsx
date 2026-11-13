@@ -3,7 +3,7 @@ import { marks as marksApi, stamps as stampsApi, type ChartInfo, type ChartMarks
 import { boundsOf, inkPath, markResolver, near, type Box, type Stroke } from "~/charts/marks"
 import { renderLyrics, chartChords } from "~/charts/lyrics"
 import type { Resolution } from "~/charts/follow"
-import type { NumeralDisplay } from "~/charts/numeral"
+import type { NumeralDisplay } from "alphatab-kit/charts/numeral"
 import { useAuth } from "./AuthContext"
 import type { ChordDiagrams } from "./ChordShapes"
 import { ChordStrip } from "./ChordStrip"

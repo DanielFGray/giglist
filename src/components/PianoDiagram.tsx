@@ -1,5 +1,5 @@
 import { playPianoChord } from "~/audio/chord"
-import { numeral } from "~/charts/numeral"
+import { numeral } from "alphatab-kit/charts/numeral"
 import { isBlack, keyRange, pianoNotes, type PianoNote } from "alphatab-kit/charts/piano"
 import type { Spelling } from "alphatab-kit/charts/spelling"
 

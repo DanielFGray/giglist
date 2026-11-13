@@ -1,7 +1,7 @@
 import { useEffect, useId, useMemo, useState, type CSSProperties } from "react"
 import type { ChartInfo } from "~/api/client"
 import { renderLyrics, type ChartItem, type ChartLine } from "~/charts/lyrics"
-import { chordNumerals, type NumeralDisplay } from "~/charts/numeral"
+import { chordNumerals, type NumeralDisplay } from "alphatab-kit/charts/numeral"
 import { ChordShapes, type ChordDiagrams } from "./ChordShapes"
 import { preloadChordPlayer } from "~/audio/chord"
 import { Phrase } from "./Phrase"
