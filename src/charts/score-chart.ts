@@ -15,7 +15,7 @@ import type { MusicalKeyType } from "~/api/songs"
 import { keyOfChords } from "./lyrics"
 import { noteInKey } from "./numeral"
 import { inferChords } from "./score-chords"
-import { spell } from "./spelling"
+import { spell } from "alphatab-kit/charts/spelling"
 
 export type ScoreChart = {
   /** Chords over lyrics, in the form `importPasted` reads. */

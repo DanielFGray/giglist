@@ -10,7 +10,7 @@
  */
 import { enclosingSection, type ChartDoc } from "./doc"
 import { DEGREE_NAME, ROMAN_STEP, inKey, keyScale, numeral, type KeyScale } from "./numeral"
-import { spell, spellNote } from "./spelling"
+import { spell, spellNote } from "alphatab-kit/charts/spelling"
 import corpusCounts from "./rock-prior.json"
 
 /** Chord-change counts over a corpus, by class: how often each class follows each other class. */

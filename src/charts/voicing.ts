@@ -2,8 +2,8 @@
  * Guitar shapes for a spelled chord: every playable way to hold its notes in
  * one hand position, best first. Pure, so the chord panel and the tests share it.
  */
-import type { PitchClass, Spelling } from "./spelling"
-import { fingersNeeded, writeFrets, type Voicing } from "./fretting"
+import type { PitchClass, Spelling } from "alphatab-kit/charts/spelling"
+import { fingersNeeded, writeFrets, type Voicing } from "alphatab-kit/charts/fretting"
 
 /** Open-string pitches as MIDI numbers, lowest string first. */
 export const STANDARD_TUNING: ReadonlyArray<number> = [40, 45, 50, 55, 59, 64]

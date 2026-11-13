@@ -2,8 +2,8 @@
  * The degree each note a guitar shape sounds is, as `R`, `3`, `b7` and so on.
  * Pure and free of the DOM, so the diagram and the tests share it.
  */
-import type { PitchClass, Spelling } from "./spelling"
-import type { Voicing } from "./fretting"
+import type { PitchClass, Spelling } from "alphatab-kit/charts/spelling"
+import type { Voicing } from "alphatab-kit/charts/fretting"
 import { STANDARD_TUNING } from "./voicing"
 
 /**

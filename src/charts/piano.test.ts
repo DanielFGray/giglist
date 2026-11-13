@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest"
 import { keyRange, pianoNotes } from "./piano"
-import { spell } from "./spelling"
+import { spell } from "alphatab-kit/charts/spelling"
 
 const notesOf = (name: string) => pianoNotes(spell(name)!).map((n) => `${n.name}:${n.degree}`)
 

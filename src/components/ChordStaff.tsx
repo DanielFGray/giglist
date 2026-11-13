@@ -1,6 +1,6 @@
 import { degreeName } from "~/charts/degrees"
 import { numeral } from "~/charts/numeral"
-import type { Spelling } from "~/charts/spelling"
+import type { Spelling } from "alphatab-kit/charts/spelling"
 import { staffNotes, staffSides, staffStep, type StaffNote } from "~/charts/staff"
 import { alphaTabAssetUrls } from "alphatab-kit"
 

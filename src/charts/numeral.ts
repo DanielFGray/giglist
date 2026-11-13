@@ -1,4 +1,4 @@
-import { spell, spellNote, type PitchClass, type Spelling } from "./spelling"
+import { spell, spellNote, type PitchClass, type Spelling } from "alphatab-kit/charts/spelling"
 
 /** Which of a chord's two names a chart shows: the name, the numeral, or both. */
 export type NumeralDisplay = "names" | "numerals" | "both"

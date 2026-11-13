@@ -1,6 +1,6 @@
 import { degrees } from "~/charts/degrees"
 import { numeral } from "~/charts/numeral"
-import { spell } from "~/charts/spelling"
+import { spell } from "alphatab-kit/charts/spelling"
 import { voicings } from "~/charts/voicing"
 import { useEffect } from "react"
 import { ChordDiagram } from "./ChordDiagram"

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest"
 import { degrees } from "./degrees"
-import { spell } from "./spelling"
-import type { Voicing } from "./fretting"
+import { spell } from "alphatab-kit/charts/spelling"
+import type { Voicing } from "alphatab-kit/charts/fretting"
 
 /** The labels `name`'s notes get in one shape, in standard tuning. */
 function labels(name: string, frets: Voicing["frets"]): ReadonlyArray<string | null> {

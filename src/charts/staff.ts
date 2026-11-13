@@ -1,4 +1,4 @@
-import { NATURALS, type Spelling } from "./spelling"
+import { NATURALS, type Spelling } from "alphatab-kit/charts/spelling"
 
 export type StaffNote = {
   readonly letter: string

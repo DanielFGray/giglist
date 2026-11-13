@@ -1,7 +1,7 @@
 import { playPianoChord } from "~/audio/chord"
 import { numeral } from "~/charts/numeral"
 import { isBlack, keyRange, pianoNotes, type PianoNote } from "~/charts/piano"
-import type { Spelling } from "~/charts/spelling"
+import type { Spelling } from "alphatab-kit/charts/spelling"
 
 /**
  * One chord as pressed keys on a keyboard trimmed to the chord's range. A circle

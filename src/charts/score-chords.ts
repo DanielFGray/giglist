@@ -11,7 +11,7 @@
  * clearly better than one.
  */
 import type { model } from "@coderline/alphatab"
-import { spell, type PitchClass } from "./spelling"
+import { spell, type PitchClass } from "alphatab-kit/charts/spelling"
 
 /** A chord without a name yet: the name depends on the song's key. */
 export type HeardChord = { readonly at: number; readonly root: PitchClass; readonly quality: Quality }

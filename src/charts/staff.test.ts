@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest"
-import { spell } from "./spelling"
+import { spell } from "alphatab-kit/charts/spelling"
 import { staffNotes, staffSides, staffStep, type StaffNote } from "./staff"
 
 function notes(name: string): ReadonlyArray<StaffNote> {

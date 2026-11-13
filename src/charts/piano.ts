@@ -1,6 +1,6 @@
 import { degreeName } from "./degrees"
 import { staffNotes } from "./staff"
-import { NATURALS, type Spelling } from "./spelling"
+import { NATURALS, type Spelling } from "alphatab-kit/charts/spelling"
 
 /** A key the chord presses: its pitch, the name the chord spells it with, and its degree. */
 export type PianoNote = {

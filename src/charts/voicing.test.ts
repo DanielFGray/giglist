@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest"
-import { spell, type Spelling } from "./spelling"
-import { fingersNeeded, writeFrets, type Voicing } from "./fretting"
+import { spell, type Spelling } from "alphatab-kit/charts/spelling"
+import { fingersNeeded, writeFrets, type Voicing } from "alphatab-kit/charts/fretting"
 import { STANDARD_TUNING, voicings } from "./voicing"
 
 const ROOTS = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"]
