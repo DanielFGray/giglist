@@ -12,7 +12,7 @@
 import { Chord, ChordLyricsPair, ChordProParser, Literal, Tag } from "chordsheetjs"
 import type { MusicalKeyType } from "~/api/songs"
 import { anchorLine, enclosingSection, inPhrase, parseDoc } from "./doc"
-import { readScoreLink, type ScoreLinkReading } from "./score-link"
+import { readScoreLink, type ScoreLinkReading } from "alphatab-kit/charts/score-link"
 
 /**
  * One drawable piece of a chart line. `start` and `end` are its range in the

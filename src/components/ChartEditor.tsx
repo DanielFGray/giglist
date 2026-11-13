@@ -7,7 +7,7 @@ import {
   setPhrase, type ChartDoc, type DocLine, type Edit,
 } from "~/charts/doc"
 import { isChordName, isPhraseStart, isTabStart, suggestedChords } from "~/charts/lyrics"
-import { readScoreLink } from "~/charts/score-link"
+import { readScoreLink } from "alphatab-kit/charts/score-link"
 import { chartSlot, suggest, type Suggestion } from "~/charts/suggest"
 import { BlockHandle, type Point } from "./BlockHandle"
 import { ChordInput, type ChordEntry } from "./ChordInput"

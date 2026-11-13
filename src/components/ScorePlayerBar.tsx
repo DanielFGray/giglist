@@ -1,7 +1,7 @@
 import type { ReactNode } from "react"
-import type { Notation } from "~/charts/score-notation"
-import { MAX_ZOOM, MIN_ZOOM, stepZoom } from "~/charts/score-zoom"
-import { MAX_SPEED, MIN_SPEED, formatClock, type StepMode } from "~/charts/speed-trainer"
+import type { Notation } from "alphatab-kit/charts/score-notation"
+import { MAX_ZOOM, MIN_ZOOM, stepZoom } from "alphatab-kit/charts/score-zoom"
+import { MAX_SPEED, MIN_SPEED, formatClock, type StepMode } from "alphatab-kit/charts/speed-trainer"
 import { SettingsPanel } from "./SettingsPanel"
 
 /**
