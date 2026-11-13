@@ -1,4 +1,4 @@
-import { test, expect, getPw, TEST_PASSWORD } from "./helpers"
+import { test, expect, getPw, TEST_PASSWORD, testSlug } from "./helpers"
 
 test.describe("invite errors", () => {
   test.describe.configure({ timeout: 30000 })
@@ -10,7 +10,7 @@ test.describe("invite errors", () => {
     await testing.login({ username: "test_invite_err_owner" })
     const created = await page.request.post("/api/my/bands", {
       data: {
-        slug: `test-invite-err-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        slug: testSlug("invite-err"),
         name: "Invite Error Band",
       },
     })
@@ -42,7 +42,7 @@ test.describe("invite errors", () => {
     await testing.login({ username: "test_invite_dup_owner" })
     const created = await page.request.post("/api/my/bands", {
       data: {
-        slug: `test-invite-dup-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        slug: testSlug("invite-dup"),
         name: "Duplicate Invite Band",
       },
     })

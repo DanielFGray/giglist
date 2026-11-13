@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test"
-import { test, expect, getPw, TEST_PASSWORD } from "./helpers"
+import { test, expect, getPw, TEST_PASSWORD, testSlug } from "./helpers"
 
 /** Create a band for the logged-in user and return its id. Band-scoped routes
  *  carry the id in the path, so a song spec needs one before it can deep-link. */
@@ -53,7 +53,7 @@ const newTitle = (page: Page) => getPw(page, "grid-new-row").locator('[data-pwid
 test.describe("songs", () => {
   test("types a run of titles into the last row, then fills in the artists down the column", async ({ page, testing }) => {
     await testing.login()
-    const bandId = await createBand(page, `test-songs-grid-${Date.now()}`)
+    const bandId = await createBand(page, testSlug("songs-grid"))
 
     await page.goto(`/band/${bandId}/songs`)
     await newTitle(page).click()
@@ -83,7 +83,7 @@ test.describe("songs", () => {
 
   test("an edited cell keeps the typed artist until the page renders the saved row", async ({ page, testing }) => {
     await testing.login()
-    const bandId = await createBand(page, `test-songs-pending-${Date.now()}`)
+    const bandId = await createBand(page, testSlug("songs-pending"))
     await createSong(page, bandId, { title: "Seven Nation Army", artist: "The White Stripes", tempo_bpm: 124 })
 
     await page.goto(`/band/${bandId}/songs`)
@@ -118,7 +118,7 @@ test.describe("songs", () => {
 
   test("Tab saves a cell and moves along the row; Escape cancels and Delete clears", async ({ page, testing }) => {
     await testing.login()
-    const bandId = await createBand(page, `test-songs-tab-${Date.now()}`)
+    const bandId = await createBand(page, testSlug("songs-tab"))
 
     await page.goto(`/band/${bandId}/songs`)
     await newTitle(page).click()
@@ -149,7 +149,7 @@ test.describe("songs", () => {
 
   test("refuses a bad value in a cell and says why", async ({ page, testing }) => {
     await testing.login()
-    const bandId = await createBand(page, `test-songs-bad-${Date.now()}`)
+    const bandId = await createBand(page, testSlug("songs-bad"))
     await createSong(page, bandId, { title: "Everlong", artist: "Foo Fighters", tempo_bpm: 158 })
 
     await page.goto(`/band/${bandId}/songs`)
@@ -172,7 +172,7 @@ test.describe("songs", () => {
 
   test("deletes a song from its row", async ({ page, testing }) => {
     await testing.login()
-    const bandId = await createBand(page, `test-songs-delete-${Date.now()}`)
+    const bandId = await createBand(page, testSlug("songs-delete"))
     await createSong(page, bandId, { title: "Everlong", artist: "Foo Fighters", tempo_bpm: 158 })
 
     await page.goto(`/band/${bandId}/songs`)
@@ -183,7 +183,7 @@ test.describe("songs", () => {
 
   test("a sort is applied when asked: an edited row keeps its place until the next sort", async ({ page, testing }) => {
     await testing.login()
-    const bandId = await createBand(page, `test-songs-stable-${Date.now()}`)
+    const bandId = await createBand(page, testSlug("songs-stable"))
     await createSong(page, bandId, { title: "Apple", artist: "The As", tempo_bpm: 140 })
     await createSong(page, bandId, { title: "Mango", artist: "The Ms", tempo_bpm: 120 })
 
@@ -205,7 +205,7 @@ test.describe("songs", () => {
 
   test("a song opens read-only, and Edit or Cancel moves between the two modes", async ({ page, testing }) => {
     await testing.login()
-    const bandId = await createBand(page, `test-songs-read-${Date.now()}`)
+    const bandId = await createBand(page, testSlug("songs-read"))
     await createSong(page, bandId, { title: "Everlong", artist: "Foo Fighters", tempo_bpm: 158 })
 
     await page.goto(`/band/${bandId}/songs`)
@@ -230,7 +230,7 @@ test.describe("songs", () => {
 
   test("Hide details gives the charts the whole width, and Details brings the sidebar back", async ({ page, testing }) => {
     await testing.login()
-    const bandId = await createBand(page, `test-songs-hide-${Date.now()}`)
+    const bandId = await createBand(page, testSlug("songs-hide"))
     const songId = await createSong(page, bandId, { title: "Everlong", artist: "Foo Fighters", tempo_bpm: 158 })
 
     await page.setViewportSize({ width: 1280, height: 800 })
@@ -251,7 +251,7 @@ test.describe("songs", () => {
 
   test("a score uploaded to an untitled song names the song, and a titled song keeps its name", async ({ page, testing }) => {
     await testing.login()
-    const bandId = await createBand(page, `test-songs-score-meta-${Date.now()}`)
+    const bandId = await createBand(page, testSlug("songs-score-meta"))
     const titled = new URL("./fixtures/titled.gp", import.meta.url).pathname
     const upload = async (songId: string) => {
       await page.goto(`/band/${bandId}/songs/${songId}`)
@@ -278,7 +278,7 @@ test.describe("songs", () => {
 
   test("rejects a duration that is not mm:ss", async ({ page, testing }) => {
     await testing.login()
-    const bandId = await createBand(page, `test-songs-duration-${Date.now()}`)
+    const bandId = await createBand(page, testSlug("songs-duration"))
 
     await page.goto(`/band/${bandId}/songs`)
     await getPw(page, "song-new").click()
@@ -293,7 +293,7 @@ test.describe("songs", () => {
 
   test("a new song is saved untitled and opens with charts and delete ready", async ({ page, testing }) => {
     await testing.login()
-    const bandId = await createBand(page, `test-songs-untitled-${Date.now()}`)
+    const bandId = await createBand(page, testSlug("songs-untitled"))
 
     await page.goto(`/band/${bandId}/songs`)
     await getPw(page, "song-new").click()
@@ -329,7 +329,7 @@ test.describe("songs", () => {
 
   test("sorts and searches the catalog", async ({ page, testing }) => {
     await testing.login()
-    const bandId = await createBand(page, `test-songs-filter-${Date.now()}`)
+    const bandId = await createBand(page, testSlug("songs-filter"))
     await createSong(page, bandId, { title: "Zebra", artist: "The Zeds", tempo_bpm: 90 })
     await createSong(page, bandId, { title: "Apple", artist: "The As", tempo_bpm: 140 })
     await createSong(page, bandId, { title: "Mango", artist: "The Ms", tempo_bpm: 120 })
@@ -357,10 +357,10 @@ test.describe("songs", () => {
     request,
   }) => {
     await testing.login()
-    const bandId = await createBand(page, `test-songs-authz-${Date.now()}`)
+    const bandId = await createBand(page, testSlug("songs-authz"))
 
     // A second user, in its own cookie store, must not reach the first band.
-    const username = `test_song_outsider_${Date.now()}`
+    const username = testing.username("song_outsider")
     const registered = await request.post("/api/auth/register", {
       data: {
         username,
@@ -395,12 +395,12 @@ test.describe("songs", () => {
   }) => {
     // Someone else owns a band, so there is data a leak would surface.
     await testing.login()
-    await createBand(page, `test-rls-other-${Date.now()}`)
+    await createBand(page, testSlug("rls-other"))
 
     // A fresh user, logged in through the API so its cookie is separate from
     // the page's. Before RLS was enforced this list returned every band in the
     // database rather than only the user's own.
-    const username = `test_rls_empty_${Date.now()}`
+    const username = testing.username("rls_empty")
     await request.post("/api/auth/register", {
       data: {
         username,

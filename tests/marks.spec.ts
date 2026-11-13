@@ -1,11 +1,11 @@
 import type { Locator, Page } from "@playwright/test"
 import { deleteLine, insertLineAfter, parseDoc, serializeDoc, type Edit } from "alphatab-kit/charts/doc"
-import { test, expect, getPw, openTool, TEST_PASSWORD } from "./helpers"
+import { test, expect, getPw, openTool, TEST_PASSWORD, testSlug } from "./helpers"
 
 /** A band, a song and a bare-lyrics chart; marks start from a chart. */
 const createChart = async (page: Page) => {
   const bandRes = await page.request.post("/api/my/bands", {
-    data: { slug: `test-marks-${Date.now()}`, name: "Test: marks" },
+    data: { slug: testSlug("marks"), name: "Test: marks" },
   })
   const bandId = (await bandRes.json()).id as string
   const song = await (

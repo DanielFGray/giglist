@@ -1,11 +1,10 @@
 import type { Page } from "@playwright/test"
-import { test, expect, getPw, TEST_PASSWORD } from "./helpers"
+import { test, expect, getPw, TEST_PASSWORD, testSlug } from "./helpers"
 
-/** A band the owner creates. The random suffix keeps slugs unique across workers. */
+/** A band the owner creates. */
 const newBand = async (owner: Page, name: string) => {
-  const suffix = Math.random().toString(36).slice(2, 8)
   const band = await owner.request.post("/api/my/bands", {
-    data: { slug: `test-login-return-${Date.now()}-${suffix}`, name },
+    data: { slug: testSlug("login-return"), name },
   })
   expect(band.ok(), await band.text()).toBe(true)
   return (await band.json()).id as string

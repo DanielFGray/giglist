@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs"
 import type { APIRequestContext, Page } from "@playwright/test"
-import { test, expect, getPw } from "./helpers"
+import { test, expect, getPw, testSlug } from "./helpers"
 
 const fixturePath = new URL("./fixtures/four-tracks.gp5", import.meta.url)
 const fixture = readFileSync(fixturePath)
@@ -10,7 +10,7 @@ const truncated = fixture.subarray(0, 200)
 /** Create a band and a song through the API; score specs start from a song. */
 const createSong = async (page: Page) => {
   const bandRes = await page.request.post("/api/my/bands", {
-    data: { slug: `test-scores-${Date.now()}`, name: "Test: scores" },
+    data: { slug: testSlug("scores"), name: "Test: scores" },
   })
   expect(bandRes.ok(), `create band failed: ${await bandRes.text()}`).toBe(true)
   const bandId = (await bandRes.json()).id as string

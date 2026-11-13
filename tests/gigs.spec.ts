@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test"
-import { test, expect, getPw, post, TEST_PASSWORD } from "./helpers"
+import { test, expect, getPw, post, TEST_PASSWORD, testSlug } from "./helpers"
 
 /** `YYYY-MM-DD`, `days` from today. */
 const dayFromToday = (days: number) => {
@@ -17,7 +17,7 @@ const setlistNames = (page: Page) => getPw(page, "gig-setlist-name")
 test.describe("gigs", () => {
   test("creates a gig, adds an existing setlist and a new one, orders them and saves the details", async ({ page, testing }) => {
     await testing.login()
-    const bandId = await createBand(page, `test-gig-${Date.now()}`)
+    const bandId = await createBand(page, testSlug("gig"))
     const song = await post(page, "/api/songs", { band_id: bandId, title: "Alpha", artist: null, key: null, tempo_bpm: null, duration_seconds: 180, capo: null, notes: null })
     const main = await post(page, "/api/setlists", { band_id: bandId, name: "Main set" })
     await post(page, `/api/setlists/${main.id}/entries`, { song_id: song.id })
@@ -74,7 +74,7 @@ test.describe("gigs", () => {
 
   test("one setlist serves many gigs, and one gig copies it for itself in the same place", async ({ page, testing }) => {
     await testing.login()
-    const bandId = await createBand(page, `test-gig-reuse-${Date.now()}`)
+    const bandId = await createBand(page, testSlug("gig-reuse"))
     const song = await post(page, "/api/songs", { band_id: bandId, title: "Alpha", artist: null, key: null, tempo_bpm: null, duration_seconds: null, capo: null, notes: null })
     const main = await post(page, "/api/setlists", { band_id: bandId, name: "Main set" })
     await post(page, `/api/setlists/${main.id}/entries`, { song_id: song.id })
@@ -116,7 +116,7 @@ test.describe("gigs", () => {
 
   test("lists upcoming gigs soonest first and past gigs latest first, and deletes a gig", async ({ page, testing }) => {
     await testing.login()
-    const bandId = await createBand(page, `test-gig-list-${Date.now()}`)
+    const bandId = await createBand(page, testSlug("gig-list"))
     for (const [venue, days] of [["Later", 20], ["Sooner", 5], ["Long ago", -60], ["Last week", -7]] as const) {
       await post(page, "/api/gigs", { band_id: bandId, ...gigFields, venue, gig_date: dayFromToday(days) })
     }
@@ -131,10 +131,10 @@ test.describe("gigs", () => {
 
   test("keeps a gig private to the band", async ({ page, testing, request }) => {
     await testing.login()
-    const bandId = await createBand(page, `test-gig-authz-${Date.now()}`)
+    const bandId = await createBand(page, testSlug("gig-authz"))
     const gig = await post(page, "/api/gigs", { band_id: bandId, ...gigFields, venue: "Private" })
 
-    const username = `test_gig_outsider_${Date.now()}`
+    const username = testing.username("gig_outsider")
     const registered = await request.post("/api/auth/register", {
       data: { username, email: `${username}@test.local`, password: TEST_PASSWORD },
     })

@@ -1,13 +1,13 @@
 import { readFileSync } from "node:fs"
 import type { APIRequestContext, Page } from "@playwright/test"
-import { test, expect, getPw } from "./helpers"
+import { test, expect, getPw, testSlug } from "./helpers"
 
 const score = readFileSync(new URL("./fixtures/sections.gp", import.meta.url))
 
 /** A band, a song in G, and a score chart uploaded to it: the score a link names. */
 const setUp = async (page: Page) => {
   const bandRes = await page.request.post("/api/my/bands", {
-    data: { slug: `test-score-links-${Date.now()}`, name: "Test: score links" },
+    data: { slug: testSlug("score-links"), name: "Test: score links" },
   })
   expect(bandRes.ok(), `create band failed: ${await bandRes.text()}`).toBe(true)
   const bandId = (await bandRes.json()).id as string

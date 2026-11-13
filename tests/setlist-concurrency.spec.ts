@@ -1,12 +1,12 @@
 import type { Page } from "@playwright/test"
-import { test, expect, post } from "./helpers"
+import { test, expect, post, testSlug } from "./helpers"
 
 const song = (page: Page, band_id: string, title: string) =>
   post(page, "/api/songs", { band_id, title, artist: null, key: null, tempo_bpm: null, duration_seconds: null, capo: null, notes: null })
 
 test("concurrent moves preserve different entries and last write wins for one entry", async ({ page, testing, browser }) => {
   const me = await testing.login()
-  const band = await post(page, "/api/my/bands", { slug: `test-concurrent-${Date.now()}`, name: "Concurrent" })
+  const band = await post(page, "/api/my/bands", { slug: testSlug("concurrent"), name: "Concurrent" })
   const songs = []
   for (const title of ["Alpha", "Beta", "Gamma", "Delta"]) songs.push(await song(page, band.id, title))
   const setlist = await post(page, "/api/setlists", { band_id: band.id, name: "Concurrent" })
@@ -43,7 +43,7 @@ test("concurrent moves preserve different entries and last write wins for one en
 
 test("parallel adds get distinct keys and a following move lands after its anchor", async ({ page, testing }) => {
   await testing.login()
-  const band = await post(page, "/api/my/bands", { slug: `test-parallel-add-${Date.now()}`, name: "Parallel adds" })
+  const band = await post(page, "/api/my/bands", { slug: testSlug("parallel-add"), name: "Parallel adds" })
   const s = await song(page, band.id, "Song")
   const setlist = await post(page, "/api/setlists", { band_id: band.id, name: "Adds" })
   const responses = await Promise.all(Array.from({ length: 4 }, () => page.request.post(`/api/setlists/${setlist.id}/entries`, { data: { song_id: s.id } })))
@@ -59,7 +59,7 @@ test("parallel adds get distinct keys and a following move lands after its ancho
 
 test("rebalances entry and gig setlist keys after repeated neighbour moves", async ({ page, testing }) => {
   await testing.login()
-  const band = await post(page, "/api/my/bands", { slug: `test-rebalance-${Date.now()}`, name: "Rebalance" })
+  const band = await post(page, "/api/my/bands", { slug: testSlug("rebalance"), name: "Rebalance" })
   const setlist = await post(page, "/api/setlists", { band_id: band.id, name: "Rebalance" })
   const entries = []
   for (const title of ["Alpha", "Beta", "Gamma"]) {

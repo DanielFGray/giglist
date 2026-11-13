@@ -1,4 +1,4 @@
-import { test, expect, getPw } from "./helpers"
+import { test, expect, getPw, testSlug } from "./helpers"
 
 test.describe("delete account", () => {
   test.describe.configure({ timeout: 30000 })
@@ -6,7 +6,7 @@ test.describe("delete account", () => {
   test("hides deletion while the user owns a band", async ({ page, testing }) => {
     await testing.login({ username: "test_del_owner" })
     const created = await page.request.post("/api/my/bands", {
-      data: { slug: `test-del-owned-${Date.now()}`, name: "Still Owned" },
+      data: { slug: testSlug("del-owned"), name: "Still Owned" },
     })
     expect(created.ok(), await created.text()).toBe(true)
 

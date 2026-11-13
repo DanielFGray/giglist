@@ -1,11 +1,11 @@
 import { readFileSync } from "node:fs"
-import { test, expect, getPw } from "./helpers"
+import { test, expect, getPw, testSlug } from "./helpers"
 
 const fixture = readFileSync(new URL("./fixtures/four-tracks.gp5", import.meta.url))
 
 test("zoom resizes the score and is remembered", async ({ page, testing }) => {
   await testing.login()
-  const band = await (await page.request.post("/api/my/bands", { data: { slug: `test-zoom-${Date.now()}`, name: "Test: zoom" } })).json()
+  const band = await (await page.request.post("/api/my/bands", { data: { slug: testSlug("zoom"), name: "Test: zoom" } })).json()
   const song = await (await page.request.post("/api/songs", {
     data: { band_id: band.id, title: "Z", artist: null, key: "G", tempo_bpm: null, duration_seconds: null, capo: null, notes: null },
   })).json()
@@ -34,7 +34,7 @@ test("zoom resizes the score and is remembered", async ({ page, testing }) => {
 
 test("a score is shortened and scrolls in its own box in edit mode", async ({ page, testing }) => {
   await testing.login()
-  const band = await (await page.request.post("/api/my/bands", { data: { slug: `test-compact-${Date.now()}`, name: "Test: compact" } })).json()
+  const band = await (await page.request.post("/api/my/bands", { data: { slug: testSlug("compact"), name: "Test: compact" } })).json()
   const song = await (await page.request.post("/api/songs", {
     data: { band_id: band.id, title: "C", artist: null, key: "G", tempo_bpm: null, duration_seconds: null, capo: null, notes: null },
   })).json()

@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test"
-import { test, expect, getPw, post, TEST_PASSWORD } from "./helpers"
+import { test, expect, getPw, post, TEST_PASSWORD, testSlug } from "./helpers"
 
 const createBand = async (page: Page, slug: string) => (await post(page, "/api/my/bands", { slug, name: `Test: ${slug}` })).id as string
 
@@ -15,7 +15,7 @@ const column = (page: Page, key: string) => rows(page).locator(`[data-pwid="cell
 test.describe("setlists", () => {
   test("the song picker leaves out songs already in the list, so its choices shrink", async ({ page, testing }) => {
     await testing.login()
-    const bandId = await createBand(page, `test-setlist-pick-${Date.now()}`)
+    const bandId = await createBand(page, testSlug("setlist-pick"))
     await createSong(page, bandId, "Alpha")
     await createSong(page, bandId, "Alto")
 
@@ -35,7 +35,7 @@ test.describe("setlists", () => {
 
   test("builds a setlist in the grid: pick songs by typing, override this list only, move and remove by keyboard", async ({ page, testing }) => {
     await testing.login()
-    const bandId = await createBand(page, `test-setlist-${Date.now()}`)
+    const bandId = await createBand(page, testSlug("setlist"))
     await createSong(page, bandId, "Alpha", { artist: "The As", key: "G", tempo_bpm: 120, duration_seconds: 100 })
     await createSong(page, bandId, "Beta", { artist: "The Bs", duration_seconds: 200 })
     await createSong(page, bandId, "Gamma", { duration_seconds: 60 })
@@ -103,7 +103,7 @@ test.describe("setlists", () => {
 
   test("renames a setlist, sets its status, copies it and deletes it", async ({ page, testing }) => {
     await testing.login()
-    const bandId = await createBand(page, `test-setlist-copy-${Date.now()}`)
+    const bandId = await createBand(page, testSlug("setlist-copy"))
     const songId = await createSong(page, bandId, "Alpha")
     const setlist = await post(page, "/api/setlists", { band_id: bandId, name: "Main set" })
     const entry = await post(page, `/api/setlists/${setlist.id}/entries`, { song_id: songId })
@@ -136,11 +136,11 @@ test.describe("setlists", () => {
 
   test("keeps a setlist and its entries private to the band", async ({ page, testing, request }) => {
     await testing.login()
-    const bandId = await createBand(page, `test-setlist-authz-${Date.now()}`)
+    const bandId = await createBand(page, testSlug("setlist-authz"))
     const setlist = await post(page, "/api/setlists", { band_id: bandId, name: "Private" })
 
     // A second user, in its own cookie store, must not reach the first band.
-    const username = `test_setlist_outsider_${Date.now()}`
+    const username = testing.username("setlist_outsider")
     const registered = await request.post("/api/auth/register", {
       data: { username, email: `${username}@test.local`, password: TEST_PASSWORD },
     })
@@ -154,7 +154,7 @@ test.describe("setlists", () => {
 
   test("refuses a move that names another setlist's entry", async ({ page, testing }) => {
     await testing.login()
-    const bandId = await createBand(page, `test-setlist-move-${Date.now()}`)
+    const bandId = await createBand(page, testSlug("setlist-move"))
     const songId = await createSong(page, bandId, "Alpha")
     const [one, other] = [
       await post(page, "/api/setlists", { band_id: bandId, name: "One" }),

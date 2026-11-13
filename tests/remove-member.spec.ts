@@ -1,4 +1,4 @@
-import { test, expect, getPw, TEST_PASSWORD } from "./helpers"
+import { test, expect, getPw, TEST_PASSWORD, testSlug } from "./helpers"
 
 test.describe("remove band member", () => {
   test.describe.configure({ timeout: 30000 })
@@ -10,7 +10,7 @@ test.describe("remove band member", () => {
     await testing.login({ username: "test_rm_owner" })
     const created = await page.request.post("/api/my/bands", {
       data: {
-        slug: `test-rm-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        slug: testSlug("rm"),
         name: "Remove Member Band",
       },
     })
@@ -65,7 +65,7 @@ test.describe("remove band member", () => {
     await testing.login({ username: "test_rm_self" })
     const created = await page.request.post("/api/my/bands", {
       data: {
-        slug: `test-rm-self-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        slug: testSlug("rm-self"),
         name: "Self Remove Band",
       },
     })
@@ -107,7 +107,7 @@ test.describe("remove band member", () => {
     await testing.login({ username: "test_rm_host" })
     const created = await page.request.post("/api/my/bands", {
       data: {
-        slug: `test-rm-host-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        slug: testSlug("rm-host"),
         name: "Non-owner View Band",
       },
     })
