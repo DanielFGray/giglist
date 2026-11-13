@@ -38,6 +38,7 @@
   "include": [
     "src",
     "scripts",
-    "worker"
+    "worker",
+    "tests"
   ]
 }
