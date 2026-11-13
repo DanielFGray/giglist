@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { AlphaTabApi, LayoutMode, NotationElement, PlayerMode } from "@coderline/alphatab"
-import { readPhrase, type PhraseProblem } from "~/charts/phrase"
+import { readPhrase, type PhraseProblem } from "alphatab-kit/charts/phrase"
 import { alphaTabAssetUrls } from "alphatab-kit"
 import { inkFrom } from "./alphatab"
 import { useThemeInk } from "./useThemeInk"

@@ -1,3 +1,5 @@
+import { BEATS_PER_BAR } from "alphatab-kit/charts/take"
+
 /**
  * The metronome click is a short tone at one pitch. The mic hears it through
  * the speakers, so the listener splits the spectrum in two: the click bands
@@ -31,10 +33,9 @@ const HALF_LENGTH_SIGMAS = 5
  */
 export const CLICK_ONSET_SECONDS = (HALF_LENGTH_SIGMAS - Math.sqrt(Math.LN2)) * SIGMA_SECONDS
 
-/** Songs have no time signature, so a bar is four beats; the first of each is accented. */
-export const BEATS_PER_BAR = 4
 /** Two bars: the session needs at least four clicks to measure the speaker-to-mic delay. */
 export const COUNT_IN_BEATS = 2 * BEATS_PER_BAR
+/** The first beat of each bar is accented. */
 export const ACCENT_GAIN = 1
 export const BEAT_GAIN = 0.55
 

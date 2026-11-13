@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
-import { ACCENT_GAIN, BEAT_GAIN, BEATS_PER_BAR, COUNT_IN_BEATS } from "./click"
+import { BEATS_PER_BAR } from "alphatab-kit/charts/take"
+import { ACCENT_GAIN, BEAT_GAIN, COUNT_IN_BEATS } from "./click"
 import { Session, type SessionEvent, type SessionPlan } from "./session"
 import { drum, keyNote, mix, mixClick, noise, pluck, SAMPLE_RATE } from "./synth"
 import { placeHit, type Subdivision } from "./timing"
