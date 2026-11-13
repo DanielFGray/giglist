@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest"
 import { readFileSync } from "node:fs"
-import { importPasted } from "./lyrics"
+import { importPasted } from "alphatab-kit/charts/lyrics"
 import { scanFormat, textFromWords, wordsFromPdf, wordsFromTesseract, type WordBox } from "./scanned"
 
 const fixture = (name: string) => readFileSync(new URL(`../../tests/fixtures/${name}`, import.meta.url), "utf8")

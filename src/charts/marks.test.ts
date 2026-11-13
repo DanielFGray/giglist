@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest"
-import { anchorText, insertLineAfter, parseDoc, serializeDoc, deleteLine } from "./doc"
+import { anchorText, insertLineAfter, parseDoc, serializeDoc, deleteLine } from "alphatab-kit/charts/doc"
 import { boundsOf, inkPath, markResolver, near, type RevisionText } from "./marks"
 
 const first = "{start_of_verse: Verse 1}\n[G]Amazing grace\nHow sweet\n{end_of_verse}"

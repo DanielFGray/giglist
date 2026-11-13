@@ -4,8 +4,8 @@
  */
 import { getStroke } from "perfect-freehand"
 import type { Change } from "alphatab-kit/charts/changes"
-import { anchorText, parseDoc } from "./doc"
-import { follow, type Resolution } from "./follow"
+import { anchorText, parseDoc } from "alphatab-kit/charts/doc"
+import { follow, type Resolution } from "alphatab-kit/charts/follow"
 
 /** One revision of a chart in order, as the browser holds it. */
 export type RevisionText = { id: string; source: string | null; changes: ReadonlyArray<Change> | null }

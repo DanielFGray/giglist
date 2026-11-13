@@ -1,5 +1,5 @@
 import { useRef, useState, type CSSProperties } from "react"
-import { isChordName } from "~/charts/lyrics"
+import { isChordName } from "alphatab-kit/charts/lyrics"
 import type { Suggestion } from "~/charts/suggest"
 import { placement } from "./ChordShapes"
 

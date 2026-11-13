@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs"
 import type { APIRequestContext, Locator, Page } from "@playwright/test"
 import type { Change } from "alphatab-kit/charts/changes"
-import { parseDoc, placeChord, serializeDoc } from "../src/charts/doc"
+import { parseDoc, placeChord, serializeDoc } from "alphatab-kit/charts/doc"
 import { test, expect, getPw, openTool, createSong, createBareChart } from "./helpers"
 
 const fixturePath = (name: string) => new URL(`./fixtures/${name}`, import.meta.url).pathname

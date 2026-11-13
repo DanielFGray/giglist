@@ -8,7 +8,7 @@
  * rock corpus as the fallback, each smoothed toward the one below it
  * (docs/adr/0005). Pure and free of the DOM.
  */
-import { enclosingSection, type ChartDoc } from "./doc"
+import { enclosingSection, type ChartDoc } from "alphatab-kit/charts/doc"
 import { DEGREE_NAME, ROMAN_STEP, inKey, keyScale, numeral, type KeyScale } from "alphatab-kit/charts/numeral"
 import { spell, spellNote } from "alphatab-kit/charts/spelling"
 import corpusCounts from "./rock-prior.json"

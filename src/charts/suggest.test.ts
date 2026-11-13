@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { parseDoc } from "./doc"
+import { parseDoc } from "alphatab-kit/charts/doc"
 import { chartSlot, suggest, type Slot } from "./suggest"
 
 const chords = (list: ReadonlyArray<{ chord: string }>) => list.map(({ chord }) => chord)

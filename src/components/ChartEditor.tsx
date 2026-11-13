@@ -5,8 +5,8 @@ import {
   addPhrase, addScoreLink, addSection, anchorLine, blockRange, canMoveBlockTo, deleteBlock, deleteLine, directiveName, dropSlots, duplicateBlock, editLine, hasHandle, inPhrase,
   insertLineAfter, moveBlock, moveBlockTo, moveChord, parseDoc, phraseAt, placeChord, removeChord, removeSection, renameSection, segments, serializeDoc,
   setPhrase, type ChartDoc, type DocLine, type Edit,
-} from "~/charts/doc"
-import { isChordName, isPhraseStart, isTabStart, suggestedChords } from "~/charts/lyrics"
+} from "alphatab-kit/charts/doc"
+import { isChordName, isPhraseStart, isTabStart, suggestedChords } from "alphatab-kit/charts/lyrics"
 import { readScoreLink } from "alphatab-kit/charts/score-link"
 import { chartSlot, suggest, type Suggestion } from "~/charts/suggest"
 import { BlockHandle, type Point } from "./BlockHandle"

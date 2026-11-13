@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect, useRef, useState, type TouchEvent } from "react"
 import { useRouter } from "@tanstack/react-router"
 import { charts, type ChartInfo, type SetlistEntryInfo } from "~/api/client"
-import { hasLyricsChart } from "~/charts/lyrics"
+import { hasLyricsChart } from "alphatab-kit/charts/lyrics"
 import { ChartViewToggle, chartsInView, type ChartView } from "./ChartViewToggle"
 import type { NumeralDisplay } from "alphatab-kit/charts/numeral"
 import type { ChordDiagrams } from "./ChordShapes"
