@@ -1,5 +1,5 @@
 import { spell } from "alphatab-kit/charts/spelling"
-import { voicings } from "../src/charts/voicing"
+import { voicings } from "alphatab-kit/charts/voicing"
 
 const roots = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"]
 const suffixes = [
