@@ -1,9 +1,11 @@
 import type { Notation } from "alphatab-kit/charts/score-notation"
-import { MAX_ZOOM, MIN_ZOOM, stepZoom } from "alphatab-kit/charts/score-zoom"
-import { MAX_SPEED, MIN_SPEED, type StepMode } from "alphatab-kit/charts/speed-trainer"
+import type { StepMode } from "alphatab-kit/charts/speed-trainer"
 import { IconButton } from "alphatab-kit/player/icon-button"
 import { CountInIcon, MetronomeIcon, PauseIcon, PlayIcon, StopIcon } from "alphatab-kit/player/icons"
+import { NotationToggles } from "alphatab-kit/player/notation-toggles"
 import { SeekBar } from "alphatab-kit/player/seek-bar"
+import { SpeedInput } from "alphatab-kit/player/speed-input"
+import { ZoomControl } from "alphatab-kit/player/zoom-control"
 import { SettingsPanel } from "./SettingsPanel"
 
 /**
@@ -123,10 +125,34 @@ export function ScorePlayerBar(props: ScorePlayerBarProps) {
             </select>
           </label>
         )}
-        <SpeedInput speed={props.speed} onSpeed={props.onSpeed} />
+        <SpeedInput
+          speed={props.speed}
+          onSpeed={props.onSpeed}
+          parts={{
+            root: { className: "flex items-center gap-2" },
+            input: { className: `${field} w-16 text-right`, "data-pwid": "score-speed" },
+          }}
+        />
         <Trainer {...props.trainer} speed={props.speed} />
-        <NotationToggles notation={props.notation} onNotation={props.onNotation} />
-        <Zoom zoom={props.zoom} onZoom={props.onZoom} />
+        <NotationToggles
+          notation={props.notation}
+          onNotation={props.onNotation}
+          parts={{
+            root: { className: "flex items-center gap-1" },
+            standard: { className: toggle, "data-pwid": "score-notation-standard" },
+            tab: { className: toggle, "data-pwid": "score-notation-tab" },
+          }}
+        />
+        <ZoomControl
+          zoom={props.zoom}
+          onZoom={props.onZoom}
+          parts={{
+            root: { className: "flex items-center gap-1" },
+            zoomOut: { className: zoomStep, "data-pwid": "score-zoom-out" },
+            reset: { className: "w-12 rounded-md px-1 py-1 text-center tabular-nums text-zinc-200 cursor-pointer", "data-pwid": "score-zoom" },
+            zoomIn: { className: zoomStep, "data-pwid": "score-zoom-in" },
+          }}
+        />
         <label className="flex items-center gap-2">
           Volume
           <input
@@ -150,89 +176,6 @@ export function ScorePlayerBar(props: ScorePlayerBarProps) {
           </span>
         )}
       </div>
-    </div>
-  )
-}
-
-/**
- * The playback speed as a number the player types, such as 0.75. It holds the
- * typed text until the field loses focus or Enter is pressed, so a half-typed
- * value is not clamped under the player's fingers; Escape puts the speed back.
- */
-function SpeedInput({ speed, onSpeed }: { speed: number; onSpeed: (speed: number) => void }) {
-  const shown = String(Number.parseFloat(speed.toFixed(3)))
-  return (
-    <label className="flex items-center gap-2">
-      Speed
-      <input
-        key={shown}
-        data-pwid="score-speed"
-        type="number"
-        min={MIN_SPEED}
-        max={MAX_SPEED}
-        step={0.05}
-        inputMode="decimal"
-        defaultValue={shown}
-        className={`${field} w-16 text-right`}
-        onBlur={(e) => {
-          const typed = Number.parseFloat(e.currentTarget.value)
-          if (Number.isFinite(typed)) onSpeed(typed)
-          else e.currentTarget.value = shown
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") e.currentTarget.blur()
-          if (e.key === "Escape") e.currentTarget.value = shown
-        }}
-      />
-      ×
-    </label>
-  )
-}
-
-/** Two toggles for the staves. Turning off the only one on turns the other on. */
-function NotationToggles({ notation, onNotation }: { notation: Notation; onNotation: (which: keyof Notation) => void }) {
-  const toggle = (which: keyof Notation, pwid: string, label: string) => (
-    <button
-      data-pwid={pwid}
-      type="button"
-      aria-pressed={notation[which]}
-      onClick={() => onNotation(which)}
-      className="rounded-md border border-[var(--color-border-subtle)] px-2 py-1 cursor-pointer aria-pressed:bg-[var(--color-amber-accent)] aria-pressed:text-zinc-950"
-    >
-      {label}
-    </button>
-  )
-  return (
-    <div className="flex items-center gap-1">
-      Show
-      {toggle("standard", "score-notation-standard", "Standard")}
-      {toggle("tab", "score-notation-tab", "Tab")}
-    </div>
-  )
-}
-
-/** Smaller and larger buttons around the zoom; tapping the percentage returns to 100%. */
-function Zoom({ zoom, onZoom }: { zoom: number; onZoom: (zoom: number) => void }) {
-  const step = "rounded-md border border-[var(--color-border-subtle)] px-2 py-1 leading-none text-zinc-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-  return (
-    <div className="flex items-center gap-1">
-      Zoom
-      <button data-pwid="score-zoom-out" type="button" aria-label="Zoom out" disabled={zoom <= MIN_ZOOM} onClick={() => onZoom(stepZoom(zoom, -1))} className={step}>
-        −
-      </button>
-      <button
-        data-pwid="score-zoom"
-        type="button"
-        aria-label="Reset zoom to 100%"
-        title="Reset zoom"
-        onClick={() => onZoom(1)}
-        className="w-12 rounded-md px-1 py-1 text-center tabular-nums text-zinc-200 cursor-pointer"
-      >
-        {Math.round(zoom * 100)}%
-      </button>
-      <button data-pwid="score-zoom-in" type="button" aria-label="Zoom in" disabled={zoom >= MAX_ZOOM} onClick={() => onZoom(stepZoom(zoom, 1))} className={step}>
-        +
-      </button>
     </div>
   )
 }
@@ -292,6 +235,12 @@ function Trainer(props: TrainerProps & { speed: number }) {
 }
 
 const field = "rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] px-2 py-1 text-xs text-zinc-200"
+
+/** The two staff toggles share one class string; `aria-pressed` styles the on state. */
+const toggle = "rounded-md border border-[var(--color-border-subtle)] px-2 py-1 cursor-pointer aria-pressed:bg-[var(--color-amber-accent)] aria-pressed:text-zinc-950"
+
+/** The zoom-out and zoom-in buttons share one class string. */
+const zoomStep = "rounded-md border border-[var(--color-border-subtle)] px-2 py-1 leading-none text-zinc-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
 
 /** The kit reports pressed as `data-pressed` on every button, so one class string styles both states. */
 const iconButton =
