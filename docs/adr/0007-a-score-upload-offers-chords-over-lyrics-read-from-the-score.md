@@ -4,7 +4,7 @@ status: proposed
 
 # A score upload offers chords over lyrics read from the score
 
-When a player adds a Guitar Pro score, the browser also reads the score's chords and lyrics as **chords over lyrics**: the text the paste box takes. The player corrects it in the form, and it is stored as a separate lyrics chart beside the score (`charts.createLyrics`), in the key the chords suggest. Nothing is stored that the player did not see. `src/charts/score-chart.ts` writes the text and `src/charts/score-chords.ts` works out chords.
+When a player adds a Guitar Pro score, the browser also reads the score's chords and lyrics as **chords over lyrics**: the text the paste box takes. The player corrects it in the form, and it is stored as a separate lyrics chart beside the score (`charts.createLyrics`), in the key the chords suggest. Nothing is stored that the player did not see. `alphatab-kit/src/charts/score-chart.ts` writes the text and `alphatab-kit/src/charts/score-chords.ts` works out chords.
 
 ## Where the chords come from
 
