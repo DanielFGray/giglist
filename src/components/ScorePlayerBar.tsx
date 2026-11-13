@@ -1,6 +1,6 @@
 import type { Notation } from "alphatab-kit/charts/score-notation"
 import { IconButton } from "alphatab-kit/player/icon-button"
-import { CountInIcon, MetronomeIcon, PauseIcon, PlayIcon, StopIcon } from "alphatab-kit/player/icons"
+import { CountInIcon, LoadingSpinner, MetronomeIcon, PauseIcon, PlayIcon, StopIcon } from "alphatab-kit/player/icons"
 import { NotationToggles } from "alphatab-kit/player/notation-toggles"
 import { SeekBar } from "alphatab-kit/player/seek-bar"
 import { SpeedInput } from "alphatab-kit/player/speed-input"
@@ -18,8 +18,10 @@ import { SettingsPanel } from "./SettingsPanel"
  * scrolls, so the controls stay in reach.
  */
 export type ScorePlayerBarProps = {
-  /** False until alphaTab has loaded its sound font; the controls that need the player wait. */
+  /** False until alphaTab has parsed the score; the controls that need a score wait. */
   ready: boolean
+  /** The synthesizer loads on the first Play: Play works before it, and shows a spinner while it loads. */
+  sound: "off" | "loading" | "ready"
   playing: boolean
   onPlayPause: () => void
   onStop: () => void
@@ -59,7 +61,7 @@ export function ScorePlayerBar(props: ScorePlayerBarProps) {
           onClick={props.onPlayPause}
           parts={{ button: { className: iconButton, "data-pwid": "score-play" } }}
         >
-          {props.playing ? <PauseIcon /> : <PlayIcon />}
+          {props.playing ? <PauseIcon /> : props.sound === "loading" ? <LoadingSpinner className="animate-spin" /> : <PlayIcon />}
         </IconButton>
         <IconButton label="Stop" disabled={!props.ready} onClick={props.onStop} parts={{ button: { className: iconButton, "data-pwid": "score-stop" } }}>
           <StopIcon />

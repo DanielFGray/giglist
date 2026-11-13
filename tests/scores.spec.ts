@@ -69,12 +69,12 @@ test.describe("scores", () => {
     expect((await uploadScore(page.request, songId, fixture)).status()).toBe(201)
 
     await page.goto(`/band/${bandId}/songs/${songId}`)
-    // The play button waits for the sound font, a download of about 1 MB.
+    // Play works as soon as the score is drawn; the first press loads the sound font, a download of about 1 MB.
     const play = getPw(page, "score-play")
     await expect(play).toBeEnabled({ timeout: 30000 })
     await expect(play).toHaveAttribute("aria-label", "Play")
     await play.click()
-    await expect(play).toHaveAttribute("aria-label", "Pause")
+    await expect(play).toHaveAttribute("aria-label", "Pause", { timeout: 30000 })
     // alphaTab's playerStateChanged event has changed the button to Pause, but its audio output needs this handoff before pausing.
     await page.waitForTimeout(500)
     await play.click()
@@ -84,6 +84,41 @@ test.describe("scores", () => {
     await expect(click).toHaveAttribute("aria-pressed", "false")
     await click.click()
     await expect(click).toHaveAttribute("aria-pressed", "true")
+  })
+
+  test("the first Play keeps the position and the selection", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, songId } = await createSong(page)
+    // four-tracks.gp5 is one bar with one beat per track, so the keys would have nowhere to go.
+    const song = await uploadScore(page.request, songId, readFileSync(new URL("./fixtures/amazing-grace.gp", import.meta.url)), "amazing-grace.gp")
+    expect(song.status()).toBe(201)
+
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    await expect(getPw(page, "score-viewer")).toHaveAttribute("data-rendered", "true", { timeout: 30000 })
+    const progress = getPw(page, "score-progress")
+    const position = async () => Number(await progress.inputValue())
+
+    // Slow, so the first Play is still running when the check reads the position.
+    const speed = getPw(page, "score-speed")
+    await speed.fill("0.5")
+    await speed.press("Enter")
+
+    // Keys move the cursor by bar, and Shift extends a selection from where it stood. Nothing has played yet.
+    await getPw(page, "score-render").focus()
+    await page.keyboard.press("Control+ArrowRight")
+    await page.keyboard.press("Control+Shift+ArrowRight")
+    const selection = getPw(page, "score-selection")
+    await expect(selection).toBeVisible()
+    const label = await selection.textContent()
+    const before = await position()
+    expect(before).toBeGreaterThan(0)
+
+    // The first Play replaces alphaTab's player, which drops the position and the range; the kit puts both back.
+    const play = getPw(page, "score-play")
+    await play.click()
+    await expect(play).toHaveAttribute("aria-label", "Pause", { timeout: 30000 })
+    expect(await position()).toBeGreaterThanOrEqual(before)
+    await expect(selection).toHaveText(label!)
   })
 
   test("the player bar has count-in, a time readout, a speed and a speed trainer", async ({ page, testing }) => {
