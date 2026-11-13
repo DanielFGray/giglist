@@ -1,7 +1,9 @@
-import type { ReactNode } from "react"
 import type { Notation } from "alphatab-kit/charts/score-notation"
 import { MAX_ZOOM, MIN_ZOOM, stepZoom } from "alphatab-kit/charts/score-zoom"
-import { MAX_SPEED, MIN_SPEED, formatClock, type StepMode } from "alphatab-kit/charts/speed-trainer"
+import { MAX_SPEED, MIN_SPEED, type StepMode } from "alphatab-kit/charts/speed-trainer"
+import { IconButton } from "alphatab-kit/player/icon-button"
+import { CountInIcon, MetronomeIcon, PauseIcon, PlayIcon, StopIcon } from "alphatab-kit/player/icons"
+import { SeekBar } from "alphatab-kit/player/seek-bar"
 import { SettingsPanel } from "./SettingsPanel"
 
 /**
@@ -63,19 +65,44 @@ export function ScorePlayerBar(props: ScorePlayerBarProps) {
       className="sticky top-[var(--stick-top,0px)] z-20 transition-[top] duration-300 -mx-1 flex flex-col gap-2 border-b border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] px-1 py-2"
     >
       <div className="flex items-center gap-2">
-        <IconButton pwid="score-play" label={props.playing ? "Pause" : "Play"} disabled={!props.ready} onClick={props.onPlayPause}>
+        <IconButton
+          label={props.playing ? "Pause" : "Play"}
+          disabled={!props.ready}
+          onClick={props.onPlayPause}
+          parts={{ button: { className: iconButton, "data-pwid": "score-play" } }}
+        >
           {props.playing ? <PauseIcon /> : <PlayIcon />}
         </IconButton>
-        <IconButton pwid="score-stop" label="Stop" disabled={!props.ready} onClick={props.onStop}>
+        <IconButton label="Stop" disabled={!props.ready} onClick={props.onStop} parts={{ button: { className: iconButton, "data-pwid": "score-stop" } }}>
           <StopIcon />
         </IconButton>
-        <IconButton pwid="score-metronome" label="Metronome click" pressed={props.metronome} onClick={() => props.onMetronome(!props.metronome)}>
+        <IconButton
+          label="Metronome click"
+          pressed={props.metronome}
+          onClick={() => props.onMetronome(!props.metronome)}
+          parts={{ button: { className: iconButton, "data-pwid": "score-metronome" } }}
+        >
           <MetronomeIcon />
         </IconButton>
-        <IconButton pwid="score-count-in" label="Count in" pressed={props.countIn} onClick={() => props.onCountIn(!props.countIn)}>
+        <IconButton
+          label="Count in"
+          pressed={props.countIn}
+          onClick={() => props.onCountIn(!props.countIn)}
+          parts={{ button: { className: iconButton, "data-pwid": "score-count-in" } }}
+        >
           <CountInIcon />
         </IconButton>
-        <Progress positionMs={props.positionMs} endMs={props.endMs} disabled={!props.ready} onSeek={props.onSeek} />
+        <SeekBar
+          positionMs={props.positionMs}
+          endMs={props.endMs}
+          disabled={!props.ready}
+          onSeek={props.onSeek}
+          parts={{
+            root: { className: "flex min-w-0 flex-1 items-center gap-2" },
+            time: { className: "shrink-0 font-mono text-xs tabular-nums text-zinc-400", "data-pwid": "score-time" },
+            range: { className: "min-w-0 flex-1", "data-pwid": "score-progress" },
+          }}
+        />
       </div>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-zinc-400">
         {props.tracks.length > 1 && (
@@ -123,28 +150,6 @@ export function ScorePlayerBar(props: ScorePlayerBarProps) {
           </span>
         )}
       </div>
-    </div>
-  )
-}
-
-function Progress({ positionMs, endMs, disabled, onSeek }: { positionMs: number; endMs: number; disabled: boolean; onSeek: (ms: number) => void }) {
-  return (
-    <div className="flex min-w-0 flex-1 items-center gap-2">
-      <span data-pwid="score-time" className="shrink-0 font-mono text-xs tabular-nums text-zinc-400">
-        {formatClock(positionMs)} / {formatClock(endMs)}
-      </span>
-      <input
-        data-pwid="score-progress"
-        type="range"
-        aria-label="Seek"
-        min={0}
-        max={endMs || 1}
-        step={10}
-        value={Math.min(positionMs, endMs || 1)}
-        disabled={disabled || endMs === 0}
-        onChange={(e) => onSeek(Number(e.target.value))}
-        className="min-w-0 flex-1"
-      />
     </div>
   )
 }
@@ -286,75 +291,8 @@ function Trainer(props: TrainerProps & { speed: number }) {
   )
 }
 
-function IconButton({
-  pwid,
-  label,
-  pressed,
-  disabled,
-  onClick,
-  children,
-}: {
-  pwid: string
-  label: string
-  pressed?: boolean
-  disabled?: boolean
-  onClick: () => void
-  children: ReactNode
-}) {
-  return (
-    <button
-      data-pwid={pwid}
-      type="button"
-      aria-label={label}
-      title={label}
-      aria-pressed={pressed}
-      disabled={disabled}
-      onClick={onClick}
-      className={`shrink-0 rounded-full p-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
-        pressed ? "bg-[var(--color-amber-accent)] text-zinc-950" : "border border-[var(--color-border-subtle)] text-zinc-300"
-      }`}
-    >
-      {children}
-    </button>
-  )
-}
-
 const field = "rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] px-2 py-1 text-xs text-zinc-200"
 
-const icon = { width: 16, height: 16, viewBox: "0 0 20 20", fill: "currentColor", "aria-hidden": true } as const
-
-const PlayIcon = () => (
-  <svg {...icon}>
-    <path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v11.78a1.5 1.5 0 0 0 2.3 1.27l9.34-5.89a1.5 1.5 0 0 0 0-2.54L6.3 2.84Z" />
-  </svg>
-)
-
-const PauseIcon = () => (
-  <svg {...icon}>
-    <path d="M5 3.75C5 3.34 5.34 3 5.75 3h1.5c.41 0 .75.34.75.75v12.5c0 .41-.34.75-.75.75h-1.5a.75.75 0 0 1-.75-.75V3.75Zm7 0c0-.41.34-.75.75-.75h1.5c.41 0 .75.34.75.75v12.5c0 .41-.34.75-.75.75h-1.5a.75.75 0 0 1-.75-.75V3.75Z" />
-  </svg>
-)
-
-const StopIcon = () => (
-  <svg {...icon}>
-    <rect x="4" y="4" width="12" height="12" rx="2" />
-  </svg>
-)
-
-/** A metronome: a tapering case with a tilted arm. */
-const MetronomeIcon = () => (
-  <svg {...icon}>
-    <path d="M7.4 2h5.2l3 14.2c.2.9-.5 1.8-1.5 1.8H5.9c-1 0-1.7-.9-1.5-1.8L7.4 2Zm1.2 1.8L6.2 15.8h7.6L11.4 3.8H8.6Z" />
-    <path d="M10.8 6.2 12.4 7 9.9 13.1 8.4 12.4l2.4-6.2Z" />
-  </svg>
-)
-
-/** Four beats before the score starts, drawn as four dots. */
-const CountInIcon = () => (
-  <svg {...icon}>
-    <circle cx="4" cy="10" r="1.8" />
-    <circle cx="8.7" cy="10" r="1.8" />
-    <circle cx="13.3" cy="10" r="1.8" />
-    <circle cx="18" cy="10" r="1.8" />
-  </svg>
-)
+/** The kit reports pressed as `data-pressed` on every button, so one class string styles both states. */
+const iconButton =
+  "shrink-0 rounded-full p-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed data-[pressed=true]:bg-[var(--color-amber-accent)] data-[pressed=true]:text-zinc-950 data-[pressed=false]:border data-[pressed=false]:border-[var(--color-border-subtle)] data-[pressed=false]:text-zinc-300"
