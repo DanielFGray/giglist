@@ -2,6 +2,8 @@
 
 This file lists every outside source GigList uses: code we adapted, data we fitted to, assets we serve, research the code follows, and libraries whose license asks more than MIT does.
 
+The chart code (`alphatab-kit/charts/*`) moved to the kit. Its sources are listed in the kit's `ATTRIBUTIONS.md`, including the GPL-2.0 condition that ChordSheetJS puts on any client bundle that includes a chart module.
+
 When a change brings in a source, add its entry in the same commit, with a link. The code comment that uses the source names it, so a reader can find the entry here.
 
 The build writes the license text of every npm package in the client bundle to `/third-party-licenses.txt` (`scripts/licenseNoticesPlugin.ts`), so this file does not repeat them.
@@ -11,10 +13,6 @@ The build writes the license text of every npm package in the client bundle to `
 - **postgres.garden**: production-only exclusion of testing handlers in `src/server/main.ts` follows `../postgres.garden/server/index.ts`.
 
 - **graphile-starter**: the user, session, email and organization migrations in `migrations/`, the three-schema layout, and the email jobs and templates in `worker/` follow it. MIT License, Copyright © 2020 Graphile Ltd. <https://github.com/graphile/starter>. License text: <https://github.com/graphile/starter/blob/main/GRAPHILE_STARTER_LICENSE.md>
-
-## Data
-
-- **ChordSheetJS chord table**: the scoring weights in `src/charts/voicing.ts` were fitted to its guitar shapes, and `src/charts/spelling.test.ts` checks that every one of its 902 chord names spells. GPL-2.0-only. <https://github.com/martijnversluis/ChordSheetJS>
 
 ## Services
 
@@ -29,15 +27,6 @@ The build writes the license text of every npm package in the client bundle to `
 
 ## Research
 
-Read while planning key detection from chord symbols. `guessKey` in `src/charts/lyrics.ts` uses Krumhansl (1990).
-
-- **Krumhansl, C. L.** (1990). *Cognitive Foundations of Musical Pitch*. Oxford University Press. The key profiles and the correlation method in `src/charts/lyrics.ts` (`guessKey`). <https://global.oup.com/academic/product/cognitive-foundations-of-musical-pitch-9780195054663>
-
-- **Noland, K. and Sandler, M.** (2006). "Key Estimation Using a Hidden Markov Model." ISMIR 2006. A 24-state HMM over chord transitions; 91% correct on 110 Beatles songs. <https://archives.ismir.net/ismir2006/paper/000091.pdf>
-- **Lee, K.** (2007). "A Unified System for Chord Transcription and Key Extraction Using Hidden Markov Models." ISMIR 2007. One HMM per key. <https://archives.ismir.net/ismir2007/paper/000245.pdf>
-- **Temperley, D. and de Clercq, T.** (2013). "Statistical Analysis of Harmony and Melody in Rock Music." *Journal of New Music Research* 42(3): 187–204. Key finding from chord roots and metrical position. <https://doi.org/10.1080/09298215.2013.788039>. Author copy: <https://www.midside.com/publications/temperley_declercq_2013.pdf>
-- **Bunks, C. and Weyde, T.** (2022). "Jazz Contrafact Detection." arXiv:2208.00792. Picks the key signature whose diatonic chords hold the most beats. <https://arxiv.org/abs/2208.00792>
-
 The click's listener (`src/audio/click/listener.ts`) follows four onset papers:
 
 - **Böck, S. and Widmer, G.** (2013). "Maximum Filter Vibrato Suppression for Onset Detection." Proc. 16th DAFx, Maynooth, 55–61. SuperFlux: the detection stage's flux against a maximum-filtered earlier frame. <https://www.dafx.de/paper-archive/2013/papers/09.dafx2013_submission_12.pdf>. Reference implementation: <https://github.com/CPJKU/SuperFlux>
@@ -45,17 +34,13 @@ The click's listener (`src/audio/click/listener.ts`) follows four onset papers:
 - **Böck, S., Krebs, F. and Schedl, M.** (2012). "Evaluating the Online Capabilities of Onset Detection Methods." Proc. 13th ISMIR, Porto, 49–54. The peak picking of the detection stage: the largest flux in a short window, over a moving average. <https://archives.ismir.net/ismir2012/paper/000049.pdf>
 - **Bello, J. P., Daudet, L., Abdallah, S., Duxbury, C., Davies, M. and Sandler, M. B.** (2005). "A Tutorial on Onset Detection in Music Signals." *IEEE Transactions on Speech and Audio Processing* 13(5), 1035–1047. The detection threshold follows the median of the recent flux. <https://doi.org/10.1109/TSA.2005.851998>
 
-Read while planning how a recorded take becomes a phrase (docs/adr/0013).
-
-- **Fisher, N. I.** (1993). *Statistical Analysis of Circular Data*. Cambridge University Press. The circular mean that `readTake` in `src/charts/take.ts` uses to find a take's offset from the grid, where a note just before a slot and one just after it pull the same way. <https://doi.org/10.1017/CBO9780511564345>
-
 ## Libraries with conditions beyond MIT
 
 - **AWS SDK for JavaScript**: `@aws-sdk/client-sesv2` sends production email through Amazon SES. Apache-2.0. <https://github.com/aws/aws-sdk-js-v3>
 
-- **ChordSheetJS**: parses, transposes and formats stored ChordPro. GPL-2.0-only. <https://github.com/martijnversluis/ChordSheetJS>
+- **ChordSheetJS**: reaches GigList through the kit's chart modules (`alphatab-kit/charts/lyrics` and the modules that import it), so it is in the client bundle. GPL-2.0-only. The kit's `ATTRIBUTIONS.md` states the condition. <https://github.com/martijnversluis/ChordSheetJS>
 - **alphaTab**: draws and plays scores and phrases. MPL-2.0. <https://alphatab.net>
-- **diff-match-patch**: maps a player's marks through later chart revisions (`src/charts/follow.ts`). Apache-2.0. <https://github.com/JackuB/diff-match-patch>
+- **diff-match-patch**: reaches GigList through the kit's `alphatab-kit/charts/marks`, which maps a player's marks through later chart revisions (`follow.ts` in the kit). Apache-2.0. <https://github.com/JackuB/diff-match-patch>
 - **markdown-it**: renders a band's Markdown description to HTML (`src/components/description.ts`). MIT License. <https://github.com/markdown-it/markdown-it>
 - **htmlparser2**: tokenises a filled-in band theme so the band's own scripts and frames can be stripped before the page is shown (`src/components/theme-sanitize.ts`). MIT License. <https://github.com/fb55/htmlparser2>
 
