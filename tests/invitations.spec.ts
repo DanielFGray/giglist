@@ -110,6 +110,40 @@ test.describe("emailed band invitations", () => {
     await context.close()
   })
 
+  test("an invitation to the user's verified email shows on their home page, and joining answers every invitation to that band", async ({ page, browser, testing }) => {
+    await testing.login()
+    const bandId = await newBand(page, "Test: Verified email")
+
+    const context = await browser.newContext()
+    const invitee = await context.newPage()
+    const username = testing.username("test_verified_email")
+    const email = `${username}@test.local`
+    const login = await invitee.request.post("/api/testing/login", { data: { username, password: TEST_PASSWORD } })
+    expect(login.ok(), await login.text()).toBe(true)
+    const secrets = await invitee.request.get(`/api/testing/email-secrets?email=${encodeURIComponent(email)}`)
+    expect(secrets.ok(), await secrets.text()).toBe(true)
+    const { user_email_id, verification_token } = (await secrets.json()) as { user_email_id: string; verification_token: string }
+    const verified = await invitee.request.post("/api/auth/emails/verify", { data: { id: user_email_id, token: verification_token } })
+    expect(verified.ok(), await verified.text()).toBe(true)
+
+    await inviteByEmail(page, bandId, email)
+    await invitee.goto("/")
+    await expect(getPw(invitee, "invitation")).toHaveText([/Join Test: Verified email/], { timeout: 10000 })
+
+    // A second invitation to the same band, by username, still shows one Join.
+    const byName = await page.request.post(`/api/my/bands/${bandId}/invite`, { data: { username } })
+    expect(byName.ok(), await byName.text()).toBe(true)
+    await invitee.reload()
+    await expect(getPw(invitee, "invitation")).toHaveText([/Join Test: Verified email/], { timeout: 10000 })
+
+    await getPw(invitee, "invitation-accept").click()
+    await expect(invitee).toHaveURL(new RegExp(`/band/${bandId}`), { timeout: 10000 })
+    expect((await songsOf(invitee, bandId)).status()).toBe(200)
+    // Both invitations are used up, so the owner has none left pending.
+    expect(await (await page.request.get(`/api/my/bands/${bandId}/invitations`)).json()).toEqual([])
+    await context.close()
+  })
+
   test("a wrong code is refused and joins nobody", async ({ page, browser, testing }) => {
     await testing.login()
     const bandId = await newBand(page, "Test: Emailed invitations")
