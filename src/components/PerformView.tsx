@@ -1,15 +1,16 @@
 import { Suspense, lazy, useEffect, useRef, useState, type TouchEvent } from "react"
 import { useRouter } from "@tanstack/react-router"
 import { charts, type ChartInfo, type SetlistEntryInfo } from "~/api/client"
-import { hasLyricsChart } from "~/charts/lyrics"
+import { hasLyricsChart } from "alphatab-kit/charts/lyrics"
 import { ChartViewToggle, chartsInView, type ChartView } from "./ChartViewToggle"
-import type { NumeralDisplay } from "~/charts/numeral"
+import type { NumeralDisplay } from "alphatab-kit/charts/numeral"
 import type { ChordDiagrams } from "./ChordShapes"
 import { ClickTrack } from "./ClickTrack"
 import { useLive, type Room } from "./live"
 import { Viewers } from "./Viewers"
 import { formatDuration } from "./duration"
 import { MarkedChart } from "./MarkedChart"
+import { errorMessage } from "./form"
 import { TEXT_SIZES, stepIndex, stepSize, swipeDirection } from "./perform"
 
 const ScoreViewer = lazy(() => import("~/components/ScoreViewer").then((m) => ({ default: m.ScoreViewer })))
@@ -305,7 +306,7 @@ function useSongCharts(songId: string | null) {
     setError(null)
     charts.bySong(songId).then(
       (list) => current && setLoaded({ songId, list }),
-      (e) => current && setError(e instanceof Error ? e.message : String(e)),
+      (e) => current && setError(errorMessage(e)),
     )
     return () => {
       current = false

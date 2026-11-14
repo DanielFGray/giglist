@@ -1,5 +1,5 @@
 import { Schema as S } from "effect"
-import { HttpApiEndpoint, HttpApiGroup, HttpApiSchema } from "effect/http-api"
+import { HttpApiEndpoint, HttpApiGroup } from "effect/http-api"
 import { PageTheme } from "./bands"
 
 // --- Public user profiles ---
@@ -26,14 +26,14 @@ export const PublicUserProfile = S.Struct({
 export class PublicUserNotFound extends S.TaggedError<
   PublicUserNotFound,
   { readonly brand: unique symbol }
->()("PublicUserNotFound", { username: S.String }) {}
+>()("PublicUserNotFound", { message: S.String, username: S.String }, { httpApiStatus: 404 }) {}
 
 export const PublicUsersApiGroup = HttpApiGroup.make("publicUsers")
   .add(
     HttpApiEndpoint.get("getPublicUser", "/:username", {
       params: { username: S.String.pipe(S.check(S.isMinLength(1))) },
       success: PublicUserProfile,
-      error: PublicUserNotFound.pipe(HttpApiSchema.status(404)),
+      error: PublicUserNotFound,
     }),
   )
   .prefix("/api/public/users")

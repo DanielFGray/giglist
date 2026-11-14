@@ -4,7 +4,7 @@ status: proposed
 
 # Chord suggestions rank the song's own changes over a rock-corpus prior
 
-When a player taps a word in the chart editor and types its chord, the field offers chords for that place in two lists: **Likely here** (chords the song already uses) and **New to this song** (chords it does not use yet). Each chord shows its numeral and one reason: "leads to Em", "follows G in this song", "as in Verse 1", "borrowed from minor", "in the key, not used yet". The model is a pure module, `src/charts/suggest.ts`; `chartSlot` reads the place from the chart, and `suggest` ranks.
+When a player taps a word in the chart editor and types its chord, the field offers chords for that place in two lists: **Likely here** (chords the song already uses) and **New to this song** (chords it does not use yet). Each chord shows its numeral and one reason: "leads to Em", "follows G in this song", "as in Verse 1", "borrowed from minor", "in the key, not used yet". The model is a pure module, `alphatab-kit/src/charts/suggest.ts`; `chartSlot` reads the place from the chart, and `suggest` ranks.
 
 ## The model
 
@@ -18,11 +18,11 @@ A chord counts by its **chord class**: the degree of its root in the key, with t
 
 ## The prior
 
-The corpus layer is the rs200 corpus (Trevor de Clercq and David Temperley, *A corpus analysis of rock harmony*, CC BY 4.0, https://rockcorpus.midside.com): 200 rock songs, each analysed by two experts. `scripts/buildRockPrior.ts` turns it into `src/charts/rock-prior.json` (class unigram and bigram counts, about 5 KB, attribution inside). `scripts/rockCorpus.ts` reads the corpus's chord grammar. The band has no real charts yet, so this corpus is the only real data.
+The corpus layer is the rs200 corpus (Trevor de Clercq and David Temperley, *A corpus analysis of rock harmony*, CC BY 4.0, https://rockcorpus.midside.com): 200 rock songs, each analysed by two experts. `alphatab-kit/scripts/buildRockPrior.ts` turns it into `alphatab-kit/src/charts/rock-prior.json` (class unigram and bigram counts, about 5 KB, attribution inside). `alphatab-kit/scripts/rockCorpus.ts` reads the corpus's chord grammar. The band has no real charts yet, so this corpus is the only real data.
 
 ## Measured
 
-`scripts/checkSuggestions.ts` hides each chord change in turn, in 5 folds by song, so a song never counts toward its own prior. It counts how often the hidden class is first or in the first three:
+`alphatab-kit/scripts/checkSuggestions.ts` hides each chord change in turn, in 5 folds by song, so a song never counts toward its own prior. It counts how often the hidden class is first or in the first three:
 
 | Setting | Hidden chords | Editor palette | Most used in song | Corpus only | Model | Unused chords only |
 |---|---|---|---|---|---|---|
@@ -34,7 +34,7 @@ The "between" score is high partly because rs200 writes repeated sections out in
 
 ## Numerals
 
-`src/charts/numeral.ts` labels chords with Roman numerals:
+`alphatab-kit/src/charts/numeral.ts` labels chords with Roman numerals:
 
 - Quality: `°` diminished, `ø7` half-diminished, `+` augmented. Figured bass marks inversions: `6`, `64`, `65`, `43`, `42`.
 - A slash bass that is not a chord tone is a key degree in Arabic numerals: `IV/5`.
@@ -50,7 +50,7 @@ Checked against music21's `romanNumeralFromChord` (44 cases in `numeral.test.ts`
 - B7→E in A minor is V7/V, not V7/v.
 - vii°7/ii, not #io7.
 
-On the corpus's applied chords, the app agrees with the experts 47.6% of the time. The two experts agree with each other 48.4% of the time (`scripts/checkNumerals.ts`).
+On the corpus's applied chords, the app agrees with the experts 47.6% of the time. The two experts agree with each other 48.4% of the time (`alphatab-kit/scripts/checkNumerals.ts`).
 
 ## Consequences
 

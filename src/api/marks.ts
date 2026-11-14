@@ -82,25 +82,26 @@ export const StampInsert = S.Struct({
 
 export class MarkForbidden extends S.TaggedError<MarkForbidden, { readonly brand: unique symbol }>()("MarkForbidden", {
   message: S.String,
-}) {}
+}, { httpApiStatus: 403 }) {}
 
 export class MarkNotFound extends S.TaggedError<MarkNotFound, { readonly brand: unique symbol }>()("MarkNotFound", {
+  message: S.String,
   id: S.String.check(S.isUUID()),
-}) {}
+}, { httpApiStatus: 404 }) {}
 
 export const MarksApiGroup = HttpApiGroup.make("marks")
   .add(
     HttpApiEndpoint.get("listMarks", "/chart/:chartId", {
       params: { chartId: S.String.check(S.isUUID()) },
       success: ChartMarks,
-      error: MarkForbidden.pipe(HttpApiSchema.status(403)),
+      error: MarkForbidden,
     }),
   )
   .add(
     HttpApiEndpoint.post("createMark", "/", {
       payload: MarkInsert,
       success: Mark.pipe(HttpApiSchema.status(201)),
-      error: MarkForbidden.pipe(HttpApiSchema.status(403)),
+      error: MarkForbidden,
     }),
   )
   .add(
@@ -108,13 +109,13 @@ export const MarksApiGroup = HttpApiGroup.make("marks")
       params: { id: S.String.check(S.isUUID()) },
       payload: MarkUpdate,
       success: Mark,
-      error: [MarkNotFound.pipe(HttpApiSchema.status(404)), MarkForbidden.pipe(HttpApiSchema.status(403))],
+      error: [MarkNotFound, MarkForbidden],
     }),
   )
   .add(
     HttpApiEndpoint.delete("deleteMark", "/:id", {
       params: { id: S.String.check(S.isUUID()) },
-      error: [MarkNotFound.pipe(HttpApiSchema.status(404)), MarkForbidden.pipe(HttpApiSchema.status(403))],
+      error: [MarkNotFound, MarkForbidden],
     }),
   )
   .middleware(SessionMiddleware)
@@ -124,20 +125,20 @@ export const StampsApiGroup = HttpApiGroup.make("stamps")
   .add(
     HttpApiEndpoint.get("listStamps", "/", {
       success: S.Array(Stamp),
-      error: MarkForbidden.pipe(HttpApiSchema.status(403)),
+      error: MarkForbidden,
     }),
   )
   .add(
     HttpApiEndpoint.post("createStamp", "/", {
       payload: StampInsert,
       success: Stamp.pipe(HttpApiSchema.status(201)),
-      error: MarkForbidden.pipe(HttpApiSchema.status(403)),
+      error: MarkForbidden,
     }),
   )
   .add(
     HttpApiEndpoint.delete("deleteStamp", "/:id", {
       params: { id: S.String.check(S.isUUID()) },
-      error: [MarkNotFound.pipe(HttpApiSchema.status(404)), MarkForbidden.pipe(HttpApiSchema.status(403))],
+      error: [MarkNotFound, MarkForbidden],
     }),
   )
   .middleware(SessionMiddleware)

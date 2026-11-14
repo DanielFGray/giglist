@@ -5,35 +5,39 @@ import { AuthDb, AuthVisitor, Db } from "./db";
 import { GigListApi } from "../api/contracts";
 import { AuthApiGroupLive } from "./httpapi/auth";
 import { BandsApiGroupLive } from "./httpapi/bands";
-import { PublicBandsApiGroupLive } from "./httpapi/public-bands";
-import { PublicUsersApiGroupLive } from "./httpapi/public-users";
+import { PublicBandsApiGroupLive } from "./httpapi/publicBands";
+import { PublicUsersApiGroupLive } from "./httpapi/publicUsers";
 import { SongsApiGroupLive } from "./httpapi/songs";
 import { SetlistsApiGroupLive } from "./httpapi/setlists";
 import { GigsApiGroupLive } from "./httpapi/gigs";
-import { ChartsApiGroupLive, ScoresApiGroupLive } from "./httpapi/charts";
-import { MarksApiGroupLive, StampsApiGroupLive } from "./httpapi/marks";
-import { LiveHub } from "./services/live-hub";
-import { ChartReader } from "./services/chart-reader";
+import { ChartsApiGroupLive } from "./httpapi/charts";
+import { ScoresApiGroupLive } from "./httpapi/scores";
+import { MarksApiGroupLive } from "./httpapi/marks";
+import { StampsApiGroupLive } from "./httpapi/stamps";
+import { LiveHub } from "./services/liveHub";
+import { ChartReader } from "./services/chartReader";
 import { Auth } from "./services/auth";
-import { Bands } from "./services/band";
-import { PublicUsers } from "./services/public-user";
+import { Bands } from "./services/bands";
+import { PublicUsers } from "./services/publicUsers";
 import { Songs } from "./services/songs";
 import { Marks } from "./services/marks";
 import { Charts } from "./services/charts";
 import { Setlists } from "./services/setlists";
 import { Gigs } from "./services/gigs";
 import { SessionMiddlewareLive } from "./httpapi/session";
-import { RateLimitMiddlewareLive } from "./httpapi/rate-limit";
+import { RateLimitMiddlewareLive } from "./httpapi/rateLimit";
+import { FailureBoundaryLive } from "./failureBoundary";
 import { HealthLive } from "./httpapi/health";
-import { TelemetryLive } from "./telemetry";
+import { RequestSpanHeaders, TracingLayer } from "./tracing";
 import { nodeEnv } from "./config";
-import { RateLimiterValkey } from "./services/rate-limiter";
-import { Worker } from "../../worker/main";
+import { RateLimiterValkey } from "./services/rateLimiter";
+import { Worker } from "../../worker/worker";
 
 const ApiLive = HttpApiBuilder.layer(GigListApi).pipe(
   Layer.provide(Layer.mergeAll(AuthApiGroupLive, BandsApiGroupLive, PublicBandsApiGroupLive, PublicUsersApiGroupLive, SongsApiGroupLive, SetlistsApiGroupLive, GigsApiGroupLive, ChartsApiGroupLive, ScoresApiGroupLive, MarksApiGroupLive, StampsApiGroupLive)),
   Layer.provide(SessionMiddlewareLive),
   Layer.provide(RateLimitMiddlewareLive),
+  Layer.provide(FailureBoundaryLive),
 );
 
 // Adapted from postgres.garden's conditional testing import. Production never
@@ -56,9 +60,9 @@ const TestingLive = Layer.unwrap(Effect.gen(function* () {
  * through the services that need app_private.
  */
 export const AppLayer = Layer.mergeAll(
-  AuthDb.Live,
-  AuthVisitor.Live,
-  Db.Live,
+  AuthDb.layer,
+  AuthVisitor.layer,
+  Db.layer,
   LiveHub.layer,
   ChartReader.layer,
   Auth.layer,
@@ -96,8 +100,10 @@ export const ServerLive = HttpRouter.serve(
   Layer.provide(AppLayer),
   // Merged rather than provided: telemetry services are references with
   // defaults, so they are not requirements of the server layer. Merging keeps
-  // the exporters in every handler's context.
-  Layer.provideMerge(TelemetryLive),
+  // the exporters, and the request span headers, in every handler's context.
+  // The worker is built under this layer too, so its jobs trace through the
+  // same exporter.
+  Layer.provideMerge(Layer.mergeAll(TracingLayer, RequestSpanHeaders)),
   // One limiter for the API middleware and the worker's mail cap.
   Layer.provide(RateLimiterValkey),
 );

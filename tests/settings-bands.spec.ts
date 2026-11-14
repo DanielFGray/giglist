@@ -1,4 +1,4 @@
-import { test, expect, getPw, TEST_PASSWORD } from "./helpers"
+import { test, expect, getPw, TEST_PASSWORD, testSlug } from "./helpers"
 
 test.describe("settings bands", () => {
   test.describe.configure({ timeout: 30000 })
@@ -9,7 +9,7 @@ test.describe("settings bands", () => {
   }) => {
     await testing.login({ username: "test_settings_sole" })
     const created = await page.request.post("/api/my/bands", {
-      data: { slug: `test-settings-sole-${Date.now()}`, name: "Solo Delete Band" },
+      data: { slug: testSlug("settings-sole"), name: "Solo Delete Band" },
     })
     expect(created.ok(), await created.text()).toBe(true)
     const band = (await created.json()) as { id: string; name: string }
@@ -33,7 +33,7 @@ test.describe("settings bands", () => {
   test("owner transfers ownership and leaves", async ({ page, testing }) => {
     await testing.login({ username: "test_settings_owner" })
     const created = await page.request.post("/api/my/bands", {
-      data: { slug: `test-settings-xfer-${Date.now()}`, name: "Transfer Band" },
+      data: { slug: testSlug("settings-xfer"), name: "Transfer Band" },
     })
     expect(created.ok(), await created.text()).toBe(true)
     const band = (await created.json()) as { id: string }
@@ -86,7 +86,7 @@ test.describe("settings bands", () => {
   test("non-owner leaves without transferring", async ({ page, testing }) => {
     await testing.login({ username: "test_settings_host" })
     const created = await page.request.post("/api/my/bands", {
-      data: { slug: `test-settings-leave-${Date.now()}`, name: "Leave Band" },
+      data: { slug: testSlug("settings-leave"), name: "Leave Band" },
     })
     expect(created.ok(), await created.text()).toBe(true)
     const band = (await created.json()) as { id: string }

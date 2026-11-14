@@ -1,11 +1,11 @@
 import { test, expect, getPw } from "./helpers"
 
 /**
- * A band name no other run uses. The create form derives the slug from the
- * name, so a fixed name makes two runs in the same checkout race on one slug.
+ * A band name no other test uses. The create form derives the slug from the
+ * name, so a name shared by two parallel tests races on one slug. Date.now()
+ * repeats across workers; a random UUID does not.
  */
-const bandName = (stem: string) =>
-  `Test: ${stem} ${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`
+const bandName = (stem: string) => `Test: ${stem} ${crypto.randomUUID().slice(0, 8)}`
 
 test.describe("bands", () => {
   test("shows create band prompt when user has no bands", async ({

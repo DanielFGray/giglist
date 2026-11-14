@@ -1,11 +1,11 @@
 import { readFileSync } from "node:fs"
-import { test, expect, getPw } from "./helpers"
+import { test, expect, getPw, testSlug } from "./helpers"
 
 const fixture = readFileSync(new URL("./fixtures/four-tracks.gp5", import.meta.url))
 
 test("standard notation and tab toggle, and turning off the last one swaps", async ({ page, testing }) => {
   await testing.login()
-  const band = await (await page.request.post("/api/my/bands", { data: { slug: `test-notation-${Date.now()}`, name: "Test: notation" } })).json()
+  const band = await (await page.request.post("/api/my/bands", { data: { slug: testSlug("notation"), name: "Test: notation" } })).json()
   const song = await (await page.request.post("/api/songs", {
     data: { band_id: band.id, title: "N", artist: null, key: "G", tempo_bpm: null, duration_seconds: null, capo: null, notes: null },
   })).json()
@@ -44,7 +44,7 @@ test("standard notation and tab toggle, and turning off the last one swaps", asy
 
 test("a drum track keeps its standard notation whatever the tab choice", async ({ page, testing }) => {
   await testing.login()
-  const band = await (await page.request.post("/api/my/bands", { data: { slug: `test-notation-${Date.now()}`, name: "Test: notation" } })).json()
+  const band = await (await page.request.post("/api/my/bands", { data: { slug: testSlug("notation"), name: "Test: notation" } })).json()
   const song = await (await page.request.post("/api/songs", {
     data: { band_id: band.id, title: "D", artist: null, key: "G", tempo_bpm: null, duration_seconds: null, capo: null, notes: null },
   })).json()

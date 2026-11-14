@@ -1,4 +1,5 @@
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router"
+import { errorMessage } from "~/components/form"
 
 export const Route = createFileRoute("/band")({
   // Band pages read band-scoped data and offer band mutations, so a signed-out
@@ -23,7 +24,7 @@ function BandError({ error, reset }: { error: unknown; reset: () => void }) {
     <div data-pwid="band-error" className="min-h-[40vh] flex flex-col items-center justify-center gap-4 text-center">
       <h1 className="text-2xl font-bold tracking-tight">Could not load this band</h1>
       <p className="text-sm text-zinc-500 max-w-md">
-        {error instanceof Error ? error.message : String(error)}
+        {errorMessage(error)}
       </p>
       <button
         onClick={reset}

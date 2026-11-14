@@ -15,7 +15,8 @@ export interface SessionData {
   readonly userId: string | null
 }
 
-export class CurrentSession extends Context.Service<CurrentSession, SessionData>()("giglist/CurrentSession") {}
+/** @perRequest: SessionMiddleware provides it for each request. */
+export class CurrentSession extends Context.Service<CurrentSession, SessionData>()("giglist/session/CurrentSession") {}
 
 export class SessionMiddleware extends HttpApiMiddleware.Service<
   SessionMiddleware,

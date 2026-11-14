@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test"
-import { test, expect, getPw, post, TEST_PASSWORD } from "./helpers"
+import { test, expect, getPw, post, TEST_PASSWORD, testSlug } from "./helpers"
 
 const createBand = async (page: Page, slug: string) => (await post(page, "/api/my/bands", { slug, name: `Test: ${slug}` })).id as string
 
@@ -15,7 +15,7 @@ const column = (page: Page, key: string) => rows(page).locator(`[data-pwid="cell
 test.describe("setlists", () => {
   test("the song picker leaves out songs already in the list, so its choices shrink", async ({ page, testing }) => {
     await testing.login()
-    const bandId = await createBand(page, `test-setlist-pick-${Date.now()}`)
+    const bandId = await createBand(page, testSlug("setlist-pick"))
     await createSong(page, bandId, "Alpha")
     await createSong(page, bandId, "Alto")
 
@@ -35,7 +35,7 @@ test.describe("setlists", () => {
 
   test("builds a setlist in the grid: pick songs by typing, override this list only, move and remove by keyboard", async ({ page, testing }) => {
     await testing.login()
-    const bandId = await createBand(page, `test-setlist-${Date.now()}`)
+    const bandId = await createBand(page, testSlug("setlist"))
     await createSong(page, bandId, "Alpha", { artist: "The As", key: "G", tempo_bpm: 120, duration_seconds: 100 })
     await createSong(page, bandId, "Beta", { artist: "The Bs", duration_seconds: 200 })
     await createSong(page, bandId, "Gamma", { duration_seconds: 60 })
@@ -103,7 +103,7 @@ test.describe("setlists", () => {
 
   test("renames a setlist, sets its status, copies it and deletes it", async ({ page, testing }) => {
     await testing.login()
-    const bandId = await createBand(page, `test-setlist-copy-${Date.now()}`)
+    const bandId = await createBand(page, testSlug("setlist-copy"))
     const songId = await createSong(page, bandId, "Alpha")
     const setlist = await post(page, "/api/setlists", { band_id: bandId, name: "Main set" })
     const entry = await post(page, `/api/setlists/${setlist.id}/entries`, { song_id: songId })
@@ -136,11 +136,11 @@ test.describe("setlists", () => {
 
   test("keeps a setlist and its entries private to the band", async ({ page, testing, request }) => {
     await testing.login()
-    const bandId = await createBand(page, `test-setlist-authz-${Date.now()}`)
+    const bandId = await createBand(page, testSlug("setlist-authz"))
     const setlist = await post(page, "/api/setlists", { band_id: bandId, name: "Private" })
 
     // A second user, in its own cookie store, must not reach the first band.
-    const username = `test_setlist_outsider_${Date.now()}`
+    const username = testing.username("setlist_outsider")
     const registered = await request.post("/api/auth/register", {
       data: { username, email: `${username}@test.local`, password: TEST_PASSWORD },
     })
@@ -152,9 +152,40 @@ test.describe("setlists", () => {
     expect(list.status(), "outsider listed another band's setlists").toBe(403)
   })
 
+  test.describe("on a phone", () => {
+    // A short window, so a touch that the browser takes as a pan scrolls the page instead of dragging.
+    test.use({ hasTouch: true, viewport: { width: 390, height: 500 } })
+
+    test("dragging a song's handle by touch moves the song", async ({ page, testing }) => {
+      await testing.login()
+      const bandId = await createBand(page, testSlug("setlist-touch"))
+      const setlist = await post(page, "/api/setlists", { band_id: bandId, name: "Touch" })
+      for (const title of ["Alpha", "Beta", "Gamma"]) {
+        await post(page, `/api/setlists/${setlist.id}/entries`, { song_id: await createSong(page, bandId, title) })
+      }
+      await page.goto(`/band/${bandId}/setlists/${setlist.id}`)
+      await expect(column(page, "title")).toHaveText(["Alpha", "Beta", "Gamma"], { timeout: 10000 })
+
+      // Real touch input through the browser's input pipeline, which applies touch-action as a phone does.
+      const handle = await rows(page).first().locator('[data-pwid="grid-drag"]').boundingBox()
+      const target = await rows(page).last().boundingBox()
+      const x = handle!.x + handle!.width / 2
+      const from = handle!.y + handle!.height / 2
+      const to = target!.y + target!.height / 2
+      const cdp = await page.context().newCDPSession(page)
+      await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y: from }] })
+      for (let step = 1; step <= 10; step++) {
+        await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x, y: from + ((to - from) * step) / 10 }] })
+      }
+      await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] })
+
+      await expect(column(page, "title")).toHaveText(["Beta", "Gamma", "Alpha"], { timeout: 10000 })
+    })
+  })
+
   test("refuses a move that names another setlist's entry", async ({ page, testing }) => {
     await testing.login()
-    const bandId = await createBand(page, `test-setlist-move-${Date.now()}`)
+    const bandId = await createBand(page, testSlug("setlist-move"))
     const songId = await createSong(page, bandId, "Alpha")
     const [one, other] = [
       await post(page, "/api/setlists", { band_id: bandId, name: "One" }),

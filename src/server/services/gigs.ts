@@ -1,11 +1,15 @@
 import { Context, Effect, Layer, Option, Schema as S } from "effect"
 import { sql } from "kysely"
 import { RequestDatabase } from "../db"
-import { LiveHub, type Written } from "./live-hub"
+import { LiveHub, type Written } from "./liveHub"
 import { Setlists, viewing } from "./setlists"
 import { between, placeAfter } from "../../components/position"
-import { Gig, GigEntry, GigNotFound, type GigDetails, type GigInsert, type GigSetlistInsert } from "../../api/gigs"
-import { SetlistForbidden, type LivePresence, type Move } from "../../api/setlists"
+import { Gig, GigEntry, type GigDetails, type GigInsert, type GigSetlistInsert } from "../../api/gigs"
+import { type LivePresence, type Move } from "../../api/setlists"
+
+export class GigMissing extends S.TaggedError<GigMissing, { readonly brand: unique symbol }>()("GigMissing", { message: S.String, id: S.String }) {}
+
+export class GigRefused extends S.TaggedError<GigRefused, { readonly brand: unique symbol }>()("GigRefused", { message: S.String }) {}
 
 const decodeGig = S.decodeUnknownEffect(Gig)
 const decodeGigs = S.decodeUnknownEffect(S.Array(Gig))
@@ -20,7 +24,7 @@ const decodeGigEntries = S.decodeUnknownEffect(S.Array(GigEntry))
  * commits — the gig, and every setlist it played before or after the write,
  * since a setlist's page lists its gigs.
  */
-export class Gigs extends Context.Service<Gigs>()("giglist/Gigs", {
+export class Gigs extends Context.Service<Gigs>()("giglist/gigs", {
   make: Effect.gen(function* () {
     const setlists = yield* Setlists
     const hub = yield* LiveHub
@@ -34,7 +38,7 @@ export class Gigs extends Context.Service<Gigs>()("giglist/Gigs", {
         return {
           result,
           rooms: [...new Set([gigId, ...before, ...after])],
-          by: yield* setlists.writerName,
+          by: yield* setlists.writerName(),
         } satisfies Written<A>
       })
 
@@ -47,15 +51,14 @@ export class Gigs extends Context.Service<Gigs>()("giglist/Gigs", {
             .orderBy(sql`g.gig_date desc nulls last`)
             .orderBy("g.created_at", "desc"),
         ),
-        Effect.flatMap(decodeGigs),
-        Effect.orDie,
+        Effect.flatMap((rows) => decodeGigs(rows).pipe(Effect.orDie)),
       )
     })
 
     const create = Effect.fn("Gigs.create")(function* (payload: typeof GigInsert.Type) {
       const db = yield* RequestDatabase
       yield* setlists.requireMember(payload.band_id)
-      const inserted = yield* db.insertInto("app_public.gigs").values(payload).returning("id").pipe(Effect.head, Effect.orDie)
+      const inserted = yield* db.insertInto("app_public.gigs").values(payload).returning("id").pipe(Effect.head, Effect.catchTag("NoSuchElementError", Effect.die))
       return yield* gigOrDie(inserted.id)
     })
 
@@ -65,7 +68,7 @@ export class Gigs extends Context.Service<Gigs>()("giglist/Gigs", {
         Effect.gen(function* () {
           const db = yield* RequestDatabase
           yield* gigOr404(id)
-          yield* db.updateTable("app_public.gigs").set(payload).where("id", "=", id).pipe(Effect.orDie)
+          yield* db.updateTable("app_public.gigs").set(payload).where("id", "=", id)
           return yield* gigOrDie(id)
         }),
       )
@@ -77,7 +80,7 @@ export class Gigs extends Context.Service<Gigs>()("giglist/Gigs", {
         Effect.gen(function* () {
           const db = yield* RequestDatabase
           yield* gigOr404(id)
-          yield* db.deleteFrom("app_public.gigs").where("id", "=", id).pipe(Effect.orDie)
+          yield* db.deleteFrom("app_public.gigs").where("id", "=", id)
         }),
       )
     })
@@ -89,7 +92,7 @@ export class Gigs extends Context.Service<Gigs>()("giglist/Gigs", {
           const db = yield* RequestDatabase
           yield* lockGig(id)
           const gig = yield* gigOr404(id)
-          const forbidden = new SetlistForbidden({ message: "That setlist is not in this band" })
+          const forbidden = new GigRefused({ message: "That setlist is not in this band" })
           const setlist = yield* db
             .selectFrom("app_public.setlists")
             .select("band_id")
@@ -97,7 +100,7 @@ export class Gigs extends Context.Service<Gigs>()("giglist/Gigs", {
             .pipe(Effect.head, Effect.catchTag("NoSuchElementError", () => Effect.fail(forbidden)))
           if (setlist.band_id !== gig.band_id) return yield* forbidden
           if (gig.setlists.some((played) => played.id === payload.setlist_id)) {
-            return yield* new SetlistForbidden({ message: "This gig already plays that setlist" })
+            return yield* new GigRefused({ message: "This gig already plays that setlist" })
           }
           // A new setlist plays last.
           const last = yield* db
@@ -114,7 +117,6 @@ export class Gigs extends Context.Service<Gigs>()("giglist/Gigs", {
           yield* db
             .insertInto("app_public.gig_setlists")
             .values({ band_id: gig.band_id, gig_id: id, setlist_id: payload.setlist_id, position_key: between(last, null) })
-            .pipe(Effect.orDie)
           return yield* gigOrDie(id)
         }),
       )
@@ -130,7 +132,6 @@ export class Gigs extends Context.Service<Gigs>()("giglist/Gigs", {
             .deleteFrom("app_public.gig_setlists")
             .where("gig_id", "=", id)
             .where("setlist_id", "=", setlistId)
-            .pipe(Effect.orDie)
           return yield* gigOrDie(id)
         }),
       )
@@ -145,7 +146,7 @@ export class Gigs extends Context.Service<Gigs>()("giglist/Gigs", {
           yield* lockGig(id)
           const gig = yield* gigOr404(id)
           if (!gig.setlists.some((played) => played.id === setlistId)) {
-            return yield* new SetlistForbidden({ message: "This gig does not play that setlist" })
+            return yield* new GigRefused({ message: "This gig does not play that setlist" })
           }
           const copy = yield* setlists.duplicate({ id: setlistId, band_id: gig.band_id }, name)
           // The copy takes the original's row, and so its place in the gig.
@@ -154,7 +155,6 @@ export class Gigs extends Context.Service<Gigs>()("giglist/Gigs", {
             .set({ setlist_id: copy })
             .where("gig_id", "=", id)
             .where("setlist_id", "=", setlistId)
-            .pipe(Effect.orDie)
           return yield* gigOrDie(id)
         }),
       )
@@ -174,20 +174,18 @@ export class Gigs extends Context.Service<Gigs>()("giglist/Gigs", {
             .where("gig_id", "=", id)
             .orderBy("position_key", "asc")
             .orderBy("setlist_id", "asc")
-            .pipe(Effect.orDie)
           const writes = rows.some((row) => row.id === payload.id)
             ? placeAfter(rows.filter((row) => row.id !== payload.id), payload.id, payload.previous)
             : Option.none()
           if (Option.isNone(writes)) {
-            return yield* new SetlistForbidden({ message: "That setlist or neighbour is not in this gig" })
+            return yield* new GigRefused({ message: "That setlist or neighbour is not in this gig" })
           }
           yield* Effect.forEach(writes.value, (write) =>
             db
               .updateTable("app_public.gig_setlists")
               .set({ position_key: write.position_key })
               .where("gig_id", "=", id)
-              .where("setlist_id", "=", write.id)
-              .pipe(Effect.orDie),
+              .where("setlist_id", "=", write.id),
           )
           return yield* gigOrDie(id)
         }),
@@ -209,13 +207,13 @@ export class Gigs extends Context.Service<Gigs>()("giglist/Gigs", {
         .orderBy("gs.setlist_id")
         .orderBy("r.position_key")
         .orderBy("r.id")
-        .pipe(Effect.flatMap(decodeGigEntries), Effect.orDie)
+        .pipe(Effect.flatMap((rows) => decodeGigEntries(rows).pipe(Effect.orDie)))
     })
 
     /** The gig's event stream; see `Setlists.watch`. */
     const watch = Effect.fn("Gigs.watch")(function* (id: string, client: string) {
       yield* gigOr404(id)
-      return hub.watch(id, viewing(yield* setlists.me, client))
+      return hub.watch(id, viewing(yield* setlists.me(), client))
     })
 
     /** Records what one of the caller's connections to the gig is doing. */
@@ -224,10 +222,14 @@ export class Gigs extends Context.Service<Gigs>()("giglist/Gigs", {
       yield* setlists.reportAs(id, payload)
     })
 
+    const get = Effect.fn("Gigs.get")(function* (id: string) {
+      return yield* gigOr404(id)
+    })
+
     return {
       list,
       create,
-      get: gigOr404,
+      get,
       update,
       remove,
       addSetlist,
@@ -246,13 +248,13 @@ export class Gigs extends Context.Service<Gigs>()("giglist/Gigs", {
 /** The ids of the setlists a gig plays. */
 const playedBy = Effect.fnUntraced(function* (gigId: string) {
   const db = yield* RequestDatabase
-  const rows = yield* db.selectFrom("app_public.gig_setlists").select("setlist_id").where("gig_id", "=", gigId).pipe(Effect.orDie)
+  const rows = yield* db.selectFrom("app_public.gig_setlists").select("setlist_id").where("gig_id", "=", gigId)
   return rows.map((row) => row.setlist_id)
 })
 
 const lockGig = Effect.fnUntraced(function* (gigId: string) {
   const db = yield* RequestDatabase
-  yield* db.selectFrom("app_public.gigs").select("id").where("id", "=", gigId).forUpdate().pipe(Effect.orDie)
+  yield* db.selectFrom("app_public.gigs").select("id").where("id", "=", gigId).forUpdate()
 })
 
 /**
@@ -299,10 +301,10 @@ const gigOr404 = Effect.fnUntraced(function* (id: string) {
   return yield* selectGigs().pipe(
     Effect.flatMap((query) => query.where("g.id", "=", id)),
     Effect.head,
-    Effect.catchTag("NoSuchElementError", () => Effect.fail(new GigNotFound({ id }))),
+    Effect.catchTag("NoSuchElementError", () => Effect.fail(new GigMissing({ id, message: "That gig was not found" }))),
     Effect.flatMap((row) => decodeGig(row).pipe(Effect.orDie)),
   )
 })
 
 /** A gig that was just written: a miss here is a server defect, not a caller error. */
-const gigOrDie = (id: string) => gigOr404(id).pipe(Effect.orDie)
+const gigOrDie = (id: string) => gigOr404(id).pipe(Effect.catchTag("GigMissing", Effect.die))

@@ -1,3 +1,4 @@
+// @entrypoint: the browser's bridge from React to the API client; each request runs on this module's runtime.
 import { Effect, ManagedRuntime, Schema as S } from "effect"
 import { FetchHttpClient, HttpClient } from "effect/http"
 import { HttpApiClient } from "effect/http-api"

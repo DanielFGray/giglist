@@ -2,6 +2,7 @@ import { Outlet, createRootRoute } from "@tanstack/react-router"
 import { Nav } from "~/components/Nav"
 import { AuthProvider } from "~/components/AuthContext"
 import { auth, bands } from "~/api/client"
+import { errorMessage } from "~/components/form"
 
 export const Route = createRootRoute({
   /**
@@ -20,7 +21,7 @@ export const Route = createRootRoute({
     <div data-pwid="root-error" className="min-h-[60vh] flex flex-col items-center justify-center gap-4 text-center">
       <h1 className="text-2xl font-bold tracking-tight">Could not load GigList</h1>
       <p className="text-sm text-zinc-500 max-w-md">
-        {error instanceof Error ? error.message : String(error)}
+        {errorMessage(error)}
       </p>
       <button
         onClick={reset}

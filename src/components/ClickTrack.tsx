@@ -1,6 +1,6 @@
 import { Effect, Fiber, Stream } from "effect"
 import { useEffect, useState } from "react"
-import { BEATS_PER_BAR } from "~/audio/click/click"
+import { BEATS_PER_BAR } from "alphatab-kit/charts/take"
 import { clickTrack } from "~/audio/click/engine"
 import type { Subdivision } from "~/audio/click/timing"
 import { NEW_TAKE, type Take, takeHits, takeStep } from "~/audio/click/take"

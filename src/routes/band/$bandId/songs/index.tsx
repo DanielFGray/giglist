@@ -8,7 +8,7 @@ import { BLANK_SONG } from "~/components/SongForm"
 import { Grid, type GridColumn } from "~/components/Grid"
 import { keepOrder } from "~/components/grid-keys"
 import { matchKeys } from "~/components/key-options"
-import { MusicalKeys } from "~/api/songs"
+import { MUSICAL_KEYS } from "alphatab-kit/charts/key"
 
 const SortKey = S.Literals(["added", "title", "artist", "key", "tempo"])
 type SortKey = (typeof SortKey)["Type"]
@@ -231,7 +231,7 @@ function songColumns(update: (song: SongInfo, data: SongUpdateData) => Promise<v
         kind: "choice",
         text: (song) => song.key ?? "",
         choices: (query) => matchKeys(query).map((key) => ({ value: key, label: key })),
-        save: (song, value) => update(song, { key: MusicalKeys.find((key) => key === value) ?? null }),
+        save: (song, value) => update(song, { key: MUSICAL_KEYS.find((key) => key === value) ?? null }),
       },
     },
     {

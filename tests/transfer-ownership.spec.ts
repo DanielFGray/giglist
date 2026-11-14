@@ -1,4 +1,4 @@
-import { test, expect, getPw, TEST_PASSWORD } from "./helpers"
+import { test, expect, getPw, TEST_PASSWORD, testSlug } from "./helpers"
 
 test.describe("transfer band ownership", () => {
   test.describe.configure({ timeout: 30000 })
@@ -10,7 +10,7 @@ test.describe("transfer band ownership", () => {
     await testing.login({ username: "test_to_owner" })
     const created = await page.request.post("/api/my/bands", {
       data: {
-        slug: `test-to-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        slug: testSlug("to"),
         name: "Transfer Ownership Band",
       },
     })

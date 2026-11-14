@@ -1,5 +1,6 @@
 import { Effect, Queue, Schedule, Schema, Scope, Stream } from "effect"
-import { ACCENT_GAIN, BEAT_GAIN, BEATS_PER_BAR, CLICK_ONSET_SECONDS, clickWaveform, COUNT_IN_BEATS } from "./click"
+import { BEATS_PER_BAR } from "alphatab-kit/charts/take"
+import { ACCENT_GAIN, BEAT_GAIN, CLICK_ONSET_SECONDS, clickWaveform, COUNT_IN_BEATS } from "./click"
 import { Session, type SessionEvent, type SessionPlan } from "./session"
 import captureUrl from "./capture.worklet.ts?worker&url"
 

@@ -1,4 +1,4 @@
-import { test, expect, getPw, TEST_PASSWORD } from "./helpers"
+import { test, expect, getPw, TEST_PASSWORD, testSlug } from "./helpers"
 
 test.describe("invite permissions", () => {
   test.describe.configure({ timeout: 30000 })
@@ -6,7 +6,7 @@ test.describe("invite permissions", () => {
   test("owner sees the invite form on the band page", async ({ page, testing }) => {
     await testing.login({ username: "test_invite_owner" })
     const created = await page.request.post("/api/my/bands", {
-      data: { slug: `test-invite-owner-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, name: "Invite Owner Band" },
+      data: { slug: testSlug("invite-owner"), name: "Invite Owner Band" },
     })
     expect(created.ok(), await created.text()).toBe(true)
     const band = (await created.json()) as { id: string }
@@ -20,7 +20,7 @@ test.describe("invite permissions", () => {
   test("non-owner member does not see the invite form", async ({ page, testing }) => {
     await testing.login({ username: "test_invite_host" })
     const created = await page.request.post("/api/my/bands", {
-      data: { slug: `test-invite-host-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, name: "Invite Host Band" },
+      data: { slug: testSlug("invite-host"), name: "Invite Host Band" },
     })
     expect(created.ok(), await created.text()).toBe(true)
     const band = (await created.json()) as { id: string }

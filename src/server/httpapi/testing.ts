@@ -87,6 +87,24 @@ const TestingApiGroupLive = HttpApiBuilder.group(TestingApi, "testing", (handler
         }, Effect.orDie),
       )
       .handle(
+        "setPositionKeys",
+        Effect.fnUntraced(function* ({ payload }) {
+          const db = yield* Db;
+          yield* db.withTransaction(Effect.gen(function* () {
+            yield* Effect.forEach(payload.entries, (entry) =>
+              db.updateTable("app_public.setlist_entries")
+                .set({ position_key: entry.position_key })
+                .where("id", "=", entry.id));
+            yield* Effect.forEach(payload.gig_setlists, (row) =>
+              db.updateTable("app_public.gig_setlists")
+                .set({ position_key: row.position_key })
+                .where("gig_id", "=", row.gig_id)
+                .where("setlist_id", "=", row.setlist_id));
+          }));
+          return { success: true };
+        }, Effect.orDie),
+      )
+      .handle(
         "testLogin",
         Effect.fnUntraced(
           function* ({ payload }) {

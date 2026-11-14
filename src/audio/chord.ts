@@ -1,4 +1,4 @@
-import { STANDARD_TUNING } from "~/charts/voicing"
+import { STANDARD_TUNING } from "alphatab-kit/charts/voicing"
 
 /**
  * Plays a chord from a guitar voicing or from piano pitches. Both sounds are synthesized, with a

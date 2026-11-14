@@ -1,9 +1,9 @@
 import { Effect, Fiber, Stream } from "effect"
 import { useEffect, useMemo, useState } from "react"
-import { BEATS_PER_BAR, COUNT_IN_BEATS } from "~/audio/click/click"
+import { readTake, type TakeReading, BEATS_PER_BAR } from "alphatab-kit/charts/take"
+import { COUNT_IN_BEATS } from "~/audio/click/click"
 import { clickTrack } from "~/audio/click/engine"
 import { NEW_TAKE, type Take, takeStep } from "~/audio/click/take"
-import { readTake, type TakeReading } from "~/charts/take"
 import { MicMeter } from "./MicMeter"
 
 /**

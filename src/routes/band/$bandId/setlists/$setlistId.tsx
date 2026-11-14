@@ -3,7 +3,7 @@ import { Link, createFileRoute, useRouter } from "@tanstack/react-router"
 import { Option, Schema as S } from "effect"
 import { gigs, setlists, songs, type GigInfo, type SetlistEntryInfo, type SetlistEntryUpdateData } from "~/api/client"
 import { SetlistStatus } from "~/api/setlists"
-import { MusicalKeys } from "~/api/songs"
+import { MUSICAL_KEYS } from "alphatab-kit/charts/key"
 import { errorMessage } from "~/components/form"
 import { useAuth } from "~/components/AuthContext"
 import { formatDuration } from "~/components/duration"
@@ -117,7 +117,7 @@ function SetlistPage() {
         kind: "choice",
         text: (entry) => (entry.key_overridden ? (entry.key ?? "") : ""),
         choices: (query) => matchKeys(query).map((key) => ({ value: key, label: key })),
-        save: (entry, value) => update(entry, { key_override: MusicalKeys.find((key) => key === value) ?? null }),
+        save: (entry, value) => update(entry, { key_override: MUSICAL_KEYS.find((key) => key === value) ?? null }),
       },
     },
     {

@@ -11,6 +11,7 @@ import { ThemeToggle } from "./ThemeToggle"
 import { Avatar } from "./Avatar"
 import { useActiveBandId, useAuth } from "./AuthContext"
 import { auth } from "~/api/client"
+import { errorMessage } from "./form"
 
 type NavItemProps = LinkComponentProps & {
   label: string
@@ -96,6 +97,7 @@ function UserMenu() {
   const { user } = useAuth()
   const router = useRouter()
   const [open, setOpen] = useState(false)
+  const [signOutError, setSignOutError] = useState<string | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -165,12 +167,23 @@ function UserMenu() {
             data-pwid="nav-signout"
             className="w-full text-left px-3 py-2 text-sm text-zinc-300 hover:bg-[var(--color-surface-hover)] hover:text-zinc-100 cursor-pointer"
             onClick={() => {
-              setOpen(false)
-              void auth.logout().then(() => router.invalidate())
+              setSignOutError(null)
+              void auth.logout().then(
+                () => {
+                  setOpen(false)
+                  return router.invalidate()
+                },
+                (e) => setSignOutError(errorMessage(e)),
+              )
             }}
           >
             Sign out
           </button>
+          {signOutError && (
+            <p role="alert" data-pwid="nav-signout-error" className="px-3 py-2 text-xs text-red-400">
+              {signOutError}
+            </p>
+          )}
         </div>
       )}
     </div>
@@ -181,6 +194,7 @@ export function Nav() {
   const { user } = useAuth()
   const bandId = useActiveBandId()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [signOutError, setSignOutError] = useState<string | null>(null)
   const slidOut = useHideOnScroll(mobileOpen)
   const router = useRouter()
 
@@ -258,12 +272,23 @@ export function Nav() {
                     data-pwid="nav-mobile-signout"
                     className="w-full text-left px-3 py-1.5 rounded-md text-sm font-medium text-zinc-400 hover:text-zinc-200 hover:bg-[var(--color-surface-hover)] cursor-pointer"
                     onClick={() => {
-                      setMobileOpen(false)
-                      void auth.logout().then(() => router.invalidate())
+                      setSignOutError(null)
+                      void auth.logout().then(
+                        () => {
+                          setMobileOpen(false)
+                          return router.invalidate()
+                        },
+                        (e) => setSignOutError(errorMessage(e)),
+                      )
                     }}
                   >
                     Sign out
                   </button>
+                  {signOutError && (
+                    <p role="alert" data-pwid="nav-mobile-signout-error" className="px-3 py-1.5 text-xs text-red-400">
+                      {signOutError}
+                    </p>
+                  )}
                 </div>
               )}
             </div>

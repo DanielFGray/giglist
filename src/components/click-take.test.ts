@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, test } from "vitest"
 import { COUNT_IN_BEATS } from "~/audio/click/click"
 import type { ClickEvent } from "~/audio/click/engine"
 import { NEW_TAKE, takeStep } from "~/audio/click/take"

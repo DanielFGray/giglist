@@ -4,7 +4,7 @@ import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/http"
 import { BandInfo } from "../../api/bands"
 import { LiveEvent } from "../../api/setlists"
 import { Song } from "../../api/songs"
-import type { LiveEventData } from "../services/live-hub"
+import type { LiveEventData } from "../services/liveHub"
 import { baseUrl, makeCookieJar } from "./apiHarness"
 
 export const testPassword = "TestUserPassword"

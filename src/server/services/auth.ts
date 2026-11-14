@@ -1,7 +1,7 @@
-import { Context, Effect, Layer, Redacted, Schema as S } from "effect";
+import { Context, Effect, Layer, Option, Redacted, Schema as S } from "effect";
 import { sql } from "kysely";
 import { Db, RequestDatabase } from "../db";
-import { pgError } from "./pg-error";
+import { type DatabaseError, hasSqlState } from "../databaseError";
 import { gravatarUrl } from "../gravatar";
 
 export class InvalidCredentials extends S.TaggedError<InvalidCredentials, { readonly brand: unique symbol }>()("InvalidCredentials", {
@@ -28,7 +28,7 @@ export class AccountError extends S.TaggedError<AccountError, { readonly brand: 
   message: S.String,
 }) {}
 
-export type AuthError =
+export type AuthFailure =
   | InvalidCredentials
   | AccountLocked
   | DuplicateAccount
@@ -47,7 +47,7 @@ const emptyToNull = (value: string | null) => {
  * run without a signed-in user, and `RequestDatabase` for everything a request
  * does as the user, which only `withAuthContext` provides.
  */
-export class Auth extends Context.Service<Auth>()("giglist/Auth", {
+export class Auth extends Context.Service<Auth>()("giglist/auth", {
   make: Effect.sync(() => {
     /** Band owners must transfer or delete those bands before account deletion. */
     const requireNoOwnedBands = Effect.fn("Auth.requireNoOwnedBands")(function* () {
@@ -102,16 +102,11 @@ export class Auth extends Context.Service<Auth>()("giglist/Auth", {
 
         return { user, sessionId: session.uuid as string };
       },
-      Effect.catch((e): Effect.Effect<never, AuthError> => {
-        if (e._tag === "RegistrationFailed") return Effect.fail(e);
-        const info = pgError(e);
-        if (info?.code === "23505")
+      Effect.catchTag("DatabaseError", (e): Effect.Effect<never, DuplicateAccount | WeakPassword | DatabaseError> => {
+        if (hasSqlState(e, "23505"))
           return Effect.fail(new DuplicateAccount({ message: "Username or email already taken" }));
-        if (info?.code === "WEAKP")
-          return Effect.fail(new WeakPassword({ message: "Password is too weak" }));
-        return Effect.logError("Registration failed", e).pipe(
-          Effect.andThen(Effect.fail(new RegistrationFailed({ message: "Registration failed" }))),
-        );
+        if (hasSqlState(e, "WEAKP")) return Effect.fail(new WeakPassword({ message: "Password is too weak" }));
+        return Effect.fail(e);
       }),
     );
 
@@ -135,14 +130,10 @@ export class Auth extends Context.Service<Auth>()("giglist/Auth", {
 
         return { sessionId: session.uuid, userId: session.user_id };
       },
-      Effect.catch((e): Effect.Effect<never, InvalidCredentials | AccountLocked> => {
-        if (e._tag === "InvalidCredentials") return Effect.fail(e);
-        const code = pgError(e)?.code;
-        if (code === "LOCKD")
+      Effect.catchTag("DatabaseError", (e): Effect.Effect<never, AccountLocked | DatabaseError> => {
+        if (hasSqlState(e, "LOCKD"))
           return Effect.fail(new AccountLocked({ message: "Account locked — too many attempts" }));
-        return Effect.logError("login failed", e).pipe(
-          Effect.andThen(Effect.fail(new InvalidCredentials({ message: "Invalid username or password" }))),
-        );
+        return Effect.fail(e);
       }),
     );
 
@@ -167,11 +158,6 @@ export class Auth extends Context.Service<Auth>()("giglist/Auth", {
         if (!session) return yield* new AccountError({ message: "This reset link is invalid or expired" });
         return { sessionId: session.uuid, userId: session.user_id };
       },
-      Effect.catch((e) => {
-        if (e._tag === "AccountError") return Effect.fail(e);
-        const message = "This reset link is invalid or expired";
-        return Effect.logError(message, e).pipe(Effect.andThen(Effect.fail(new AccountError({ message }))));
-      }),
     );
 
     const logout = Effect.fn("Auth.logout")(function* (sessionId: string) {
@@ -224,18 +210,14 @@ export class Auth extends Context.Service<Auth>()("giglist/Auth", {
             ),
           );
       },
-      Effect.catch((e) => {
-        if (e._tag === "AccountError") return Effect.fail(e);
-        const info = pgError(e);
-        if (info?.code === "23505" && info.constraint === "users_username_key")
+      Effect.catchTag("DatabaseError", (e): Effect.Effect<never, AccountError | DatabaseError> => {
+        if (Option.exists(e.report, (r) => r.code === "23505" && Option.contains(r.constraint, "users_username_key")))
           return Effect.fail(new AccountError({ message: "That username is already taken" }));
-        if (info?.constraint === "username_check")
+        if (Option.exists(e.report, (r) => Option.contains(r.constraint, "username_check")))
           return Effect.fail(new AccountError({ message: "That username is not allowed" }));
-        if (info?.constraint === "url_check")
+        if (Option.exists(e.report, (r) => Option.contains(r.constraint, "url_check")))
           return Effect.fail(new AccountError({ message: "Avatar URL must start with http:// or https://" }));
-        return Effect.logError("updateProfile failed", e).pipe(
-          Effect.andThen(Effect.fail(new AccountError({ message: "Could not update profile" }))),
-        );
+        return Effect.fail(e);
       }),
     );
 
@@ -264,18 +246,11 @@ export class Auth extends Context.Service<Auth>()("giglist/Auth", {
           return yield* new AccountError({ message: "Could not change password" });
         }
       },
-      Effect.catch((e) => {
-        if (e._tag === "AccountError") return Effect.fail(e);
-        const code = pgError(e)?.code;
-        if (code === "CREDS")
-          return Effect.fail(new AccountError({ message: "Incorrect password" }));
-        if (code === "LOGIN")
-          return Effect.fail(new AccountError({ message: "You must be signed in" }));
-        if (code === "WEAKP")
-          return Effect.fail(new AccountError({ message: "Password is too weak" }));
-        return Effect.logError("Could not change password", e).pipe(
-          Effect.andThen(Effect.fail(new AccountError({ message: "Could not change password" }))),
-        );
+      Effect.catchTag("DatabaseError", (e): Effect.Effect<never, AccountError | DatabaseError> => {
+        if (hasSqlState(e, "CREDS")) return Effect.fail(new AccountError({ message: "Incorrect password" }));
+        if (hasSqlState(e, "LOGIN")) return Effect.fail(new AccountError({ message: "You must be signed in" }));
+        if (hasSqlState(e, "WEAKP")) return Effect.fail(new AccountError({ message: "Password is too weak" }));
+        return Effect.fail(e);
       }),
     );
 
@@ -302,14 +277,10 @@ export class Auth extends Context.Service<Auth>()("giglist/Auth", {
             ),
           );
       },
-      Effect.catch((e) => {
-        if (e._tag === "AccountError") return Effect.fail(e);
-        const code = pgError(e)?.code;
-        if (code === "EMTKN" || code === "23505")
+      Effect.catchTag("DatabaseError", (e): Effect.Effect<never, AccountError | DatabaseError> => {
+        if (hasSqlState(e, "EMTKN") || hasSqlState(e, "23505"))
           return Effect.fail(new AccountError({ message: "That email is already in use" }));
-        return Effect.logError("Could not add email", e).pipe(
-          Effect.andThen(Effect.fail(new AccountError({ message: "Could not add email" }))),
-        );
+        return Effect.fail(e);
       }),
     );
 
@@ -324,16 +295,10 @@ export class Auth extends Context.Service<Auth>()("giglist/Auth", {
           return yield* new AccountError({ message: "That email was not found" });
         }
       },
-      Effect.catch((e) => {
-        if (e._tag === "AccountError") return Effect.fail(e);
-        const code = pgError(e)?.code;
-        if (code === "CDLEA")
-          return Effect.fail(
-            new AccountError({ message: "You must keep at least one verified email" }),
-          );
-        return Effect.logError("Could not remove email", e).pipe(
-          Effect.andThen(Effect.fail(new AccountError({ message: "Could not remove email" }))),
-        );
+      Effect.catchTag("DatabaseError", (e): Effect.Effect<never, AccountError | DatabaseError> => {
+        if (hasSqlState(e, "CDLEA"))
+          return Effect.fail(new AccountError({ message: "You must keep at least one verified email" }));
+        return Effect.fail(e);
       }),
     );
 
@@ -358,18 +323,11 @@ export class Auth extends Context.Service<Auth>()("giglist/Auth", {
             ),
           );
       },
-      Effect.catch((e) => {
-        if (e._tag === "AccountError") return Effect.fail(e);
-        const code = pgError(e)?.code;
-        if (code === "DNIED")
-          return Effect.fail(new AccountError({ message: "That's not your email" }));
-        if (code === "VRFY1")
-          return Effect.fail(
-            new AccountError({ message: "Verify the email before making it primary" }),
-          );
-        return Effect.logError("Could not update primary email", e).pipe(
-          Effect.andThen(Effect.fail(new AccountError({ message: "Could not update primary email" }))),
-        );
+      Effect.catchTag("DatabaseError", (e): Effect.Effect<never, AccountError | DatabaseError> => {
+        if (hasSqlState(e, "DNIED")) return Effect.fail(new AccountError({ message: "That's not your email" }));
+        if (hasSqlState(e, "VRFY1"))
+          return Effect.fail(new AccountError({ message: "Verify the email before making it primary" }));
+        return Effect.fail(e);
       }),
     );
 
@@ -393,10 +351,6 @@ export class Auth extends Context.Service<Auth>()("giglist/Auth", {
           });
         }
       },
-      Effect.catchIf(
-        (e): e is Exclude<typeof e, AccountError> => e._tag !== "AccountError",
-        (e) => Effect.logError("Could not resend verification", e).pipe(Effect.andThen(Effect.fail(new AccountError({ message: "Could not resend verification" })))),
-      ),
     );
 
     /** Token-gated; runs as the table owner because no session is required. */
@@ -421,10 +375,6 @@ export class Auth extends Context.Service<Auth>()("giglist/Auth", {
           return yield* new AccountError({ message: "Invalid or expired verification link" });
         }
       },
-      Effect.catchIf(
-        (e): e is Exclude<typeof e, AccountError> => e._tag !== "AccountError",
-        (e) => Effect.logError("Could not verify email", e).pipe(Effect.andThen(Effect.fail(new AccountError({ message: "Could not verify email" })))),
-      ),
     );
 
     const requestAccountDeletion = Effect.fn("Auth.requestAccountDeletion")(
@@ -444,14 +394,9 @@ export class Auth extends Context.Service<Auth>()("giglist/Auth", {
           return yield* new AccountError({ message: "Could not start account deletion" });
         }
       },
-      Effect.catch((e) => {
-        if (e._tag === "AccountError") return Effect.fail(e);
-        const code = pgError(e)?.code;
-        if (code === "LOGIN")
-          return Effect.fail(new AccountError({ message: "You must be signed in" }));
-        return Effect.logError("Could not start account deletion", e).pipe(
-          Effect.andThen(Effect.fail(new AccountError({ message: "Could not start account deletion" }))),
-        );
+      Effect.catchTag("DatabaseError", (e): Effect.Effect<never, AccountError | DatabaseError> => {
+        if (hasSqlState(e, "LOGIN")) return Effect.fail(new AccountError({ message: "You must be signed in" }));
+        return Effect.fail(e);
       }),
     );
 
@@ -474,24 +419,17 @@ export class Auth extends Context.Service<Auth>()("giglist/Auth", {
           return yield* new AccountError({ message: "Could not delete account" });
         }
       },
-      Effect.catch((e) => {
-        if (e._tag === "AccountError") return Effect.fail(e);
-        const code = pgError(e)?.code;
-        if (code === "LOGIN")
-          return Effect.fail(new AccountError({ message: "You must be signed in" }));
-        if (code === "OWNER")
+      Effect.catchTag("DatabaseError", (e): Effect.Effect<never, AccountError | DatabaseError> => {
+        if (hasSqlState(e, "LOGIN")) return Effect.fail(new AccountError({ message: "You must be signed in" }));
+        if (hasSqlState(e, "OWNER"))
           return Effect.fail(
             new AccountError({
               message: "Transfer ownership or delete every band you own before deleting your account",
             }),
           );
-        if (code === "DNIED")
-          return Effect.fail(
-            new AccountError({ message: "That confirmation code is wrong or has expired" }),
-          );
-        return Effect.logError("Could not delete account", e).pipe(
-          Effect.andThen(Effect.fail(new AccountError({ message: "Could not delete account" }))),
-        );
+        if (hasSqlState(e, "DNIED"))
+          return Effect.fail(new AccountError({ message: "That confirmation code is wrong or has expired" }));
+        return Effect.fail(e);
       }),
     );
 

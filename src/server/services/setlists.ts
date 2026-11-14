@@ -2,10 +2,14 @@ import { Context, Effect, Layer, Option, Predicate, Schema as S, Struct } from "
 import { sql } from "kysely"
 import { RequestDatabase } from "../db"
 import { Auth } from "./auth"
-import { Bands } from "./band"
-import { LiveHub, type Written } from "./live-hub"
+import { Bands } from "./bands"
+import { LiveHub, type Written } from "./liveHub"
 import { between, placeAfter } from "../../components/position"
-import { LivePresence, Setlist, SetlistEntry, SetlistForbidden, SetlistNotFound, type Move, type SetlistEntryInsert, type SetlistEntryUpdate, type SetlistInsert, type SetlistUpdate } from "../../api/setlists"
+import { LivePresence, Setlist, SetlistEntry, type Move, type SetlistEntryInsert, type SetlistEntryUpdate, type SetlistInsert, type SetlistUpdate } from "../../api/setlists"
+
+export class SetlistMissing extends S.TaggedError<SetlistMissing, { readonly brand: unique symbol }>()("SetlistMissing", { message: S.String, id: S.String }) {}
+
+export class SetlistRefused extends S.TaggedError<SetlistRefused, { readonly brand: unique symbol }>()("SetlistRefused", { message: S.String }) {}
 
 const decodeSetlist = S.decodeUnknownEffect(Setlist)
 const decodeSetlists = S.decodeUnknownEffect(S.Array(Setlist))
@@ -21,22 +25,24 @@ const decodeEntries = S.decodeUnknownEffect(S.Array(SetlistEntry))
  * commits — the setlist and every gig that plays it. A setlist and a gig are
  * each a room of the LiveHub; `watch` opens one and `report` updates a viewer.
  */
-export class Setlists extends Context.Service<Setlists>()("giglist/Setlists", {
+export class Setlists extends Context.Service<Setlists>()("giglist/setlists", {
   make: Effect.gen(function* () {
     const bands = yield* Bands
     const auth = yield* Auth
     const hub = yield* LiveHub
 
-    const requireMember = Effect.fnUntraced(function* (bandId: string) {
+    const requireMember = Effect.fn("Setlists.requireMember")(function* (bandId: string) {
       if (!(yield* bands.isMember(bandId))) {
-        return yield* new SetlistForbidden({ message: "You are not a member of that band" })
+        return yield* new SetlistRefused({ message: "You are not a member of that band" })
       }
     })
 
     /** The signed-in user, read in the request's transaction. */
-    const me = auth.getMe().pipe(
-      Effect.filterOrFail(Predicate.isNotNull, () => new SetlistForbidden({ message: "You must be signed in" })),
-    )
+    const me = Effect.fn("Setlists.me")(function* () {
+      return yield* auth.getMe().pipe(
+        Effect.filterOrFail(Predicate.isNotNull, () => new SetlistRefused({ message: "You must be signed in" })),
+      )
+    })
 
     /**
      * Runs a write to the setlist, and names the rooms that show it. The gigs
@@ -49,17 +55,18 @@ export class Setlists extends Context.Service<Setlists>()("giglist/Setlists", {
           .selectFrom("app_public.gig_setlists")
           .select("gig_id")
           .where("setlist_id", "=", setlistId)
-          .pipe(Effect.orDie)
         const result = yield* write
         return {
           result,
           rooms: [setlistId, ...gigs.map((gig) => gig.gig_id)],
-          by: yield* writerName,
+          by: yield* writerName(),
         } satisfies Written<A>
       })
 
     /** The username of the request's user, read in the write's own transaction. */
-    const writerName = auth.getMe().pipe(Effect.map((user) => user?.username ?? null))
+    const writerName = Effect.fn("Setlists.writerName")(function* () {
+      return (yield* auth.getMe())?.username ?? null
+    })
 
     const list = Effect.fn("Setlists.list")(function* (bandId: string) {
       yield* requireMember(bandId)
@@ -76,7 +83,7 @@ export class Setlists extends Context.Service<Setlists>()("giglist/Setlists", {
         .insertInto("app_public.setlists")
         .values({ band_id: payload.band_id, name: payload.name })
         .returning("id")
-        .pipe(Effect.head, Effect.orDie)
+        .pipe(Effect.head, Effect.catchTag("NoSuchElementError", Effect.die))
       return yield* setlistOrDie(inserted.id)
     })
 
@@ -88,7 +95,7 @@ export class Setlists extends Context.Service<Setlists>()("giglist/Setlists", {
           yield* setlistOr404(id)
           // An empty SET is not valid SQL, and an empty payload changes nothing.
           if (Struct.keys(payload).length > 0) {
-            yield* db.updateTable("app_public.setlists").set(payload).where("id", "=", id).pipe(Effect.orDie)
+            yield* db.updateTable("app_public.setlists").set(payload).where("id", "=", id)
           }
           return yield* setlistOrDie(id)
         }),
@@ -114,7 +121,7 @@ export class Setlists extends Context.Service<Setlists>()("giglist/Setlists", {
         .insertInto("app_public.setlists")
         .values({ band_id: source.band_id, name })
         .returning("id")
-        .pipe(Effect.head, Effect.orDie)
+        .pipe(Effect.head, Effect.catchTag("NoSuchElementError", Effect.die))
       // The entries keep their keys, so the copy plays in the same order.
       yield* db
         .insertInto("app_public.setlist_entries")
@@ -132,7 +139,6 @@ export class Setlists extends Context.Service<Setlists>()("giglist/Setlists", {
             ])
             .where("setlist_id", "=", source.id),
         )
-        .pipe(Effect.orDie)
       return created.id
     })
 
@@ -142,7 +148,7 @@ export class Setlists extends Context.Service<Setlists>()("giglist/Setlists", {
         Effect.gen(function* () {
           const db = yield* RequestDatabase
           yield* setlistOr404(id)
-          yield* db.deleteFrom("app_public.setlists").where("id", "=", id).pipe(Effect.orDie)
+          yield* db.deleteFrom("app_public.setlists").where("id", "=", id)
         }),
       )
     })
@@ -176,7 +182,7 @@ export class Setlists extends Context.Service<Setlists>()("giglist/Setlists", {
             .insertInto("app_public.setlist_entries")
             .values({ setlist_id: id, song_id: payload.song_id, position_key: between(last, null) })
             .returning("id")
-            .pipe(Effect.head, Effect.orDie)
+            .pipe(Effect.head, Effect.catchTag("NoSuchElementError", Effect.die))
           return yield* entryOr404(inserted.id, id)
         }),
       )
@@ -201,7 +207,6 @@ export class Setlists extends Context.Service<Setlists>()("giglist/Setlists", {
               .set(payload)
               .where("id", "=", entryId)
               .where("setlist_id", "=", id)
-              .pipe(Effect.orDie)
           }
           return yield* entryOr404(entryId, id)
         }),
@@ -218,7 +223,6 @@ export class Setlists extends Context.Service<Setlists>()("giglist/Setlists", {
             .deleteFrom("app_public.setlist_entries")
             .where("id", "=", entryId)
             .where("setlist_id", "=", id)
-            .pipe(Effect.orDie)
         }),
       )
     })
@@ -237,19 +241,17 @@ export class Setlists extends Context.Service<Setlists>()("giglist/Setlists", {
             .where("setlist_id", "=", id)
             .orderBy("position_key", "asc")
             .orderBy("id", "asc")
-            .pipe(Effect.orDie)
           const writes = rows.some((row) => row.id === payload.id)
             ? placeAfter(rows.filter((row) => row.id !== payload.id), payload.id, payload.previous)
             : Option.none()
           if (Option.isNone(writes)) {
-            return yield* new SetlistForbidden({ message: "That entry or neighbour is not in this setlist" })
+            return yield* new SetlistRefused({ message: "That entry or neighbour is not in this setlist" })
           }
           yield* Effect.forEach(writes.value, (write) =>
             db
               .updateTable("app_public.setlist_entries")
               .set({ position_key: write.position_key })
-              .where("id", "=", write.id)
-              .pipe(Effect.orDie),
+              .where("id", "=", write.id),
           )
         }),
       )
@@ -262,7 +264,7 @@ export class Setlists extends Context.Service<Setlists>()("giglist/Setlists", {
      */
     const watch = Effect.fn("Setlists.watch")(function* (id: string, client: string) {
       yield* setlistOr404(id)
-      return hub.watch(id, viewing(yield* me, client))
+      return hub.watch(id, viewing(yield* me(), client))
     })
 
     /** Records what one of the caller's connections to the setlist is doing. */
@@ -272,11 +274,15 @@ export class Setlists extends Context.Service<Setlists>()("giglist/Setlists", {
     })
 
     /** Records what the caller's connection to a room is doing; another user's connection is refused. */
-    const reportAs = Effect.fnUntraced(function* (roomId: string, payload: typeof LivePresence.Type) {
+    const reportAs = Effect.fn("Setlists.reportAs")(function* (roomId: string, payload: typeof LivePresence.Type) {
       const user = yield* auth.getMe()
       if (!user || !(yield* hub.report(roomId, user.id, payload))) {
-        return yield* new SetlistForbidden({ message: "That connection is not yours" })
+        return yield* new SetlistRefused({ message: "That connection is not yours" })
       }
+    })
+
+    const get = Effect.fn("Setlists.get")(function* (id: string) {
+      return yield* setlistOr404(id)
     })
 
     return {
@@ -286,7 +292,7 @@ export class Setlists extends Context.Service<Setlists>()("giglist/Setlists", {
       reportAs,
       list,
       create,
-      get: setlistOr404,
+      get,
       update,
       copy,
       duplicate,
@@ -312,7 +318,7 @@ export class Setlists extends Context.Service<Setlists>()("giglist/Setlists", {
  */
 const requireBandSong = Effect.fnUntraced(function* (songId: string, bandId: string) {
   const db = yield* RequestDatabase
-  const forbidden = new SetlistForbidden({ message: "That song is not in this band" })
+  const forbidden = new SetlistRefused({ message: "That song is not in this band" })
   const song = yield* db
     .selectFrom("app_public.songs")
     .select("band_id")
@@ -323,7 +329,7 @@ const requireBandSong = Effect.fnUntraced(function* (songId: string, bandId: str
 
 const lockSetlist = Effect.fnUntraced(function* (setlistId: string) {
   const db = yield* RequestDatabase
-  yield* db.selectFrom("app_public.setlists").select("id").where("id", "=", setlistId).forUpdate().pipe(Effect.orDie)
+  yield* db.selectFrom("app_public.setlists").select("id").where("id", "=", setlistId).forUpdate()
 })
 
 /**
@@ -370,13 +376,13 @@ const setlistOr404 = Effect.fnUntraced(function* (id: string) {
   return yield* selectSetlists().pipe(
     Effect.flatMap((query) => query.where("s.id", "=", id)),
     Effect.head,
-    Effect.catchTag("NoSuchElementError", () => Effect.fail(new SetlistNotFound({ id }))),
+    Effect.catchTag("NoSuchElementError", () => Effect.fail(new SetlistMissing({ id, message: "That setlist was not found" }))),
     Effect.flatMap((row) => decodeSetlist(row).pipe(Effect.orDie)),
   )
 })
 
 /** A setlist that was just written: a miss here is a server defect, not a caller error. */
-const setlistOrDie = (id: string) => setlistOr404(id).pipe(Effect.orDie)
+const setlistOrDie = (id: string) => setlistOr404(id).pipe(Effect.catchTag("SetlistMissing", Effect.die))
 
 /**
  * The resolved view rows for one setlist, ordered for display. The view applies
@@ -404,7 +410,7 @@ const entryOr404 = Effect.fnUntraced(function* (entryId: string, setlistId: stri
     .where("setlist_id", "=", setlistId)
     .pipe(
       Effect.head,
-      Effect.catchTag("NoSuchElementError", () => Effect.fail(new SetlistNotFound({ id: setlistId }))),
+      Effect.catchTag("NoSuchElementError", () => Effect.fail(new SetlistMissing({ id: setlistId, message: "That setlist was not found" }))),
       Effect.flatMap((row) => decodeEntry(row).pipe(Effect.orDie)),
     )
 })

@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, test } from "vitest"
 import type { ClickEvent } from "./engine"
 import { NEW_TAKE, takeHits, takeStep } from "./take"
 

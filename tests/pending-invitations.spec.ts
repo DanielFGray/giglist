@@ -1,14 +1,10 @@
 import type { Browser, Page } from "@playwright/test"
-import { test, expect, getPw, TEST_PASSWORD } from "./helpers"
+import { test, expect, getPw, TEST_PASSWORD, testSlug } from "./helpers"
 
-/**
- * A band the owner creates. Workers can start in the same millisecond, so a
- * timestamp alone can repeat a slug; the random suffix keeps each one unique.
- */
+/** A band the owner creates. */
 const newBand = async (owner: Page, name: string) => {
-  const suffix = Math.random().toString(36).slice(2, 8)
   const band = await owner.request.post("/api/my/bands", {
-    data: { slug: `test-pending-${Date.now()}-${suffix}`, name },
+    data: { slug: testSlug("pending"), name },
   })
   expect(band.ok(), await band.text()).toBe(true)
   return (await band.json()).id as string

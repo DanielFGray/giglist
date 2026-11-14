@@ -29,7 +29,7 @@ A gig's sets are its setlists. Sections inside a setlist would give a second way
 
 ## Live rooms
 
-A setlist and a gig are each a room in `services/live-hub.ts`. A write to a setlist is announced to the setlist and to every gig that plays it, because the gig's page shows each setlist's song count and length and the gig's stage view plays its songs. A write to a gig is announced to the gig and to every setlist it played before or after the write, because a setlist's page lists the gigs that play it.
+A setlist and a gig are each a room in `services/liveHub.ts`. A write to a setlist is announced to the setlist and to every gig that plays it, because the gig's page shows each setlist's song count and length and the gig's stage view plays its songs. A write to a gig is announced to the gig and to every setlist it played before or after the write, because a setlist's page lists the gigs that play it.
 
 ## Grids
 

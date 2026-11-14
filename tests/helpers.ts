@@ -3,6 +3,13 @@ import { test as base, expect, type Locator, type Page } from "@playwright/test"
 /** Password every seeded test user is registered with. Specs must not retype it. */
 export const TEST_PASSWORD = "test_password_123!"
 
+/**
+ * A band slug no other test uses. Date.now() repeats across parallel workers,
+ * so two tests can mint the same slug in one millisecond; a random UUID does
+ * not. The `test-` prefix is what `test:clean` (the testing API's clear) matches.
+ */
+export const testSlug = (name: string) => `test-${name}-${crypto.randomUUID().slice(0, 8)}`
+
 /** A user this test acts as. Its email is the one `testing/login` registers. */
 export type TestUser = { readonly username: string; readonly email: string }
 
@@ -96,7 +103,7 @@ export const post = async (page: Page, url: string, data: unknown) => {
  * and "Encore" (Gamma). Beta has a chart with a mark and the notes "Watch the break".
  */
 export const createGig = async (page: Page) => {
-  const band = await post(page, "/api/my/bands", { slug: `test-perform-${crypto.randomUUID().slice(0, 8)}`, name: "Test: perform" })
+  const band = await post(page, "/api/my/bands", { slug: testSlug("perform"), name: "Test: perform" })
   const song = (title: string, key: string) =>
     post(page, "/api/songs", { band_id: band.id, title, artist: null, key, tempo_bpm: 120, duration_seconds: null, capo: null, notes: title === "Beta" ? "Watch the break" : null })
   const [alpha, beta, gamma] = [await song("Alpha", "G"), await song("Beta", "G"), await song("Gamma", "D")]
@@ -124,7 +131,7 @@ export const createGig = async (page: Page) => {
 /** A new band with one song, "Amazing Grace" in G, at `tempo` beats per minute or none. */
 export const createSong = async (page: Page, tempo: number | null = null) => {
   const bandRes = await page.request.post("/api/my/bands", {
-    data: { slug: `test-charts-${crypto.randomUUID().slice(0, 8)}`, name: "Test: charts" },
+    data: { slug: testSlug("charts"), name: "Test: charts" },
   })
   expect(bandRes.ok(), `create band failed: ${await bandRes.text()}`).toBe(true)
   const bandId = (await bandRes.json()).id as string

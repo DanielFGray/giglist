@@ -1,0 +1,23 @@
+import { Effect } from "effect"
+import { HttpApiBuilder } from "effect/http-api"
+import { PublicUsers } from "../services/publicUsers"
+import { withAuthContext } from "../db"
+import { toHttpError } from "../dbErrors"
+import { GigListApi } from "../../api/contracts"
+import { PublicUserNotFound } from "../../api/public-users"
+
+/**
+ * Signed-out visitors still run as the visitor role, with no session id, so
+ * the profile reads exactly what the `public_user*` functions grant the visitor.
+ */
+export const PublicUsersApiGroupLive = HttpApiBuilder.group(GigListApi, "publicUsers", (handlers) =>
+  handlers.handle("getPublicUser", ({ params: { username } }) =>
+    PublicUsers.use((users) => users.getPublicUserProfile(username)).pipe(
+      withAuthContext,
+      Effect.catchTags({
+        DatabaseError: toHttpError,
+        PublicUserMissing: (e) => Effect.fail(new PublicUserNotFound({ message: "That user has no public page", username: e.username })),
+      }),
+    ),
+  ),
+)

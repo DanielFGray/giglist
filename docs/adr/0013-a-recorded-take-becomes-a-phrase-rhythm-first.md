@@ -6,7 +6,7 @@ status: proposed
 
 The phrase form can record a take. The player plays to the song's click, and the browser writes the take as alphaTex for the phrase (docs/adr/0003). It reads the take in three steps; each step uses the one before it:
 
-1. When: the click's listener (`src/audio/click/`, the one onset detector in GigList) finds where each sound starts, and each start snaps to the click's grid (`src/charts/take.ts`). The output is a slash staff (`\staff {slash}`): rhythm only, for any instrument, drums included.
+1. When: the click's listener (`src/audio/click/`, the one onset detector in GigList) finds where each sound starts, and each start snaps to the click's grid (`alphatab-kit/src/charts/take.ts`). The output is a slash staff (`\staff {slash}`): rhythm only, for any instrument, drums included.
 2. What: each start gets its pitch (basic-pitch, Bittner et al. 2022) or, for drums, its drum.
 3. Relations: string and fret, chords, ties and rests.
 

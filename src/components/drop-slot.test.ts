@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, test } from "vitest"
 import { slotUnder, type DropRow } from "./drop-slot"
 
 const rows: ReadonlyArray<DropRow> = [

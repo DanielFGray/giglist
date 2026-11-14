@@ -1,9 +1,11 @@
-import { Config, Context, Effect, Layer, Option } from "effect"
+import { Cause, Config, Context, Effect, Layer, Option } from "effect"
 import { PgClient } from "@effect/sql-pg"
-import * as PgKysely from "./effect-kysely"
+import * as PgKysely from "./effectKysely"
 import { sql } from "kysely"
 import type { DB } from "../../generated/DB.js"
 import { CurrentSession } from "../api/session"
+import { ServiceUnavailable } from "../api/errors"
+import type { DatabaseError } from "./databaseError"
 
 export type KyselyDB = PgKysely.EffectKysely<DB>
 
@@ -16,18 +18,12 @@ export type KyselyDB = PgKysely.EffectKysely<DB>
  * a user identity may run on it: RLS is the only thing keeping one band's songs
  * out of another band's result set.
  */
-export class Db extends Context.Service<Db, KyselyDB>()("giglist/Db") {
-  static Conn = Layer.unwrap(
-    Config.Redacted("DATABASE_URL").pipe(
-      Effect.map((url) =>
-        PgClient.layer({ url }),
-      ),
-    ),
+export class Db extends Context.Service<Db, KyselyDB>()("giglist/db", {
+  make: PgKysely.makePg<DB>(),
+}) {
+  static readonly layer = Layer.effect(this, this.make).pipe(
+    Layer.provide(PgClient.layerConfig({ url: Config.Redacted("DATABASE_URL") })),
   )
-
-  static Kysely = Layer.effect(this, PgKysely.makePg<DB>())
-
-  static Live = this.Kysely.pipe(Layer.provide(this.Conn))
 }
 
 /**
@@ -35,26 +31,19 @@ export class Db extends Context.Service<Db, KyselyDB>()("giglist/Db") {
  * it holds none of the grants until a request says `SET ROLE` to the visitor
  * role — see `withAuthContext`.
  */
-export class AuthDb extends Context.Service<AuthDb, KyselyDB>()("giglist/AuthDb") {
-  static Conn = Layer.unwrap(
-    Config.Redacted("AUTH_DATABASE_URL").pipe(
-      Effect.map((url) =>
-        PgClient.layer({ url }),
-      ),
-    ),
+export class AuthDb extends Context.Service<AuthDb, KyselyDB>()("giglist/db/AuthDb", {
+  make: PgKysely.makePg<DB>(),
+}) {
+  static readonly layer = Layer.effect(this, this.make).pipe(
+    Layer.provide(PgClient.layerConfig({ url: Config.Redacted("AUTH_DATABASE_URL") })),
   )
-
-  static Kysely = Layer.effect(this, PgKysely.makePg<DB>())
-
-  static Live = this.Kysely.pipe(Layer.provide(this.Conn))
 }
 
 /** The visitor role that the authenticator must set. */
-export class AuthVisitor extends Context.Service<AuthVisitor, string>()("giglist/AuthVisitor") {
-  static Live = Layer.effect(
-    this,
-    Config.String("DATABASE_VISITOR"),
-  )
+export class AuthVisitor extends Context.Service<AuthVisitor, string>()("giglist/db/AuthVisitor", {
+  make: Config.String("DATABASE_VISITOR"),
+}) {
+  static readonly layer = Layer.effect(this, this.make)
 }
 
 /**
@@ -63,9 +52,10 @@ export class AuthVisitor extends Context.Service<AuthVisitor, string>()("giglist
  * one request. A service method yields it per call, so the requirement is part
  * of every visitor-scoped method by design.
  *
+ * @perRequest: withAuthContext provides it for each request.
  * @effect-leakable-service
  */
-export class RequestDatabase extends Context.Service<RequestDatabase, KyselyDB>()("giglist/RequestDatabase") {}
+export class RequestDatabase extends Context.Service<RequestDatabase, KyselyDB>()("giglist/db/RequestDatabase") {}
 
 /**
  * Make `effect` run as the request's user.
@@ -79,9 +69,10 @@ export class RequestDatabase extends Context.Service<RequestDatabase, KyselyDB>(
  * is undone at commit, so nothing leaks into the next request that borrows the
  * connection.
  *
- * Database failures become defects rather than errors. A caller cannot do
- * anything with a SqlError, and letting it into an endpoint's error channel
- * would turn it into a 400 the client is expected to read.
+ * A failed database call stays a DatabaseError in the error channel. The
+ * endpoint answers it through toHttpError (dbErrors.ts), except a refused
+ * switch to the visitor role, which is a fault in the server's settings and
+ * answers 503 (refusedRoleSwitch).
  */
 export const withAuthContext = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
   Effect.gen(function* () {
@@ -96,16 +87,38 @@ export const withAuthContext = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
 
     return yield* db.withTransaction(
       Effect.gen(function* () {
-        yield* db.selectNoFrom([
-          // Transaction-local, so the pooled connection returns to the
-          // authenticator when the request ends. The role is a trusted name
-          // from the environment, so it is inlined as a literal rather than
-          // bound. The session id is user input and stays a bound parameter.
-          sql<string>`set_config('role', ${sql.lit(visitor)}, true)`.as("_"),
-          sql<string>`set_config('my.session_id', ${sessionId}, true)`.as("_"),
-        ])
+        yield* db
+          .selectNoFrom([
+            // Transaction-local, so the pooled connection returns to the
+            // authenticator when the request ends. The role is a trusted name
+            // from the environment, so it is inlined as a literal rather than
+            // bound. The session id is user input and stays a bound parameter.
+            sql<string>`set_config('role', ${sql.lit(visitor)}, true)`.as("_"),
+            sql<string>`set_config('my.session_id', ${sessionId}, true)`.as("_"),
+          ])
+          .pipe(Effect.catchTag("DatabaseError", refusedRoleSwitch(visitor)))
 
         return yield* effect.pipe(Effect.provideService(RequestDatabase, db))
       }),
-    ).pipe(Effect.catchTag("SqlError", Effect.die))
+    )
   })
+
+/**
+ * A refused switch to the visitor role is a fault in the server's settings:
+ * `DATABASE_VISITOR` names no role (22023), or a role the authenticator is not
+ * a member of (42501). It answers 503 misconfigured and logs at Error with the
+ * role name. Any other failure passes on to toHttpError, whose table would read
+ * 42501 as a row that row-level security refused (403).
+ */
+const refusedRoleSwitch = (role: string) =>
+  Effect.fnUntraced(function* (error: DatabaseError) {
+    const refused = Option.exists(error.report, ({ code }) => roleSwitchRefusals.has(code))
+    if (!refused) return yield* error
+    yield* Effect.logError(`Could not switch to the visitor role '${role}'`, Cause.fail(error))
+    return yield* new ServiceUnavailable({
+      message: "The service is not available right now.",
+      reason: "misconfigured",
+    })
+  })
+
+const roleSwitchRefusals = new Set(["42501", "22023"])

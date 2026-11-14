@@ -1,7 +1,7 @@
 /** @typedef { import("graphile-worker").Task } Task */
 
 /** @type {Task} */
-export default async (_payload, { withPgClient }) => {
+export default async (_payload, { withPgClient, logger }) => {
   const { rowCount: sessionsRemoved } = await withPgClient(client =>
     client.query(
       `delete from app_private.sessions
@@ -14,7 +14,7 @@ export default async (_payload, { withPgClient }) => {
        where latest_attempt < now() - interval '30 days'`,
     ),
   )
-  console.info(
+  logger.info(
     `maintenance__cleanup: deleted ${sessionsRemoved ?? 0} expired sessions and ${passwordResetsRemoved ?? 0} unregistered email password resets`,
   )
 }

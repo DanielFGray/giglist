@@ -1,8 +1,10 @@
 import { Context, Effect, Layer, Schema as S, Struct } from "effect"
 import { RequestDatabase } from "../db"
-import { Bands } from "./band"
-import { Song, SongForbidden, type SongInsert, type SongUpdate } from "../../api/songs"
+import { Bands } from "./bands"
+import { Song, type SongInsert, type SongUpdate } from "../../api/songs"
 import { songCreate, songDelete, songFindByBandId, songFindById } from "../../../generated/queries.js"
+
+export class SongRefused extends S.TaggedError<SongRefused, { readonly brand: unique symbol }>()("SongRefused", { message: S.String }) {}
 
 const decodeSong = S.decodeUnknownEffect(Song)
 const decodeSongs = S.decodeUnknownEffect(S.Array(Song))
@@ -12,11 +14,11 @@ const decodeSongs = S.decodeUnknownEffect(S.Array(Song))
  * security scopes every query; the member checks turn "nothing visible" into a
  * 403 the browser can show.
  */
-export class Songs extends Context.Service<Songs>()("giglist/Songs", {
+export class Songs extends Context.Service<Songs>()("giglist/songs", {
   make: Effect.gen(function* () {
     const bands = yield* Bands
 
-    const notMember = () => new SongForbidden({ message: "You are not a member of that band" })
+    const notMember = () => new SongRefused({ message: "You are not a member of that band" })
 
     const requireMember = Effect.fnUntraced(function* (bandId: string) {
       if (!(yield* bands.isMember(bandId))) return yield* notMember()
@@ -44,14 +46,20 @@ export class Songs extends Context.Service<Songs>()("giglist/Songs", {
     const listByBand = Effect.fn("Songs.listByBand")(function* (bandId: string) {
       const db = yield* RequestDatabase
       yield* requireMember(bandId)
-      return yield* songFindByBandId(db)({ band_id: bandId }).pipe(Effect.andThen(decodeSongs), Effect.orDie)
+      return yield* songFindByBandId(db)({ band_id: bandId }).pipe(
+        Effect.andThen((rows) => decodeSongs(rows).pipe(Effect.orDie)),
+      )
     })
 
     const create = Effect.fn("Songs.create")(function* (payload: typeof SongInsert.Type) {
       const db = yield* RequestDatabase
       yield* requireMember(payload.band_id)
       // The column default sets created_by to the caller.
-      return yield* songCreate(db)({ ...payload }).pipe(Effect.head, Effect.andThen(decodeSong), Effect.orDie)
+      return yield* songCreate(db)({ ...payload }).pipe(
+        Effect.head,
+        Effect.catchTag("NoSuchElementError", Effect.die),
+        Effect.andThen((created) => decodeSong(created).pipe(Effect.orDie)),
+      )
     })
 
     const update = Effect.fn("Songs.update")(function* (id: string, payload: typeof SongUpdate.Type) {
@@ -68,14 +76,18 @@ export class Songs extends Context.Service<Songs>()("giglist/Songs", {
         .set(payload)
         .where("id", "=", id)
         .returningAll()
-        .pipe(Effect.head, Effect.andThen(decodeSong), Effect.orDie)
+        .pipe(
+          Effect.head,
+          Effect.catchTag("NoSuchElementError", Effect.die),
+          Effect.andThen((updated) => decodeSong(updated).pipe(Effect.orDie)),
+        )
     })
 
     const remove = Effect.fn("Songs.remove")(function* (id: string) {
       const db = yield* RequestDatabase
       const existing = yield* row(id)
       yield* requireMember(existing.band_id)
-      yield* songDelete(db)({ id }).pipe(Effect.orDie)
+      yield* songDelete(db)({ id })
     })
 
     return { byId, listByBand, create, update, remove }

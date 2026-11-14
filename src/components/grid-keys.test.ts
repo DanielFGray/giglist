@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, test } from "vitest"
 import { finishDirection, keepOrder, navigate, step, type KeyPress } from "./grid-keys"
 
 const size = { rows: 3, cols: 4 }

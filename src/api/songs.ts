@@ -1,27 +1,17 @@
 import { Schema as S, Struct } from "effect"
 import { HttpApiEndpoint, HttpApiGroup, HttpApiSchema } from "effect/http-api"
+import { MUSICAL_KEYS } from "alphatab-kit/charts/key"
 import { SessionMiddleware } from "./session"
 
 // --- Songs schemas ---
 
 /**
- * The keys the `app_public.musical_key` domain accepts, spelled out because the
- * schema uses a text domain with a check constraint rather than an enum. A value
- * outside this list fails here as a 400, instead of reaching the database and
- * coming back as a domain violation.
+ * The `app_public.musical_key` domain accepts exactly `MUSICAL_KEYS`, spelled out
+ * because the schema uses a text domain with a check constraint rather than an
+ * enum. A value outside this list fails here as a 400, instead of reaching the
+ * database and coming back as a domain violation.
  */
-const keys = [
-  "C", "C#", "Db", "D", "D#", "Eb", "E", "F", "F#", "Gb",
-  "G", "G#", "Ab", "A", "A#", "Bb", "B",
-  "Cm", "C#m", "Dbm", "Dm", "D#m", "Ebm", "Em", "Fm", "F#m", "Gbm",
-  "Gm", "G#m", "Abm", "Am", "A#m", "Bbm", "Bm",
-] as const
-
-export const MusicalKeys = keys
-
-export type MusicalKeyType = S.Schema.Type<typeof musicalKey>
-
-export const musicalKey = S.Literals([...keys])
+export const musicalKey = S.Literals([...MUSICAL_KEYS])
 
 /*
  * Wire schemas for the song catalog, declared here rather than taken from
@@ -66,9 +56,6 @@ export const SongFields = Struct.omit(SongInsert.fields, ["band_id"])
 
 export const SongUpdate = S.Struct(Struct.map(SongFields, S.optionalKey))
 
-export class SongNotFound extends S.TaggedError<SongNotFound, { readonly brand: unique symbol }>()("SongNotFound", {
-  id: S.String.check(S.isUUID()),
-}) {}
 
 /**
  * Declared here instead of importing the generated group, which maps its reads
@@ -79,28 +66,28 @@ export class SongNotFound extends S.TaggedError<SongNotFound, { readonly brand: 
  * generated/queries.ts, and the lookup by id happens inside the handler, which
  * needs the song row to authorise its band anyway.
  */
-export class SongForbidden extends S.TaggedError<SongForbidden, { readonly brand: unique symbol }>()("SongForbidden", { message: S.String },) {}
+export class SongForbidden extends S.TaggedError<SongForbidden, { readonly brand: unique symbol }>()("SongForbidden", { message: S.String }, { httpApiStatus: 403 }) {}
 
 export const SongsApiGroup = HttpApiGroup.make("songs")
   .add(
     HttpApiEndpoint.get("songFindById", "/:id", {
       params: { id: S.String.check(S.isUUID()) },
       success: Song,
-      error: SongForbidden.pipe(HttpApiSchema.status(403)),
+      error: SongForbidden,
     }),
   )
   .add(
     HttpApiEndpoint.get("songFindByBandId", "/band/:bandId", {
       params: { bandId: S.String.check(S.isUUID()) },
       success: S.Array(Song),
-      error: SongForbidden.pipe(HttpApiSchema.status(403)),
+      error: SongForbidden,
     }),
   )
   .add(
     HttpApiEndpoint.post("songCreate", "/", {
       payload: SongInsert,
       success: Song.pipe(HttpApiSchema.status(201)),
-      error: SongForbidden.pipe(HttpApiSchema.status(403)),
+      error: SongForbidden,
     }),
   )
   .add(
@@ -108,19 +95,13 @@ export const SongsApiGroup = HttpApiGroup.make("songs")
       params: { id: S.String.check(S.isUUID()) },
       payload: SongUpdate,
       success: Song,
-      error: [
-        SongNotFound.pipe(HttpApiSchema.status(404)),
-        SongForbidden.pipe(HttpApiSchema.status(403)),
-      ],
+      error: SongForbidden,
     }),
   )
   .add(
     HttpApiEndpoint.delete("songDelete", "/:id", {
       params: { id: S.String.check(S.isUUID()) },
-      error: [
-        SongNotFound.pipe(HttpApiSchema.status(404)),
-        SongForbidden.pipe(HttpApiSchema.status(403)),
-      ],
+      error: SongForbidden,
     }),
   )
   .middleware(SessionMiddleware)
