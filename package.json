@@ -50,7 +50,7 @@
     "@tanstack/react-form": "^1.33.5",
     "@tanstack/react-router": "^1.170.46",
     "@vitejs/plugin-react": "^6.3.0",
-    "alphatab-kit": "github:DanielFGray/alphatab-kit#v0.1.0",
+    "alphatab-kit": "github:DanielFGray/alphatab-kit#v0.3.0",
     "chordsheetjs": "18.0.0",
     "diff-match-patch": "1.0.5",
     "effect": "^4.1.3",
