@@ -130,7 +130,9 @@ export function Grid<R>({
   const ownsFocus = useRef(false)
   const body = useRef<HTMLTableSectionElement>(null)
   /** The row held by its handle, and the index it would take if dropped now. */
-  const [lifted, setLifted] = useState<{ readonly key: string; readonly to: number } | null>(null)
+  const [held, setHeld] = useState<{ readonly key: string; readonly to: number } | null>(null)
+  // A row removed while held (another member deleted it) takes its handle away, so its drop never comes.
+  const lifted = held !== null && rowKeys.includes(held.key) ? held : null
 
   // A focused draft whose row arrived is that row.
   const activeRow = (isDraft(active.row) ? arrived(active.row) : null) ?? active.row
@@ -350,9 +352,9 @@ export function Grid<R>({
                       <td aria-hidden />
                     ) : (
                       <RowHandle
-                        onDrag={(point) => setLifted({ key, to: rowIndexAt(point.y) })}
+                        onDrag={(point) => setHeld({ key, to: rowIndexAt(point.y) })}
                         onDrop={(point) => {
-                          setLifted(null)
+                          setHeld(null)
                           if (point) onMoveRow(key, rowIndexAt(point.y))
                         }}
                       />
