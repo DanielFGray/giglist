@@ -1,16 +1,11 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react"
-
-export type Point = { readonly x: number; readonly y: number }
-
-/** A pointer must travel this far, in pixels, before a press on the handle is a drag and not a tap. */
-const DRAG_DISTANCE = 5
+import { usePointerDrag, type Point } from "./pointer-drag"
 
 /**
  * The grip in the left margin of a block (a line, a phrase or a section). Dragging
  * it reports the pointer to the editor, which finds the place to drop; Escape
  * cancels the drag. Tapping it opens a menu, which is the way to move a block
- * without dragging. Pointer events serve the mouse and touch alike, where HTML5
- * drag-and-drop does not start on touch.
+ * without dragging.
  */
 export function BlockHandle({
   label,
@@ -35,12 +30,15 @@ export function BlockHandle({
   onDrop: (point: Point | null) => void
 }) {
   const [open, setOpen] = useState(false)
-  const [dragging, setDragging] = useState(false)
   const root = useRef<HTMLDivElement>(null)
   const grip = useRef<HTMLButtonElement>(null)
-  const press = useRef<{ start: Point; pointer: number; moved: boolean } | null>(null)
-  // A drag ends with a click on the handle, which must not open the menu.
-  const afterDrag = useRef(false)
+  const drag = usePointerDrag({
+    onDrag: (point) => {
+      setOpen(false)
+      onDrag(point)
+    },
+    onDrop,
+  })
 
   const items = () => [...(root.current?.querySelectorAll<HTMLElement>("[role=menuitem]:not(:disabled)") ?? [])]
 
@@ -53,21 +51,6 @@ export function BlockHandle({
     document.addEventListener("pointerdown", outside)
     return () => document.removeEventListener("pointerdown", outside)
   }, [open])
-
-  useEffect(() => {
-    if (!dragging) return
-    const cancel = (event: globalThis.KeyboardEvent) => {
-      if (event.key !== "Escape") return
-      const current = press.current
-      press.current = null
-      afterDrag.current = true
-      if (current) grip.current?.releasePointerCapture(current.pointer)
-      setDragging(false)
-      onDrop(null)
-    }
-    document.addEventListener("keydown", cancel)
-    return () => document.removeEventListener("keydown", cancel)
-  }, [dragging, onDrop])
 
   const close = () => {
     setOpen(false)
@@ -101,42 +84,9 @@ export function BlockHandle({
         aria-label={`Actions for ${label}`}
         aria-haspopup="menu"
         aria-expanded={open}
-        onPointerDown={(event) => {
-          if (event.button !== 0) return
-          afterDrag.current = false
-          event.currentTarget.setPointerCapture(event.pointerId)
-          press.current = { start: { x: event.clientX, y: event.clientY }, pointer: event.pointerId, moved: false }
-        }}
-        onPointerMove={(event) => {
-          const current = press.current
-          if (!current) return
-          const point = { x: event.clientX, y: event.clientY }
-          if (!current.moved && Math.hypot(point.x - current.start.x, point.y - current.start.y) < DRAG_DISTANCE) return
-          if (!current.moved) {
-            setOpen(false)
-            setDragging(true)
-          }
-          current.moved = true
-          onDrag(point)
-        }}
-        onPointerUp={(event) => {
-          const current = press.current
-          press.current = null
-          if (!current?.moved) return
-          afterDrag.current = true
-          setDragging(false)
-          onDrop({ x: event.clientX, y: event.clientY })
-        }}
-        onPointerCancel={() => {
-          const current = press.current
-          press.current = null
-          if (!current?.moved) return
-          setDragging(false)
-          onDrop(null)
-        }}
+        {...drag.handlers}
         onClick={() => {
-          if (afterDrag.current) afterDrag.current = false
-          else setOpen(!open)
+          if (!drag.endedInDrag()) setOpen(!open)
         }}
         className="flex h-7 w-6 cursor-grab touch-none select-none items-center justify-center rounded-md text-zinc-500 hover:text-zinc-200 focus-visible:text-zinc-200"
       >

@@ -1,4 +1,4 @@
-import type { Point } from "./BlockHandle"
+import type { Point } from "./pointer-drag"
 
 /** A drawn row of the editor: its line, the two slots a drop on it can mean, and where it sits on screen. */
 export type DropRow = {

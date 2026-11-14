@@ -152,6 +152,37 @@ test.describe("setlists", () => {
     expect(list.status(), "outsider listed another band's setlists").toBe(403)
   })
 
+  test.describe("on a phone", () => {
+    // A short window, so a touch that the browser takes as a pan scrolls the page instead of dragging.
+    test.use({ hasTouch: true, viewport: { width: 390, height: 500 } })
+
+    test("dragging a song's handle by touch moves the song", async ({ page, testing }) => {
+      await testing.login()
+      const bandId = await createBand(page, testSlug("setlist-touch"))
+      const setlist = await post(page, "/api/setlists", { band_id: bandId, name: "Touch" })
+      for (const title of ["Alpha", "Beta", "Gamma"]) {
+        await post(page, `/api/setlists/${setlist.id}/entries`, { song_id: await createSong(page, bandId, title) })
+      }
+      await page.goto(`/band/${bandId}/setlists/${setlist.id}`)
+      await expect(column(page, "title")).toHaveText(["Alpha", "Beta", "Gamma"], { timeout: 10000 })
+
+      // Real touch input through the browser's input pipeline, which applies touch-action as a phone does.
+      const handle = await rows(page).first().locator('[data-pwid="grid-drag"]').boundingBox()
+      const target = await rows(page).last().boundingBox()
+      const x = handle!.x + handle!.width / 2
+      const from = handle!.y + handle!.height / 2
+      const to = target!.y + target!.height / 2
+      const cdp = await page.context().newCDPSession(page)
+      await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y: from }] })
+      for (let step = 1; step <= 10; step++) {
+        await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x, y: from + ((to - from) * step) / 10 }] })
+      }
+      await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] })
+
+      await expect(column(page, "title")).toHaveText(["Beta", "Gamma", "Alpha"], { timeout: 10000 })
+    })
+  })
+
   test("refuses a move that names another setlist's entry", async ({ page, testing }) => {
     await testing.login()
     const bandId = await createBand(page, testSlug("setlist-move"))

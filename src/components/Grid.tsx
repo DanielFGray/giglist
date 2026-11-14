@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from "react"
 import { errorMessage } from "./form"
 import { finishDirection, navigate, step, type Direction } from "./grid-keys"
+import { usePointerDrag, type Point } from "./pointer-drag"
 
 /** One suggestion of a choice column: the value it saves, and what the list shows. */
 export type Choice = { readonly value: string; readonly label: string; readonly hint?: string }
@@ -127,7 +128,9 @@ export function Grid<R>({
   const [error, setError] = useState<string | null>(null)
   const cells = useRef(new Map<string, HTMLTableCellElement>())
   const ownsFocus = useRef(false)
-  const dragging = useRef<string | null>(null)
+  const body = useRef<HTMLTableSectionElement>(null)
+  /** The row held by its handle, and the index it would take if dropped now. */
+  const [lifted, setLifted] = useState<{ readonly key: string; readonly to: number } | null>(null)
 
   // A focused draft whose row arrived is that row.
   const activeRow = (isDraft(active.row) ? arrived(active.row) : null) ?? active.row
@@ -245,6 +248,17 @@ export function Grid<R>({
   const editable = (key: string, column: GridColumn<R>) =>
     key === NEW ? newRow?.column === column.key : column.edit !== undefined
 
+  /**
+   * The index of the placed row level with `y`, clamped to the first and last
+   * one. Only height counts: a thumb on the handle drifts sideways off the
+   * table. Placed rows come first in `keys`, so their index is their place.
+   */
+  const rowIndexAt = (y: number) => {
+    const placed = [...(body.current?.querySelectorAll<HTMLElement>("tr[data-row-key]") ?? [])]
+    const at = placed.findIndex((row) => y < row.getBoundingClientRect().bottom)
+    return at < 0 ? placed.length - 1 : at
+  }
+
   const onKeyDown = (event: KeyboardEvent<HTMLTableElement>) => {
     // Keys from an editor or a row button are theirs, not the grid's.
     if (editing !== null || event.target !== cells.current.get(activeId)) return
@@ -309,43 +323,40 @@ export function Grid<R>({
               {actions && <th aria-hidden className="border-b border-[var(--color-border-subtle)]" />}
             </tr>
           </thead>
-          <tbody>
+          <tbody ref={body}>
             {keys.map((key, index) => {
               const row = rowAt(key)
               // The new row and draft rows have no place in the order yet, so they neither drag nor take drops.
               const fixed = key === NEW || isDraft(key)
+              const from = lifted === null ? -1 : keys.indexOf(lifted.key)
               return (
                 <tr
                   key={identity(key)}
                   role="row"
                   aria-rowindex={index + 2}
                   data-pwid={key === NEW ? "grid-new-row" : isDraft(key) ? "grid-draft-row" : "grid-row"}
-                  data-row-key={key === NEW || isDraft(key) ? undefined : key}
-                  onDragOver={onMoveRow && !fixed ? (e) => e.preventDefault() : undefined}
-                  onDrop={
-                    onMoveRow && !fixed
-                      ? (e) => {
-                          e.preventDefault()
-                          if (dragging.current !== null) onMoveRow(dragging.current, index)
-                          dragging.current = null
-                        }
-                      : undefined
-                  }
-                  className="border-b border-[var(--color-border-subtle)] last:border-b-0"
+                  data-row-key={fixed ? undefined : key}
+                  className={`border-b border-[var(--color-border-subtle)] last:border-b-0 ${lifted?.key === key ? "opacity-50" : ""} ${
+                    lifted === null || lifted.to !== index || from === index
+                      ? ""
+                      : // The line shows which side of the row the dropped row lands on.
+                        from < index
+                        ? "shadow-[inset_0_-2px_0_var(--color-amber-accent)]"
+                        : "shadow-[inset_0_2px_0_var(--color-amber-accent)]"
+                  }`}
                 >
-                  {onMoveRow && (
-                    <td
-                      aria-hidden
-                      data-pwid="grid-drag"
-                      draggable={!fixed}
-                      onDragStart={() => {
-                        dragging.current = key
-                      }}
-                      className={`text-center text-zinc-600 select-none ${fixed ? "" : "cursor-grab"}`}
-                    >
-                      {fixed ? "" : "⋮⋮"}
-                    </td>
-                  )}
+                  {onMoveRow &&
+                    (fixed ? (
+                      <td aria-hidden />
+                    ) : (
+                      <RowHandle
+                        onDrag={(point) => setLifted({ key, to: rowIndexAt(point.y) })}
+                        onDrop={(point) => {
+                          setLifted(null)
+                          if (point) onMoveRow(key, rowIndexAt(point.y))
+                        }}
+                      />
+                    ))}
                   {columns.map((column) => {
                     const id = cellId(key, column.key)
                     const isActive = id === activeId
@@ -422,6 +433,19 @@ export function Grid<R>({
 }
 
 const cellId = (row: string, col: string) => `${row}:${col}`
+
+/**
+ * The grip at the start of a placed row. It is hidden from assistive
+ * technology, because Alt+Up/Down moves a row from the keyboard.
+ */
+function RowHandle({ onDrag, onDrop }: { onDrag: (point: Point) => void; onDrop: (point: Point | null) => void }) {
+  const { handlers } = usePointerDrag({ onDrag, onDrop })
+  return (
+    <td aria-hidden data-pwid="grid-drag" {...handlers} className="text-center text-zinc-600 select-none touch-none cursor-grab">
+      ⋮⋮
+    </td>
+  )
+}
 
 /** The new row's editor is its column's, with `save` unused (the grid calls `create`). */
 const newRowEdit = <R,>(columns: ReadonlyArray<GridColumn<R>>, newRow: NewRow<R> | undefined) =>

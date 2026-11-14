@@ -9,7 +9,8 @@ import {
 import { isChordName, isPhraseStart, isTabStart, suggestedChords } from "alphatab-kit/charts/lyrics"
 import { readScoreLink } from "alphatab-kit/charts/score-link"
 import { chartSlot, suggest, type Suggestion } from "alphatab-kit/charts/suggest"
-import { BlockHandle, type Point } from "./BlockHandle"
+import { BlockHandle } from "./BlockHandle"
+import type { Point } from "./pointer-drag"
 import { ChordInput, type ChordEntry } from "./ChordInput"
 import { slotUnder, type DropRow, type DropSlot } from "./drop-slot"
 import { errorMessage } from "./form"
@@ -39,10 +40,6 @@ const NO_SUGGESTIONS = { likely: [], fresh: [] } as const
 
 /** A block lifted by its handle, and the slot the pointer is over, if the block may go there. */
 type Drag = { block: number; over: DropSlot | null }
-
-/** While dragging a block, a pointer this close to the top or bottom of the window scrolls the page. */
-const EDGE = 70
-const SCROLL_STEP = 14
 
 const button =
   "px-3 py-1.5 rounded-md border border-[var(--color-border-subtle)] text-xs text-zinc-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
@@ -81,7 +78,6 @@ export function ChartEditor({
    */
   const [extra, setExtra] = useState<ReadonlyArray<string>>([])
   const [drag, setDrag] = useState<Drag | null>(null)
-  const pointer = useRef<Point | null>(null)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -150,33 +146,13 @@ export function ChartEditor({
     return over && canMoveBlockTo(doc, block, over.slot) ? over : null
   }
 
-  const dragBlock = (block: number, point: Point) => {
-    pointer.current = point
-    setDrag({ block, over: slotAt(block, point) })
-  }
+  const dragBlock = (block: number, point: Point) => setDrag({ block, over: slotAt(block, point) })
 
   const dropBlock = (block: number, point: Point | null) => {
     const over = point ? slotAt(block, point) : null
-    pointer.current = null
     setDrag(null)
     if (over) apply(moveBlockTo(doc, block, over.slot))
   }
-
-  // A touch drag cannot scroll the page itself, so while a block is held near the top or bottom
-  // edge the page scrolls, even when the pointer is still. The slot under the pointer changes as it scrolls.
-  const heldBlock = drag?.block
-  useEffect(() => {
-    if (heldBlock === undefined) return
-    const id = setInterval(() => {
-      const point = pointer.current
-      if (!point) return
-      if (point.y < EDGE) window.scrollBy(0, -SCROLL_STEP)
-      else if (point.y > window.innerHeight - EDGE) window.scrollBy(0, SCROLL_STEP)
-      else return
-      setDrag({ block: heldBlock, over: slotAt(heldBlock, point) })
-    }, 16)
-    return () => clearInterval(id)
-  })
 
 
   const save = async () => {
