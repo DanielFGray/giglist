@@ -37,6 +37,8 @@ interface Rule {
 const limits = {
   login: { by: "ip", limit: 10, window: "5 minutes", whenStoreDown: "allow" },
   register: { by: "ip", limit: 5, window: "1 hour", whenStoreDown: "deny" },
+  joinByInvitation: { by: "ip", limit: 5, window: "1 hour", whenStoreDown: "deny" },
+  invitationPreview: { by: "ip", limit: 30, window: "1 hour", whenStoreDown: "allow" },
   forgotPassword: { by: "ip", limit: 5, window: "1 hour", whenStoreDown: "deny" },
   resetPassword: { by: "ip", limit: 10, window: "1 hour", whenStoreDown: "allow" },
   verifyEmail: { by: "ip", limit: 20, window: "1 hour", whenStoreDown: "allow" },

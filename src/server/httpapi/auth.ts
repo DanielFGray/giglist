@@ -3,7 +3,7 @@ import { HttpApiBuilder } from "effect/http-api"
 import { Auth, type AuthFailure, AccountError } from "../services/auth"
 import { withAuthContext } from "../db"
 import { toHttpError } from "../dbErrors"
-import type { DatabaseError } from "../databaseError"
+import { type DatabaseError, isDatabaseError } from "../databaseError"
 import { asSignedIn, ifSignedIn } from "./scope"
 import { sessionCookiePolicy } from "./session"
 import { AuthError } from "../../api/auth"
@@ -27,6 +27,7 @@ const asAuthError = <A, R>(effect: Effect.Effect<A, AuthFailure | AccountError |
   AccountLocked: toAuthError,
   DuplicateAccount: toAuthError,
   InvalidCredentials: toAuthError,
+  InvitationRefused: toAuthError,
   RegistrationFailed: toAuthError,
   WeakPassword: toAuthError,
   DatabaseError: toHttpError,
@@ -51,6 +52,15 @@ export const AuthApiGroupLive = HttpApiBuilder.group(GigListApi, "auth", (handle
         Auth.use((auth) => auth.register(payload)).pipe(
           Effect.flatMap((result) => setSessionCookie(result.sessionId)),
           Effect.as(ok),
+          asAuthError,
+        ),
+      )
+      .handle("invitationPreview", ({ params: { invitationId }, query: { code } }) =>
+        Auth.use((auth) => auth.invitationPreview(invitationId, code)).pipe(asAuthError, withAuthContext, Effect.catchIf(isDatabaseError, toHttpError)),
+      )
+      .handle("joinByInvitation", ({ params: { invitationId }, payload }) =>
+        Auth.use((auth) => auth.joinByInvitation({ invitationId, ...payload })).pipe(
+          Effect.flatMap(({ bandId, sessionId }) => setSessionCookie(sessionId).pipe(Effect.as({ bandId }))),
           asAuthError,
         ),
       )

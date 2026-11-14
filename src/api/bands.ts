@@ -1,5 +1,6 @@
 import { Schema as S } from "effect"
 import { HttpApiEndpoint, HttpApiGroup } from "effect/http-api"
+import { Email } from "./auth"
 import { RateLimitMiddleware } from "./rate-limit"
 import { SessionMiddleware } from "./session"
 
@@ -117,7 +118,8 @@ export const PublicBandProfile = S.Struct({
 
 export const InvitePayload = S.Struct({
   username: S.optional(S.String),
-  email: S.optional(S.String),
+  // An emailed invitation signs its reader up with this address, so it must be one sign-up accepts.
+  email: S.optional(Email),
 })
 
 /**

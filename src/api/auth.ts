@@ -36,17 +36,26 @@ const Username = S.String.pipe(
 )
 
 /** Matches the check on `app_public.user_emails.email`. */
-const Email = S.String.check(S.isPattern(/^[^@]+@[^@]+\.[^@]+$/, { message: "Enter an email address" }))
+export const Email = S.String.check(S.isPattern(/^[^@]+@[^@]+\.[^@]+$/, { message: "Enter an email address" }))
 
 const NewPassword = S.RedactedFromValue(
   S.String.check(S.isMinLength(8, { message: "Use at least 8 characters" })),
 )
 
-export const RegisterPayload = S.Struct({
+/** What a new account's owner chooses. Joining from an emailed invitation takes only these: the address comes from the invitation. */
+export const NewAccount = S.Struct({
   username: Username,
-  email: Email,
   password: NewPassword,
 })
+
+export const RegisterPayload = S.Struct({ ...NewAccount.fields, email: Email })
+
+/** An emailed invitation's link, shown before sign-in. `has_account`: the address already has an account, so its owner signs in instead. */
+export const InvitationPreview = S.Struct({ band_name: S.String, email: S.String, has_account: S.Boolean })
+
+export const JoinByInvitationPayload = S.Struct({ ...NewAccount.fields, code: S.String })
+
+export const JoinByInvitationSuccess = S.Struct({ bandId: S.String })
 
 export const ForgotPasswordPayload = S.Struct({ email: S.String })
 
@@ -137,6 +146,22 @@ export const AuthApiGroup = HttpApiGroup.make("auth")
     HttpApiEndpoint.post("register", "/register", {
       payload: RegisterPayload,
       success: AuthSuccess,
+      error: AuthError,
+    }).middleware(RateLimitMiddleware),
+  )
+  .add(
+    HttpApiEndpoint.get("invitationPreview", "/invitations/:invitationId", {
+      params: { invitationId: S.String.check(S.isUUID()) },
+      query: { code: S.String },
+      success: InvitationPreview,
+      error: AuthError,
+    }).middleware(RateLimitMiddleware),
+  )
+  .add(
+    HttpApiEndpoint.post("joinByInvitation", "/invitations/:invitationId/join", {
+      params: { invitationId: S.String.check(S.isUUID()) },
+      payload: JoinByInvitationPayload,
+      success: JoinByInvitationSuccess,
       error: AuthError,
     }).middleware(RateLimitMiddleware),
   )

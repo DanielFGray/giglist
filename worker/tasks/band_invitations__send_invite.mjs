@@ -7,9 +7,10 @@
 
 /**
  * Emails the invitation. An invitation to an address has a code, which the link
- * carries: the reader has no account yet, so the code is the only proof they were
- * sent it. An invitation to a user's account has no code and goes to that user's
- * primary email.
+ * carries: the code proves its reader was sent it, so it signs them up with that
+ * address verified, or joins them from an account that has not verified it. An
+ * invitation to a user's account has no code and goes to that user's primary
+ * email.
  * @type {Task}
  */
 export default async (inPayload, { addJob, withPgClient, logger }) => {
