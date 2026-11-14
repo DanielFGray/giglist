@@ -1,7 +1,7 @@
 import { Context, Effect, Layer, Option, Redacted, Schema as S } from "effect";
 import { sql } from "kysely";
 import { Db, RequestDatabase } from "../db";
-import { type DatabaseError, hasSqlState } from "../databaseError";
+import { type DatabaseError, hasSqlState, isDatabaseError } from "../databaseError";
 import { gravatarUrl } from "../gravatar";
 
 export class InvalidCredentials extends S.TaggedError<InvalidCredentials, { readonly brand: unique symbol }>()("InvalidCredentials", {
@@ -28,12 +28,18 @@ export class AccountError extends S.TaggedError<AccountError, { readonly brand: 
   message: S.String,
 }) {}
 
+/** An emailed invitation's link that cannot sign anyone up: used, cancelled, wrong code, or an address that has an account. */
+export class InvitationRefused extends S.TaggedError<InvitationRefused, { readonly brand: unique symbol }>()("InvitationRefused", {
+  message: S.String,
+}) {}
+
 export type AuthFailure =
   | InvalidCredentials
   | AccountLocked
   | DuplicateAccount
   | WeakPassword
-  | RegistrationFailed;
+  | RegistrationFailed
+  | InvitationRefused;
 
 const emptyToNull = (value: string | null) => {
   if (value === null) return null;
@@ -88,26 +94,68 @@ export class Auth extends Context.Service<Auth>()("giglist/auth", {
             ),
           );
 
-        // app_private.sessions isn't in generated DB types, cast table name
-        const session = yield* db
-          .insertInto("app_private.sessions")
-          .values({ user_id: user.id })
-          .returning(["uuid", "user_id"])
-          .pipe(
-            Effect.head,
-            Effect.catchTag("NoSuchElementError", () =>
-              Effect.fail(new RegistrationFailed({ message: "Failed to create session" })),
-            ),
-          );
-
-        return { user, sessionId: session.uuid as string };
+        return { user, sessionId: yield* startSession(user.id) };
       },
-      Effect.catchTag("DatabaseError", (e): Effect.Effect<never, DuplicateAccount | WeakPassword | DatabaseError> => {
-        if (hasSqlState(e, "23505"))
-          return Effect.fail(new DuplicateAccount({ message: "Username or email already taken" }));
-        if (hasSqlState(e, "WEAKP")) return Effect.fail(new WeakPassword({ message: "Password is too weak" }));
+      asSignupFailure,
+    );
+
+    /**
+     * What an emailed invitation's link shows before sign-in. Only the link's
+     * code opens it; a wrong code or a used invitation reads as missing.
+     */
+    const invitationPreview = Effect.fn("Auth.invitationPreview")(function* (invitationId: string, code: string) {
+      const db = yield* RequestDatabase;
+      return yield* db
+        .selectFrom(
+          sql<{ band_name: string; email: string; has_account: boolean }>`app_public.invitation_preview(${invitationId}::uuid, ${code}::text)`.as("i"),
+        )
+        .selectAll()
+        .pipe(Effect.head, Effect.catchTag("NoSuchElementError", () => Effect.fail(invitationGone)));
+    });
+
+    /**
+     * Signs up the person an emailed invitation went to, as a member of its
+     * band, and signs them in. The account's email is the invitation's address,
+     * verified by the code the link carries, so no verification email follows.
+     * One transaction: a refused sign-up joins nobody and uses up nothing.
+     */
+    const joinByInvitation = Effect.fn("Auth.joinByInvitation")(
+      function* (args: { invitationId: string; code: string; username: string; password: Redacted.Redacted<string> }) {
+        const db = yield* Db;
+        return yield* db.withTransaction(
+          Effect.gen(function* () {
+            const invitation = yield* db
+              .selectFrom(sql<{ email: string }>`app_public.invitation_preview(${args.invitationId}::uuid, ${args.code}::text)`.as("i"))
+              .select("email")
+              .pipe(Effect.head, Effect.catchTag("NoSuchElementError", () => Effect.fail(invitationGone)));
+            const joined = yield* db
+              .selectFrom(
+                sql<{ user_id: string; band_id: string }>`app_private.join_band_by_invitation(
+                  invitation_id => ${args.invitationId}::uuid,
+                  code => ${args.code}::text,
+                  username => ${args.username}::citext,
+                  avatar_url => ${gravatarUrl(invitation.email)},
+                  password => ${Redacted.value(args.password)}::text
+                )`.as("j"),
+              )
+              .selectAll()
+              .pipe(
+                Effect.head,
+                Effect.catchTag("NoSuchElementError", () =>
+                  Effect.fail(new RegistrationFailed({ message: "Registration failed" })),
+                ),
+              );
+            return { bandId: joined.band_id, sessionId: yield* startSession(joined.user_id) };
+          }),
+        );
+      },
+      Effect.catchTag("DatabaseError", (e): Effect.Effect<never, InvitationRefused | DatabaseError> => {
+        if (hasSqlState(e, "NTFND") || hasSqlState(e, "INCOD")) return Effect.fail(invitationGone);
+        if (hasSqlState(e, "EMTKN"))
+          return Effect.fail(new InvitationRefused({ message: "That email already has an account. Sign in to accept the invitation" }));
         return Effect.fail(e);
       }),
+      asSignupFailure,
     );
 
     const login = Effect.fn("Auth.login")(
@@ -435,6 +483,8 @@ export class Auth extends Context.Service<Auth>()("giglist/auth", {
 
     return {
       register,
+      invitationPreview,
+      joinByInvitation,
       login,
       forgotPassword,
       resetPassword,
@@ -455,3 +505,31 @@ export class Auth extends Context.Service<Auth>()("giglist/auth", {
 }) {
   static readonly layer = Layer.effect(this, this.make);
 }
+
+const invitationGone = new InvitationRefused({ message: "This invitation link is no longer valid" });
+
+/** A session for a new account, which signs it in. */
+const startSession = Effect.fn("Auth.startSession")(function* (userId: string) {
+  const db = yield* Db;
+  const session = yield* db
+    .insertInto("app_private.sessions")
+    .values({ user_id: userId })
+    .returning(["uuid"])
+    .pipe(
+      Effect.head,
+      Effect.catchTag("NoSuchElementError", () =>
+        Effect.fail(new RegistrationFailed({ message: "Failed to create session" })),
+      ),
+    );
+  return session.uuid as string;
+});
+
+/** The database's refusals of a new account, as the messages the sign-up forms show. */
+const asSignupFailure = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+  effect.pipe(
+    Effect.catchIf(isDatabaseError, (e): Effect.Effect<never, DuplicateAccount | WeakPassword | DatabaseError> => {
+      if (hasSqlState(e, "23505")) return Effect.fail(new DuplicateAccount({ message: "Username or email already taken" }));
+      if (hasSqlState(e, "WEAKP")) return Effect.fail(new WeakPassword({ message: "Password is too weak" }));
+      return Effect.fail(e);
+    }),
+  );

@@ -3,7 +3,7 @@ import { Effect, Schema as S } from "effect"
 import { HttpClient, HttpClientResponse } from "effect/http"
 import { AcceptInvitationSuccess, BandInfo, BandMember } from "../../api/bands"
 import { baseUrl, TestHttpClientLive } from "../test/apiHarness"
-import { createBand, postJson, signedIn } from "../test/clients"
+import { anonymous, createBand, login, postJson, signedIn, testPassword } from "../test/clients"
 
 const runId = Math.random().toString(36).slice(2, 8)
 
@@ -28,7 +28,7 @@ describe("bands over HTTP", () => {
       expect(members).toEqual([])
     }).pipe(Effect.provide(TestHttpClientLive)))
 
-  it.effect("an emailed invitation is accepted only with its code", () =>
+  it.effect("an emailed invitation to an address the invitee has not verified is accepted only with its code", () =>
     Effect.gen(function* () {
       const owner = yield* signedIn(`invite_owner_${runId}`)
       const inviteeName = `invitee_${runId}`
@@ -52,5 +52,28 @@ describe("bands over HTTP", () => {
       )
       expect(accepted.bandId).toBe(band.id)
       expect((yield* listBands(invitee)).map((b) => b.id)).toContain(band.id)
+    }).pipe(Effect.provide(TestHttpClientLive)))
+
+  // Joining from the link creates an account whose email is verified by the code
+  // alone, so a wrong code must create nothing: no account, no membership.
+  it.effect("joining from an emailed link with a wrong code creates no account", () =>
+    Effect.gen(function* () {
+      const owner = yield* signedIn(`join_owner_${runId}`)
+      const band = yield* createBand(owner, `join-${runId}`)
+      const email = `join_invitee_${runId}@example.com`
+      expect((yield* postJson(owner, `/my/bands/${band.id}/invite`, { email })).status).toBe(204)
+      const invitation = yield* owner.get(`${baseUrl}/testing/band-invitation?band_id=${band.id}&email=${encodeURIComponent(email)}`).pipe(
+        Effect.flatMap(HttpClientResponse.schemaBodyJson(S.Struct({ id: S.String, code: S.String }))),
+      )
+
+      const visitor = yield* anonymous
+      const username = `join_guess_${runId}`
+      const refused = yield* postJson(visitor, `/auth/invitations/${invitation.id}/join`, { username, password: testPassword, code: "not-the-code" })
+      expect(refused.status).toBe(400)
+      expect((yield* login(visitor, username)).status).toBe(401)
+
+      const joined = yield* postJson(visitor, `/auth/invitations/${invitation.id}/join`, { username, password: testPassword, code: invitation.code })
+      expect(joined.status).toBe(200)
+      expect((yield* listBands(visitor)).map((b) => b.id)).toContain(band.id)
     }).pipe(Effect.provide(TestHttpClientLive)))
 })

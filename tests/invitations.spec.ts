@@ -26,6 +26,15 @@ const invite = async (browser: Browser, owner: Page, username: string) => {
 
 const songsOf = (page: Page, bandId: string) => page.request.get(`/api/songs/band/${bandId}`)
 
+/** Verifies one of the signed-in user's emails, through the link its verification email carries. */
+const verifyEmail = async (user: Page, email: string) => {
+  const secrets = await user.request.get(`/api/testing/email-secrets?email=${encodeURIComponent(email)}`)
+  expect(secrets.ok(), await secrets.text()).toBe(true)
+  const { user_email_id, verification_token } = (await secrets.json()) as { user_email_id: string; verification_token: string }
+  const verified = await user.request.post("/api/auth/emails/verify", { data: { id: user_email_id, token: verification_token } })
+  expect(verified.ok(), await verified.text()).toBe(true)
+}
+
 test.describe("band invitations", () => {
   test("an invited user sees the invitation and joins the band by accepting it", async ({ page, browser, testing }) => {
     await testing.login()
@@ -120,11 +129,7 @@ test.describe("emailed band invitations", () => {
     const email = `${username}@test.local`
     const login = await invitee.request.post("/api/testing/login", { data: { username, password: TEST_PASSWORD } })
     expect(login.ok(), await login.text()).toBe(true)
-    const secrets = await invitee.request.get(`/api/testing/email-secrets?email=${encodeURIComponent(email)}`)
-    expect(secrets.ok(), await secrets.text()).toBe(true)
-    const { user_email_id, verification_token } = (await secrets.json()) as { user_email_id: string; verification_token: string }
-    const verified = await invitee.request.post("/api/auth/emails/verify", { data: { id: user_email_id, token: verification_token } })
-    expect(verified.ok(), await verified.text()).toBe(true)
+    await verifyEmail(invitee, email)
 
     await inviteByEmail(page, bandId, email)
     await invitee.goto("/")
@@ -144,6 +149,17 @@ test.describe("emailed band invitations", () => {
     await context.close()
   })
 
+  test("an invitation to an address a member has verified is refused", async ({ page, testing }) => {
+    const owner = await testing.login()
+    const bandId = await newBand(page, "Test: Emailed invitations")
+    await verifyEmail(page, owner.email)
+
+    const sent = await page.request.post(`/api/my/bands/${bandId}/invite`, { data: { email: owner.email } })
+    expect(sent.status()).toBe(400)
+    expect(await sent.text()).toContain("already a member")
+    expect(await (await page.request.get(`/api/my/bands/${bandId}/invitations`)).json()).toEqual([])
+  })
+
   test("a wrong code is refused and joins nobody", async ({ page, browser, testing }) => {
     await testing.login()
     const bandId = await newBand(page, "Test: Emailed invitations")
@@ -160,16 +176,46 @@ test.describe("emailed band invitations", () => {
     await context.close()
   })
 
-  test("a signed-out visitor is asked to sign in and cannot accept", async ({ page, browser, testing }) => {
+  test("a signed-out visitor signs up from the emailed link and is in the band, with the invited address verified", async ({ page, browser, testing }) => {
     await testing.login()
     const bandId = await newBand(page, "Test: Emailed invitations")
-    const { id, code } = await inviteByEmail(page, bandId, `${testing.username("test_signed_out")}@test.local`)
+    const email = `${testing.username("test_join_link")}@test.local`
+    const { id, code } = await inviteByEmail(page, bandId, email)
 
     const context = await browser.newContext()
     const visitor = await context.newPage()
     await visitor.goto(`/invitations/accept?id=${id}&code=${code}`)
-    await expect(getPw(visitor, "accept-invitation-signin")).toBeVisible({ timeout: 10000 })
-    await expect(getPw(visitor, "accept-invitation-submit")).toHaveCount(0)
+    await expect(getPw(visitor, "accept-invitation-title")).toHaveText("Join Test: Emailed invitations", { timeout: 10000 })
+    await expect(getPw(visitor, "accept-invitation-page")).toContainText(email)
+    await getPw(visitor, "signup-username").fill(testing.username("test_join_link"))
+    await getPw(visitor, "signup-password").fill(TEST_PASSWORD)
+    await getPw(visitor, "signup-submit").click()
+
+    await expect(visitor).toHaveURL(new RegExp(`/band/${bandId}`), { timeout: 10000 })
+    await expect(getPw(visitor, "band-members")).toBeVisible({ timeout: 10000 })
+    expect((await songsOf(visitor, bandId)).status()).toBe(200)
+    const emails = (await (await visitor.request.get("/api/auth/emails")).json()) as Array<{ email: string; is_verified: boolean }>
+    expect(emails).toEqual([expect.objectContaining({ email, is_verified: true })])
+    expect(await (await page.request.get(`/api/my/bands/${bandId}/invitations`)).json()).toEqual([])
+    await context.close()
+  })
+
+  test("an emailed link to an address that has an account asks for sign-in, not sign-up", async ({ page, browser, testing }) => {
+    await testing.login()
+    const bandId = await newBand(page, "Test: Emailed invitations")
+    const context = await browser.newContext()
+    const member = await context.newPage()
+    const username = testing.username("test_link_has_account")
+    const email = `${username}@test.local`
+    await member.request.post("/api/testing/login", { data: { username, password: TEST_PASSWORD } })
+    await verifyEmail(member, email)
+    await context.clearCookies()
+
+    const { id, code } = await inviteByEmail(page, bandId, email)
+    await member.goto(`/invitations/accept?id=${id}&code=${code}`)
+    await expect(getPw(member, "accept-invitation-title")).toHaveText("Join Test: Emailed invitations", { timeout: 10000 })
+    await expect(getPw(member, "accept-invitation-signin")).toBeVisible()
+    await expect(getPw(member, "signup-username")).toHaveCount(0)
     await context.close()
   })
 })

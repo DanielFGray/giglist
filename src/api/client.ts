@@ -68,6 +68,7 @@ export type GigDetailsData = Parameters<GigsClient["updateGig"]>[0]["payload"]
 type AuthClient = Effect.Success<GigListApiClient>["auth"]
 export type LoginData = Parameters<AuthClient["login"]>[0]["payload"]
 export type RegisterData = Parameters<AuthClient["register"]>[0]["payload"]
+export type JoinByInvitationData = Parameters<AuthClient["joinByInvitation"]>[0]["payload"]
 export type ForgotPasswordData = Parameters<AuthClient["forgotPassword"]>[0]["payload"]
 export type ResetPasswordData = Parameters<AuthClient["resetPassword"]>[0]["payload"]
 export type UpdateProfileData = Parameters<AuthClient["updateMe"]>[0]["payload"]
@@ -103,6 +104,12 @@ export const auth = {
 
   register: (data: RegisterData) =>
     run(api.pipe(Effect.flatMap((c) => c.auth.register({ payload: data })))),
+
+  invitationPreview: (invitationId: string, code: string) =>
+    run(api.pipe(Effect.flatMap((c) => c.auth.invitationPreview({ params: { invitationId }, query: { code } })))),
+
+  joinByInvitation: (invitationId: string, payload: JoinByInvitationData) =>
+    run(api.pipe(Effect.flatMap((c) => c.auth.joinByInvitation({ params: { invitationId }, payload })))),
 
   forgotPassword: (data: ForgotPasswordData) =>
     run(api.pipe(Effect.flatMap((c) => c.auth.forgotPassword({ payload: data })))),
