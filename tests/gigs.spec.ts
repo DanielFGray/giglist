@@ -72,6 +72,26 @@ test.describe("gigs", () => {
     await expect(getPw(page, "gig-label")).not.toHaveText("The Echo Room", { timeout: 10000 })
   })
 
+  // The test API server runs no map search (PLACES_URL is empty in
+  // playwright.config.ts), so the only suggestions are the band's own venues.
+  test("a new gig's venue suggests the band's past venues, and picking one fills in its address", async ({ page, testing }) => {
+    await testing.login()
+    const bandId = await createBand(page, testSlug("venue"))
+    await post(page, "/api/gigs", { band_id: bandId, ...gigFields, venue: "The Echo Room", address: "1 Echo Lane", gig_date: dayFromToday(-30) })
+
+    await page.goto(`/band/${bandId}/gigs`)
+    await getPw(page, "gig-venue").pressSequentially("echo")
+    await expect(getPw(page, "gig-venue-option")).toHaveText([/The Echo Room.*Played here.*1 Echo Lane/], { timeout: 10000 })
+    await getPw(page, "gig-venue-option").click()
+    await expect(getPw(page, "gig-venue")).toHaveValue("The Echo Room")
+    await expect(getPw(page, "gig-new-address")).toHaveValue("1 Echo Lane")
+
+    await getPw(page, "gig-date").fill(dayFromToday(10))
+    await getPw(page, "gig-submit").click()
+    await expect(getPw(page, "gig-label")).toHaveText("The Echo Room", { timeout: 10000 })
+    await expect(getPw(page, "gig-address")).toHaveText("1 Echo Lane")
+  })
+
   test("one setlist serves many gigs, and one gig copies it for itself in the same place", async ({ page, testing }) => {
     await testing.login()
     const bandId = await createBand(page, testSlug("gig-reuse"))

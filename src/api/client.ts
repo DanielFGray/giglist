@@ -412,6 +412,9 @@ export const gigs = {
   byBand: (bandId: string) =>
     run(api.pipe(Effect.flatMap((c) => c.gigs.listGigs({ params: { bandId } })))),
 
+  suggestVenues: (bandId: string, q: string) =>
+    run(api.pipe(Effect.flatMap((c) => c.gigs.suggestVenues({ params: { bandId }, query: { q } })))),
+
   get: (id: string) =>
     run(api.pipe(Effect.flatMap((c) => c.gigs.getGig({ params: { id } })))),
 

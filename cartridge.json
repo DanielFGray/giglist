@@ -60,7 +60,8 @@
         { "name": "DATABASE_VISITOR", "database": "giglist", "role": "visitor" },
         { "name": "VALKEY_KEY_PREFIX", "valkey": "keyPrefix" },
         { "name": "OTEL_TRACES_EXPORTER", "value": "otlp" },
-        { "name": "OTEL_LOGS_EXPORTER", "value": "otlp" }
+        { "name": "OTEL_LOGS_EXPORTER", "value": "otlp" },
+        { "name": "PLACES_URL", "value": "https://photon.komoot.io" }
       ],
       "connections": [],
       "secrets": [

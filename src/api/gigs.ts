@@ -1,6 +1,7 @@
 import { Schema as S } from "effect"
 import { HttpApiEndpoint, HttpApiGroup, HttpApiSchema } from "effect/http-api"
 import { uuid } from "./fields"
+import { RateLimitMiddleware } from "./rate-limit"
 import { SessionMiddleware } from "./session"
 import { GigRef, LiveEvent, LivePresence, Move, SetlistCopy, SetlistEntry, SetlistForbidden } from "./setlists"
 
@@ -52,6 +53,16 @@ export const GigInsert = S.Struct({
   ...GigDetails.fields,
 })
 
+/**
+ * A venue the gig forms offer as the user types: one the band has played
+ * (`band`, with the address it last saved), or a map search's find (`map`).
+ */
+export const VenueSuggestion = S.Struct({
+  venue: S.String,
+  address: S.NullOr(S.String),
+  source: S.Literals(["band", "map"]),
+})
+
 /** A setlist the gig starts playing, after the ones it already plays. */
 export const GigSetlistInsert = S.Struct({
   setlist_id: uuid,
@@ -80,6 +91,14 @@ export const GigsApiGroup = HttpApiGroup.make("gigs")
       success: S.Array(Gig),
       error: SetlistForbidden,
     }),
+  )
+  .add(
+    HttpApiEndpoint.get("suggestVenues", "/band/:bandId/venues", {
+      params: { bandId: uuid },
+      query: { q: S.String.pipe(S.check(S.isMinLength(2)), S.check(S.isMaxLength(100))) },
+      success: S.Array(VenueSuggestion),
+      error: SetlistForbidden,
+    }).middleware(RateLimitMiddleware),
   )
   .add(
     HttpApiEndpoint.post("createGig", "/", {

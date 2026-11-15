@@ -18,6 +18,7 @@ import { gigs, setlists, type GigInfo, type SetlistInfo } from "~/api/client"
 import { GigDetails } from "~/api/gigs"
 import { SubmitButton, TextAreaField, TextField, errorMessage, fieldError } from "~/components/form"
 import { useAuth } from "~/components/AuthContext"
+import { VenueField } from "~/components/VenueField"
 import { gigLabel } from "~/components/gig-label"
 import { useLive } from "~/components/live"
 import { Viewers } from "~/components/Viewers"
@@ -413,7 +414,16 @@ function GigDetailsForm({ bandId, gig, onSaved }: { bandId: string; gig: GigInfo
       <div className="grid gap-3 sm:grid-cols-2">
         <form.Field name="venue">
           {(field) => (
-            <TextField label="Venue" pwid="gig-venue" value={field.state.value ?? ""} onChange={(v) => field.handleChange(nullable(v))} error={fieldError(field)} placeholder="The Echo Room" />
+            <VenueField
+              bandId={bandId}
+              value={field.state.value ?? ""}
+              onChange={(v) => field.handleChange(nullable(v))}
+              onPick={(picked) => {
+                field.handleChange(picked.venue)
+                if (picked.address !== null) form.setFieldValue("address", picked.address)
+              }}
+              error={fieldError(field)}
+            />
           )}
         </form.Field>
         <form.Field name="gig_date">
