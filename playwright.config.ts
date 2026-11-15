@@ -34,8 +34,9 @@ export default defineConfig({
     : [
         {
           command: "bun run dev:server",
-          // The specs register more users per hour than a person would.
-          env: { RATE_LIMIT: "off" },
+          // The specs register more users per hour than a person would, and no
+          // spec depends on the outside map search.
+          env: { RATE_LIMIT: "off", PLACES_URL: "" },
           url: `http://localhost:${API_PORT}/healthz`,
           reuseExistingServer: true,
           timeout: 60000,

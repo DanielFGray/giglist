@@ -2,6 +2,7 @@ import { useState } from "react"
 import { Link, createFileRoute, useRouter } from "@tanstack/react-router"
 import { gigs, type GigInfo } from "~/api/client"
 import { SubmitButton, TextField, errorMessage } from "~/components/form"
+import { VenueField } from "~/components/VenueField"
 import { gigLabel, localToday, splitGigs } from "~/components/gig-label"
 import { listLength } from "~/components/SetlistSummary"
 import { formatGigDate, formatTimeOfDay } from "~/components/time"
@@ -82,6 +83,7 @@ function GigRow({ bandId, gig }: { bandId: string; gig: GigInfo }) {
 function NewGig({ bandId }: { bandId: string }) {
   const router = useRouter()
   const [venue, setVenue] = useState("")
+  const [address, setAddress] = useState("")
   const [date, setDate] = useState("")
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -97,7 +99,7 @@ function NewGig({ bandId }: { bandId: string }) {
             band_id: bandId,
             venue: venue.trim() || null,
             gig_date: date || null,
-            address: null,
+            address: address.trim() || null,
             load_in_time: null,
             performance_time: null,
             notes: null,
@@ -112,10 +114,19 @@ function NewGig({ bandId }: { bandId: string }) {
     >
       <h2 className="text-sm font-semibold text-zinc-300">New gig</h2>
       <div className="grid gap-3 sm:grid-cols-[1fr_12rem_auto] items-end">
-        <TextField label="Venue" pwid="gig-venue" value={venue} onChange={setVenue} placeholder="The Echo Room" />
+        <VenueField
+          bandId={bandId}
+          value={venue}
+          onChange={setVenue}
+          onPick={(picked) => {
+            setVenue(picked.venue)
+            if (picked.address !== null) setAddress(picked.address)
+          }}
+        />
         <TextField label="Date" pwid="gig-date" type="date" value={date} onChange={setDate} />
         <SubmitButton pwid="gig-submit" disabled={pending} pending={pending} label="Create gig" pendingLabel="Creating…" />
       </div>
+      <TextField label="Address (optional)" pwid="gig-new-address" value={address} onChange={setAddress} placeholder="123 Main St" />
       {error && <div data-pwid="gig-form-error" className="text-sm text-red-400">{error}</div>}
     </form>
   )

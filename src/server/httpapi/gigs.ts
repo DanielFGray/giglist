@@ -17,6 +17,9 @@ export const GigsApiGroupLive = HttpApiBuilder.group(GigListApi, "gigs", (handle
     .handle("listGigs", ({ params: { bandId } }) =>
       Gigs.use((g) => g.list(bandId)).pipe(asMember, Effect.catchTags({ SetlistRefused: setlistRefused })),
     )
+    .handle("suggestVenues", ({ params: { bandId }, query: { q } }) =>
+      Gigs.use((g) => g.suggestVenues(bandId, q)).pipe(asMember, Effect.catchTags({ SetlistRefused: setlistRefused })),
+    )
     .handle("createGig", ({ payload }) =>
       Gigs.use((g) => g.create(payload)).pipe(asMember, Effect.catchTags({ SetlistRefused: setlistRefused })),
     )

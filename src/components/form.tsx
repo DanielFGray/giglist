@@ -28,7 +28,7 @@ export function fieldError(field: FieldLike): string | undefined {
   return messages.length > 0 ? messages.join(", ") : undefined
 }
 
-const inputClass =
+export const inputClass =
   "w-full rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] px-3 py-2 text-sm placeholder:text-zinc-600 focus:outline-none focus:border-[var(--color-amber-accent)] transition-colors"
 
 const submitClass =

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "@effect/vitest"
 import { Effect, Schema as S } from "effect"
 import { HttpClient, HttpClientResponse } from "effect/http"
-import { Gig, GigEntry } from "../../api/gigs"
+import { Gig, GigEntry, VenueSuggestion } from "../../api/gigs"
 import { Setlist, SetlistEntry } from "../../api/setlists"
 import type { LiveEventData } from "../services/liveHub"
 import { baseUrl, TestHttpClientLive } from "../test/apiHarness"
@@ -178,4 +178,34 @@ describe("setlists and gigs over HTTP", () => {
       expect((yield* getJson(member, `/setlists/${setlist.id}`, Setlist)).name).toBe("Private")
       expect((yield* getJson(member, `/gigs/${gig.id}`, Gig)).setlists).toEqual([])
     }).pipe(Effect.scoped, Effect.provide(TestHttpClientLive)))
+  // The suite runs no map search (PLACES_URL is empty in test/setup.ts), so
+  // every suggestion here is one of the band's own venues.
+  it.effect("venue suggestions offer each of the band's venues once, with its latest address, to members only", () =>
+    Effect.gen(function* () {
+      const member = yield* signedIn(`venue_member_${runId}`)
+      const band = yield* createBand(member, `venues-${runId}`)
+      const gig = (details: { venue: string; address: string | null; gig_date: string }) =>
+        postJson(member, "/gigs", { band_id: band.id, ...noDetails, ...details })
+      yield* gig({ venue: "The Echo Room", address: "1 Old Road", gig_date: "2029-01-01" })
+      yield* gig({ venue: "the echo room", address: "2 New Road", gig_date: "2030-01-01" })
+      // A later gig that saved no address does not hide the one that did.
+      yield* gig({ venue: "The Echo Room", address: null, gig_date: "2031-01-01" })
+      // Played after the address above was saved, but before the venue's last gig.
+      yield* gig({ venue: "Old Echo Hall", address: null, gig_date: "2030-06-01" })
+      yield* gig({ venue: "Echoplex", address: null, gig_date: "2027-01-01" })
+      yield* gig({ venue: "Corner Pub", address: "3 Side Street", gig_date: "2028-01-01" })
+
+      const suggest = (client: HttpClient.HttpClient, q: string) =>
+        client.get(`${baseUrl}/gigs/band/${band.id}/venues?q=${encodeURIComponent(q)}`)
+      const found = yield* suggest(member, "ECHO").pipe(Effect.flatMap(body(S.Array(VenueSuggestion))))
+      // A name that starts with the text comes first, then the most recently played.
+      expect(found).toEqual([
+        { venue: "Echoplex", address: null, source: "band" },
+        { venue: "the echo room", address: "2 New Road", source: "band" },
+        { venue: "Old Echo Hall", address: null, source: "band" },
+      ])
+
+      const outsider = yield* signedIn(`venue_outsider_${runId}`)
+      expect((yield* suggest(outsider, "echo")).status).toBe(403)
+    }).pipe(Effect.provide(TestHttpClientLive)))
 })

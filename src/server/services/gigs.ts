@@ -2,9 +2,10 @@ import { Context, Effect, Layer, Option, Schema as S } from "effect"
 import { sql } from "kysely"
 import { RequestDatabase } from "../db"
 import { LiveHub, type Written } from "./liveHub"
+import { Places } from "./places"
 import { Setlists, viewing } from "./setlists"
 import { between, placeAfter } from "../../components/position"
-import { Gig, GigEntry, type GigDetails, type GigInsert, type GigSetlistInsert } from "../../api/gigs"
+import { Gig, GigEntry, type GigDetails, type GigInsert, type GigSetlistInsert, type VenueSuggestion } from "../../api/gigs"
 import { type LivePresence, type Move } from "../../api/setlists"
 
 export class GigMissing extends S.TaggedError<GigMissing, { readonly brand: unique symbol }>()("GigMissing", { message: S.String, id: S.String }) {}
@@ -28,6 +29,7 @@ export class Gigs extends Context.Service<Gigs>()("giglist/gigs", {
   make: Effect.gen(function* () {
     const setlists = yield* Setlists
     const hub = yield* LiveHub
+    const places = yield* Places
 
     /** Runs a write to the gig, and names the rooms that show it. */
     const writing = <A, E, R>(gigId: string, write: Effect.Effect<A, E, R>) =>
@@ -53,6 +55,24 @@ export class Gigs extends Context.Service<Gigs>()("giglist/gigs", {
         ),
         Effect.flatMap((rows) => decodeGigs(rows).pipe(Effect.orDie)),
       )
+    })
+
+    /**
+     * The venues to offer for `query`: the band's own first, then the map's
+     * finds. A find with the same name and address as one of the band's is the
+     * same place, so it shows once.
+     */
+    const suggestVenues = Effect.fn("Gigs.suggestVenues")(function* (bandId: string, query: string) {
+      yield* setlists.requireMember(bandId)
+      const [played, found] = yield* Effect.all([bandVenues(bandId, query), places.search(query)], {
+        concurrency: "unbounded",
+      })
+      const same = (v: { venue: string; address: string | null }) => `${v.venue.toLowerCase()}\n${v.address ?? ""}`
+      const known = new Set(played.map(same))
+      return [
+        ...played.map((v): typeof VenueSuggestion.Type => ({ ...v, source: "band" })),
+        ...found.filter((v) => !known.has(same(v))).map((v): typeof VenueSuggestion.Type => ({ ...v, source: "map" })),
+      ]
     })
 
     const create = Effect.fn("Gigs.create")(function* (payload: typeof GigInsert.Type) {
@@ -228,6 +248,7 @@ export class Gigs extends Context.Service<Gigs>()("giglist/gigs", {
 
     return {
       list,
+      suggestVenues,
       create,
       get,
       update,
@@ -242,7 +263,7 @@ export class Gigs extends Context.Service<Gigs>()("giglist/gigs", {
     }
   }),
 }) {
-  static readonly layer = Layer.effect(this, this.make).pipe(Layer.provide([Setlists.layer, LiveHub.layer]))
+  static readonly layer = Layer.effect(this, this.make).pipe(Layer.provide([Setlists.layer, LiveHub.layer, Places.layer]))
 }
 
 /** The ids of the setlists a gig plays. */
@@ -308,3 +329,33 @@ const gigOr404 = Effect.fnUntraced(function* (id: string) {
 
 /** A gig that was just written: a miss here is a server defect, not a caller error. */
 const gigOrDie = (id: string) => gigOr404(id).pipe(Effect.catchTag("GigMissing", Effect.die))
+
+const decodeBandVenues = S.decodeUnknownEffect(S.Array(S.Struct({ venue: S.String, address: S.NullOr(S.String) })))
+
+/**
+ * Up to five venues the band has played whose name contains `query`, ignoring
+ * case: names that start with it first, then the most recently played. Each
+ * venue shows once, with the address of its latest gig that saved one.
+ */
+const bandVenues = Effect.fnUntraced(function* (bandId: string, query: string) {
+  const db = yield* RequestDatabase
+  const latest = db
+    .selectFrom("app_public.gigs")
+    .distinctOn(sql`lower(venue)`)
+    .select(["venue", "address"])
+    .select(sql<string | null>`max(gig_date) over (partition by lower(venue))`.as("last_played"))
+    .where("band_id", "=", bandId)
+    .where(sql<number>`strpos(lower(venue), lower(${query}))`, ">", 0)
+    .orderBy(sql`lower(venue)`)
+    .orderBy(sql`address is null`)
+    .orderBy(sql`gig_date desc nulls last`)
+    .orderBy("created_at", "desc")
+  const rows = yield* db
+    .selectFrom(latest.as("v"))
+    .select(["v.venue", "v.address"])
+    .orderBy(sql`starts_with(lower(v.venue), lower(${query})) desc`)
+    .orderBy(sql`v.last_played desc nulls last`)
+    .orderBy("v.venue")
+    .limit(5)
+  return yield* decodeBandVenues(rows).pipe(Effect.orDie)
+})
