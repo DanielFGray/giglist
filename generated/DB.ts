@@ -208,9 +208,17 @@ export interface AppPublicGigs {
   gig_date: Timestamp | null;
   id: Generated<string>;
   /**
+   * Where the venue is, from the map place or past venue the band picked; null when the address was typed by hand.
+   */
+  latitude: number | null;
+  /**
    * When the band must arrive and load in, as a wall-clock time at the venue on the gig date.
    */
   load_in_time: string | null;
+  /**
+   * Where the venue is, with latitude.
+   */
+  longitude: number | null;
   /**
    * Notes for the band only.
    */

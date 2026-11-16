@@ -10,7 +10,7 @@ const dayFromToday = (days: number) => {
 
 const createBand = async (page: Page, slug: string) => (await post(page, "/api/my/bands", { slug, name: `Test: ${slug}` })).id as string
 
-const gigFields = { gig_date: null, address: null, load_in_time: null, performance_time: null, notes: null }
+const gigFields = { gig_date: null, address: null, location: null, load_in_time: null, performance_time: null, notes: null }
 
 const setlistNames = (page: Page) => getPw(page, "gig-setlist-name")
 
@@ -74,10 +74,15 @@ test.describe("gigs", () => {
 
   // The test API server runs no map search (PLACES_URL is empty in
   // playwright.config.ts), so the only suggestions are the band's own venues.
-  test("a new gig's venue suggests the band's past venues, and picking one fills in its address", async ({ page, testing }) => {
+  test("a new gig's venue suggests the band's past venues, and picking one fills in its address and keeps its point", async ({ page, testing }) => {
     await testing.login()
     const bandId = await createBand(page, testSlug("venue"))
-    await post(page, "/api/gigs", { band_id: bandId, ...gigFields, venue: "The Echo Room", address: "1 Echo Lane", gig_date: dayFromToday(-30) })
+    const point = { latitude: 51.5, longitude: -0.12 }
+    await post(page, "/api/gigs", { band_id: bandId, ...gigFields, venue: "The Echo Room", address: "1 Echo Lane", location: point, gig_date: dayFromToday(-30) })
+    const saved = async () => {
+      const id = new URL(page.url()).pathname.split("/").at(-1)
+      return (await page.request.get(`/api/gigs/${id}`)).json()
+    }
 
     await page.goto(`/band/${bandId}/gigs`)
     await getPw(page, "gig-venue").pressSequentially("echo")
@@ -90,6 +95,18 @@ test.describe("gigs", () => {
     await getPw(page, "gig-submit").click()
     await expect(getPw(page, "gig-label")).toHaveText("The Echo Room", { timeout: 10000 })
     await expect(getPw(page, "gig-address")).toHaveText("1 Echo Lane")
+    expect(await saved()).toMatchObject({ location: point })
+
+    // Saving other details keeps the point; an address typed by hand drops it.
+    await getPw(page, "gig-notes").fill("Side door")
+    await getPw(page, "gig-save").click()
+    await expect.poll(saved, { timeout: 10000 }).toMatchObject({ notes: "Side door", location: point })
+    // A save remounts the form once the page reloads; start the next edit after that.
+    await page.reload()
+    await expect(getPw(page, "gig-notes")).toHaveValue("Side door", { timeout: 10000 })
+    await getPw(page, "gig-address-field").fill("2 Echo Lane")
+    await getPw(page, "gig-save").click()
+    await expect.poll(saved, { timeout: 10000 }).toMatchObject({ address: "2 Echo Lane", location: null })
   })
 
   test("one setlist serves many gigs, and one gig copies it for itself in the same place", async ({ page, testing }) => {

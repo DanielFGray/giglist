@@ -1,7 +1,10 @@
 import { Config, Context, Effect, Layer, Option, Schema as S, String as Str } from "effect"
+import type { Location } from "../../api/gigs"
 
-/** A place a map search found: its name, and its postal address on one line. */
-export type Place = { readonly venue: string; readonly address: string | null }
+type Location = typeof Location.Type
+
+/** A place a map search found: its name, its postal address on one line, and its point. */
+export type Place = { readonly venue: string; readonly address: string | null; readonly location: Location }
 
 /**
  * Map search for the venue a gig form is typing, through a Photon server
@@ -9,9 +12,10 @@ export type Place = { readonly venue: string; readonly address: string | null }
  * With no `PLACES_URL` there is no map search, and the form offers only the
  * band's own venues.
  *
- * Only the typed text is sent, under a generic client name, never who typed
- * it. A suggestion is a convenience, so an unreachable, slow or malformed
- * answer is logged and counts as no finds.
+ * Finds near `near` rank first. The point goes out rounded to one decimal
+ * (about 10 km), with the typed text, under a generic client name; who typed
+ * it is never sent. A suggestion is a convenience, so an unreachable, slow or
+ * malformed answer is logged and counts as no finds.
  */
 export class Places extends Context.Service<Places>()("giglist/places", {
   make: Effect.gen(function* () {
@@ -20,11 +24,15 @@ export class Places extends Context.Service<Places>()("giglist/places", {
       Config.map(Option.filter(Str.isNonEmpty)),
     )
 
-    const search = Effect.fn("Places.search")(function* (query: string) {
+    const search = Effect.fn("Places.search")(function* (query: string, near: Location | null) {
       if (Option.isNone(url)) return []
       const endpoint = new URL("/api/", url.value)
       endpoint.searchParams.set("q", query)
       endpoint.searchParams.set("limit", "5")
+      if (near) {
+        endpoint.searchParams.set("lat", near.latitude.toFixed(1))
+        endpoint.searchParams.set("lon", near.longitude.toFixed(1))
+      }
       // Venues are points with an address ("house") or without one ("other");
       // the other layers are streets, towns and regions.
       endpoint.searchParams.append("layer", "house")
@@ -55,11 +63,15 @@ class MapSearchFailed extends S.TaggedError<MapSearchFailed, { readonly brand: u
   message: S.String,
 }) {}
 
-/** The places in a Photon answer that have a name, each with its address. */
+/** The places in a Photon answer that have a name, each with its address and point. */
 export const readPhotonAnswer = (json: unknown) =>
   decodePhoton(json).pipe(
     Effect.map((answer): ReadonlyArray<Place> =>
-      answer.features.flatMap(({ properties: p }) => (p.name ? [{ venue: p.name, address: addressLine(p) }] : [])),
+      answer.features.flatMap(({ properties: p, geometry }) =>
+        p.name
+          ? [{ venue: p.name, address: addressLine(p), location: { longitude: geometry.coordinates[0], latitude: geometry.coordinates[1] } }]
+          : [],
+      ),
     ),
   )
 
@@ -86,7 +98,10 @@ const PhotonProperties = S.Struct({
 })
 type PhotonProperties = typeof PhotonProperties.Type
 
-/** The fields of Photon's GeoJSON answer that an address needs. */
-const PhotonAnswer = S.Struct({ features: S.Array(S.Struct({ properties: PhotonProperties })) })
+/** A GeoJSON point is `[longitude, latitude]`. */
+const PhotonPoint = S.Struct({ coordinates: S.Tuple([S.Finite, S.Finite]) })
+
+/** The fields of Photon's GeoJSON answer that a suggestion needs. */
+const PhotonAnswer = S.Struct({ features: S.Array(S.Struct({ properties: PhotonProperties, geometry: PhotonPoint })) })
 
 const decodePhoton = S.decodeUnknownEffect(PhotonAnswer)

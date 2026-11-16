@@ -16,6 +16,15 @@ const GigTime = S.NullOr(
   S.String.pipe(S.check(S.isPattern(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/))),
 )
 
+/**
+ * Where a venue is on the map. A gig keeps the point of the place the band
+ * picked, so it describes the gig's address; an address typed by hand has none.
+ */
+export const Location = S.Struct({
+  latitude: S.Finite.pipe(S.check(S.isBetween({ minimum: -90, maximum: 90 }))),
+  longitude: S.Finite.pipe(S.check(S.isBetween({ minimum: -180, maximum: 180 }))),
+})
+
 /** A setlist as a gig plays it, in the gig's order. `gig_count` counts every gig that plays it, this one included. */
 export const GigSetlist = S.Struct({
   id: uuid,
@@ -30,6 +39,7 @@ export const Gig = S.Struct({
   ...GigRef.fields,
   band_id: uuid,
   address: S.NullOr(S.String),
+  location: S.NullOr(Location),
   load_in_time: GigTime,
   performance_time: GigTime,
   /** For the band only. */
@@ -43,6 +53,7 @@ export const GigDetails = S.Struct({
   venue: S.NullOr(S.String.pipe(S.check(S.isMinLength(1)), S.check(S.isMaxLength(200)))),
   gig_date: S.NullOr(S.String.pipe(S.check(S.isPattern(/^\d{4}-\d{2}-\d{2}$/)))),
   address: S.NullOr(S.String.pipe(S.check(S.isMaxLength(1000)))),
+  location: S.NullOr(Location),
   load_in_time: GigTime,
   performance_time: GigTime,
   notes: S.NullOr(S.String.pipe(S.check(S.isMaxLength(5000)))),
@@ -55,11 +66,13 @@ export const GigInsert = S.Struct({
 
 /**
  * A venue the gig forms offer as the user types: one the band has played
- * (`band`, with the address it last saved), or a map search's find (`map`).
+ * (`band`, with the address and point it last saved), or a map search's find
+ * (`map`, with its point).
  */
 export const VenueSuggestion = S.Struct({
   venue: S.String,
   address: S.NullOr(S.String),
+  location: S.NullOr(Location),
   source: S.Literals(["band", "map"]),
 })
 

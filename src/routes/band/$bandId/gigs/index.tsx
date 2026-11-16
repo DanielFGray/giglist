@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { Link, createFileRoute, useRouter } from "@tanstack/react-router"
 import { gigs, type GigInfo } from "~/api/client"
+import type { Location } from "~/api/gigs"
 import { SubmitButton, TextField, errorMessage } from "~/components/form"
 import { VenueField } from "~/components/VenueField"
 import { gigLabel, localToday, splitGigs } from "~/components/gig-label"
@@ -83,7 +84,8 @@ function GigRow({ bandId, gig }: { bandId: string; gig: GigInfo }) {
 function NewGig({ bandId }: { bandId: string }) {
   const router = useRouter()
   const [venue, setVenue] = useState("")
-  const [address, setAddress] = useState("")
+  // The point belongs to the address: a pick sets both, and typing in the address drops the point.
+  const [place, setPlace] = useState<{ address: string; location: typeof Location.Type | null }>({ address: "", location: null })
   const [date, setDate] = useState("")
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -99,7 +101,8 @@ function NewGig({ bandId }: { bandId: string }) {
             band_id: bandId,
             venue: venue.trim() || null,
             gig_date: date || null,
-            address: address.trim() || null,
+            address: place.address.trim() || null,
+            location: place.location,
             load_in_time: null,
             performance_time: null,
             notes: null,
@@ -120,13 +123,13 @@ function NewGig({ bandId }: { bandId: string }) {
           onChange={setVenue}
           onPick={(picked) => {
             setVenue(picked.venue)
-            if (picked.address !== null) setAddress(picked.address)
+            if (picked.address !== null) setPlace({ address: picked.address, location: picked.location })
           }}
         />
         <TextField label="Date" pwid="gig-date" type="date" value={date} onChange={setDate} />
         <SubmitButton pwid="gig-submit" disabled={pending} pending={pending} label="Create gig" pendingLabel="Creating…" />
       </div>
-      <TextField label="Address (optional)" pwid="gig-new-address" value={address} onChange={setAddress} placeholder="123 Main St" />
+      <TextField label="Address (optional)" pwid="gig-new-address" value={place.address} onChange={(address) => setPlace({ address, location: null })} placeholder="123 Main St" />
       {error && <div data-pwid="gig-form-error" className="text-sm text-red-400">{error}</div>}
     </form>
   )

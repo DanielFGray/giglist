@@ -5,7 +5,7 @@ import { LiveHub, type Written } from "./liveHub"
 import { Places } from "./places"
 import { Setlists, viewing } from "./setlists"
 import { between, placeAfter } from "../../components/position"
-import { Gig, GigEntry, type GigDetails, type GigInsert, type GigSetlistInsert, type VenueSuggestion } from "../../api/gigs"
+import { Gig, GigEntry, Location, type GigDetails, type GigInsert, type GigSetlistInsert, type VenueSuggestion } from "../../api/gigs"
 import { type LivePresence, type Move } from "../../api/setlists"
 
 export class GigMissing extends S.TaggedError<GigMissing, { readonly brand: unique symbol }>()("GigMissing", { message: S.String, id: S.String }) {}
@@ -59,12 +59,14 @@ export class Gigs extends Context.Service<Gigs>()("giglist/gigs", {
 
     /**
      * The venues to offer for `query`: the band's own first, then the map's
-     * finds. A find with the same name and address as one of the band's is the
-     * same place, so it shows once.
+     * finds, nearest the band's gig closest to today first. A find with the
+     * same name and address as one of the band's is the same place, so it
+     * shows once.
      */
     const suggestVenues = Effect.fn("Gigs.suggestVenues")(function* (bandId: string, query: string) {
       yield* setlists.requireMember(bandId)
-      const [played, found] = yield* Effect.all([bandVenues(bandId, query), places.search(query)], {
+      const near = yield* bandPoint(bandId)
+      const [played, found] = yield* Effect.all([bandVenues(bandId, query), places.search(query, near)], {
         concurrency: "unbounded",
       })
       const same = (v: { venue: string; address: string | null }) => `${v.venue.toLowerCase()}\n${v.address ?? ""}`
@@ -78,7 +80,7 @@ export class Gigs extends Context.Service<Gigs>()("giglist/gigs", {
     const create = Effect.fn("Gigs.create")(function* (payload: typeof GigInsert.Type) {
       const db = yield* RequestDatabase
       yield* setlists.requireMember(payload.band_id)
-      const inserted = yield* db.insertInto("app_public.gigs").values(payload).returning("id").pipe(Effect.head, Effect.catchTag("NoSuchElementError", Effect.die))
+      const inserted = yield* db.insertInto("app_public.gigs").values(withPoint(payload)).returning("id").pipe(Effect.head, Effect.catchTag("NoSuchElementError", Effect.die))
       return yield* gigOrDie(inserted.id)
     })
 
@@ -88,7 +90,7 @@ export class Gigs extends Context.Service<Gigs>()("giglist/gigs", {
         Effect.gen(function* () {
           const db = yield* RequestDatabase
           yield* gigOr404(id)
-          yield* db.updateTable("app_public.gigs").set(payload).where("id", "=", id)
+          yield* db.updateTable("app_public.gigs").set(withPoint(payload)).where("id", "=", id)
           return yield* gigOrDie(id)
         }),
       )
@@ -294,6 +296,7 @@ const selectGigs = Effect.fnUntraced(function* () {
       "g.venue",
       sql<string | null>`g.gig_date::text`.as("gig_date"),
       "g.address",
+      location("g").as("location"),
       sql<string | null>`g.load_in_time::text`.as("load_in_time"),
       sql<string | null>`g.performance_time::text`.as("performance_time"),
       "g.notes",
@@ -330,19 +333,54 @@ const gigOr404 = Effect.fnUntraced(function* (id: string) {
 /** A gig that was just written: a miss here is a server defect, not a caller error. */
 const gigOrDie = (id: string) => gigOr404(id).pipe(Effect.catchTag("GigMissing", Effect.die))
 
-const decodeBandVenues = S.decodeUnknownEffect(S.Array(S.Struct({ venue: S.String, address: S.NullOr(S.String) })))
+/** A gig's details as the table's columns: the table keeps `location` as two. */
+const withPoint = <A extends { readonly location: typeof Location.Type | null }>({ location: point, ...rest }: A) => ({
+  ...rest,
+  latitude: point?.latitude ?? null,
+  longitude: point?.longitude ?? null,
+})
+
+/** The `location` of the gig row `table`, as a `Location` object or null. */
+const location = (table: string) =>
+  sql<unknown>`case when ${sql.ref(`${table}.latitude`)} is null then null
+    else json_build_object('latitude', ${sql.ref(`${table}.latitude`)}, 'longitude', ${sql.ref(`${table}.longitude`)}) end`
+
+const decodePoints = S.decodeUnknownEffect(S.Array(Location))
+
+/**
+ * Where the band plays now: the point of its gig closest to today that has
+ * one, or null when no gig does.
+ */
+const bandPoint = Effect.fnUntraced(function* (bandId: string) {
+  const db = yield* RequestDatabase
+  const rows = yield* db
+    .selectFrom("app_public.gigs")
+    .select(["latitude", "longitude"])
+    .where("band_id", "=", bandId)
+    .where("latitude", "is not", null)
+    .orderBy(sql`abs(gig_date - current_date) nulls last`)
+    .orderBy("updated_at", "desc")
+    .limit(1)
+  const [point] = yield* decodePoints(rows).pipe(Effect.orDie)
+  return point ?? null
+})
+
+const decodeBandVenues = S.decodeUnknownEffect(
+  S.Array(S.Struct({ venue: S.String, address: S.NullOr(S.String), location: S.NullOr(Location) })),
+)
 
 /**
  * Up to five venues the band has played whose name contains `query`, ignoring
  * case: names that start with it first, then the most recently played. Each
- * venue shows once, with the address of its latest gig that saved one.
+ * venue shows once, with the address and point of its latest gig that saved
+ * an address.
  */
 const bandVenues = Effect.fnUntraced(function* (bandId: string, query: string) {
   const db = yield* RequestDatabase
   const latest = db
     .selectFrom("app_public.gigs")
     .distinctOn(sql`lower(venue)`)
-    .select(["venue", "address"])
+    .select(["venue", "address", "latitude", "longitude"])
     .select(sql<string | null>`max(gig_date) over (partition by lower(venue))`.as("last_played"))
     .where("band_id", "=", bandId)
     .where(sql<number>`strpos(lower(venue), lower(${query}))`, ">", 0)
@@ -352,7 +390,7 @@ const bandVenues = Effect.fnUntraced(function* (bandId: string, query: string) {
     .orderBy("created_at", "desc")
   const rows = yield* db
     .selectFrom(latest.as("v"))
-    .select(["v.venue", "v.address"])
+    .select(["v.venue", "v.address", location("v").as("location")])
     .orderBy(sql`starts_with(lower(v.venue), lower(${query})) desc`)
     .orderBy(sql`v.last_played desc nulls last`)
     .orderBy("v.venue")

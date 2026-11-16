@@ -122,7 +122,7 @@ export const createGig = async (page: Page) => {
   const override = await page.request.put(`/api/setlists/${one.id}/entries/${one.entries[1].id}`, { data: { key_override: "Bb" } })
   expect(override.ok(), await override.text()).toBe(true)
   const gig = await post(page, "/api/gigs", {
-    band_id: band.id, venue: "Friday", gig_date: null, address: null, load_in_time: null, performance_time: null, notes: null,
+    band_id: band.id, venue: "Friday", gig_date: null, address: null, location: null, load_in_time: null, performance_time: null, notes: null,
   })
   for (const s of [one, encore]) await post(page, `/api/gigs/${gig.id}/setlists`, { setlist_id: s.id })
   return { bandId: band.id as string, gigId: gig.id as string, setlistId: one.id, encoreId: encore.id }

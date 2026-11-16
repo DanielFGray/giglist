@@ -370,6 +370,7 @@ function GigDetailsForm({ bandId, gig, onSaved }: { bandId: string; gig: GigInfo
     venue: gig.venue,
     gig_date: gig.gig_date,
     address: gig.address,
+    location: gig.location,
     load_in_time: gig.load_in_time === null ? null : timeInputValue(gig.load_in_time),
     performance_time: gig.performance_time === null ? null : timeInputValue(gig.performance_time),
     notes: gig.notes,
@@ -420,7 +421,10 @@ function GigDetailsForm({ bandId, gig, onSaved }: { bandId: string; gig: GigInfo
               onChange={(v) => field.handleChange(nullable(v))}
               onPick={(picked) => {
                 field.handleChange(picked.venue)
-                if (picked.address !== null) form.setFieldValue("address", picked.address)
+                if (picked.address !== null) {
+                  form.setFieldValue("address", picked.address)
+                  form.setFieldValue("location", picked.location)
+                }
               }}
               error={fieldError(field)}
             />
@@ -444,7 +448,19 @@ function GigDetailsForm({ bandId, gig, onSaved }: { bandId: string; gig: GigInfo
       </div>
       <form.Field name="address">
         {(field) => (
-          <TextAreaField label="Address" pwid="gig-address-field" rows={2} value={field.state.value ?? ""} onChange={(v) => field.handleChange(nullable(v))} error={fieldError(field)} placeholder="123 Main St" />
+          <TextAreaField
+            label="Address"
+            pwid="gig-address-field"
+            rows={2}
+            value={field.state.value ?? ""}
+            onChange={(v) => {
+              // The saved point is the picked place's; an address typed by hand has none.
+              field.handleChange(nullable(v))
+              form.setFieldValue("location", null)
+            }}
+            error={fieldError(field)}
+            placeholder="123 Main St"
+          />
         )}
       </form.Field>
       <form.Field name="notes">
