@@ -1,10 +1,10 @@
 import { useMemo, useState } from "react"
 import { NotationElement, type model, type Settings } from "@coderline/alphatab"
-import { readPhrase, type PhraseProblem } from "alphatab-kit/charts/phrase"
-import { IconButton } from "alphatab-kit/player/icon-button"
-import { CountInIcon, LoadingSpinner, PlayIcon, StopIcon } from "alphatab-kit/player/icons"
-import { SpeedInput } from "alphatab-kit/player/speed-input"
-import { useScorePlayer, type UseScorePlayer } from "alphatab-kit/player/use-score-player"
+import { readPhrase, type PhraseProblem } from "gigbag.js/charts/phrase"
+import { IconButton } from "gigbag.js/player/icon-button"
+import { CountInIcon, LoadingSpinner, PlayIcon, StopIcon } from "gigbag.js/player/icons"
+import { SpeedInput } from "gigbag.js/player/speed-input"
+import { useScorePlayer, type UseScorePlayer } from "gigbag.js/player/use-score-player"
 
 /**
  * A phrase drawn by alphaTab, with play, loop, count-in and speed. Systems wrap

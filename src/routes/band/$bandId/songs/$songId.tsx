@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { charts, songs } from "~/api/client"
-import { MUSICAL_KEYS, type MusicalKey } from "alphatab-kit/charts/key"
+import { MUSICAL_KEYS, type MusicalKey } from "gigbag.js/charts/key"
 import { SongEditor } from "~/components/SongEditor"
 
 export const Route = createFileRoute("/band/$bandId/songs/$songId")({

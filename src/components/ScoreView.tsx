@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef } from "react"
 import { importer, model, Settings, StaveProfile } from "@coderline/alphatab"
-import { barsOfBeatSpan, selectionLabel, type BarSpan } from "alphatab-kit/charts/score-bars"
-import { createMixer, setSolo } from "alphatab-kit/charts/score-mixer"
-import { SpeedInput } from "alphatab-kit/player/speed-input"
-import { useScorePlayer, type UseScorePlayer } from "alphatab-kit/player/use-score-player"
+import { barsOfBeatSpan, selectionLabel, type BarSpan } from "gigbag.js/charts/score-bars"
+import { createMixer, setSolo } from "gigbag.js/charts/score-mixer"
+import { SpeedInput } from "gigbag.js/player/speed-input"
+import { useScorePlayer, type UseScorePlayer } from "gigbag.js/player/use-score-player"
 
 /**
  * Reads a Guitar Pro file for drawing as a tab. The staff profile is set before

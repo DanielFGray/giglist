@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
-import { BEATS_PER_BAR } from "alphatab-kit/charts/take"
+import { BEATS_PER_BAR } from "gigbag.js/charts/take"
 import { ACCENT_GAIN, BEAT_GAIN, COUNT_IN_BEATS } from "./click"
 import { Session, type SessionEvent, type SessionPlan } from "./session"
 import { drum, keyNote, mix, mixClick, noise, pluck, SAMPLE_RATE } from "./synth"

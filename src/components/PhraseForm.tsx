@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { readPhrase } from "alphatab-kit/charts/phrase"
+import { readPhrase } from "gigbag.js/charts/phrase"
 import { Phrase } from "./Phrase"
 import { RecordTake } from "./RecordTake"
 

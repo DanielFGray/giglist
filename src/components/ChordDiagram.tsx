@@ -1,4 +1,4 @@
-import { barreOf, fretWindow, writeFrets, type Voicing } from "alphatab-kit/charts/fretting"
+import { barreOf, fretWindow, writeFrets, type Voicing } from "gigbag.js/charts/fretting"
 
 /**
  * One guitar shape drawn as a vertical chord box: strings as vertical lines

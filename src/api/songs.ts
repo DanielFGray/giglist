@@ -1,6 +1,6 @@
 import { Schema as S, Struct } from "effect"
 import { HttpApiEndpoint, HttpApiGroup, HttpApiSchema } from "effect/http-api"
-import { MUSICAL_KEYS } from "alphatab-kit/charts/key"
+import { MUSICAL_KEYS } from "gigbag.js/charts/key"
 import { SessionMiddleware } from "./session"
 
 // --- Songs schemas ---

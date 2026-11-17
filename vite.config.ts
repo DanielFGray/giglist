@@ -2,7 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { TanStackRouterVite } from "@tanstack/router-plugin/vite";
 import tailwindcss from "@tailwindcss/vite";
-import { alphaTabAssets } from "alphatab-kit/vite";
+import { alphaTabAssets } from "gigbag.js/vite";
 import { licenseNoticesPlugin } from "./scripts/licenseNoticesPlugin";
 import path from "node:path";
 

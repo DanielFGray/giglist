@@ -28,6 +28,7 @@ const gig = (band_id: string, venue: string | null, gig_date: string) => ({
   notes: "Private: load in through the kitchen",
   gig_date,
   address: null,
+  location: null,
   load_in_time: null,
   performance_time: null,
 })

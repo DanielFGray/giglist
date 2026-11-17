@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { charts } from "~/api/client"
-import { MAX_SCAN_BYTES } from "alphatab-kit/charts/scanned"
+import { MAX_SCAN_BYTES } from "gigbag.js/charts/scanned"
 import { errorMessage } from "./form"
 
 /** A file the player chose, and the chords and lyrics the server read from it. */

@@ -2,7 +2,7 @@
 
 This file lists every outside source GigList uses: code we adapted, data we fitted to, assets we serve, research the code follows, and libraries whose license asks more than MIT does.
 
-The chart code (`alphatab-kit/charts/*`) moved to the kit. Its sources are listed in the kit's `ATTRIBUTIONS.md`, including the GPL-2.0 condition that ChordSheetJS puts on any client bundle that includes a chart module.
+The chart code (`gigbag.js/charts/*`) moved to the kit. Its sources are listed in the kit's `ATTRIBUTIONS.md`, including the GPL-2.0 condition that ChordSheetJS puts on any client bundle that includes a chart module.
 
 When a change brings in a source, add its entry in the same commit, with a link. The code comment that uses the source names it, so a reader can find the entry here.
 
@@ -38,9 +38,9 @@ The click's listener (`src/audio/click/listener.ts`) follows four onset papers:
 
 - **AWS SDK for JavaScript**: `@aws-sdk/client-sesv2` sends production email through Amazon SES. Apache-2.0. <https://github.com/aws/aws-sdk-js-v3>
 
-- **ChordSheetJS**: reaches GigList through the kit's chart modules (`alphatab-kit/charts/lyrics` and the modules that import it), so it is in the client bundle. GPL-2.0-only. The kit's `ATTRIBUTIONS.md` states the condition. <https://github.com/martijnversluis/ChordSheetJS>
+- **ChordSheetJS**: reaches GigList through the kit's chart modules (`gigbag.js/charts/lyrics` and the modules that import it), so it is in the client bundle. GPL-2.0-only. The kit's `ATTRIBUTIONS.md` states the condition. <https://github.com/martijnversluis/ChordSheetJS>
 - **alphaTab**: draws and plays scores and phrases. MPL-2.0. <https://alphatab.net>
-- **diff-match-patch**: reaches GigList through the kit's `alphatab-kit/charts/marks`, which maps a player's marks through later chart revisions (`follow.ts` in the kit). Apache-2.0. <https://github.com/JackuB/diff-match-patch>
+- **diff-match-patch**: reaches GigList through the kit's `gigbag.js/charts/marks`, which maps a player's marks through later chart revisions (`follow.ts` in the kit). Apache-2.0. <https://github.com/JackuB/diff-match-patch>
 - **markdown-it**: renders a band's Markdown description to HTML (`src/components/description.ts`). MIT License. <https://github.com/markdown-it/markdown-it>
 - **htmlparser2**: tokenises a filled-in band theme so the band's own scripts and frames can be stripped before the page is shown (`src/components/theme-sanitize.ts`). MIT License. <https://github.com/fb55/htmlparser2>
 

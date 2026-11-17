@@ -66,7 +66,7 @@ test("rebalances entry and gig setlist keys after repeated neighbour moves", asy
     const s = await song(page, band.id, title)
     entries.push(await post(page, `/api/setlists/${setlist.id}/entries`, { song_id: s.id }))
   }
-  const gig = await post(page, "/api/gigs", { band_id: band.id, venue: "Rebalance", gig_date: null, address: null, load_in_time: null, performance_time: null, notes: null })
+  const gig = await post(page, "/api/gigs", { band_id: band.id, venue: "Rebalance", gig_date: null, address: null, location: null, load_in_time: null, performance_time: null, notes: null })
   const sets = []
   for (const name of ["Set 1", "Set 2", "Set 3"]) {
     const set = await post(page, "/api/setlists", { band_id: band.id, name })

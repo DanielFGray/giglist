@@ -2,10 +2,10 @@
  * The song a score fills in when a player uploads it. Only an untitled song
  * takes the score's title, artist and tempo. The song types live in setlist's
  * API client, so this stays with the app while the score's metadata comes from
- * alphatab-kit.
+ * gigbag.js.
  */
 import type { SongInfo, SongUpdateData } from "~/api/client"
-import type { ScoreMeta } from "alphatab-kit/charts/score-meta"
+import type { ScoreMeta } from "gigbag.js/charts/score-meta"
 
 /** The title a song gets when a player adds it before knowing its name. */
 export const UNTITLED_SONG = "Untitled song"

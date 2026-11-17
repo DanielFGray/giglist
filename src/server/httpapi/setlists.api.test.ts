@@ -8,7 +8,7 @@ import { baseUrl, TestHttpClientLive } from "../test/apiHarness"
 import { anonymous, createBand, createSong, nextEvent, openRoom, postJson, sendJson, signedIn } from "../test/clients"
 
 const runId = Math.random().toString(36).slice(2, 8)
-const noDetails = { venue: null, gig_date: null, address: null, load_in_time: null, performance_time: null, notes: null }
+const noDetails = { venue: null, gig_date: null, address: null, location: null, load_in_time: null, performance_time: null, notes: null }
 const body = <A, I>(schema: S.Codec<A, I>) => HttpClientResponse.schemaBodyJson(schema)
 const getJson = <A, I>(client: HttpClient.HttpClient, path: string, schema: S.Codec<A, I>) =>
   client.get(`${baseUrl}${path}`).pipe(Effect.flatMap(body(schema)))
@@ -178,8 +178,8 @@ describe("setlists and gigs over HTTP", () => {
       expect((yield* getJson(member, `/setlists/${setlist.id}`, Setlist)).name).toBe("Private")
       expect((yield* getJson(member, `/gigs/${gig.id}`, Gig)).setlists).toEqual([])
     }).pipe(Effect.scoped, Effect.provide(TestHttpClientLive)))
-  // The suite runs no map search (PLACES_URL is empty in test/setup.ts), so
-  // every suggestion here is one of the band's own venues.
+  // The map search asks the stand-in Photon of test/globalSetup.ts, which
+  // finds one place named for the text and the point it searched near.
   it.effect("venue suggestions offer each of the band's venues once, with its latest address, to members only", () =>
     Effect.gen(function* () {
       const member = yield* signedIn(`venue_member_${runId}`)
@@ -198,14 +198,44 @@ describe("setlists and gigs over HTTP", () => {
       const suggest = (client: HttpClient.HttpClient, q: string) =>
         client.get(`${baseUrl}/gigs/band/${band.id}/venues?q=${encodeURIComponent(q)}`)
       const found = yield* suggest(member, "ECHO").pipe(Effect.flatMap(body(S.Array(VenueSuggestion))))
-      // A name that starts with the text comes first, then the most recently played.
+      // A name that starts with the text comes first, then the most recently
+      // played. No gig has a point, so the map search leans nowhere.
       expect(found).toEqual([
-        { venue: "Echoplex", address: null, source: "band" },
-        { venue: "the echo room", address: "2 New Road", source: "band" },
-        { venue: "Old Echo Hall", address: null, source: "band" },
+        { venue: "Echoplex", address: null, location: null, source: "band" },
+        { venue: "the echo room", address: "2 New Road", location: null, source: "band" },
+        { venue: "Old Echo Hall", address: null, location: null, source: "band" },
+        { venue: "ECHO near nowhere", address: "Mapton", location: { latitude: 0, longitude: 0 }, source: "map" },
       ])
 
       const outsider = yield* signedIn(`venue_outsider_${runId}`)
       expect((yield* suggest(outsider, "echo")).status).toBe(403)
+    }).pipe(Effect.provide(TestHttpClientLive)))
+
+  it.effect("the map search leans toward the point of the band's gig closest to today, rounded to a tenth of a degree", () =>
+    Effect.gen(function* () {
+      const member = yield* signedIn(`venue_near_${runId}`)
+      const band = yield* createBand(member, `venues-near-${runId}`)
+      const day = (offset: number) => new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10)
+      const gig = (details: object) =>
+        postJson(member, "/gigs", { band_id: band.id, ...noDetails, ...details }).pipe(Effect.flatMap(body(Gig)))
+      const newYork = { latitude: 40.7221, longitude: -73.9868 }
+      const tulsa = { latitude: 36.1364, longitude: -95.9848 }
+      yield* gig({ venue: "Mercury Lounge", address: "217 East Houston Street", location: newYork, gig_date: day(-400) })
+      const next = yield* gig({ venue: "Cain's Ballroom", address: "423 North Main Street", location: tulsa, gig_date: day(10) })
+      expect(next.location).toEqual(tulsa)
+      // A gig on today's date with an address typed by hand has no point to lean toward.
+      yield* gig({ venue: "Corner Pub", address: "3 Side Street", gig_date: day(0) })
+
+      const suggest = (q: string) =>
+        member.get(`${baseUrl}/gigs/band/${band.id}/venues?q=${q}`).pipe(Effect.flatMap(body(S.Array(VenueSuggestion))))
+      expect(yield* suggest("mercury")).toEqual([
+        { venue: "Mercury Lounge", address: "217 East Houston Street", location: newYork, source: "band" },
+        { venue: "mercury near 36.1,-96.0", address: "Mapton", location: { latitude: 36.1, longitude: -96 }, source: "map" },
+      ])
+
+      // Saved without its point, the Tulsa gig no longer counts, and the next closest does.
+      const resaved = yield* sendJson(member, "PUT", `/gigs/${next.id}`, { ...noDetails, venue: "Cain's Ballroom", address: "423 North Main Street", gig_date: day(10) })
+      expect(resaved.status).toBe(200)
+      expect((yield* suggest("hall")).map((s) => s.venue)).toEqual(["hall near 40.7,-74.0"])
     }).pipe(Effect.provide(TestHttpClientLive)))
 })

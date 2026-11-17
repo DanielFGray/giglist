@@ -1,4 +1,4 @@
-import { BEATS_PER_BAR } from "alphatab-kit/charts/take"
+import { BEATS_PER_BAR } from "gigbag.js/charts/take"
 
 /**
  * The metronome click is a short tone at one pitch. The mic hears it through

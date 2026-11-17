@@ -1,14 +1,14 @@
 import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type DragEvent } from "react"
 import { charts, type ChartInfo } from "~/api/client"
-import { composeChanges } from "alphatab-kit/charts/changes"
+import { composeChanges } from "gigbag.js/charts/changes"
 import {
   addPhrase, addScoreLink, addSection, anchorLine, blockRange, canMoveBlockTo, deleteBlock, deleteLine, directiveName, dropSlots, duplicateBlock, editLine, hasHandle, inPhrase,
   insertLineAfter, moveBlock, moveBlockTo, moveChord, parseDoc, phraseAt, placeChord, removeChord, removeSection, renameSection, segments, serializeDoc,
   setPhrase, type ChartDoc, type DocLine, type Edit,
-} from "alphatab-kit/charts/doc"
-import { isChordName, isPhraseStart, isTabStart, suggestedChords } from "alphatab-kit/charts/lyrics"
-import { readScoreLink } from "alphatab-kit/charts/score-link"
-import { chartSlot, suggest, type Suggestion } from "alphatab-kit/charts/suggest"
+} from "gigbag.js/charts/doc"
+import { isChordName, isPhraseStart, isTabStart, suggestedChords } from "gigbag.js/charts/lyrics"
+import { readScoreLink } from "gigbag.js/charts/score-link"
+import { chartSlot, suggest, type Suggestion } from "gigbag.js/charts/suggest"
 import { BlockHandle } from "./BlockHandle"
 import type { Point } from "./pointer-drag"
 import { ChordInput, type ChordEntry } from "./ChordInput"

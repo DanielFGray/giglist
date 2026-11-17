@@ -1,8 +1,8 @@
-import { degreeName } from "alphatab-kit/charts/degrees"
-import { numeral } from "alphatab-kit/charts/numeral"
-import type { Spelling } from "alphatab-kit/charts/spelling"
-import { staffNotes, staffSides, staffStep, type StaffNote } from "alphatab-kit/charts/staff"
-import { alphaTabAssetUrls } from "alphatab-kit"
+import { degreeName } from "gigbag.js/charts/degrees"
+import { numeral } from "gigbag.js/charts/numeral"
+import type { Spelling } from "gigbag.js/charts/spelling"
+import { staffNotes, staffSides, staffStep, type StaffNote } from "gigbag.js/charts/staff"
+import { alphaTabAssetUrls } from "gigbag.js"
 
 /**
  * One chord as stacked whole notes on a treble staff: no bar lines, no time

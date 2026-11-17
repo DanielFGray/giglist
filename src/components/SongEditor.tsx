@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useRouter } from "@tanstack/react-router"
 import { songs, type ChartInfo, type SongInfo, type SongUpdateData } from "~/api/client"
-import { type MusicalKey } from "alphatab-kit/charts/key"
+import { type MusicalKey } from "gigbag.js/charts/key"
 import { ClickTrack } from "./ClickTrack"
 import { songFromScore } from "./song-from-score"
 import { SongCharts } from "./SongCharts"
