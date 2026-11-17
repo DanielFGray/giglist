@@ -55,16 +55,26 @@ drop databases, roles and schemas.
 
 A page release is a folder under `/srv/www/giglist.dfg.rocks/` on atheist. It is never
 changed after it is written. The router `giglist-dfg-rocks` in
-`~/build/homelab-site/routes/sites.toml` names the live folder in `X-Site-Release`:
+`~/build/homelab-site/routes/sites.toml` names the live folder in `X-Site-Release`.
 
-1. Build `dist/` with the `Containerfile`, whose image holds only `dist/`. Copy it to
-   `/srv/www/giglist.dfg.rocks/<date>-<short commit>/` on atheist.
-2. Set `X-Site-Release` to that folder in `routes/sites.toml`, and commit the site repository.
-3. Run `ops rebuild atheist`.
+Release the pages from the same commit as the API:
+
+1. `bash scripts/releasePages.sh [commit]` (default `HEAD`). It builds `dist/` in a temporary
+   worktree and writes `__spa-fallback.html`, the route's `X-Site-Fallback`, as a copy of
+   `index.html`. It refuses when the CSP `script-src` in `sites.toml` does not name the hash of
+   the build's inline script. It copies the build to
+   `/srv/www/giglist.dfg.rocks/<date>-<short commit>/`, or reuses a folder for that commit
+   only when it is identical to the build. It then sets `X-Site-Release` and commits
+   `homelab-site` with a pathspec.
+2. Run `ops rebuild atheist` (needs sudo).
+3. Run `bash scripts/checkProduction.sh https://giglist.dfg.rocks`.
 
 To roll back, point `X-Site-Release` at the previous folder and rebuild. The route's
 `X-Site-Fallback` sends the app page for a path that has no file, but only to a request
 that accepts HTML. A missing script or image still gets 404.
+
+The `Containerfile` is not used by the release. Its base image, `localhost/bun-base:1`, is on
+no host, so it cannot build; `scripts/releasePages.sh` runs the same two build steps itself.
 `server-ansible/nixos/atheist/static-sites-operations.md` describes the file server.
 
 ## Security headers
