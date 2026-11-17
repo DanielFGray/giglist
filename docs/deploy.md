@@ -16,20 +16,23 @@ Live setlist events stay in one API process's memory (`services/liveHub.ts`), so
 
 ## Release the API
 
-From this repository, with the commit to release at `HEAD`:
+A push to `main` on `cynic` is the release. From a clean checkout of `main` (a git
+worktree works; it needs this checkout's `.env` and an installed `node_modules`):
 
 ```sh
 ops login            # once every 2 hours
 ops secret check     # fails when a secret the cartridge names is unset
-ops release          # builds HEAD, pushes the image, shows the plan, deploys
+ops promote develop  # merges develop, commits the current migration, runs scripts/verify,
+                     # builds the image and signs off the tree; prints the push command
+git push cynic main  # the push deploys the signed-off tree
 ```
 
-`ops release` builds from the committed `HEAD`, not the working tree. It pins the
-image digest into a copy of `cartridge.json` and records the deployment on the control
-host; `ops deployment list giglist` lists them and `ops rollback giglist <n>` deploys one
-again. Configuration is in `cartridge.json`: plain values under `environment`, and
-database, Valkey and OpenBao secrets under `secrets`. Set a new OpenBao key with
-`ops secret set <key>`.
+Then fast-forward `develop` to `main`, so the committed migration and the emptied
+`migrations/current` reach it: `git merge --ff-only main` on `develop`. The dev database
+already records the migration as committed.
+
+Configuration is in `cartridge.json`: plain values under `environment`, and database,
+Valkey and OpenBao secrets under `secrets`. Set a new OpenBao key with `ops secret set <key>`.
 
 ## Database migrations
 
