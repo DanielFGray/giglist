@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react"
 import { scores } from "~/api/client"
-import { selectionLabel } from "alphatab-kit/charts/score-bars"
-import { clampZoom } from "alphatab-kit/charts/score-zoom"
-import { useScorePlayer } from "alphatab-kit/player/use-score-player"
+import { selectionLabel } from "gigbag.js/charts/score-bars"
+import { clampZoom } from "gigbag.js/charts/score-zoom"
+import { useScorePlayer } from "gigbag.js/player/use-score-player"
 import { errorMessage } from "./form"
 import { ScorePlayerBar } from "./ScorePlayerBar"
 

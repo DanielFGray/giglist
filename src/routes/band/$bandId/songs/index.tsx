@@ -8,7 +8,7 @@ import { BLANK_SONG } from "~/components/SongForm"
 import { Grid, type GridColumn } from "~/components/Grid"
 import { keepOrder } from "~/components/grid-keys"
 import { matchKeys } from "~/components/key-options"
-import { MUSICAL_KEYS } from "alphatab-kit/charts/key"
+import { MUSICAL_KEYS } from "gigbag.js/charts/key"
 
 const SortKey = S.Literals(["added", "title", "artist", "key", "tempo"])
 type SortKey = (typeof SortKey)["Type"]

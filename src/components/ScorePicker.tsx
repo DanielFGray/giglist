@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react"
 import { type model } from "@coderline/alphatab"
 import { scores, type ChartInfo } from "~/api/client"
-import { drawnRange, formatScoreLink, sectionChoices, type ScoreLink as Link, type ScoreOutline } from "alphatab-kit/charts/score-link"
-import { trackOptions } from "alphatab-kit/charts/score-tracks"
+import { drawnRange, formatScoreLink, sectionChoices, type ScoreLink as Link, type ScoreOutline } from "gigbag.js/charts/score-link"
+import { trackOptions } from "gigbag.js/charts/score-tracks"
 import { errorMessage } from "./form"
 import { outlineOf, ScoreLink } from "./ScoreLink"
 import { readScore, ScoreView } from "./ScoreView"
-import type { BarSpan } from "alphatab-kit/charts/score-bars"
+import type { BarSpan } from "gigbag.js/charts/score-bars"
 
 /**
  * Writes a score link (docs/adr/0004): a score chart of the song, one of its

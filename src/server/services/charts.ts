@@ -1,10 +1,10 @@
 import { createHash } from "node:crypto"
 import { Context, Effect, Layer, Schema as S } from "effect"
 import { RequestDatabase } from "../db"
-import { explains } from "alphatab-kit/charts/changes"
-import { anchorText, parseDoc } from "alphatab-kit/charts/doc"
-import { guessKey, importPasted } from "alphatab-kit/charts/lyrics"
-import { MAX_SCORE_BYTES, scoreFormat } from "alphatab-kit/charts/score-file"
+import { explains } from "gigbag.js/charts/changes"
+import { anchorText, parseDoc } from "gigbag.js/charts/doc"
+import { guessKey, importPasted } from "gigbag.js/charts/lyrics"
+import { MAX_SCORE_BYTES, scoreFormat } from "gigbag.js/charts/score-file"
 import { Chart, type ChartRevisionInsert, type LyricsChartInsert, type ScoreUploadQuery } from "../../api/charts"
 
 export class ChartRefused extends S.TaggedError<ChartRefused, { readonly brand: unique symbol }>()("ChartRefused", { message: S.String }) {}

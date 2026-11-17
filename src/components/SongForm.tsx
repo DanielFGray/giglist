@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react"
 import { useForm } from "@tanstack/react-form"
 import { Schema as S } from "effect"
 import { SongFields } from "~/api/songs"
-import { MUSICAL_KEYS, type MusicalKey } from "alphatab-kit/charts/key"
+import { MUSICAL_KEYS, type MusicalKey } from "gigbag.js/charts/key"
 import type { SongCreateData, SongInfo, SongUpdateData } from "~/api/client"
 import {
   NumberField,

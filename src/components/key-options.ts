@@ -1,4 +1,4 @@
-import { MUSICAL_KEYS, type MusicalKey } from "alphatab-kit/charts/key"
+import { MUSICAL_KEYS, type MusicalKey } from "gigbag.js/charts/key"
 
 /** The choices for the key a chart is written in, with "Not set" first. */
 export const keyOptions: ReadonlyArray<{ value: MusicalKey | ""; label: string }> = [

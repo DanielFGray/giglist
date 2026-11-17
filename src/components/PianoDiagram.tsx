@@ -1,7 +1,7 @@
 import { playPianoChord } from "~/audio/chord"
-import { numeral } from "alphatab-kit/charts/numeral"
-import { isBlack, keyRange, pianoNotes, type PianoNote } from "alphatab-kit/charts/piano"
-import type { Spelling } from "alphatab-kit/charts/spelling"
+import { numeral } from "gigbag.js/charts/numeral"
+import { isBlack, keyRange, pianoNotes, type PianoNote } from "gigbag.js/charts/piano"
+import type { Spelling } from "gigbag.js/charts/spelling"
 
 /**
  * One chord as pressed keys on a keyboard trimmed to the chord's range. A circle
