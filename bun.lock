@@ -17,7 +17,7 @@
         "@tanstack/react-router": "^1.170.46",
         "@vitejs/plugin-react": "^6.3.0",
         "effect": "^4.1.3",
-        "gigbag.js": "github:DanielFGray/alphatab-kit#v0.4.1",
+        "gigbag.js": "github:DanielFGray/alphatab-kit#v0.4.2",
         "graphile-migrate": "^2.0.0-rc.6",
         "graphile-worker": "^0.18.0",
         "html-to-text": "^10.0.1",
@@ -698,7 +698,7 @@
 
     "get-symbol-description": ["get-symbol-description@1.1.0", "", { "dependencies": { "call-bound": "^1.0.3", "es-errors": "^1.3.0", "get-intrinsic": "^1.2.6" } }, "sha512-w9UMqWwJxHNOvoNzSJ2oPF5wvYcvP7jUvYzhp67yEhTi17ZDBBC1z9pTdGuzjD+EFIqLSYRweZjqfiPzQ06Ebg=="],
 
-    "gigbag.js": ["gigbag.js@github:DanielFGray/alphatab-kit#1367fb3", { "dependencies": { "chordsheetjs": "18.0.0", "diff-match-patch": "1.0.5", "perfect-freehand": "1.2.3" }, "peerDependencies": { "@coderline/alphatab": "*", "effect": "^4.1.0", "react": "^19.0.0", "react-dom": "^19.0.0", "vite": ">=6" }, "optionalPeers": ["effect"], "hasInstallScript": true, "bin": { "gigbag": "./dist/bin.js" } }, "DanielFGray-alphatab-kit-1367fb3", "sha512-5pY/v6xoZ1mXU3pCeC6HnSHUtorrMKaZGSzADcT/QGhadNyCtlKkNRRZ4KMZyXYRLGflmL9tGSGRkWV89yK+zg=="],
+    "gigbag.js": ["gigbag.js@github:DanielFGray/alphatab-kit#a600ecd", { "dependencies": { "chordsheetjs": "18.0.0", "diff-match-patch": "1.0.5", "perfect-freehand": "1.2.3" }, "peerDependencies": { "@coderline/alphatab": "*", "effect": "^4.1.0", "react": "^19.0.0", "react-dom": "^19.0.0", "vite": ">=6" }, "optionalPeers": ["effect"], "bin": { "gigbag": "./dist/bin.js" } }, "DanielFGray-alphatab-kit-a600ecd", "sha512-8cua0Itsqfw4QAY2QQi0y1nO1R2vLxZpwHaOklS74qDg5vML+bKBaTJAOJjAWORfkUAQZIsAqU6tScnUF02VAQ=="],
 
     "glob": ["glob@13.0.7", "", { "dependencies": { "minimatch": "^10.2.2", "minipass": "^7.1.3", "path-scurry": "^2.0.2" } }, "sha512-wfsFgXQ8A3SEI9XGf7Nl3Y9l7ffSrGh7SUCT7vU/2CzYPep9kjxAn1S40F9OPKxAMGCVl7HtNlJhrCJUeUq83g=="],
 
