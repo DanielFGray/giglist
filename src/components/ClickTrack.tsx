@@ -1,13 +1,23 @@
-import { Effect, Fiber, Stream } from "effect"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { BEATS_PER_BAR } from "gigbag.js/charts/take"
-import { clickTrack } from "~/audio/click/engine"
-import type { Subdivision } from "~/audio/click/timing"
-import { NEW_TAKE, type Take, takeHits, takeStep } from "~/audio/click/take"
-import { hitTiles, judgement, signedMs, SUBDIVISIONS, takeStatus } from "./click-take"
-import { MicMeter } from "./MicMeter"
+import { MicMeter } from "gigbag.js/click/readouts"
+import { hitTiles, judgement, signedMs, takeStatus } from "gigbag.js/click/report"
+import type { Take } from "gigbag.js/click/take"
+import type { Hit, Subdivision } from "gigbag.js/click/timing"
+import { type ClickMode as Mode, useClickTrack } from "gigbag.js/click/use-click-track"
 
-type Mode = "off" | "click" | "listen"
+/** The grid the player aims at, for the subdivision picker. */
+const SUBDIVISIONS: ReadonlyArray<readonly [Subdivision, string]> = [
+  [1, "Quarter notes"],
+  [2, "Eighth notes"],
+  [3, "Triplets"],
+  [4, "Sixteenths"],
+]
+
+const MIC_METER_PARTS = {
+  root: { className: "h-1.5 overflow-hidden rounded-full bg-zinc-800" },
+  fill: { className: "h-full bg-zinc-400" },
+}
 
 /**
  * Two buttons that play a click at `bpm`, with the first beat of each bar
@@ -19,21 +29,9 @@ type Mode = "off" | "click" | "listen"
  */
 export function ClickTrack({ bpm, className, pwid = "click" }: { bpm: number; className: string; pwid?: string }) {
   const [mode, setMode] = useState<Mode>("off")
-  const [take, setTake] = useState<Take>(NEW_TAKE)
   const [panel, setPanel] = useState(false)
   const [subdivision, setSubdivision] = useState<Subdivision>(1)
-
-  useEffect(() => {
-    if (mode === "off") return
-    setTake(NEW_TAKE)
-    const fiber = Effect.runFork(
-      Stream.runForEach(clickTrack({ bpm, listen: mode === "listen" }), (event) => Effect.sync(() => setTake((take) => takeStep(take, event)))),
-    )
-    return () => {
-      Effect.runFork(Fiber.interrupt(fiber))
-      setTake((take) => ({ ...take, beat: null, level: 0 }))
-    }
-  }, [mode, bpm])
+  const { take, hits } = useClickTrack({ mode, bpm, beatsPerBar: BEATS_PER_BAR, subdivision, micId: null })
 
   const toggle = (pressed: Exclude<Mode, "off">) => {
     setMode(mode === pressed ? "off" : pressed)
@@ -62,29 +60,28 @@ export function ClickTrack({ bpm, className, pwid = "click" }: { bpm: number; cl
       >
         {mode === "listen" ? `Listen ${bpm}${counter}` : "Listen"}
       </button>
-      {panel && <ListenPanel take={take} running={mode === "listen"} bpm={bpm} subdivision={subdivision} onSubdivision={setSubdivision} onClose={close} pwid={pwid} />}
+      {panel && <ListenPanel take={take} hits={hits} running={mode === "listen"} subdivision={subdivision} onSubdivision={setSubdivision} onClose={close} pwid={pwid} />}
     </div>
   )
 }
 
 function ListenPanel({
   take,
+  hits,
   running,
-  bpm,
   subdivision,
   onSubdivision,
   onClose,
   pwid,
 }: {
   take: Take
+  hits: ReadonlyArray<Hit>
   running: boolean
-  bpm: number
   subdivision: Subdivision
   onSubdivision: (subdivision: Subdivision) => void
   onClose: () => void
   pwid: string
 }) {
-  const hits = takeHits(take, bpm, subdivision)
   const last = hits.at(-1)
   // The panel is dark in both themes, because it also opens over the dark
   // stage view. So its text uses only grey shades that the light theme does
@@ -97,7 +94,7 @@ function ListenPanel({
     >
       <div className="flex items-start justify-between gap-3">
         <p data-pwid={`${pwid}-status`} aria-live="polite" className="text-zinc-200">
-          {takeStatus(take, running)}
+          {takeStatus(take, running, BEATS_PER_BAR)}
         </p>
         <button type="button" data-pwid={`${pwid}-close`} onClick={onClose} aria-label="Close" className="shrink-0 cursor-pointer px-1 text-zinc-500 hover:text-zinc-100">
           ✕
@@ -106,7 +103,7 @@ function ListenPanel({
       {running && (
         <div className="space-y-1">
           <p className="truncate text-xs text-zinc-500">{take.device === null ? "Opening the microphone…" : `Listening on ${take.device}`}</p>
-          <MicMeter peak={take.level} />
+          <MicMeter peak={take.level} parts={MIC_METER_PARTS} />
         </div>
       )}
       <div aria-live="polite" className="text-center">
