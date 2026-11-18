@@ -2,12 +2,11 @@ import { Effect } from "effect"
 import { HttpApiBuilder } from "effect/http-api"
 import { Auth, type AuthFailure, AccountError } from "../services/auth"
 import { withAuthContext } from "../db"
-import { toHttpError } from "../dbErrors"
-import { type DatabaseError, isDatabaseError } from "../databaseError"
+import type { DatabaseError } from "@danielfgray/stompbox/db"
 import { asSignedIn, ifSignedIn } from "./scope"
 import { sessionCookiePolicy } from "./session"
 import { AuthError } from "../../api/auth"
-import { Unauthorized } from "../../api/errors"
+import { BadCredentials } from "../../api/errors"
 import { GigListApi } from "../../api/contracts"
 import { CurrentSession, sessionCookie } from "../../api/session"
 
@@ -17,21 +16,21 @@ const ok = { ok: true as const }
 const toAuthError = (e: { readonly message: string }) => Effect.fail(new AuthError({ message: e.message }))
 
 /** A rejected sign-in answers 401 with the service's message. */
-const toUnauthorized = (e: { readonly message: string }) =>
-  Effect.fail(new Unauthorized({ message: e.message, reason: "invalid_credentials" }))
+const toUnauthorized = (e: { readonly message: string }) => Effect.fail(new BadCredentials({ message: e.message }))
 
 /** Each service failure answers the one contract class, with the service's message. */
 const asAuthError = <A, R>(effect: Effect.Effect<A, AuthFailure | AccountError | DatabaseError, R>) =>
-  effect.pipe(Effect.catchTags({
-  AccountError: toAuthError,
-  AccountLocked: toAuthError,
-  DuplicateAccount: toAuthError,
-  InvalidCredentials: toAuthError,
-  InvitationRefused: toAuthError,
-  RegistrationFailed: toAuthError,
-  WeakPassword: toAuthError,
-  DatabaseError: toHttpError,
-}))
+  effect.pipe(
+    Effect.catchTags({
+      AccountError: toAuthError,
+      AccountLocked: toAuthError,
+      DuplicateAccount: toAuthError,
+      InvalidCredentials: toAuthError,
+      InvitationRefused: toAuthError,
+      RegistrationFailed: toAuthError,
+      WeakPassword: toAuthError,
+    }),
+  )
 
 const asUser = asSignedIn(() => new AuthError({ message: "You must be signed in" }))
 
@@ -39,13 +38,16 @@ export const AuthApiGroupLive = HttpApiBuilder.group(GigListApi, "auth", (handle
   Effect.gen(function* () {
     const cookie = yield* sessionCookiePolicy
     const setSessionCookie = (sessionId: string) => HttpApiBuilder.securitySetCookie(sessionCookie, sessionId, cookie)
-    const clearSessionCookie = HttpApiBuilder.securitySetCookie(sessionCookie, "", { ...cookie, maxAge: "0 seconds" })
+    const clearSessionCookie = HttpApiBuilder.securitySetCookie(sessionCookie, "", {
+      ...cookie,
+      maxAge: "0 seconds",
+    })
     return handlers
       .handle("login", ({ payload }) =>
         Auth.use((auth) => auth.login(payload)).pipe(
           Effect.flatMap((result) => setSessionCookie(result.sessionId)),
           Effect.as(ok),
-          Effect.catchTags({ AccountLocked: toUnauthorized, InvalidCredentials: toUnauthorized, DatabaseError: toHttpError }),
+          Effect.catchTags({ AccountLocked: toUnauthorized, InvalidCredentials: toUnauthorized }),
         ),
       )
       .handle("register", ({ payload }) =>
@@ -56,7 +58,7 @@ export const AuthApiGroupLive = HttpApiBuilder.group(GigListApi, "auth", (handle
         ),
       )
       .handle("invitationPreview", ({ params: { invitationId }, query: { code } }) =>
-        Auth.use((auth) => auth.invitationPreview(invitationId, code)).pipe(asAuthError, withAuthContext, Effect.catchIf(isDatabaseError, toHttpError)),
+        Auth.use((auth) => auth.invitationPreview(invitationId, code)).pipe(asAuthError, withAuthContext),
       )
       .handle("joinByInvitation", ({ params: { invitationId }, payload }) =>
         Auth.use((auth) => auth.joinByInvitation({ invitationId, ...payload })).pipe(
@@ -65,7 +67,7 @@ export const AuthApiGroupLive = HttpApiBuilder.group(GigListApi, "auth", (handle
         ),
       )
       .handle("forgotPassword", ({ payload }) =>
-        Auth.use((auth) => auth.forgotPassword(payload.email)).pipe(Effect.catchTag("DatabaseError", toHttpError), Effect.as(ok)),
+        Auth.use((auth) => auth.forgotPassword(payload.email)).pipe(Effect.as(ok)),
       )
       .handle("resetPassword", ({ payload }) =>
         Auth.use((auth) => auth.resetPassword(payload)).pipe(
@@ -78,17 +80,20 @@ export const AuthApiGroupLive = HttpApiBuilder.group(GigListApi, "auth", (handle
         Effect.gen(function* () {
           const session = yield* CurrentSession
           if (session.sessionId) {
-            yield* Auth.use((auth) => auth.logout(session.sessionId)).pipe(Effect.catchTag("DatabaseError", toHttpError))
+            yield* Auth.use((auth) => auth.logout(session.sessionId))
           }
           yield* clearSessionCookie
           return ok
         }),
       )
-      .handle("me", () => Auth.use((auth) => auth.getMe()).pipe(withAuthContext, Effect.catchTag("DatabaseError", toHttpError), ifSignedIn(Effect.succeed(null))))
+      .handle("me", () => Auth.use((auth) => auth.getMe()).pipe(withAuthContext, ifSignedIn(Effect.succeed(null))))
       .handle("updateMe", ({ payload }) => Auth.use((auth) => auth.updateProfile(payload)).pipe(asAuthError, asUser))
       .handle("changePassword", ({ payload }) =>
         Auth.use((auth) =>
-          auth.changePassword({ oldPassword: payload.old_password, newPassword: payload.new_password }),
+          auth.changePassword({
+            oldPassword: payload.old_password,
+            newPassword: payload.new_password,
+          }),
         ).pipe(asAuthError, Effect.as(ok), asUser),
       )
       .handle("listEmails", () =>
@@ -127,7 +132,13 @@ export const AuthApiGroupLive = HttpApiBuilder.group(GigListApi, "auth", (handle
   }),
 )
 
-const toUserEmail = (row: { id: string; email: string; is_verified: boolean; is_primary: boolean; created_at: Date }) => ({
+const toUserEmail = (row: {
+  id: string
+  email: string
+  is_verified: boolean
+  is_primary: boolean
+  created_at: Date
+}) => ({
   id: row.id,
   email: row.email,
   is_verified: row.is_verified,

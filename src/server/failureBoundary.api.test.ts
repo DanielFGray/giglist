@@ -4,7 +4,8 @@ import { HttpRouter, HttpServer } from "effect/http"
 import { HttpApi, HttpApiBuilder, HttpApiEndpoint, HttpApiGroup } from "effect/http-api"
 import { ChartConflict } from "../api/charts"
 import { FailureBoundary } from "../api/failure-boundary"
-import { FailureBoundaryLive } from "./failureBoundary"
+import { FailureBoundaryLayer } from "@danielfgray/stompbox/http/server"
+import { toHttpError } from "./dbErrors"
 import { answerRequest, collectLogs, type LogLine } from "./test/probe"
 
 /** One endpoint that dies, one that fails with a declared error, and one that decodes a payload. */
@@ -25,15 +26,13 @@ const ProbeApi = HttpApi.make("probe")
 const ProbeHandlers = HttpApiBuilder.group(ProbeApi, "probe", (handlers) =>
   handlers
     .handle("defect", () => Effect.die(new Error('relation "secret_table" does not exist')))
-    .handle("taken", () =>
-      Effect.fail(new ChartConflict({ message: "The chart changed since you opened it" })),
-    )
+    .handle("taken", () => Effect.fail(new ChartConflict({ message: "The chart changed since you opened it" })))
     .handle("signUp", () => Effect.void),
 )
 
 const served = HttpApiBuilder.layer(ProbeApi).pipe(
   Layer.provide(ProbeHandlers),
-  Layer.provide(FailureBoundaryLive),
+  Layer.provide(FailureBoundaryLayer.make(FailureBoundary, toHttpError)),
   Layer.provide(HttpServer.layerServices),
 )
 
@@ -41,7 +40,10 @@ const probe = (method: "GET" | "POST", path: string, body?: unknown) =>
   Effect.acquireUseRelease(
     Effect.sync(() => {
       const lines: Array<LogLine> = []
-      return { lines, web: HttpRouter.toWebHandler(served.pipe(Layer.provideMerge(collectLogs(lines)))) }
+      return {
+        lines,
+        web: HttpRouter.toWebHandler(served.pipe(Layer.provideMerge(collectLogs(lines)))),
+      }
     }),
     ({ web, lines }) => answerRequest(web, lines, method, path, body),
     ({ web }) => Effect.promise(() => web.dispose()),

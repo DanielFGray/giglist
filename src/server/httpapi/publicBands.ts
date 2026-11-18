@@ -2,7 +2,6 @@ import { Effect } from "effect"
 import { HttpApiBuilder } from "effect/http-api"
 import { Bands } from "../services/bands"
 import { withAuthContext } from "../db"
-import { toHttpError } from "../dbErrors"
 import { PublicBandNotFound } from "../../api/bands"
 import { GigListApi } from "../../api/contracts"
 
@@ -15,8 +14,8 @@ export const PublicBandsApiGroupLive = HttpApiBuilder.group(GigListApi, "publicB
     Bands.use((bands) => bands.getPublicBandProfile(slug)).pipe(
       withAuthContext,
       Effect.catchTags({
-        DatabaseError: toHttpError,
-        PublicBandMissing: (e) => Effect.fail(new PublicBandNotFound({ message: "That band has no public page", slug: e.slug })),
+        PublicBandMissing: (e) =>
+          Effect.fail(new PublicBandNotFound({ message: "That band has no public page", slug: e.slug })),
       }),
     ),
   ),

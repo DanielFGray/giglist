@@ -4,8 +4,8 @@ import * as PgKysely from "./effectKysely"
 import { sql } from "kysely"
 import type { DB } from "../../generated/DB.js"
 import { CurrentSession } from "../api/session"
-import { ServiceUnavailable } from "../api/errors"
-import type { DatabaseError } from "./databaseError"
+import { ServiceUnavailable } from "@danielfgray/stompbox/http"
+import type { DatabaseError } from "@danielfgray/stompbox/db"
 
 export type KyselyDB = PgKysely.EffectKysely<DB>
 
@@ -70,7 +70,7 @@ export class RequestDatabase extends Context.Service<RequestDatabase, KyselyDB>(
  * connection.
  *
  * A failed database call stays a DatabaseError in the error channel. The
- * endpoint answers it through toHttpError (dbErrors.ts), except a refused
+ * failure boundary answers it through dbErrors.ts, except a refused
  * switch to the visitor role, which is a fault in the server's settings and
  * answers 503 (refusedRoleSwitch).
  */
@@ -107,7 +107,7 @@ export const withAuthContext = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
  * A refused switch to the visitor role is a fault in the server's settings:
  * `DATABASE_VISITOR` names no role (22023), or a role the authenticator is not
  * a member of (42501). It answers 503 misconfigured and logs at Error with the
- * role name. Any other failure passes on to toHttpError, whose table would read
+ * role name. Any other failure passes on to the boundary, whose table would read
  * 42501 as a row that row-level security refused (403).
  */
 const refusedRoleSwitch = (role: string) =>

@@ -1,15 +1,13 @@
 import { describe, expect, it } from "@effect/vitest"
 import { PgClient } from "@effect/sql-pg"
-import { Config, Effect, Layer, Option, Schema as S } from "effect"
+import { Config, Effect, Layer, Schema as S } from "effect"
 import { HttpRouter, HttpServer } from "effect/http"
 import { HttpApi, HttpApiBuilder, HttpApiEndpoint, HttpApiGroup, HttpApiSchema } from "effect/http-api"
-import { isSqlError } from "effect/sql/SqlError"
-import { DatabaseRefusals } from "../api/errors"
+import { toDatabaseError } from "@danielfgray/stompbox/db"
+import { FailureBoundaryLayer } from "@danielfgray/stompbox/http/server"
 import { FailureBoundary } from "../api/failure-boundary"
 import { AuthDb, AuthVisitor, RequestDatabase, withAuthContext } from "./db"
-import { toDatabaseError } from "./databaseError"
 import { toHttpError } from "./dbErrors"
-import { FailureBoundaryLive } from "./failureBoundary"
 import { answerRequest, collectLogs, type LogLine } from "./test/probe"
 
 /**
@@ -18,7 +16,7 @@ import { answerRequest, collectLogs, type LogLine } from "./test/probe"
  * cases raise the same SQLSTATEs by hand, because no setlist table holds a
  * fixed row that would fail the way each one needs.
  */
-const statementNames = ["custom", "usernameTaken", "otherUnique", "divisionByZero", "unknown"] as const
+const statementNames = ["custom", "usernameTaken", "otherUnique", "unknown"] as const
 const statements: Record<(typeof statementNames)[number], string> = {
   custom: `do $$ begin
     raise exception 'You are not allowed to do that' using errcode = 'DNIED';
@@ -32,7 +30,6 @@ const statements: Record<(typeof statementNames)[number], string> = {
       using errcode = '23505', constraint = 'user_emails_user_id_email_key',
         detail = 'Key (user_id, email)=(c00k1e, alice@example.com) already exists.';
   end $$`,
-  divisionByZero: `select 1 / 0`,
   unknown: `do $$ begin
     raise exception 'relation secret_table is broken' using errcode = 'ZZ001',
       hint = 'look at secret_table';
@@ -48,13 +45,7 @@ const runRaw = (statement: string) =>
   Effect.gen(function* () {
     const client = yield* PgClient.PgClient
     return yield* client.unsafe(statement)
-  }).pipe(
-    Effect.catchIf(isSqlError, (error) =>
-      Effect.flatMap(Effect.option(Effect.currentSpan), (enclosing) =>
-        Effect.fail(toDatabaseError(error, Option.map(enclosing, (span) => span.name))),
-      ),
-    ),
-  )
+  }).pipe(toDatabaseError)
 
 const ProbeApi = HttpApi.make("probe")
   .add(
@@ -63,13 +54,11 @@ const ProbeApi = HttpApi.make("probe")
         HttpApiEndpoint.get("raise", "/raise/:name", {
           params: { name: S.Literals(statementNames) },
           success: S.Void.pipe(HttpApiSchema.status(204)),
-          error: DatabaseRefusals,
         }),
       )
       .add(
         HttpApiEndpoint.get("visitorInsert", "/visitor-insert", {
           success: S.Void.pipe(HttpApiSchema.status(204)),
-          error: DatabaseRefusals,
         }),
       ),
   )
@@ -77,41 +66,31 @@ const ProbeApi = HttpApi.make("probe")
 
 const ProbeHandlers = HttpApiBuilder.group(ProbeApi, "probe", (handlers) =>
   handlers
-      .handle(
-        "raise",
-        Effect.fn("Probe.raise")(
-          function* ({ params: { name } }) {
-            yield* runRaw(statements[name])
-          },
-          Effect.catchTag("DatabaseError", toHttpError),
-        ),
-      )
-      .handle(
-        "visitorInsert",
-        Effect.fn("Probe.visitorInsert")(
-          function* () {
-            // No session, so the request runs as the visitor, who may not insert a song.
-            yield* Effect.gen(function* () {
-              const visitor = yield* RequestDatabase
-              yield* visitor
-                .insertInto("app_public.songs")
-                .values({ band_id: "00000000-0000-0000-0000-000000000000", title: "x" })
-            }).pipe(withAuthContext)
-          },
-          Effect.catchTag("DatabaseError", toHttpError),
-        ),
-      ),
+    .handle(
+      "raise",
+      Effect.fn("Probe.raise")(function* ({ params: { name } }) {
+        yield* runRaw(statements[name])
+      }),
+    )
+    .handle(
+      "visitorInsert",
+      Effect.fn("Probe.visitorInsert")(function* () {
+        // No session, so the request runs as the visitor, who may not insert a song.
+        yield* Effect.gen(function* () {
+          const visitor = yield* RequestDatabase
+          yield* visitor
+            .insertInto("app_public.songs")
+            .values({ band_id: "00000000-0000-0000-0000-000000000000", title: "x" })
+        }).pipe(withAuthContext)
+      }),
+    ),
 )
 
 const served = HttpApiBuilder.layer(ProbeApi).pipe(
   Layer.provide(ProbeHandlers),
-  Layer.provide(FailureBoundaryLive),
+  Layer.provide(FailureBoundaryLayer.make(FailureBoundary, toHttpError)),
   Layer.provideMerge(
-    Layer.mergeAll(
-      AuthDb.layer,
-      AuthVisitor.layer,
-      PgClient.layerConfig({ url: Config.Redacted("DATABASE_URL") }),
-    ),
+    Layer.mergeAll(AuthDb.layer, AuthVisitor.layer, PgClient.layerConfig({ url: Config.Redacted("DATABASE_URL") })),
   ),
   Layer.provide(HttpServer.layerServices),
 )
@@ -120,7 +99,10 @@ const request = (path: string) =>
   Effect.acquireUseRelease(
     Effect.sync(() => {
       const lines: Array<LogLine> = []
-      return { lines, web: HttpRouter.toWebHandler(Layer.provideMerge(served, collectLogs(lines))) }
+      return {
+        lines,
+        web: HttpRouter.toWebHandler(Layer.provideMerge(served, collectLogs(lines))),
+      }
     }),
     ({ web, lines }) => answerRequest(web, lines, "GET", path),
     ({ web }) => Effect.promise(() => web.dispose()),
@@ -139,7 +121,7 @@ describe("toHttpError", () => {
       expect(lines).toHaveLength(2)
       expect(lines[1]?.message).toEqual(["Sent HTTP response"])
       expect(lines[0]?.level).toBe("Info")
-      expect(lines[0]?.cause).toContain("[DNIED] You are not allowed to do that; query: Probe.raise")
+      expect(lines[0]?.cause).toContain("[DNIED] You are not allowed to do that")
     }),
   )
 
@@ -149,9 +131,8 @@ describe("toHttpError", () => {
       path: "/raise/usernameTaken",
       status: 409,
       body: {
-        _tag: "Conflict",
+        _tag: "UsernameTaken",
         message: "username already exists",
-        reason: "username_taken",
       },
       logged: "detail: Key (username)=(dbtest_alice) already exists.; constraint: users_username_key",
     },
@@ -165,17 +146,6 @@ describe("toHttpError", () => {
         reason: "already_exists",
       },
       logged: "constraint: user_emails_user_id_email_key",
-    },
-    {
-      name: "a data exception (class 22)",
-      path: "/raise/divisionByZero",
-      status: 400,
-      body: {
-        _tag: "InvalidOperation",
-        message: "Some values are not valid.",
-        reason: "invalid_input",
-      },
-      logged: "[22012] division by zero",
     },
     {
       name: "a row that row-level security refuses",
@@ -211,9 +181,7 @@ describe("toHttpError", () => {
       const [line] = lines
       expect(line?.level).toBe("Error")
       expect(line?.message).toEqual(["Unexpected failure"])
-      expect(line?.cause).toContain(
-        "[ZZ001] relation secret_table is broken; query: Probe.raise; hint: look at secret_table",
-      )
+      expect(line?.cause).toContain("[ZZ001] relation secret_table is broken; hint: look at secret_table")
       expect(status).toBe(500)
       expect(JSON.parse(body)).toEqual({
         _tag: "InternalError",

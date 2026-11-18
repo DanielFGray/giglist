@@ -1,6 +1,6 @@
 import { Schema as S } from "effect"
 import { HttpApiEndpoint, HttpApiGroup, HttpApiSchema } from "effect/http-api"
-import { Unauthorized } from "./errors"
+import { BadCredentials } from "./errors"
 import { RateLimitMiddleware } from "./rate-limit"
 import { SessionMiddleware } from "./session"
 
@@ -38,9 +38,7 @@ const Username = S.String.pipe(
 /** Matches the check on `app_public.user_emails.email`. */
 export const Email = S.String.check(S.isPattern(/^[^@]+@[^@]+\.[^@]+$/, { message: "Enter an email address" }))
 
-const NewPassword = S.RedactedFromValue(
-  S.String.check(S.isMinLength(8, { message: "Use at least 8 characters" })),
-)
+const NewPassword = S.RedactedFromValue(S.String.check(S.isMinLength(8, { message: "Use at least 8 characters" })))
 
 /** What a new account's owner chooses. Joining from an emailed invitation takes only these: the address comes from the invitation. */
 export const NewAccount = S.Struct({
@@ -51,7 +49,11 @@ export const NewAccount = S.Struct({
 export const RegisterPayload = S.Struct({ ...NewAccount.fields, email: Email })
 
 /** An emailed invitation's link, shown before sign-in. `has_account`: the address already has an account, so its owner signs in instead. */
-export const InvitationPreview = S.Struct({ band_name: S.String, email: S.String, has_account: S.Boolean })
+export const InvitationPreview = S.Struct({
+  band_name: S.String,
+  email: S.String,
+  has_account: S.Boolean,
+})
 
 export const JoinByInvitationPayload = S.Struct({ ...NewAccount.fields, code: S.String })
 
@@ -66,9 +68,7 @@ export const ResetPasswordPayload = S.Struct({
 })
 
 /** Matches `app_public.url`, or null when the user clears the field. */
-const AvatarUrl = S.NullOr(
-  S.String.pipe(S.check(S.isPattern(/^https?:\/\/\S+$/))),
-)
+const AvatarUrl = S.NullOr(S.String.pipe(S.check(S.isPattern(/^https?:\/\/\S+$/))))
 
 export const AuthUser = S.Struct({
   id: S.String.check(S.isUUID()),
@@ -129,7 +129,11 @@ export const ConfirmAccountDeletionPayload = S.Struct({
 
 export const AuthSuccess = S.Struct({ ok: S.Literals([true]) })
 
-export class AuthError extends S.TaggedError<AuthError, { readonly brand: unique symbol }>()("AuthError", { message: S.String }, { httpApiStatus: 400 }) {}
+export class AuthError extends S.TaggedError<AuthError, { readonly brand: unique symbol }>()(
+  "AuthError",
+  { message: S.String },
+  { httpApiStatus: 400 },
+) {}
 
 // --- Auth API group ---
 // NOTE: .prefix() must come AFTER .add() — prefix only applies to existing endpoints
@@ -139,7 +143,7 @@ export const AuthApiGroup = HttpApiGroup.make("auth")
     HttpApiEndpoint.post("login", "/login", {
       payload: LoginPayload,
       success: AuthSuccess,
-      error: Unauthorized,
+      error: BadCredentials,
     }).middleware(RateLimitMiddleware),
   )
   .add(
@@ -178,16 +182,8 @@ export const AuthApiGroup = HttpApiGroup.make("auth")
       error: AuthError,
     }).middleware(RateLimitMiddleware),
   )
-  .add(
-    HttpApiEndpoint.post("logout", "/logout", { success: AuthSuccess }).middleware(
-      SessionMiddleware,
-    ),
-  )
-  .add(
-    HttpApiEndpoint.get("me", "/me", { success: S.NullOr(AuthUser) }).middleware(
-      SessionMiddleware,
-    ),
-  )
+  .add(HttpApiEndpoint.post("logout", "/logout", { success: AuthSuccess }).middleware(SessionMiddleware))
+  .add(HttpApiEndpoint.get("me", "/me", { success: S.NullOr(AuthUser) }).middleware(SessionMiddleware))
   .add(
     HttpApiEndpoint.put("updateMe", "/me", {
       payload: UpdateProfilePayload,
@@ -200,7 +196,9 @@ export const AuthApiGroup = HttpApiGroup.make("auth")
       payload: ChangePasswordPayload,
       success: AuthSuccess,
       error: AuthError,
-    }).middleware(RateLimitMiddleware).middleware(SessionMiddleware),
+    })
+      .middleware(RateLimitMiddleware)
+      .middleware(SessionMiddleware),
   )
   .add(
     HttpApiEndpoint.get("listEmails", "/emails", {
@@ -213,7 +211,9 @@ export const AuthApiGroup = HttpApiGroup.make("auth")
       payload: AddEmailPayload,
       success: UserEmail.pipe(HttpApiSchema.status(201)),
       error: AuthError,
-    }).middleware(RateLimitMiddleware).middleware(SessionMiddleware),
+    })
+      .middleware(RateLimitMiddleware)
+      .middleware(SessionMiddleware),
   )
   .add(
     HttpApiEndpoint.post("verifyEmail", "/emails/verify", {
@@ -241,13 +241,17 @@ export const AuthApiGroup = HttpApiGroup.make("auth")
       params: { id: S.String.check(S.isUUID()) },
       success: AuthSuccess,
       error: AuthError,
-    }).middleware(RateLimitMiddleware).middleware(SessionMiddleware),
+    })
+      .middleware(RateLimitMiddleware)
+      .middleware(SessionMiddleware),
   )
   .add(
     HttpApiEndpoint.post("requestAccountDeletion", "/account/delete-request", {
       success: AuthSuccess,
       error: AuthError,
-    }).middleware(RateLimitMiddleware).middleware(SessionMiddleware),
+    })
+      .middleware(RateLimitMiddleware)
+      .middleware(SessionMiddleware),
   )
   .add(
     HttpApiEndpoint.post("confirmAccountDeletion", "/account/delete", {

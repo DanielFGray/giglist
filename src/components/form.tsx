@@ -1,30 +1,21 @@
 import type { ReactNode } from "react"
-import { InternalError } from "~/api/errors"
+import { errorMessage as apiErrorMessage } from "@danielfgray/stompbox/http/client"
 
 /**
- * The one line that shows a failure to the user. A Standard Schema validator
- * reports an object with a `message`; a plain function validator reports a
- * string. An InternalError also carries the trace id the server logged the
- * cause under, so the line includes it for the user to quote in a report.
+ * The one line that shows a failure to the user. A plain function validator
+ * reports a string, which is shown as it is; everything else (an API error, a
+ * Standard Schema issue with a `message`, a transport failure) goes to
+ * stompbox, which adds the trace id of an InternalError.
  */
 export function errorMessage(error: unknown): string {
-  if (typeof error === "string") return error
-  if (error instanceof InternalError) {
-    return `${error.message} (reference: ${error.traceId})`
-  }
-  if (error !== null && typeof error === "object" && "message" in error) {
-    return String(error.message)
-  }
-  return String(error)
+  return typeof error === "string" ? error : apiErrorMessage(error)
 }
 
 type FieldLike = { state: { meta: { errors: ReadonlyArray<unknown> } } }
 
 /** Every problem on a field, joined for display; undefined when it is valid. */
 export function fieldError(field: FieldLike): string | undefined {
-  const messages = field.state.meta.errors
-    .filter((error) => error !== undefined && error !== null)
-    .map(errorMessage)
+  const messages = field.state.meta.errors.filter((error) => error !== undefined && error !== null).map(errorMessage)
   return messages.length > 0 ? messages.join(", ") : undefined
 }
 

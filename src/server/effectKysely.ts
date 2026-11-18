@@ -8,10 +8,10 @@
  * `SqlClient`. A `Proxy` supplies the per-query execution effect, which is why
  * plugin tracking and `withTransaction` survive the builder chain.
  */
-import { Effect, Effectable, Option } from "effect";
-import * as SqlClient from "effect/sql/SqlClient";
-import { isSqlError, SqlError, UnknownError } from "effect/sql/SqlError";
-import { type DatabaseError, toDatabaseError } from "./databaseError";
+import { toDatabaseError, type DatabaseError } from "@danielfgray/stompbox/db"
+import { Effect, Effectable } from "effect"
+import * as SqlClient from "effect/sql/SqlClient"
+import { SqlError, UnknownError } from "effect/sql/SqlError"
 import {
   AlterTableColumnAlteringBuilder,
   CreateIndexBuilder,
@@ -33,11 +33,11 @@ import {
   PostgresQueryCompiler,
   UpdateQueryBuilder,
   WheneableMergeQueryBuilder,
-} from "kysely";
-import type { Compilable, KyselyConfig, KyselyPlugin, QueryResult, Simplify } from "kysely";
+} from "kysely"
+import type { Compilable, KyselyConfig, KyselyPlugin, QueryResult, Simplify } from "kysely"
 
 /** Where the Proxy installs a builder's execution effect. */
-const Commit = Symbol.for("giglist/effectKysely/commit");
+const Commit = Symbol.for("giglist/effectKysely/commit")
 
 /**
  * The Effect protocol assigned to Kysely builder prototypes. Evaluating a
@@ -49,9 +49,9 @@ const Commit = Symbol.for("giglist/effectKysely/commit");
 const BuilderProto = Effectable.Prototype<Effect.Effect<ReadonlyArray<unknown>, DatabaseError>>({
   label: "KyselyQuery",
   evaluate(this: any) {
-    return this[Commit]();
+    return this[Commit]()
   },
-});
+})
 
 /**
  * The Effect protocol's own members (notably the string-keyed `evaluate`).
@@ -61,7 +61,7 @@ const BuilderProto = Effectable.Prototype<Effect.Effect<ReadonlyArray<unknown>, 
 const ProtoKeys = new Set<string | symbol>([
   ...Object.getOwnPropertyNames(BuilderProto),
   ...Object.getOwnPropertySymbols(BuilderProto),
-]);
+])
 
 /** @internal */
 export const patch = (prototype: object) => {
@@ -75,25 +75,25 @@ export const patch = (prototype: object) => {
       Object.defineProperty(prototype, key, descriptor)
     }
   }
-};
+}
 
 // Builders that never pass through `selectFrom` still need the protocol, so
 // their prototypes are patched once at module load.
-patch(AlterTableColumnAlteringBuilder.prototype);
-patch(CreateIndexBuilder.prototype);
-patch(CreateSchemaBuilder.prototype);
-patch(CreateTableBuilder.prototype);
-patch(CreateTypeBuilder.prototype);
-patch(CreateViewBuilder.prototype);
-patch(DropIndexBuilder.prototype);
-patch(DropSchemaBuilder.prototype);
-patch(DropTableBuilder.prototype);
-patch(DropTypeBuilder.prototype);
-patch(DropViewBuilder.prototype);
-patch(InsertQueryBuilder.prototype);
-patch(UpdateQueryBuilder.prototype);
-patch(DeleteQueryBuilder.prototype);
-patch(WheneableMergeQueryBuilder.prototype);
+patch(AlterTableColumnAlteringBuilder.prototype)
+patch(CreateIndexBuilder.prototype)
+patch(CreateSchemaBuilder.prototype)
+patch(CreateTableBuilder.prototype)
+patch(CreateTypeBuilder.prototype)
+patch(CreateViewBuilder.prototype)
+patch(DropIndexBuilder.prototype)
+patch(DropSchemaBuilder.prototype)
+patch(DropTableBuilder.prototype)
+patch(DropTypeBuilder.prototype)
+patch(DropViewBuilder.prototype)
+patch(InsertQueryBuilder.prototype)
+patch(UpdateQueryBuilder.prototype)
+patch(DeleteQueryBuilder.prototype)
+patch(WheneableMergeQueryBuilder.prototype)
 
 function effectifyWith(
   obj: unknown,
@@ -102,87 +102,75 @@ function effectifyWith(
   plugins: ReadonlyArray<KyselyPlugin> = [],
 ): any {
   if (typeof obj !== "object" || obj === null) {
-    return obj;
+    return obj
   }
   return new Proxy(obj, {
     get(target: any, prop: string | symbol, receiver) {
       // Proxy invariants require returning fixed properties unchanged.
-      const desc = Object.getOwnPropertyDescriptor(target, prop);
+      const desc = Object.getOwnPropertyDescriptor(target, prop)
       if (desc && !desc.configurable && !desc.writable) {
-        return target[prop];
+        return target[prop]
       }
-      const prototype = Object.getPrototypeOf(target);
+      const prototype = Object.getPrototypeOf(target)
       if (Effect.TypeId in prototype && prop === Commit) {
-        return commit.bind(target, plugins);
+        return commit.bind(target, plugins)
       }
       // Effect protocol members (`evaluate`, `pipe`, continuations) stay as-is.
       if (ProtoKeys.has(prop)) {
-        return target[prop];
+        return target[prop]
       }
       // The remaining symbol keys belong to the runtime; leave them untouched.
       if (typeof prop === "symbol") {
-        return target[prop];
+        return target[prop]
       }
       if (typeof target[prop] === "function") {
         if (whitelist.includes(prop)) {
-          return target[prop].bind(target);
+          return target[prop].bind(target)
         }
         return (...args: Array<unknown>) => {
           // Callback helpers need the proxy to retain plugin tracking.
           if (prop === "$call" || (prop === "$if" && args[0])) {
-            return target[prop].call(receiver, ...args);
+            return target[prop].call(receiver, ...args)
           }
           return effectifyWith(
             target[prop].call(target, ...args),
             commit,
             whitelist,
-            prop === "withPlugin"
-              ? [...plugins, args[0] as KyselyPlugin]
-              : prop === "withoutPlugins"
-                ? []
-                : plugins,
-          );
-        };
+            prop === "withPlugin" ? [...plugins, args[0] as KyselyPlugin] : prop === "withoutPlugins" ? [] : plugins,
+          )
+        }
       }
-      return effectifyWith(target[prop], commit, whitelist, plugins);
+      return effectifyWith(target[prop], commit, whitelist, plugins)
     },
-  });
+  })
 }
 
-/**
- * Runs one compiled query in a `db.query` span. The enclosing span (the service
- * method that built the query) is read before the span opens, so a refused
- * query's log line names the method that ran it.
- */
-const runQuery = <A>(execute: Effect.Effect<A, SqlError>) =>
-  Effect.flatMap(Effect.option(Effect.currentSpan), (enclosing) =>
-    execute.pipe(
-      Effect.mapError((error) => toDatabaseError(error, Option.map(enclosing, (span) => span.name))),
-      Effect.withSpan("db.query"),
-    ),
-  );
+/** Runs one compiled query in a `db.query` span; a failed statement becomes a `DatabaseError`. */
+const runQuery = <A>(execute: Effect.Effect<A, SqlError>) => execute.pipe(toDatabaseError, Effect.withSpan("db.query"))
 
 const makeSqlCommit = (client: SqlClient.SqlClient) => {
   return function (this: Compilable, plugins: ReadonlyArray<KyselyPlugin>) {
-    const { parameters, queryId, sql } = this.compile();
-    const execute = client.unsafe<Record<string, unknown>>(sql, parameters);
-    if (plugins.length === 0) return runQuery(execute);
-    return runQuery(Effect.flatMap(execute, (rows) =>
-      Effect.map(
-        Effect.reduce(
-          plugins,
-          () => ({ rows: Array.from(rows) }) as QueryResult<Record<string, unknown>>,
-          (result, plugin) =>
-            Effect.tryPromise({
-              try: () => plugin.transformResult({ queryId, result }),
-              catch: (cause) => new SqlError({ reason: new UnknownError({ cause }) }),
-            }),
+    const { parameters, queryId, sql } = this.compile()
+    const execute = client.unsafe<Record<string, unknown>>(sql, parameters)
+    if (plugins.length === 0) return runQuery(execute)
+    return runQuery(
+      Effect.flatMap(execute, (rows) =>
+        Effect.map(
+          Effect.reduce(
+            plugins,
+            () => ({ rows: Array.from(rows) }) as QueryResult<Record<string, unknown>>,
+            (result, plugin) =>
+              Effect.tryPromise({
+                try: () => plugin.transformResult({ queryId, result }),
+                catch: (cause) => new SqlError({ reason: new UnknownError({ cause }) }),
+              }),
+          ),
+          (result) => result.rows,
         ),
-        (result) => result.rows,
       ),
-    ));
-  };
-};
+    )
+  }
+}
 
 /** @internal */
 const effectifyWithSql = <T>(
@@ -190,7 +178,7 @@ const effectifyWithSql = <T>(
   client: SqlClient.SqlClient,
   whitelist: Array<string> = [],
   plugins: ReadonlyArray<KyselyPlugin> = [],
-): T => effectifyWith(obj, makeSqlCommit(client), whitelist, plugins);
+): T => effectifyWith(obj, makeSqlCommit(client), whitelist, plugins)
 
 /**
  * Create a Kysely instance whose builders are Effects, executed through the
@@ -198,25 +186,19 @@ const effectifyWithSql = <T>(
  */
 const makeWithSql = <DB>(config: KyselyConfig) =>
   Effect.gen(function* () {
-    const client = yield* SqlClient.SqlClient;
+    const client = yield* SqlClient.SqlClient
 
-    const db = new Kysely<DB>(config) as unknown as EffectKysely<DB>;
-    (db as any).withTransaction = <R, E, A>(self: Effect.Effect<A, E, R>) =>
-      client.withTransaction(self).pipe(
-        Effect.catchIf(isSqlError, (error) =>
-          Effect.flatMap(Effect.option(Effect.currentSpan), (enclosing) =>
-            Effect.fail(toDatabaseError(error, Option.map(enclosing, (span) => span.name))),
-          ),
-        ),
-      );
+    const db = new Kysely<DB>(config) as unknown as EffectKysely<DB>
+    ;(db as any).withTransaction = <R, E, A>(self: Effect.Effect<A, E, R>) =>
+      client.withTransaction(self).pipe(toDatabaseError)
 
     // SelectQueryBuilder is not exported from "kysely", so its prototype is
     // patched from an instance.
-    const selectPrototype = Object.getPrototypeOf(db.selectFrom("" as any));
-    patch(selectPrototype);
+    const selectPrototype = Object.getPrototypeOf(db.selectFrom("" as any))
+    patch(selectPrototype)
 
-    return effectifyWithSql(db, client, ["withTransaction", "compile"], config.plugins);
-  });
+    return effectifyWithSql(db, client, ["withTransaction", "compile"], config.plugins)
+  })
 
 /**
  * The PostgreSQL flavour: a dummy-driver dialect paired with the `SqlClient`
@@ -231,13 +213,13 @@ export const makePg = <DB>(config?: Omit<KyselyConfig, "dialect">) =>
       createIntrospector: (db) => new PostgresIntrospector(db),
       createQueryCompiler: () => new PostgresQueryCompiler(),
     },
-  });
+  })
 
 /**
  * A Kysely instance whose query builders evaluate as Effects.
  */
 export interface EffectKysely<DB> extends Omit<Kysely<DB>, "transaction"> {
-  withTransaction: <R, E, A>(self: Effect.Effect<A, E, R>) => Effect.Effect<A, E | DatabaseError, R>;
+  withTransaction: <R, E, A>(self: Effect.Effect<A, E, R>) => Effect.Effect<A, E | DatabaseError, R>
 }
 
 declare module "kysely" {
@@ -256,8 +238,5 @@ declare module "kysely" {
   interface InsertQueryBuilder<DB, TB, O> extends Effect.Effect<Array<Simplify<O>>, DatabaseError> {}
   interface UpdateQueryBuilder<DB, UT, TB, O> extends Effect.Effect<Array<Simplify<O>>, DatabaseError> {}
   interface DeleteQueryBuilder<DB, TB, O> extends Effect.Effect<Array<Simplify<O>>, DatabaseError> {}
-  interface WheneableMergeQueryBuilder<DB, TT, ST, O> extends Effect.Effect<
-    Array<Simplify<O>>,
-    DatabaseError
-  > {}
+  interface WheneableMergeQueryBuilder<DB, TT, ST, O> extends Effect.Effect<Array<Simplify<O>>, DatabaseError> {}
 }
