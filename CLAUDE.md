@@ -15,7 +15,10 @@ The backend follows ~/build/effect-web-template. Before you add or change a
 backend pattern (config, HTTP server, database access, errors, sessions, rate
 limits, Valkey, realtime, worker, tests), read how the template does it and do
 the same. Security code and auth SQL will come from `@danielfgray/stompbox`
-(~/build/stompbox); this app does not depend on it yet.
+(~/build/stompbox). The app depends on stompbox (v0.2.0) for HTTP failure
+handling and database errors: the generic error classes, the failure boundary,
+`DatabaseError` and `toDatabaseError`, `onSqlState` and `errorMessage`. The
+app's own refusals are tagged classes in `src/api/errors.ts`.
 
 When the template has no pattern for what you need, stop and ask the user
 which way to go: prove the pattern in this app and then port it to the

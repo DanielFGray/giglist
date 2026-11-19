@@ -2,8 +2,7 @@ import { Effect } from "effect"
 import { HttpApiBuilder } from "effect/http-api"
 import { Bands, BandRefused } from "../services/bands"
 import { withAuthContext } from "../db"
-import { toHttpError } from "../dbErrors"
-import { type DatabaseError, isDatabaseError } from "../databaseError"
+import type { DatabaseError } from "@danielfgray/stompbox/db"
 import { asSignedIn, ifSignedIn } from "./scope"
 import { BandError } from "../../api/bands"
 import { GigListApi } from "../../api/contracts"
@@ -27,12 +26,15 @@ const asMember = asSignedIn(() => new BandError({ message: "You must be signed i
  * role's policies cannot name a user without a session id.
  */
 const asMemberOrNone = <A, E, R>(effect: Effect.Effect<ReadonlyArray<A>, E, R>) =>
-  effect.pipe(withAuthContext, Effect.catchIf(isDatabaseError, toHttpError), ifSignedIn(Effect.succeed([])))
+  effect.pipe(withAuthContext, ifSignedIn(Effect.succeed([])))
 
 export const BandsApiGroupLive = HttpApiBuilder.group(GigListApi, "myBands", (handlers) =>
   handlers
     .handle("listBands", () =>
-      Bands.use((bands) => bands.getUserBands()).pipe(Effect.map((rows) => rows.map(toBandInfo)), asMemberOrNone),
+      Bands.use((bands) => bands.getUserBands()).pipe(
+        Effect.map((rows) => rows.map(toBandInfo)),
+        asMemberOrNone,
+      ),
     )
     .handle("listInvitations", () =>
       Bands.use((bands) => bands.listInvitations()).pipe(

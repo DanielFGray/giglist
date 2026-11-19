@@ -1,6 +1,6 @@
 import { Schema as S } from "effect"
 import { describe, expect, test } from "vitest"
-import { InternalError } from "~/api/errors"
+import { InternalError } from "@danielfgray/stompbox/http"
 import { errorMessage } from "./form"
 
 describe("errorMessage", () => {
@@ -29,8 +29,8 @@ describe("errorMessage", () => {
     expect(errorMessage(decoded)).toBe("Something went wrong (reference: abc123)")
   })
 
-  test("reads a non-error value as text", () => {
-    expect(errorMessage(42)).toBe("42")
-    expect(errorMessage(null)).toBe("null")
+  test("shows fixed text for a value that is not an error with a message", () => {
+    expect(errorMessage(42)).toBe("The request could not be completed. Try again.")
+    expect(errorMessage(null)).toBe("The request could not be completed. Try again.")
   })
 })

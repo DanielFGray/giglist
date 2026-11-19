@@ -33,9 +33,9 @@ import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "n
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { parseArgs } from "node:util"
-import { Listener } from "../src/audio/click/listener"
-import type { Placement } from "../src/audio/click/placement"
-import { noise } from "../src/audio/click/synth"
+import { Listener } from "gigbag.js/click/listener"
+import type { Placement } from "gigbag.js/click/placement"
+import { noise } from "gigbag.js/click/synth"
 
 const { positionals, values } = parseArgs({
   allowPositionals: true,

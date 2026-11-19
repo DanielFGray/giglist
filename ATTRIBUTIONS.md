@@ -27,7 +27,7 @@ The build writes the license text of every npm package in the client bundle to `
 
 ## Research
 
-The click's listener (`src/audio/click/listener.ts`) follows four onset papers:
+The click's listener (`gigbag.js/click/listener`) follows four onset papers:
 
 - **Böck, S. and Widmer, G.** (2013). "Maximum Filter Vibrato Suppression for Onset Detection." Proc. 16th DAFx, Maynooth, 55–61. SuperFlux: the detection stage's flux against a maximum-filtered earlier frame. <https://www.dafx.de/paper-archive/2013/papers/09.dafx2013_submission_12.pdf>. Reference implementation: <https://github.com/CPJKU/SuperFlux>
 - **Glover, J., Lazzarini, V. and Timoney, J.** (2011). "Real-time detection of musical onsets with linear prediction and sinusoidal modeling." *EURASIP Journal on Advances in Signal Processing* 2011:68. Linear-prediction error as the onset signal, used here to place each note. <https://doi.org/10.1186/1687-6180-2011-68>

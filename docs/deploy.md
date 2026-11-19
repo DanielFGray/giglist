@@ -16,20 +16,23 @@ Live setlist events stay in one API process's memory (`services/liveHub.ts`), so
 
 ## Release the API
 
-From this repository, with the commit to release at `HEAD`:
+A push to `main` on `cynic` is the release. From a clean checkout of `main` (a git
+worktree works; it needs this checkout's `.env` and an installed `node_modules`):
 
 ```sh
 ops login            # once every 2 hours
 ops secret check     # fails when a secret the cartridge names is unset
-ops release          # builds HEAD, pushes the image, shows the plan, deploys
+ops promote develop  # merges develop, commits the current migration, runs scripts/verify,
+                     # builds the image and signs off the tree; prints the push command
+git push cynic main  # the push deploys the signed-off tree
 ```
 
-`ops release` builds from the committed `HEAD`, not the working tree. It pins the
-image digest into a copy of `cartridge.json` and records the deployment on the control
-host; `ops deployment list giglist` lists them and `ops rollback giglist <n>` deploys one
-again. Configuration is in `cartridge.json`: plain values under `environment`, and
-database, Valkey and OpenBao secrets under `secrets`. Set a new OpenBao key with
-`ops secret set <key>`.
+Then fast-forward `develop` to `main`, so the committed migration and the emptied
+`migrations/current` reach it: `git merge --ff-only main` on `develop`. The dev database
+already records the migration as committed.
+
+Configuration is in `cartridge.json`: plain values under `environment`, and database,
+Valkey and OpenBao secrets under `secrets`. Set a new OpenBao key with `ops secret set <key>`.
 
 ## Database migrations
 
@@ -52,16 +55,26 @@ drop databases, roles and schemas.
 
 A page release is a folder under `/srv/www/giglist.dfg.rocks/` on atheist. It is never
 changed after it is written. The router `giglist-dfg-rocks` in
-`~/build/homelab-site/routes/sites.toml` names the live folder in `X-Site-Release`:
+`~/build/homelab-site/routes/sites.toml` names the live folder in `X-Site-Release`.
 
-1. Build `dist/` with the `Containerfile`, whose image holds only `dist/`. Copy it to
-   `/srv/www/giglist.dfg.rocks/<date>-<short commit>/` on atheist.
-2. Set `X-Site-Release` to that folder in `routes/sites.toml`, and commit the site repository.
-3. Run `ops rebuild atheist`.
+Release the pages from the same commit as the API:
+
+1. `bash scripts/releasePages.sh [commit]` (default `HEAD`). It builds `dist/` in a temporary
+   worktree and writes `__spa-fallback.html`, the route's `X-Site-Fallback`, as a copy of
+   `index.html`. It refuses when the CSP `script-src` in `sites.toml` does not name the hash of
+   the build's inline script. It copies the build to
+   `/srv/www/giglist.dfg.rocks/<date>-<short commit>/`, or reuses a folder for that commit
+   only when it is identical to the build. It then sets `X-Site-Release` and commits
+   `homelab-site` with a pathspec.
+2. Run `ops rebuild atheist` (needs sudo).
+3. Run `bash scripts/checkProduction.sh https://giglist.dfg.rocks`.
 
 To roll back, point `X-Site-Release` at the previous folder and rebuild. The route's
 `X-Site-Fallback` sends the app page for a path that has no file, but only to a request
 that accepts HTML. A missing script or image still gets 404.
+
+The `Containerfile` is not used by the release. Its base image, `localhost/bun-base:1`, is on
+no host, so it cannot build; `scripts/releasePages.sh` runs the same two build steps itself.
 `server-ansible/nixos/atheist/static-sites-operations.md` describes the file server.
 
 ## Security headers

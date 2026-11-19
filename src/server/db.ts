@@ -1,13 +1,11 @@
 import { Cause, Config, Context, Effect, Layer, Option } from "effect"
 import { PgClient } from "@effect/sql-pg"
-import * as PgKysely from "./effectKysely"
+import { SqlClient } from "effect/sql/SqlClient"
 import { sql } from "kysely"
 import type { DB } from "../../generated/DB.js"
 import { CurrentSession } from "../api/session"
-import { ServiceUnavailable } from "../api/errors"
-import type { DatabaseError } from "./databaseError"
-
-export type KyselyDB = PgKysely.EffectKysely<DB>
+import { ServiceUnavailable } from "@danielfgray/stompbox/http"
+import { runnerOn, toDatabaseError, type DatabaseError } from "@danielfgray/stompbox/db"
 
 /**
  * Connection as the table owner.
@@ -18,8 +16,8 @@ export type KyselyDB = PgKysely.EffectKysely<DB>
  * a user identity may run on it: RLS is the only thing keeping one band's songs
  * out of another band's result set.
  */
-export class Db extends Context.Service<Db, KyselyDB>()("giglist/db", {
-  make: PgKysely.makePg<DB>(),
+export class Db extends Context.Service<Db, SqlClient>()("giglist/db", {
+  make: Effect.service(SqlClient),
 }) {
   static readonly layer = Layer.effect(this, this.make).pipe(
     Layer.provide(PgClient.layerConfig({ url: Config.Redacted("DATABASE_URL") })),
@@ -31,8 +29,8 @@ export class Db extends Context.Service<Db, KyselyDB>()("giglist/db", {
  * it holds none of the grants until a request says `SET ROLE` to the visitor
  * role — see `withAuthContext`.
  */
-export class AuthDb extends Context.Service<AuthDb, KyselyDB>()("giglist/db/AuthDb", {
-  make: PgKysely.makePg<DB>(),
+export class AuthDb extends Context.Service<AuthDb, SqlClient>()("giglist/db/AuthDb", {
+  make: Effect.service(SqlClient),
 }) {
   static readonly layer = Layer.effect(this, this.make).pipe(
     Layer.provide(PgClient.layerConfig({ url: Config.Redacted("AUTH_DATABASE_URL") })),
@@ -55,7 +53,30 @@ export class AuthVisitor extends Context.Service<AuthVisitor, string>()("giglist
  * @perRequest: withAuthContext provides it for each request.
  * @effect-leakable-service
  */
-export class RequestDatabase extends Context.Service<RequestDatabase, KyselyDB>()("giglist/db/RequestDatabase") {}
+export class RequestDatabase extends Context.Service<RequestDatabase, SqlClient>()("giglist/db/RequestDatabase") {}
+
+/**
+ * Queries typed by `Tables`, run on `client`. Layer code that takes a pool in
+ * its `make` builds its queries with this, so its effects do not require the
+ * pool again.
+ */
+export const queriesOn = <Tables>(client: SqlClient) => runnerOn<Tables, never>(Effect.succeed(client))
+
+/** Queries on the owner pool, `Db`. */
+export const ownerDb = runnerOn<DB, Db>(Effect.service(Db))
+
+/** Queries on the authenticator pool, `AuthDb`, outside any visitor role. */
+export const authenticatorDb = runnerOn<DB, AuthDb>(Effect.service(AuthDb))
+
+/** Queries on the request's transaction, as the visitor role. */
+export const requestDb = runnerOn<DB, RequestDatabase>(Effect.service(RequestDatabase))
+
+/**
+ * Runs `effect` in one transaction on the owner pool. Its `ownerDb` queries
+ * join the transaction because `SqlClient` keeps the open one in the fiber.
+ */
+export const withOwnerTransaction = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+  Effect.flatMap(Effect.service(Db), (client) => client.withTransaction(effect)).pipe(toDatabaseError)
 
 /**
  * Make `effect` run as the request's user.
@@ -70,7 +91,7 @@ export class RequestDatabase extends Context.Service<RequestDatabase, KyselyDB>(
  * connection.
  *
  * A failed database call stays a DatabaseError in the error channel. The
- * endpoint answers it through toHttpError (dbErrors.ts), except a refused
+ * failure boundary answers it through dbErrors.ts, except a refused
  * switch to the visitor role, which is a fault in the server's settings and
  * answers 503 (refusedRoleSwitch).
  */
@@ -85,29 +106,33 @@ export const withAuthContext = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
       onSome: (session) => session.sessionId,
     })
 
-    return yield* db.withTransaction(
-      Effect.gen(function* () {
-        yield* db
-          .selectNoFrom([
-            // Transaction-local, so the pooled connection returns to the
-            // authenticator when the request ends. The role is a trusted name
-            // from the environment, so it is inlined as a literal rather than
-            // bound. The session id is user input and stays a bound parameter.
-            sql<string>`set_config('role', ${sql.lit(visitor)}, true)`.as("_"),
-            sql<string>`set_config('my.session_id', ${sessionId}, true)`.as("_"),
-          ])
-          .pipe(Effect.catchTag("DatabaseError", refusedRoleSwitch(visitor)))
+    return yield* db
+      .withTransaction(
+        Effect.gen(function* () {
+          yield* authenticatorDb
+            .exec((k) =>
+              k.selectNoFrom([
+                // Transaction-local, so the pooled connection returns to the
+                // authenticator when the request ends. The role is a trusted name
+                // from the environment, so it is inlined as a literal rather than
+                // bound. The session id is user input and stays a bound parameter.
+                sql<string>`set_config('role', ${sql.lit(visitor)}, true)`.as("_"),
+                sql<string>`set_config('my.session_id', ${sessionId}, true)`.as("_"),
+              ]),
+            )
+            .pipe(Effect.catchTag("DatabaseError", refusedRoleSwitch(visitor)))
 
-        return yield* effect.pipe(Effect.provideService(RequestDatabase, db))
-      }),
-    )
+          return yield* effect.pipe(Effect.provideService(RequestDatabase, db))
+        }),
+      )
+      .pipe(toDatabaseError)
   })
 
 /**
  * A refused switch to the visitor role is a fault in the server's settings:
  * `DATABASE_VISITOR` names no role (22023), or a role the authenticator is not
  * a member of (42501). It answers 503 misconfigured and logs at Error with the
- * role name. Any other failure passes on to toHttpError, whose table would read
+ * role name. Any other failure passes on to the boundary, whose table would read
  * 42501 as a row that row-level security refused (403).
  */
 const refusedRoleSwitch = (role: string) =>

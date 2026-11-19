@@ -1,125 +1,87 @@
 import { Schema as S } from "effect"
 
 /**
- * Broad HTTP errors. Each class owns one status via `httpApiStatus`; message-only
- * variants that shared a status are discriminated by a typed `reason` literal.
+ * The refusals this app answers, one tagged class each. The generic classes
+ * (`Conflict`, `Forbidden`, ...) come from `@danielfgray/stompbox/http`; the
+ * client tells classes apart by `_tag`.
  */
 
-/** A defect. The body carries a fixed message and the trace id that finds the logged cause. */
-export class InternalError extends S.TaggedError<InternalError, { readonly brand: unique symbol }>()(
-  "InternalError",
-  {
-    message: S.String,
-    /** Finds the request in the traces and logs. */
-    traceId: S.String,
-  },
-  { httpApiStatus: 500 },
-) {}
-
-/** A request whose session or credentials do not allow it. */
-export class Unauthorized extends S.TaggedError<Unauthorized, { readonly brand: unique symbol }>()(
-  "Unauthorized",
-  {
-    message: S.String,
-    reason: S.Literals(["authentication_required", "invalid_credentials"]),
-  },
+/** A sign-in with a wrong username or password. */
+export class BadCredentials extends S.TaggedError<BadCredentials, { readonly brand: unique symbol }>()(
+  "BadCredentials",
+  { message: S.String },
   { httpApiStatus: 401 },
 ) {}
 
-/** A request the signed-in user may not make. */
-export class Forbidden extends S.TaggedError<Forbidden, { readonly brand: unique symbol }>()(
-  "Forbidden",
-  {
-    message: S.String,
-    reason: S.Literals(["access_denied"]),
-  },
-  { httpApiStatus: 403 },
-) {}
-
-export class NotFound extends S.TaggedError<NotFound, { readonly brand: unique symbol }>()(
-  "NotFound",
-  { message: S.String },
-  { httpApiStatus: 404 },
-) {}
-
-/** The request conflicts with data that exists now. `reason` says which kind of conflict. */
-export class Conflict extends S.TaggedError<Conflict, { readonly brand: unique symbol }>()(
-  "Conflict",
-  {
-    message: S.String,
-    reason: S.Literals([
-      "username_taken",
-      "email_taken",
-      "already_member",
-      "account_already_linked",
-      "owns_organization",
-      "slug_taken",
-      "already_exists",
-      "related_data",
-    ]),
-  },
-  { httpApiStatus: 409 },
-) {}
-
+/** An account that is locked after too many failed sign-ins. */
 export class Locked extends S.TaggedError<Locked, { readonly brand: unique symbol }>()(
   "Locked",
   { message: S.String },
   { httpApiStatus: 423 },
 ) {}
 
-/** One rejected request value. `path` starts with the request part (`payload`, `params`, `query`, `headers`). */
-export const InputIssue = S.Struct({
-  path: S.Array(S.Union([S.String, S.Int])),
-  message: S.String,
-})
-
-/** A request the server cannot accept as sent. `issues` names each rejected value when the request failed its schema. */
-export class InvalidOperation extends S.TaggedError<InvalidOperation, { readonly brand: unique symbol }>()(
-  "InvalidOperation",
-  {
-    message: S.String,
-    reason: S.Literals([
-      "cannot_delete_last_email",
-      "email_not_verified",
-      "invalid_token",
-      "weak_password",
-      "missing_data",
-      "invalid_input",
-    ]),
-    field: S.optional(S.Literals(["email", "password", "username"])),
-    requirements: S.optional(S.Array(S.String)),
-    /** For `invalid_input`: each value the request schema rejected. */
-    issues: S.optional(S.Array(InputIssue)),
-  },
+/** A password that fails the strength rules; `requirements` lists them for the form. */
+export class PasswordTooWeak extends S.TaggedError<PasswordTooWeak, { readonly brand: unique symbol }>()(
+  "PasswordTooWeak",
+  { message: S.String, requirements: S.Array(S.String) },
   { httpApiStatus: 400 },
 ) {}
 
-/**
- * The server could not finish the request now: a conflict with a concurrent
- * transaction (`busy`), a statement timeout (`timed_out`), or a fault in the
- * server's settings (`misconfigured`, such as a database role it cannot switch
- * to). The same request may succeed if the client sends it again later.
- */
-export class ServiceUnavailable extends S.TaggedError<ServiceUnavailable, { readonly brand: unique symbol }>()(
-  "ServiceUnavailable",
-  {
-    message: S.String,
-    reason: S.Literals(["busy", "timed_out", "misconfigured"]),
-  },
-  { httpApiStatus: 503 },
+/** The last email of an account cannot be deleted. */
+export class CannotDeleteLastEmail extends S.TaggedError<CannotDeleteLastEmail, { readonly brand: unique symbol }>()(
+  "CannotDeleteLastEmail",
+  { message: S.String },
+  { httpApiStatus: 400 },
 ) {}
 
-/**
- * Every class a refused database call can be answered with (see
- * src/server/dbErrors.ts). Any endpoint that queries can answer any of them.
- */
-export const DatabaseRefusals = [
-  Unauthorized,
-  Forbidden,
-  NotFound,
-  Conflict,
-  Locked,
-  InvalidOperation,
-  ServiceUnavailable,
-] as const
-export type DatabaseRefusal = (typeof DatabaseRefusals)[number]["Type"]
+/** The action needs an email the user has verified. */
+export class EmailNotVerified extends S.TaggedError<EmailNotVerified, { readonly brand: unique symbol }>()(
+  "EmailNotVerified",
+  { message: S.String },
+  { httpApiStatus: 400 },
+) {}
+
+/** The invitation code in the request is wrong. */
+export class InvalidToken extends S.TaggedError<InvalidToken, { readonly brand: unique symbol }>()(
+  "InvalidToken",
+  { message: S.String },
+  { httpApiStatus: 400 },
+) {}
+
+export class UsernameTaken extends S.TaggedError<UsernameTaken, { readonly brand: unique symbol }>()(
+  "UsernameTaken",
+  { message: S.String },
+  { httpApiStatus: 409 },
+) {}
+
+export class EmailTaken extends S.TaggedError<EmailTaken, { readonly brand: unique symbol }>()(
+  "EmailTaken",
+  { message: S.String },
+  { httpApiStatus: 409 },
+) {}
+
+/** A third-party account that another user already linked. */
+export class AccountAlreadyLinked extends S.TaggedError<AccountAlreadyLinked, { readonly brand: unique symbol }>()(
+  "AccountAlreadyLinked",
+  { message: S.String },
+  { httpApiStatus: 409 },
+) {}
+
+export class AlreadyMember extends S.TaggedError<AlreadyMember, { readonly brand: unique symbol }>()(
+  "AlreadyMember",
+  { message: S.String },
+  { httpApiStatus: 409 },
+) {}
+
+/** A user who owns a band cannot be deleted. */
+export class OwnsOrganization extends S.TaggedError<OwnsOrganization, { readonly brand: unique symbol }>()(
+  "OwnsOrganization",
+  { message: S.String },
+  { httpApiStatus: 409 },
+) {}
+
+export class SlugTaken extends S.TaggedError<SlugTaken, { readonly brand: unique symbol }>()(
+  "SlugTaken",
+  { message: S.String },
+  { httpApiStatus: 409 },
+) {}

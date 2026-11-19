@@ -139,6 +139,15 @@ index c02bd31c8de1f087c8f0071c57e21b661e3a05ae..bc46d90925dce185449b6733ee79e0cc
  		}
  		state.tempoChanges.push(new MidiFileSequencerTempoChange(bpm, 0, 0));
  		const millisPerTick = 6e4 / (bpm * this._mainState.division);
+@@ -53195,7 +53234,7 @@ class AlphaTabApiBase {
+ 		if (this._isDestroyed) return;
+ 		this._beatVisibilityChecker.bounds = this.boundsLookup;
+ 		this._currentBeat = null;
+-		this._cursorUpdateTick(this._previousTick, false, 1, true, true);
++		this._cursorUpdateTick(this._previousTick, false, 1, this.playerState === 1, true);
+ 		this._refreshSelectionHighlight();
+ 		this.postRenderFinished.trigger();
+ 		this.uiFacade.triggerEvent(this.container, "postRenderFinished", null);
 diff --git a/dist/alphaTab.js b/dist/alphaTab.js
 index 0934d6f5c1dc89ed4468663ead397ddfb09a6ed0..b137f74564a0281e80a47f6492d1f9d5a5df7257 100644
 --- a/dist/alphaTab.js
@@ -280,3 +289,12 @@ index 0934d6f5c1dc89ed4468663ead397ddfb09a6ed0..b137f74564a0281e80a47f6492d1f9d5
  			}
  			state.tempoChanges.push(new MidiFileSequencerTempoChange(bpm, 0, 0));
  			const millisPerTick = 6e4 / (bpm * this._mainState.division);
+@@ -53194,7 +53233,7 @@
+ 			if (this._isDestroyed) return;
+ 			this._beatVisibilityChecker.bounds = this.boundsLookup;
+ 			this._currentBeat = null;
+-			this._cursorUpdateTick(this._previousTick, false, 1, true, true);
++			this._cursorUpdateTick(this._previousTick, false, 1, this.playerState === 1, true);
+ 			this._refreshSelectionHighlight();
+ 			this.postRenderFinished.trigger();
+ 			this.uiFacade.triggerEvent(this.container, "postRenderFinished", null);

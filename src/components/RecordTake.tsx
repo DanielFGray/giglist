@@ -1,10 +1,10 @@
 import { Effect, Fiber, Stream } from "effect"
 import { useEffect, useMemo, useState } from "react"
 import { readTake, type TakeReading, BEATS_PER_BAR } from "gigbag.js/charts/take"
-import { COUNT_IN_BEATS } from "~/audio/click/click"
-import { clickTrack } from "~/audio/click/engine"
-import { NEW_TAKE, type Take, takeStep } from "~/audio/click/take"
-import { MicMeter } from "./MicMeter"
+import { countInBeats } from "gigbag.js/click/click"
+import { clickTrack } from "gigbag.js/click/engine"
+import { NEW_TAKE, type Take, takeStep } from "gigbag.js/click/take"
+import { MicMeter } from "gigbag.js/click/readouts"
 
 /**
  * Records a take for a phrase (docs/adr/0013): plays the song's click, listens
@@ -21,7 +21,7 @@ export function RecordTake({ bpm, onTex, className }: { bpm: number; onTex: (tex
     if (!recording) return
     setTake(NEW_TAKE)
     setShift(0)
-    const fiber = Effect.runFork(Stream.runForEach(clickTrack({ bpm, listen: true }), (event) => Effect.sync(() => setTake((take) => takeStep(take, event)))))
+    const fiber = Effect.runFork(Stream.runForEach(clickTrack({ bpm, beatsPerBar: BEATS_PER_BAR, listen: true }), (event) => Effect.sync(() => setTake((take) => takeStep(take, event)))))
     return () => {
       Effect.runFork(Fiber.interrupt(fiber))
     }
@@ -64,7 +64,7 @@ export function RecordTake({ bpm, onTex, className }: { bpm: number; onTex: (tex
         )}
         {recording && (
           <div className="w-24">
-            <MicMeter peak={take.level} />
+            <MicMeter peak={take.level} parts={MIC_METER_PARTS} />
           </div>
         )}
       </div>
@@ -81,13 +81,21 @@ function recordStatus(take: Take, recording: boolean, reading: TakeReading | nul
   if (!recording && take.device === null) return `Plays the click at the song's tempo and writes the rhythm you play. Play the click through speakers, so the mic can time it.`
   if (take.device === null) return "Opening the microphone…"
   if (take.beat === null) return "Starting…"
-  if (recording && take.beat < COUNT_IN_BEATS) return `Count-in ${take.beat + 1} of ${COUNT_IN_BEATS}.`
+  if (recording && take.beat < COUNT_IN) return `Count-in ${take.beat + 1} of ${COUNT_IN}.`
   const notes = `${take.notesMs.length} ${take.notesMs.length === 1 ? "note" : "notes"}`
-  if (recording) return `Bar ${Math.floor((take.beat - COUNT_IN_BEATS) / BEATS_PER_BAR) + 1}: play, then press Stop. ${notes} so far.`
+  if (recording) return `Bar ${Math.floor((take.beat - COUNT_IN) / BEATS_PER_BAR) + 1}: play, then press Stop. ${notes} so far.`
   if (!reading?.tex) return "No notes were heard after the count-in."
   const estimated = take.missedClick ? " The mic did not hear the click, so the browser's delay estimate placed them: if the take reads a 16th off, move it." : ""
   const moved = shift === 0 ? "" : ` Moved ${Math.abs(shift)} 16th${Math.abs(shift) === 1 ? "" : "s"} ${shift < 0 ? "earlier" : "later"}.`
   const drifting = reading.driftingBars.map((b) => b.bar + 1)
   const check = drifting.length === 0 ? "" : ` ${drifting.length === 1 ? "Bar" : "Bars"} ${drifting.join(", ")} sit between 16ths: check ${drifting.length === 1 ? "it" : "them"}.`
   return `Heard ${notes}.${estimated}${moved}${check}`
+}
+
+/** The beats before the first bar of a take. */
+const COUNT_IN = countInBeats(BEATS_PER_BAR)
+
+const MIC_METER_PARTS = {
+  root: { className: "h-1.5 overflow-hidden rounded-full bg-zinc-800" },
+  fill: { className: "h-full bg-zinc-400" },
 }
