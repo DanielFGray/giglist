@@ -1,20 +1,32 @@
 import { Context, Effect, Layer, Option, Schema as S } from "effect"
-import { sql } from "kysely"
-import { RequestDatabase } from "../db"
+import { sql, type Kysely } from "kysely"
+import { requestDb } from "../db"
+import type { DB } from "../../../generated/DB.js"
+import { IdRow } from "../rows"
 import { LiveHub, type Written } from "./liveHub"
 import { Places } from "./places"
 import { Setlists, viewing } from "./setlists"
 import { between, placeAfter } from "../../components/position"
-import { Gig, GigEntry, Location, type GigDetails, type GigInsert, type GigSetlistInsert, type VenueSuggestion } from "../../api/gigs"
+import {
+  Gig,
+  GigEntry,
+  GigSetlist,
+  Location,
+  type GigDetails,
+  type GigInsert,
+  type GigSetlistInsert,
+  type VenueSuggestion,
+} from "../../api/gigs"
 import { type LivePresence, type Move } from "../../api/setlists"
 
-export class GigMissing extends S.TaggedError<GigMissing, { readonly brand: unique symbol }>()("GigMissing", { message: S.String, id: S.String }) {}
+export class GigMissing extends S.TaggedError<GigMissing, { readonly brand: unique symbol }>()("GigMissing", {
+  message: S.String,
+  id: S.String,
+}) {}
 
-export class GigRefused extends S.TaggedError<GigRefused, { readonly brand: unique symbol }>()("GigRefused", { message: S.String }) {}
-
-const decodeGig = S.decodeUnknownEffect(Gig)
-const decodeGigs = S.decodeUnknownEffect(S.Array(Gig))
-const decodeGigEntries = S.decodeUnknownEffect(S.Array(GigEntry))
+export class GigRefused extends S.TaggedError<GigRefused, { readonly brand: unique symbol }>()("GigRefused", {
+  message: S.String,
+}) {}
 
 /**
  * A band's gigs and the setlists each plays, read and written as the request's
@@ -46,14 +58,11 @@ export class Gigs extends Context.Service<Gigs>()("giglist/gigs", {
 
     const list = Effect.fn("Gigs.list")(function* (bandId: string) {
       yield* setlists.requireMember(bandId)
-      return yield* selectGigs().pipe(
-        Effect.flatMap((query) =>
-          query
-            .where("g.band_id", "=", bandId)
-            .orderBy(sql`g.gig_date desc nulls last`)
-            .orderBy("g.created_at", "desc"),
-        ),
-        Effect.flatMap((rows) => decodeGigs(rows).pipe(Effect.orDie)),
+      return yield* requestDb.all(Gig, (k) =>
+        selectGigs(k)
+          .where("g.band_id", "=", bandId)
+          .orderBy(sql`g.gig_date desc nulls last`)
+          .orderBy("g.created_at", "desc"),
       )
     })
 
@@ -78,9 +87,10 @@ export class Gigs extends Context.Service<Gigs>()("giglist/gigs", {
     })
 
     const create = Effect.fn("Gigs.create")(function* (payload: typeof GigInsert.Type) {
-      const db = yield* RequestDatabase
       yield* setlists.requireMember(payload.band_id)
-      const inserted = yield* db.insertInto("app_public.gigs").values(withPoint(payload)).returning("id").pipe(Effect.head, Effect.catchTag("NoSuchElementError", Effect.die))
+      const inserted = yield* requestDb.one(IdRow, (k) =>
+        k.insertInto("app_public.gigs").values(withPoint(payload)).returning("id"),
+      )
       return yield* gigOrDie(inserted.id)
     })
 
@@ -88,9 +98,8 @@ export class Gigs extends Context.Service<Gigs>()("giglist/gigs", {
       return yield* writing(
         id,
         Effect.gen(function* () {
-          const db = yield* RequestDatabase
           yield* gigOr404(id)
-          yield* db.updateTable("app_public.gigs").set(withPoint(payload)).where("id", "=", id)
+          yield* requestDb.exec((k) => k.updateTable("app_public.gigs").set(withPoint(payload)).where("id", "=", id))
           return yield* gigOrDie(id)
         }),
       )
@@ -100,9 +109,8 @@ export class Gigs extends Context.Service<Gigs>()("giglist/gigs", {
       return yield* writing(
         id,
         Effect.gen(function* () {
-          const db = yield* RequestDatabase
           yield* gigOr404(id)
-          yield* db.deleteFrom("app_public.gigs").where("id", "=", id)
+          yield* requestDb.exec((k) => k.deleteFrom("app_public.gigs").where("id", "=", id))
         }),
       )
     })
@@ -111,34 +119,37 @@ export class Gigs extends Context.Service<Gigs>()("giglist/gigs", {
       return yield* writing(
         id,
         Effect.gen(function* () {
-          const db = yield* RequestDatabase
           yield* lockGig(id)
           const gig = yield* gigOr404(id)
           const forbidden = new GigRefused({ message: "That setlist is not in this band" })
-          const setlist = yield* db
-            .selectFrom("app_public.setlists")
-            .select("band_id")
-            .where("id", "=", payload.setlist_id)
-            .pipe(Effect.head, Effect.catchTag("NoSuchElementError", () => Effect.fail(forbidden)))
-          if (setlist.band_id !== gig.band_id) return yield* forbidden
+          const setlist = yield* requestDb.maybe(S.Struct({ band_id: S.String }), (k) =>
+            k.selectFrom("app_public.setlists").select("band_id").where("id", "=", payload.setlist_id),
+          )
+          if (Option.isNone(setlist) || setlist.value.band_id !== gig.band_id) return yield* forbidden
           if (gig.setlists.some((played) => played.id === payload.setlist_id)) {
             return yield* new GigRefused({ message: "This gig already plays that setlist" })
           }
           // A new setlist plays last.
-          const last = yield* db
-            .selectFrom("app_public.gig_setlists")
-            .select("position_key")
-            .where("gig_id", "=", id)
-            .orderBy("position_key", "desc")
-            .orderBy("setlist_id", "desc")
-            .pipe(
-              Effect.head,
-              Effect.map((row) => row.position_key),
-              Effect.catchTag("NoSuchElementError", () => Effect.succeed(null)),
-            )
-          yield* db
-            .insertInto("app_public.gig_setlists")
-            .values({ band_id: gig.band_id, gig_id: id, setlist_id: payload.setlist_id, position_key: between(last, null) })
+          const newest = yield* requestDb.maybe(S.Struct({ position_key: S.String }), (k) =>
+            k
+              .selectFrom("app_public.gig_setlists")
+              .select("position_key")
+              .where("gig_id", "=", id)
+              .orderBy("position_key", "desc")
+              .orderBy("setlist_id", "desc"),
+          )
+          const last = Option.match(newest, {
+            onNone: () => null,
+            onSome: (row) => row.position_key,
+          })
+          yield* requestDb.exec((k) =>
+            k.insertInto("app_public.gig_setlists").values({
+              band_id: gig.band_id,
+              gig_id: id,
+              setlist_id: payload.setlist_id,
+              position_key: between(last, null),
+            }),
+          )
           return yield* gigOrDie(id)
         }),
       )
@@ -148,12 +159,10 @@ export class Gigs extends Context.Service<Gigs>()("giglist/gigs", {
       return yield* writing(
         id,
         Effect.gen(function* () {
-          const db = yield* RequestDatabase
           yield* gigOr404(id)
-          yield* db
-            .deleteFrom("app_public.gig_setlists")
-            .where("gig_id", "=", id)
-            .where("setlist_id", "=", setlistId)
+          yield* requestDb.exec((k) =>
+            k.deleteFrom("app_public.gig_setlists").where("gig_id", "=", id).where("setlist_id", "=", setlistId),
+          )
           return yield* gigOrDie(id)
         }),
       )
@@ -164,7 +173,6 @@ export class Gigs extends Context.Service<Gigs>()("giglist/gigs", {
       return yield* writing(
         id,
         Effect.gen(function* () {
-          const db = yield* RequestDatabase
           yield* lockGig(id)
           const gig = yield* gigOr404(id)
           if (!gig.setlists.some((played) => played.id === setlistId)) {
@@ -172,11 +180,13 @@ export class Gigs extends Context.Service<Gigs>()("giglist/gigs", {
           }
           const copy = yield* setlists.duplicate({ id: setlistId, band_id: gig.band_id }, name)
           // The copy takes the original's row, and so its place in the gig.
-          yield* db
-            .updateTable("app_public.gig_setlists")
-            .set({ setlist_id: copy })
-            .where("gig_id", "=", id)
-            .where("setlist_id", "=", setlistId)
+          yield* requestDb.exec((k) =>
+            k
+              .updateTable("app_public.gig_setlists")
+              .set({ setlist_id: copy })
+              .where("gig_id", "=", id)
+              .where("setlist_id", "=", setlistId),
+          )
           return yield* gigOrDie(id)
         }),
       )
@@ -186,28 +196,37 @@ export class Gigs extends Context.Service<Gigs>()("giglist/gigs", {
       return yield* writing(
         id,
         Effect.gen(function* () {
-          const db = yield* RequestDatabase
           yield* gigOr404(id)
           // Serialise all moves for one gig before reading neighbour keys.
           yield* lockGig(id)
-          const rows = yield* db
-            .selectFrom("app_public.gig_setlists")
-            .select(["setlist_id as id", "position_key"])
-            .where("gig_id", "=", id)
-            .orderBy("position_key", "asc")
-            .orderBy("setlist_id", "asc")
+          const rows = yield* requestDb.all(S.Struct({ id: S.String, position_key: S.String }), (k) =>
+            k
+              .selectFrom("app_public.gig_setlists")
+              .select(["setlist_id as id", "position_key"])
+              .where("gig_id", "=", id)
+              .orderBy("position_key", "asc")
+              .orderBy("setlist_id", "asc"),
+          )
           const writes = rows.some((row) => row.id === payload.id)
-            ? placeAfter(rows.filter((row) => row.id !== payload.id), payload.id, payload.previous)
+            ? placeAfter(
+                rows.filter((row) => row.id !== payload.id),
+                payload.id,
+                payload.previous,
+              )
             : Option.none()
           if (Option.isNone(writes)) {
-            return yield* new GigRefused({ message: "That setlist or neighbour is not in this gig" })
+            return yield* new GigRefused({
+              message: "That setlist or neighbour is not in this gig",
+            })
           }
           yield* Effect.forEach(writes.value, (write) =>
-            db
-              .updateTable("app_public.gig_setlists")
-              .set({ position_key: write.position_key })
-              .where("gig_id", "=", id)
-              .where("setlist_id", "=", write.id),
+            requestDb.exec((k) =>
+              k
+                .updateTable("app_public.gig_setlists")
+                .set({ position_key: write.position_key })
+                .where("gig_id", "=", id)
+                .where("setlist_id", "=", write.id),
+            ),
           )
           return yield* gigOrDie(id)
         }),
@@ -216,20 +235,20 @@ export class Gigs extends Context.Service<Gigs>()("giglist/gigs", {
 
     /** Every entry of every setlist the gig plays, in playing order, each with its setlist's name. */
     const entries = Effect.fn("Gigs.entries")(function* (id: string) {
-      const db = yield* RequestDatabase
       yield* gigOr404(id)
-      return yield* db
-        .selectFrom("app_public.setlist_entries_resolved as r")
-        .innerJoin("app_public.gig_setlists as gs", "gs.setlist_id", "r.setlist_id")
-        .innerJoin("app_public.setlists as s", "s.id", "r.setlist_id")
-        .selectAll("r")
-        .select("s.name as setlist_name")
-        .where("gs.gig_id", "=", id)
-        .orderBy("gs.position_key")
-        .orderBy("gs.setlist_id")
-        .orderBy("r.position_key")
-        .orderBy("r.id")
-        .pipe(Effect.flatMap((rows) => decodeGigEntries(rows).pipe(Effect.orDie)))
+      return yield* requestDb.all(GigEntry, (k) =>
+        k
+          .selectFrom("app_public.setlist_entries_resolved as r")
+          .innerJoin("app_public.gig_setlists as gs", "gs.setlist_id", "r.setlist_id")
+          .innerJoin("app_public.setlists as s", "s.id", "r.setlist_id")
+          .selectAll("r")
+          .select("s.name as setlist_name")
+          .where("gs.gig_id", "=", id)
+          .orderBy("gs.position_key")
+          .orderBy("gs.setlist_id")
+          .orderBy("r.position_key")
+          .orderBy("r.id"),
+      )
     })
 
     /** The gig's event stream; see `Setlists.watch`. */
@@ -265,19 +284,21 @@ export class Gigs extends Context.Service<Gigs>()("giglist/gigs", {
     }
   }),
 }) {
-  static readonly layer = Layer.effect(this, this.make).pipe(Layer.provide([Setlists.layer, LiveHub.layer, Places.layer]))
+  static readonly layer = Layer.effect(this, this.make).pipe(
+    Layer.provide([Setlists.layer, LiveHub.layer, Places.layer]),
+  )
 }
 
 /** The ids of the setlists a gig plays. */
 const playedBy = Effect.fnUntraced(function* (gigId: string) {
-  const db = yield* RequestDatabase
-  const rows = yield* db.selectFrom("app_public.gig_setlists").select("setlist_id").where("gig_id", "=", gigId)
+  const rows = yield* requestDb.all(S.Struct({ setlist_id: S.String }), (k) =>
+    k.selectFrom("app_public.gig_setlists").select("setlist_id").where("gig_id", "=", gigId),
+  )
   return rows.map((row) => row.setlist_id)
 })
 
 const lockGig = Effect.fnUntraced(function* (gigId: string) {
-  const db = yield* RequestDatabase
-  yield* db.selectFrom("app_public.gigs").select("id").where("id", "=", gigId).forUpdate()
+  yield* requestDb.exec((k) => k.selectFrom("app_public.gigs").select("id").where("id", "=", gigId).forUpdate())
 })
 
 /**
@@ -286,23 +307,20 @@ const lockGig = Effect.fnUntraced(function* (gigId: string) {
  * to text so the driver's `Date` does not shift them across time zones; the
  * times stay the venue's wall-clock `HH:MM:SS`.
  */
-const selectGigs = Effect.fnUntraced(function* () {
-  const db = yield* RequestDatabase
-  return db
-    .selectFrom("app_public.gigs as g")
-    .select([
-      "g.id",
-      "g.band_id",
-      "g.venue",
-      sql<string | null>`g.gig_date::text`.as("gig_date"),
-      "g.address",
-      location("g").as("location"),
-      sql<string | null>`g.load_in_time::text`.as("load_in_time"),
-      sql<string | null>`g.performance_time::text`.as("performance_time"),
-      "g.notes",
-      "g.created_at",
-      "g.updated_at",
-      sql`coalesce((
+const selectGigs = (k: Kysely<DB>) =>
+  k.selectFrom("app_public.gigs as g").select([
+    "g.id",
+    "g.band_id",
+    "g.venue",
+    sql<string | null>`g.gig_date::text`.as("gig_date"),
+    "g.address",
+    location("g").as("location"),
+    sql<string | null>`g.load_in_time::text`.as("load_in_time"),
+    sql<string | null>`g.performance_time::text`.as("performance_time"),
+    "g.notes",
+    "g.created_at",
+    "g.updated_at",
+    sql<ReadonlyArray<typeof GigSetlist.Type>>`coalesce((
         select json_agg(json_build_object(
           'id', s.id,
           'name', s.name,
@@ -317,17 +335,12 @@ const selectGigs = Effect.fnUntraced(function* () {
         from app_public.gig_setlists gs join app_public.setlists s on s.id = gs.setlist_id
         where gs.gig_id = g.id
       ), '[]'::json)`.as("setlists"),
-    ])
-})
+  ])
 
 /** A gig the caller may touch; RLS makes "missing" and "another band's" the same 404. */
 const gigOr404 = Effect.fnUntraced(function* (id: string) {
-  return yield* selectGigs().pipe(
-    Effect.flatMap((query) => query.where("g.id", "=", id)),
-    Effect.head,
-    Effect.catchTag("NoSuchElementError", () => Effect.fail(new GigMissing({ id, message: "That gig was not found" }))),
-    Effect.flatMap((row) => decodeGig(row).pipe(Effect.orDie)),
-  )
+  const found = yield* requestDb.maybe(Gig, (k) => selectGigs(k).where("g.id", "=", id))
+  return yield* Effect.fromOption(found, () => new GigMissing({ id, message: "That gig was not found" }))
 })
 
 /** A gig that was just written: a miss here is a server defect, not a caller error. */
@@ -342,32 +355,33 @@ const withPoint = <A extends { readonly location: typeof Location.Type | null }>
 
 /** The `location` of the gig row `table`, as a `Location` object or null. */
 const location = (table: string) =>
-  sql<unknown>`case when ${sql.ref(`${table}.latitude`)} is null then null
+  sql<typeof Location.Type | null>`case when ${sql.ref(`${table}.latitude`)} is null then null
     else json_build_object('latitude', ${sql.ref(`${table}.latitude`)}, 'longitude', ${sql.ref(`${table}.longitude`)}) end`
-
-const decodePoints = S.decodeUnknownEffect(S.Array(Location))
 
 /**
  * Where the band plays now: the point of its gig closest to today that has
  * one, or null when no gig does.
  */
 const bandPoint = Effect.fnUntraced(function* (bandId: string) {
-  const db = yield* RequestDatabase
-  const rows = yield* db
-    .selectFrom("app_public.gigs")
-    .select(["latitude", "longitude"])
-    .where("band_id", "=", bandId)
-    .where("latitude", "is not", null)
-    .orderBy(sql`abs(gig_date - current_date) nulls last`)
-    .orderBy("updated_at", "desc")
-    .limit(1)
-  const [point] = yield* decodePoints(rows).pipe(Effect.orDie)
-  return point ?? null
+  const point = yield* requestDb.maybe(Location, (k) =>
+    k
+      .selectFrom("app_public.gigs")
+      .select(["latitude", "longitude"])
+      .$narrowType<{ latitude: number; longitude: number }>()
+      .where("band_id", "=", bandId)
+      .where("latitude", "is not", null)
+      .orderBy(sql`abs(gig_date - current_date) nulls last`)
+      .orderBy("updated_at", "desc")
+      .limit(1),
+  )
+  return Option.getOrNull(point)
 })
 
-const decodeBandVenues = S.decodeUnknownEffect(
-  S.Array(S.Struct({ venue: S.String, address: S.NullOr(S.String), location: S.NullOr(Location) })),
-)
+const BandVenueRow = S.Struct({
+  venue: S.String,
+  address: S.NullOr(S.String),
+  location: S.NullOr(Location),
+})
 
 /**
  * Up to five venues the band has played whose name contains `query`, ignoring
@@ -376,24 +390,28 @@ const decodeBandVenues = S.decodeUnknownEffect(
  * an address.
  */
 const bandVenues = Effect.fnUntraced(function* (bandId: string, query: string) {
-  const db = yield* RequestDatabase
-  const latest = db
-    .selectFrom("app_public.gigs")
-    .distinctOn(sql`lower(venue)`)
-    .select(["venue", "address", "latitude", "longitude"])
-    .select(sql<string | null>`max(gig_date) over (partition by lower(venue))`.as("last_played"))
-    .where("band_id", "=", bandId)
-    .where(sql<number>`strpos(lower(venue), lower(${query}))`, ">", 0)
-    .orderBy(sql`lower(venue)`)
-    .orderBy(sql`address is null`)
-    .orderBy(sql`gig_date desc nulls last`)
-    .orderBy("created_at", "desc")
-  const rows = yield* db
-    .selectFrom(latest.as("v"))
-    .select(["v.venue", "v.address", location("v").as("location")])
-    .orderBy(sql`starts_with(lower(v.venue), lower(${query})) desc`)
-    .orderBy(sql`v.last_played desc nulls last`)
-    .orderBy("v.venue")
-    .limit(5)
-  return yield* decodeBandVenues(rows).pipe(Effect.orDie)
+  return yield* requestDb.all(BandVenueRow, (k) => {
+    const latest = k
+      .selectFrom("app_public.gigs")
+      .distinctOn(sql`lower(venue)`)
+      .select(["venue", "address", "latitude", "longitude"])
+      .select(sql<string | null>`max(gig_date) over (partition by lower(venue))`.as("last_played"))
+      .where("band_id", "=", bandId)
+      .where(sql<number>`strpos(lower(venue), lower(${query}))`, ">", 0)
+      .orderBy(sql`lower(venue)`)
+      .orderBy(sql`address is null`)
+      .orderBy(sql`gig_date desc nulls last`)
+      .orderBy("created_at", "desc")
+    return (
+      k
+        .selectFrom(latest.as("v"))
+        .select(["v.venue", "v.address", location("v").as("location")])
+        // The query keeps only rows whose venue contains the text, so the venue is not null.
+        .$narrowType<{ venue: string }>()
+        .orderBy(sql`starts_with(lower(v.venue), lower(${query})) desc`)
+        .orderBy(sql`v.last_played desc nulls last`)
+        .orderBy("v.venue")
+        .limit(5)
+    )
+  })
 })

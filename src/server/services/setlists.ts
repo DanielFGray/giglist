@@ -1,20 +1,33 @@
 import { Context, Effect, Layer, Option, Predicate, Schema as S, Struct } from "effect"
-import { sql } from "kysely"
-import { RequestDatabase } from "../db"
+import { sql, type Kysely } from "kysely"
+import { requestDb } from "../db"
+import type { DB } from "../../../generated/DB.js"
+import { IdRow } from "../rows"
 import { Auth } from "./auth"
 import { Bands } from "./bands"
 import { LiveHub, type Written } from "./liveHub"
 import { between, placeAfter } from "../../components/position"
-import { LivePresence, Setlist, SetlistEntry, type Move, type SetlistEntryInsert, type SetlistEntryUpdate, type SetlistInsert, type SetlistUpdate } from "../../api/setlists"
+import {
+  GigRef,
+  LivePresence,
+  Setlist,
+  SetlistEntry,
+  type Move,
+  type SetlistEntryInsert,
+  type SetlistEntryUpdate,
+  type SetlistInsert,
+  type SetlistUpdate,
+} from "../../api/setlists"
 
-export class SetlistMissing extends S.TaggedError<SetlistMissing, { readonly brand: unique symbol }>()("SetlistMissing", { message: S.String, id: S.String }) {}
+export class SetlistMissing extends S.TaggedError<SetlistMissing, { readonly brand: unique symbol }>()(
+  "SetlistMissing",
+  { message: S.String, id: S.String },
+) {}
 
-export class SetlistRefused extends S.TaggedError<SetlistRefused, { readonly brand: unique symbol }>()("SetlistRefused", { message: S.String }) {}
-
-const decodeSetlist = S.decodeUnknownEffect(Setlist)
-const decodeSetlists = S.decodeUnknownEffect(S.Array(Setlist))
-const decodeEntry = S.decodeUnknownEffect(SetlistEntry)
-const decodeEntries = S.decodeUnknownEffect(S.Array(SetlistEntry))
+export class SetlistRefused extends S.TaggedError<SetlistRefused, { readonly brand: unique symbol }>()(
+  "SetlistRefused",
+  { message: S.String },
+) {}
 
 /**
  * A band's setlists and their entries, read and written as the request's user.
@@ -39,9 +52,9 @@ export class Setlists extends Context.Service<Setlists>()("giglist/setlists", {
 
     /** The signed-in user, read in the request's transaction. */
     const me = Effect.fn("Setlists.me")(function* () {
-      return yield* auth.getMe().pipe(
-        Effect.filterOrFail(Predicate.isNotNull, () => new SetlistRefused({ message: "You must be signed in" })),
-      )
+      return yield* auth
+        .getMe()
+        .pipe(Effect.filterOrFail(Predicate.isNotNull, () => new SetlistRefused({ message: "You must be signed in" })))
     })
 
     /**
@@ -50,11 +63,9 @@ export class Setlists extends Context.Service<Setlists>()("giglist/setlists", {
      */
     const writing = <A, E, R>(setlistId: string, write: Effect.Effect<A, E, R>) =>
       Effect.gen(function* () {
-        const db = yield* RequestDatabase
-        const gigs = yield* db
-          .selectFrom("app_public.gig_setlists")
-          .select("gig_id")
-          .where("setlist_id", "=", setlistId)
+        const gigs = yield* requestDb.all(S.Struct({ gig_id: S.String }), (k) =>
+          k.selectFrom("app_public.gig_setlists").select("gig_id").where("setlist_id", "=", setlistId),
+        )
         const result = yield* write
         return {
           result,
@@ -70,20 +81,16 @@ export class Setlists extends Context.Service<Setlists>()("giglist/setlists", {
 
     const list = Effect.fn("Setlists.list")(function* (bandId: string) {
       yield* requireMember(bandId)
-      const rows = yield* selectSetlists().pipe(
-        Effect.flatMap((query) => query.where("s.band_id", "=", bandId).orderBy("s.name").orderBy("s.id")),
+      return yield* requestDb.all(Setlist, (k) =>
+        selectSetlists(k).where("s.band_id", "=", bandId).orderBy("s.name").orderBy("s.id"),
       )
-      return yield* decodeSetlists(rows).pipe(Effect.orDie)
     })
 
     const create = Effect.fn("Setlists.create")(function* (payload: typeof SetlistInsert.Type) {
-      const db = yield* RequestDatabase
       yield* requireMember(payload.band_id)
-      const inserted = yield* db
-        .insertInto("app_public.setlists")
-        .values({ band_id: payload.band_id, name: payload.name })
-        .returning("id")
-        .pipe(Effect.head, Effect.catchTag("NoSuchElementError", Effect.die))
+      const inserted = yield* requestDb.one(IdRow, (k) =>
+        k.insertInto("app_public.setlists").values({ band_id: payload.band_id, name: payload.name }).returning("id"),
+      )
       return yield* setlistOrDie(inserted.id)
     })
 
@@ -91,11 +98,10 @@ export class Setlists extends Context.Service<Setlists>()("giglist/setlists", {
       return yield* writing(
         id,
         Effect.gen(function* () {
-          const db = yield* RequestDatabase
           yield* setlistOr404(id)
           // An empty SET is not valid SQL, and an empty payload changes nothing.
           if (Struct.keys(payload).length > 0) {
-            yield* db.updateTable("app_public.setlists").set(payload).where("id", "=", id)
+            yield* requestDb.exec((k) => k.updateTable("app_public.setlists").set(payload).where("id", "=", id))
           }
           return yield* setlistOrDie(id)
         }),
@@ -116,29 +122,28 @@ export class Setlists extends Context.Service<Setlists>()("giglist/setlists", {
       source: { id: string; band_id: string },
       name: string,
     ) {
-      const db = yield* RequestDatabase
-      const created = yield* db
-        .insertInto("app_public.setlists")
-        .values({ band_id: source.band_id, name })
-        .returning("id")
-        .pipe(Effect.head, Effect.catchTag("NoSuchElementError", Effect.die))
+      const created = yield* requestDb.one(IdRow, (k) =>
+        k.insertInto("app_public.setlists").values({ band_id: source.band_id, name }).returning("id"),
+      )
       // The entries keep their keys, so the copy plays in the same order.
-      yield* db
-        .insertInto("app_public.setlist_entries")
-        .columns(["setlist_id", "song_id", "position_key", "key_override", "tempo_override", "notes_override"])
-        .expression(
-          db
-            .selectFrom("app_public.setlist_entries")
-            .select([
-              sql<string>`${created.id}::uuid`.as("setlist_id"),
-              "song_id",
-              "position_key",
-              "key_override",
-              "tempo_override",
-              "notes_override",
-            ])
-            .where("setlist_id", "=", source.id),
-        )
+      yield* requestDb.exec((k) =>
+        k
+          .insertInto("app_public.setlist_entries")
+          .columns(["setlist_id", "song_id", "position_key", "key_override", "tempo_override", "notes_override"])
+          .expression(
+            k
+              .selectFrom("app_public.setlist_entries")
+              .select([
+                sql<string>`${created.id}::uuid`.as("setlist_id"),
+                "song_id",
+                "position_key",
+                "key_override",
+                "tempo_override",
+                "notes_override",
+              ])
+              .where("setlist_id", "=", source.id),
+          ),
+      )
       return created.id
     })
 
@@ -146,9 +151,8 @@ export class Setlists extends Context.Service<Setlists>()("giglist/setlists", {
       return yield* writing(
         id,
         Effect.gen(function* () {
-          const db = yield* RequestDatabase
           yield* setlistOr404(id)
-          yield* db.deleteFrom("app_public.setlists").where("id", "=", id)
+          yield* requestDb.exec((k) => k.deleteFrom("app_public.setlists").where("id", "=", id))
         }),
       )
     })
@@ -162,27 +166,32 @@ export class Setlists extends Context.Service<Setlists>()("giglist/setlists", {
       return yield* writing(
         id,
         Effect.gen(function* () {
-          const db = yield* RequestDatabase
           yield* lockSetlist(id)
           const setlist = yield* setlistOr404(id)
           yield* requireBandSong(payload.song_id, setlist.band_id)
           // A new entry plays last.
-          const last = yield* db
-            .selectFrom("app_public.setlist_entries")
-            .select("position_key")
-            .where("setlist_id", "=", id)
-            .orderBy("position_key", "desc")
-            .orderBy("id", "desc")
-            .pipe(
-              Effect.head,
-              Effect.map((row) => row.position_key),
-              Effect.catchTag("NoSuchElementError", () => Effect.succeed(null)),
-            )
-          const inserted = yield* db
-            .insertInto("app_public.setlist_entries")
-            .values({ setlist_id: id, song_id: payload.song_id, position_key: between(last, null) })
-            .returning("id")
-            .pipe(Effect.head, Effect.catchTag("NoSuchElementError", Effect.die))
+          const newest = yield* requestDb.maybe(S.Struct({ position_key: S.String }), (k) =>
+            k
+              .selectFrom("app_public.setlist_entries")
+              .select("position_key")
+              .where("setlist_id", "=", id)
+              .orderBy("position_key", "desc")
+              .orderBy("id", "desc"),
+          )
+          const last = Option.match(newest, {
+            onNone: () => null,
+            onSome: (row) => row.position_key,
+          })
+          const inserted = yield* requestDb.one(IdRow, (k) =>
+            k
+              .insertInto("app_public.setlist_entries")
+              .values({
+                setlist_id: id,
+                song_id: payload.song_id,
+                position_key: between(last, null),
+              })
+              .returning("id"),
+          )
           return yield* entryOr404(inserted.id, id)
         }),
       )
@@ -196,17 +205,18 @@ export class Setlists extends Context.Service<Setlists>()("giglist/setlists", {
       return yield* writing(
         id,
         Effect.gen(function* () {
-          const db = yield* RequestDatabase
           const setlist = yield* setlistOr404(id)
           yield* entryOr404(entryId, id)
           if (payload.song_id !== undefined) yield* requireBandSong(payload.song_id, setlist.band_id)
           // An empty SET is not valid SQL, and an empty payload changes nothing.
           if (Struct.keys(payload).length > 0) {
-            yield* db
-              .updateTable("app_public.setlist_entries")
-              .set(payload)
-              .where("id", "=", entryId)
-              .where("setlist_id", "=", id)
+            yield* requestDb.exec((k) =>
+              k
+                .updateTable("app_public.setlist_entries")
+                .set(payload)
+                .where("id", "=", entryId)
+                .where("setlist_id", "=", id),
+            )
           }
           return yield* entryOr404(entryId, id)
         }),
@@ -217,12 +227,10 @@ export class Setlists extends Context.Service<Setlists>()("giglist/setlists", {
       return yield* writing(
         id,
         Effect.gen(function* () {
-          const db = yield* RequestDatabase
           yield* setlistOr404(id)
-          yield* db
-            .deleteFrom("app_public.setlist_entries")
-            .where("id", "=", entryId)
-            .where("setlist_id", "=", id)
+          yield* requestDb.exec((k) =>
+            k.deleteFrom("app_public.setlist_entries").where("id", "=", entryId).where("setlist_id", "=", id),
+          )
         }),
       )
     })
@@ -231,27 +239,36 @@ export class Setlists extends Context.Service<Setlists>()("giglist/setlists", {
       return yield* writing(
         id,
         Effect.gen(function* () {
-          const db = yield* RequestDatabase
           yield* setlistOr404(id)
           // Serialise all moves for one setlist before reading neighbour keys.
           yield* lockSetlist(id)
-          const rows = yield* db
-            .selectFrom("app_public.setlist_entries")
-            .select(["id", "position_key"])
-            .where("setlist_id", "=", id)
-            .orderBy("position_key", "asc")
-            .orderBy("id", "asc")
+          const rows = yield* requestDb.all(S.Struct({ id: S.String, position_key: S.String }), (k) =>
+            k
+              .selectFrom("app_public.setlist_entries")
+              .select(["id", "position_key"])
+              .where("setlist_id", "=", id)
+              .orderBy("position_key", "asc")
+              .orderBy("id", "asc"),
+          )
           const writes = rows.some((row) => row.id === payload.id)
-            ? placeAfter(rows.filter((row) => row.id !== payload.id), payload.id, payload.previous)
+            ? placeAfter(
+                rows.filter((row) => row.id !== payload.id),
+                payload.id,
+                payload.previous,
+              )
             : Option.none()
           if (Option.isNone(writes)) {
-            return yield* new SetlistRefused({ message: "That entry or neighbour is not in this setlist" })
+            return yield* new SetlistRefused({
+              message: "That entry or neighbour is not in this setlist",
+            })
           }
           yield* Effect.forEach(writes.value, (write) =>
-            db
-              .updateTable("app_public.setlist_entries")
-              .set({ position_key: write.position_key })
-              .where("id", "=", write.id),
+            requestDb.exec((k) =>
+              k
+                .updateTable("app_public.setlist_entries")
+                .set({ position_key: write.position_key })
+                .where("id", "=", write.id),
+            ),
           )
         }),
       )
@@ -307,9 +324,7 @@ export class Setlists extends Context.Service<Setlists>()("giglist/setlists", {
     }
   }),
 }) {
-  static readonly layer = Layer.effect(this, this.make).pipe(
-    Layer.provide([Bands.layer, Auth.layer, LiveHub.layer]),
-  )
+  static readonly layer = Layer.effect(this, this.make).pipe(Layer.provide([Bands.layer, Auth.layer, LiveHub.layer]))
 }
 
 /**
@@ -317,19 +332,15 @@ export class Setlists extends Context.Service<Setlists>()("giglist/setlists", {
  * foreign id is caught here before the resolved view could join its title.
  */
 const requireBandSong = Effect.fnUntraced(function* (songId: string, bandId: string) {
-  const db = yield* RequestDatabase
   const forbidden = new SetlistRefused({ message: "That song is not in this band" })
-  const song = yield* db
-    .selectFrom("app_public.songs")
-    .select("band_id")
-    .where("id", "=", songId)
-    .pipe(Effect.head, Effect.catchTag("NoSuchElementError", () => Effect.fail(forbidden)))
-  if (song.band_id !== bandId) return yield* forbidden
+  const song = yield* requestDb.maybe(S.Struct({ band_id: S.String }), (k) =>
+    k.selectFrom("app_public.songs").select("band_id").where("id", "=", songId),
+  )
+  if (Option.isNone(song) || song.value.band_id !== bandId) return yield* forbidden
 })
 
 const lockSetlist = Effect.fnUntraced(function* (setlistId: string) {
-  const db = yield* RequestDatabase
-  yield* db.selectFrom("app_public.setlists").select("id").where("id", "=", setlistId).forUpdate()
+  yield* requestDb.exec((k) => k.selectFrom("app_public.setlists").select("id").where("id", "=", setlistId).forUpdate())
 })
 
 /**
@@ -337,31 +348,27 @@ const lockSetlist = Effect.fnUntraced(function* (setlistId: string) {
  * one (soonest first), its song count and its summed duration. The subqueries
  * run under the caller's policies like the rest of the query.
  */
-const selectSetlists = Effect.fnUntraced(function* () {
-  const db = yield* RequestDatabase
-  return db
-    .selectFrom("app_public.setlists as s")
-    .select([
-      "s.id",
-      "s.band_id",
-      "s.name",
-      "s.status",
-      "s.created_at",
-      "s.updated_at",
-      sql<number>`(select count(*)::int from app_public.setlist_entries e where e.setlist_id = s.id)`.as("song_count"),
-      sql<number>`(
+const selectSetlists = (k: Kysely<DB>) =>
+  k.selectFrom("app_public.setlists as s").select([
+    "s.id",
+    "s.band_id",
+    "s.name",
+    "s.status",
+    "s.created_at",
+    "s.updated_at",
+    sql<number>`(select count(*)::int from app_public.setlist_entries e where e.setlist_id = s.id)`.as("song_count"),
+    sql<number>`(
         select coalesce(sum(songs.duration_seconds), 0)::int
         from app_public.setlist_entries e join app_public.songs on songs.id = e.song_id
         where e.setlist_id = s.id
       )`.as("duration_seconds"),
-      sql`coalesce((
+    sql<ReadonlyArray<typeof GigRef.Type>>`coalesce((
         select json_agg(json_build_object('id', g.id, 'venue', g.venue, 'gig_date', g.gig_date::text)
                         order by g.gig_date nulls last, g.id)
         from app_public.gig_setlists gs join app_public.gigs g on g.id = gs.gig_id
         where gs.setlist_id = s.id
       ), '[]'::json)`.as("gigs"),
-    ])
-})
+  ])
 
 /**
  * A setlist the caller may touch.
@@ -369,16 +376,12 @@ const selectSetlists = Effect.fnUntraced(function* () {
  * RLS hides a setlist outside the caller's bands, so "missing" and "not yours"
  * are the same answer — the caller learns nothing about another band.
  *
- * The decode is where a schema mismatch (the server disagreeing with its own
- * schema) becomes a defect, so only the real 404 stays in the error channel.
+ * The runner's row Schema is where a mismatch (the server disagreeing with its
+ * own schema) becomes a defect, so only the real 404 stays in the error channel.
  */
 const setlistOr404 = Effect.fnUntraced(function* (id: string) {
-  return yield* selectSetlists().pipe(
-    Effect.flatMap((query) => query.where("s.id", "=", id)),
-    Effect.head,
-    Effect.catchTag("NoSuchElementError", () => Effect.fail(new SetlistMissing({ id, message: "That setlist was not found" }))),
-    Effect.flatMap((row) => decodeSetlist(row).pipe(Effect.orDie)),
-  )
+  const found = yield* requestDb.maybe(Setlist, (k) => selectSetlists(k).where("s.id", "=", id))
+  return yield* Effect.fromOption(found, () => new SetlistMissing({ id, message: "That setlist was not found" }))
 })
 
 /** A setlist that was just written: a miss here is a server defect, not a caller error. */
@@ -389,30 +392,29 @@ const setlistOrDie = (id: string) => setlistOr404(id).pipe(Effect.catchTag("Setl
  * the entry's overrides over the song's defaults, so the client never resolves
  * inheritance itself.
  */
-const entriesFor = Effect.fnUntraced(function* (setlistId: string) {
-  const db = yield* RequestDatabase
-  return yield* db
-    .selectFrom("app_public.setlist_entries_resolved")
-    .selectAll()
-    .where("setlist_id", "=", setlistId)
-    .orderBy("position_key", "asc")
-    .orderBy("id", "asc")
-    .pipe(Effect.flatMap((rows) => decodeEntries(rows).pipe(Effect.orDie)))
-})
+const entriesFor = (setlistId: string) =>
+  requestDb.all(SetlistEntry, (k) =>
+    k
+      .selectFrom("app_public.setlist_entries_resolved")
+      .selectAll()
+      .where("setlist_id", "=", setlistId)
+      .orderBy("position_key", "asc")
+      .orderBy("id", "asc"),
+  )
 
 /** One entry, scoped to `setlistId` so the id alone cannot reach another band. */
 const entryOr404 = Effect.fnUntraced(function* (entryId: string, setlistId: string) {
-  const db = yield* RequestDatabase
-  return yield* db
-    .selectFrom("app_public.setlist_entries_resolved")
-    .selectAll()
-    .where("id", "=", entryId)
-    .where("setlist_id", "=", setlistId)
-    .pipe(
-      Effect.head,
-      Effect.catchTag("NoSuchElementError", () => Effect.fail(new SetlistMissing({ id: setlistId, message: "That setlist was not found" }))),
-      Effect.flatMap((row) => decodeEntry(row).pipe(Effect.orDie)),
-    )
+  const found = yield* requestDb.maybe(SetlistEntry, (k) =>
+    k
+      .selectFrom("app_public.setlist_entries_resolved")
+      .selectAll()
+      .where("id", "=", entryId)
+      .where("setlist_id", "=", setlistId),
+  )
+  return yield* Effect.fromOption(
+    found,
+    () => new SetlistMissing({ id: setlistId, message: "That setlist was not found" }),
+  )
 })
 
 /** A connection that has just opened a room, before it reports what it is doing. */

@@ -6,7 +6,7 @@ import { HttpApi, HttpApiBuilder, HttpApiEndpoint, HttpApiGroup, HttpApiSchema }
 import { toDatabaseError } from "@danielfgray/stompbox/db"
 import { FailureBoundaryLayer } from "@danielfgray/stompbox/http/server"
 import { FailureBoundary } from "../api/failure-boundary"
-import { AuthDb, AuthVisitor, RequestDatabase, withAuthContext } from "./db"
+import { AuthDb, AuthVisitor, requestDb, withAuthContext } from "./db"
 import { toHttpError } from "./dbErrors"
 import { answerRequest, collectLogs, type LogLine } from "./test/probe"
 
@@ -38,8 +38,8 @@ const statements: Record<(typeof statementNames)[number], string> = {
 
 /**
  * Runs a statement the typed query builders cannot express, such as a DO block.
- * A failure takes the conversion a builder's failure takes (effectKysely.ts
- * runQuery), so the handler sees the same DatabaseError.
+ * A failure takes the conversion a runner statement takes (`toDatabaseError`),
+ * so the handler sees the same DatabaseError.
  */
 const runRaw = (statement: string) =>
   Effect.gen(function* () {
@@ -76,12 +76,11 @@ const ProbeHandlers = HttpApiBuilder.group(ProbeApi, "probe", (handlers) =>
       "visitorInsert",
       Effect.fn("Probe.visitorInsert")(function* () {
         // No session, so the request runs as the visitor, who may not insert a song.
-        yield* Effect.gen(function* () {
-          const visitor = yield* RequestDatabase
-          yield* visitor
-            .insertInto("app_public.songs")
-            .values({ band_id: "00000000-0000-0000-0000-000000000000", title: "x" })
-        }).pipe(withAuthContext)
+        yield* requestDb
+          .exec((k) =>
+            k.insertInto("app_public.songs").values({ band_id: "00000000-0000-0000-0000-000000000000", title: "x" }),
+          )
+          .pipe(withAuthContext)
       }),
     ),
 )

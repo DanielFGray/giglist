@@ -1,7 +1,17 @@
 import { Context, Effect, Layer, Option, Schema } from "effect"
 import { sql } from "kysely"
-import { RequestDatabase } from "../db"
-import type { UpdateBandPayload } from "../../api/bands"
+import { requestDb } from "../db"
+import {
+  BandInfo,
+  BandInvitation,
+  BandMember,
+  PageTheme,
+  PendingInvitation,
+  PublicBandGig,
+  PublicBandMember,
+  PublicBandSong,
+  type UpdateBandPayload,
+} from "../../api/bands"
 import { type DatabaseError, onSqlState } from "@danielfgray/stompbox/db"
 
 type BandUpdate = Schema.Schema.Type<typeof UpdateBandPayload>
@@ -42,30 +52,22 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
       bandId: string
       userId: string
     }) {
-      const db = yield* RequestDatabase
-      const band = yield* db
-        .selectFrom(
-          sql<{ id: string }>`app_public.transfer_band_ownership(
+      const refused = () =>
+        new BandRefused({
+          message: "Could not transfer ownership — you must be the owner and the person a member",
+        })
+      const transferred = yield* requestDb.maybe(MaybeIdRow, (k) =>
+        k
+          .selectFrom(
+            sql<{ id: string | null }>`app_public.transfer_band_ownership(
               ${args.bandId}::uuid,
               ${args.userId}::uuid
             )`.as("b"),
-        )
-        .selectAll()
-        .pipe(
-          Effect.head,
-          Effect.catchTag("NoSuchElementError", () =>
-            Effect.fail(
-              new BandRefused({
-                message: "Could not transfer ownership — you must be the owner and the person a member",
-              }),
-            ),
-          ),
-        )
-      if (!band.id) {
-        return yield* new BandRefused({
-          message: "Could not transfer ownership — you must be the owner and the person a member",
-        })
-      }
+          )
+          .selectAll(),
+      )
+      const band = yield* Effect.fromOption(transferred, refused)
+      if (!band.id) return yield* refused()
     })
 
     /**
@@ -78,59 +80,54 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
      * through `app_public.public_band`, never through a policy.
      */
     const getUserBands = Effect.fn("Bands.getUserBands")(function* () {
-      const db = yield* RequestDatabase
-      return yield* db
-        .selectFrom("app_public.band_memberships")
-        .innerJoin("app_public.bands", "app_public.bands.id", "app_public.band_memberships.band_id")
-        .select(bandColumns)
-        .where("app_public.band_memberships.user_id", "=", sql<string>`app_public.current_user_id()`)
-        .orderBy("app_public.bands.name", "asc")
+      return yield* requestDb.all(BandInfo, (k) =>
+        k
+          .selectFrom("app_public.band_memberships")
+          .innerJoin("app_public.bands", "app_public.bands.id", "app_public.band_memberships.band_id")
+          .select(bandColumns)
+          .where("app_public.band_memberships.user_id", "=", sql<string>`app_public.current_user_id()`)
+          .orderBy("app_public.bands.name", "asc"),
+      )
     })
 
     const getBandMembers = Effect.fn("Bands.getBandMembers")(function* (bandId: string) {
-      const db = yield* RequestDatabase
-      return yield* db
-        .selectFrom("app_public.band_memberships")
-        .innerJoin("app_public.users", "app_public.users.id", "app_public.band_memberships.user_id")
-        .select([
-          "app_public.band_memberships.id",
-          "app_public.band_memberships.user_id",
-          "app_public.band_memberships.is_owner",
-          "app_public.band_memberships.created_at",
-          "app_public.users.username",
-          "app_public.users.name",
-          "app_public.users.avatar_url",
-        ])
-        .where("app_public.band_memberships.band_id", "=", bandId)
-        .orderBy("app_public.band_memberships.is_owner", "desc")
-        .orderBy("app_public.users.username", "asc")
+      return yield* requestDb.all(BandMember, (k) =>
+        k
+          .selectFrom("app_public.band_memberships")
+          .innerJoin("app_public.users", "app_public.users.id", "app_public.band_memberships.user_id")
+          .select([
+            "app_public.band_memberships.id",
+            "app_public.band_memberships.user_id",
+            "app_public.band_memberships.is_owner",
+            "app_public.band_memberships.created_at",
+            "app_public.users.username",
+            "app_public.users.name",
+            "app_public.users.avatar_url",
+          ])
+          .where("app_public.band_memberships.band_id", "=", bandId)
+          .orderBy("app_public.band_memberships.is_owner", "desc")
+          .orderBy("app_public.users.username", "asc"),
+      )
     })
 
     const createBand = Effect.fn("Bands.createBand")(
       function* (args: { slug: string; name: string }) {
-        const db = yield* RequestDatabase
-        const created = yield* db
-          .selectFrom(
-            sql<{ id: string | null }>`app_public.create_band(
+        const created = yield* requestDb.maybe(MaybeIdRow, (k) =>
+          k
+            .selectFrom(
+              sql<{ id: string | null }>`app_public.create_band(
               slug => ${args.slug}::citext,
               name => ${args.name}
             )`.as("b"),
-          )
-          .select("id")
-          .pipe(
-            Effect.head,
-            Effect.catchTag("NoSuchElementError", () =>
-              Effect.fail(new BandRefused({ message: "Failed to create band" })),
-            ),
-          )
-
-        const id = created.id
-        if (!id) return yield* new BandRefused({ message: "Failed to create band" })
-        return yield* db
-          .selectFrom("app_public.bands")
-          .select(bandColumns)
-          .where("app_public.bands.id", "=", id)
-          .pipe(Effect.head, Effect.catchTag("NoSuchElementError", Effect.die))
+            )
+            .select("id"),
+        )
+        const failed = () => new BandRefused({ message: "Failed to create band" })
+        const id = (yield* Effect.fromOption(created, failed)).id
+        if (!id) return yield* failed()
+        return yield* requestDb.one(BandInfo, (k) =>
+          k.selectFrom("app_public.bands").select(bandColumns).where("app_public.bands.id", "=", id),
+        )
       },
       Effect.catchTag("DatabaseError", (e): Effect.Effect<never, BandRefused | DatabaseError> => {
         if (Option.exists(e.report, (r) => Option.contains(r.constraint, "bands_slug_key")))
@@ -141,14 +138,15 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
 
     const inviteToBand = Effect.fn("Bands.inviteToBand")(
       function* (args: { bandId: string; username?: string; email?: string }) {
-        const db = yield* RequestDatabase
-        yield* db.selectNoFrom([
-          sql`app_public.invite_to_band(
+        yield* requestDb.exec((k) =>
+          k.selectNoFrom([
+            sql`app_public.invite_to_band(
             band_id => ${args.bandId}::uuid,
             username => ${args.username ?? null}::citext,
             email => ${args.email ?? null}::citext
           )`.as("_"),
-        ])
+          ]),
+        )
       },
       onSqlState({
         LOGIN: () => new BandRefused({ message: "You must be logged in" }),
@@ -166,24 +164,26 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
 
     /** The invitations addressed to the current user. */
     const listInvitations = Effect.fn("Bands.listInvitations")(function* () {
-      const db = yield* RequestDatabase
-      return yield* db
-        .selectFrom(
-          sql<{
-            id: string
-            band_id: string
-            band_name: string
-          }>`app_public.my_band_invitations()`.as("i"),
-        )
-        .selectAll()
+      return yield* requestDb.all(BandInvitation, (k) =>
+        k
+          .selectFrom(
+            sql<{
+              id: string
+              band_id: string
+              band_name: string
+            }>`app_public.my_band_invitations()`.as("i"),
+          )
+          .selectAll(),
+      )
     })
 
     const acceptInvitation = Effect.fn("Bands.acceptInvitation")(
       function* (invitationId: string, code: string | null) {
-        const db = yield* RequestDatabase
-        const [row] = yield* db.selectNoFrom([
-          sql<string>`app_public.accept_invitation_to_band(${invitationId}::uuid, ${code}::text)`.as("band_id"),
-        ])
+        const row = yield* requestDb.one(Schema.Struct({ band_id: Schema.String }), (k) =>
+          k.selectNoFrom([
+            sql<string>`app_public.accept_invitation_to_band(${invitationId}::uuid, ${code}::text)`.as("band_id"),
+          ]),
+        )
         return { bandId: row.band_id }
       },
       onSqlState({
@@ -194,23 +194,25 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
     )
 
     const declineInvitation = Effect.fn("Bands.declineInvitation")(function* (invitationId: string) {
-      const db = yield* RequestDatabase
-      yield* db.selectNoFrom([sql`app_public.decline_invitation_to_band(${invitationId}::uuid)`.as("_")])
+      yield* requestDb.exec((k) =>
+        k.selectNoFrom([sql`app_public.decline_invitation_to_band(${invitationId}::uuid)`.as("_")]),
+      )
     })
 
     /** Pending invitations for a band. Only the owner may call this. */
     const listPendingInvitations = Effect.fn("Bands.listPendingInvitations")(
       function* (bandId: string) {
-        const db = yield* RequestDatabase
-        return yield* db
-          .selectFrom(
-            sql<{
-              id: string
-              username: string | null
-              email: string | null
-            }>`app_public.band_pending_invitations(${bandId}::uuid)`.as("i"),
-          )
-          .selectAll()
+        return yield* requestDb.all(PendingInvitation, (k) =>
+          k
+            .selectFrom(
+              sql<{
+                id: string
+                username: string | null
+                email: string | null
+              }>`app_public.band_pending_invitations(${bandId}::uuid)`.as("i"),
+            )
+            .selectAll(),
+        )
       },
       onSqlState({
         DNIED: () => new BandRefused({ message: "You must be the band owner to see invitations" }),
@@ -220,10 +222,9 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
     /** Delete a pending invitation. Only the band's owner may cancel it. */
     const cancelInvitation = Effect.fn("Bands.cancelInvitation")(
       function* (args: { bandId: string; invitationId: string }) {
-        const db = yield* RequestDatabase
-        yield* db.selectNoFrom([
-          sql`app_public.cancel_invitation(${args.bandId}::uuid, ${args.invitationId}::uuid)`.as("_"),
-        ])
+        yield* requestDb.exec((k) =>
+          k.selectNoFrom([sql`app_public.cancel_invitation(${args.bandId}::uuid, ${args.invitationId}::uuid)`.as("_")]),
+        )
       },
       onSqlState({
         NTFND: () => new BandRefused({ message: "That invitation no longer exists" }),
@@ -231,23 +232,24 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
       }),
     )
 
+    /** Whether the request's user owns `bandId`, or a refusal when they are not a member. */
+    const requireMembership = Effect.fnUntraced(function* (bandId: string) {
+      const mine = yield* requestDb.maybe(Schema.Struct({ is_owner: Schema.Boolean }), (k) =>
+        k
+          .selectFrom("app_public.band_memberships")
+          .select(["is_owner"])
+          .where("band_id", "=", bandId)
+          .where("user_id", "=", sql<string>`app_public.current_user_id()`),
+      )
+      return yield* Effect.fromOption(mine, () => new BandRefused({ message: "You are not a member of that band" }))
+    })
+
     const deleteBand = Effect.fn("Bands.deleteBand")(function* (bandId: string) {
-      const db = yield* RequestDatabase
-      const mine = yield* db
-        .selectFrom("app_public.band_memberships")
-        .select(["is_owner"])
-        .where("band_id", "=", bandId)
-        .where("user_id", "=", sql<string>`app_public.current_user_id()`)
-        .pipe(
-          Effect.head,
-          Effect.catchTag("NoSuchElementError", () =>
-            Effect.fail(new BandRefused({ message: "You are not a member of that band" })),
-          ),
-        )
+      const mine = yield* requireMembership(bandId)
       if (!mine.is_owner) {
         return yield* new BandRefused({ message: "Only the owner can delete the band" })
       }
-      yield* db.selectNoFrom([sql`app_public.delete_band(${bandId}::uuid)`.as("_")])
+      yield* requestDb.exec((k) => k.selectNoFrom([sql`app_public.delete_band(${bandId}::uuid)`.as("_")]))
     })
 
     const updateBand = Effect.fn("Bands.updateBand")(function* ({
@@ -255,18 +257,7 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
       page_options,
       ...fields
     }: { bandId: string } & BandUpdate) {
-      const db = yield* RequestDatabase
-      const mine = yield* db
-        .selectFrom("app_public.band_memberships")
-        .select(["is_owner"])
-        .where("band_id", "=", bandId)
-        .where("user_id", "=", sql<string>`app_public.current_user_id()`)
-        .pipe(
-          Effect.head,
-          Effect.catchTag("NoSuchElementError", () =>
-            Effect.fail(new BandRefused({ message: "You are not a member of that band" })),
-          ),
-        )
+      const mine = yield* requireMembership(bandId)
       if (!mine.is_owner) {
         return yield* new BandRefused({ message: "Only the owner can update the band" })
       }
@@ -279,11 +270,18 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
       }
       const changed = Object.values(patch).some((v) => v !== undefined)
       const row = changed
-        ? db.updateTable("app_public.bands").set(patch).where("app_public.bands.id", "=", bandId).returning(bandColumns)
-        : db.selectFrom("app_public.bands").select(bandColumns).where("app_public.bands.id", "=", bandId)
-      return yield* row.pipe(
-        Effect.head,
-        Effect.catchTag("NoSuchElementError", () => Effect.fail(new BandRefused({ message: "Band not found" }))),
+        ? requestDb.maybe(BandInfo, (k) =>
+            k
+              .updateTable("app_public.bands")
+              .set(patch)
+              .where("app_public.bands.id", "=", bandId)
+              .returning(bandColumns),
+          )
+        : requestDb.maybe(BandInfo, (k) =>
+            k.selectFrom("app_public.bands").select(bandColumns).where("app_public.bands.id", "=", bandId),
+          )
+      return yield* Effect.flatMap(row, (found) =>
+        Effect.fromOption(found, () => new BandRefused({ message: "Band not found" })),
       )
     })
 
@@ -295,53 +293,57 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
      * that list hidden.
      */
     const getPublicBandProfile = Effect.fn("Bands.getPublicBandProfile")(function* (slug: string) {
-      const db = yield* RequestDatabase
-      const band = yield* db
-        .selectFrom(
-          sql<{
-            slug: string
-            name: string
-            description: string | null
-            page_theme: string | null
-            page_options: Record<string, string>
-          }>`app_public.public_band(${slug}::citext)`.as("b"),
-        )
-        .selectAll()
-        .pipe(
-          Effect.head,
-          Effect.catchTag("NoSuchElementError", () => Effect.fail(new PublicBandMissing({ slug }))),
-        )
+      const found = yield* requestDb.maybe(PublicBandRow, (k) =>
+        k
+          .selectFrom(
+            sql<{
+              slug: string
+              name: string
+              description: string | null
+              page_theme: string | null
+              page_options: Record<string, string>
+            }>`app_public.public_band(${slug}::citext)`.as("b"),
+          )
+          .selectAll(),
+      )
+      const band = yield* Effect.fromOption(found, () => new PublicBandMissing({ slug }))
 
-      const members = yield* db
-        .selectFrom(
-          sql<{
-            username: string
-            name: string | null
-            avatar_url: string | null
-            is_owner: boolean
-          }>`app_public.public_band_members(${slug}::citext)`.as("m"),
-        )
-        .selectAll()
+      const members = yield* requestDb.all(PublicBandMember, (k) =>
+        k
+          .selectFrom(
+            sql<{
+              username: string
+              name: string | null
+              avatar_url: string | null
+              is_owner: boolean
+            }>`app_public.public_band_members(${slug}::citext)`.as("m"),
+          )
+          .selectAll(),
+      )
 
       // `date` as text: the driver would otherwise build a local-midnight Date,
       // which shifts the day in any zone west of UTC.
-      const gigs = yield* db
-        .selectFrom(
-          sql<{
-            venue: string | null
-            gig_date: string
-          }>`app_public.public_band_gig_dates(${slug}::citext)`.as("g"),
-        )
-        .select(["g.venue", sql<string>`g.gig_date::text`.as("gig_date")])
+      const gigs = yield* requestDb.all(PublicBandGig, (k) =>
+        k
+          .selectFrom(
+            sql<{
+              venue: string | null
+              gig_date: string
+            }>`app_public.public_band_gig_dates(${slug}::citext)`.as("g"),
+          )
+          .select(["g.venue", sql<string>`g.gig_date::text`.as("gig_date")]),
+      )
 
-      const songs = yield* db
-        .selectFrom(
-          sql<{
-            title: string
-            artist: string | null
-          }>`app_public.public_band_songs(${slug}::citext)`.as("s"),
-        )
-        .selectAll()
+      const songs = yield* requestDb.all(PublicBandSong, (k) =>
+        k
+          .selectFrom(
+            sql<{
+              title: string
+              artist: string | null
+            }>`app_public.public_band_songs(${slug}::citext)`.as("s"),
+          )
+          .selectAll(),
+      )
 
       return {
         slug: band.slug,
@@ -357,19 +359,22 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
 
     const removeMember = Effect.fn("Bands.removeMember")(
       function* (args: { bandId: string; userId: string }) {
-        const db = yield* RequestDatabase
-        const [me] = yield* db.selectNoFrom([sql<string>`app_public.current_user_id()`.as("user_id")])
+        const me = yield* requestDb.one(Schema.Struct({ user_id: Schema.NullOr(Schema.String) }), (k) =>
+          k.selectNoFrom([sql<string | null>`app_public.current_user_id()`.as("user_id")]),
+        )
 
         if (me.user_id === args.userId) {
           return yield* new BandRefused({ message: "Use Leave to remove yourself" })
         }
 
-        yield* db.selectNoFrom([
-          sql`app_public.remove_from_band(
+        yield* requestDb.exec((k) =>
+          k.selectNoFrom([
+            sql`app_public.remove_from_band(
             ${args.bandId}::uuid,
             ${args.userId}::uuid
           )`.as("_"),
-        ])
+          ]),
+        )
       },
       onSqlState({ DNIED: () => new BandRefused({ message: "You cannot remove that member" }) }),
     )
@@ -382,25 +387,23 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
       bandId: string
       transferTo: string | undefined
     }) {
-      const db = yield* RequestDatabase
-      const me = yield* db
-        .selectFrom("app_public.band_memberships")
-        .select(["user_id", "is_owner"])
-        .where("band_id", "=", args.bandId)
-        .where("user_id", "=", sql<string>`app_public.current_user_id()`)
-        .pipe(
-          Effect.head,
-          Effect.catchTag("NoSuchElementError", () =>
-            Effect.fail(new BandRefused({ message: "You are not a member of that band" })),
-          ),
-        )
+      const mine = yield* requestDb.maybe(Schema.Struct({ user_id: Schema.String, is_owner: Schema.Boolean }), (k) =>
+        k
+          .selectFrom("app_public.band_memberships")
+          .select(["user_id", "is_owner"])
+          .where("band_id", "=", args.bandId)
+          .where("user_id", "=", sql<string>`app_public.current_user_id()`),
+      )
+      const me = yield* Effect.fromOption(mine, () => new BandRefused({ message: "You are not a member of that band" }))
 
       if (me.is_owner) {
-        const others = yield* db
-          .selectFrom("app_public.band_memberships")
-          .select(["user_id"])
-          .where("band_id", "=", args.bandId)
-          .where("user_id", "<>", me.user_id)
+        const others = yield* requestDb.all(Schema.Struct({ user_id: Schema.String }), (k) =>
+          k
+            .selectFrom("app_public.band_memberships")
+            .select(["user_id"])
+            .where("band_id", "=", args.bandId)
+            .where("user_id", "<>", me.user_id),
+        )
         if (others.length === 0) {
           return yield* new BandRefused({
             message: "You are the only member — delete the band to remove its data",
@@ -417,12 +420,14 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
         yield* transferOwnership({ bandId: args.bandId, userId: args.transferTo })
       }
 
-      yield* db.selectNoFrom([
-        sql`app_public.remove_from_band(
+      yield* requestDb.exec((k) =>
+        k.selectNoFrom([
+          sql`app_public.remove_from_band(
             ${args.bandId}::uuid,
             ${me.user_id}::uuid
           )`.as("_"),
-      ])
+        ]),
+      )
     })
 
     /**
@@ -431,12 +436,11 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
      * result. It runs in the caller's transaction, so both agree on the user.
      */
     const isMember = Effect.fn("Bands.isMember")(function* (bandId: string) {
-      const db = yield* RequestDatabase
       // `current_user_member_band_ids()` is a `setof uuid`; `select * from fn() as ids`
       // names its one column after the alias.
-      const rows = yield* db
-        .selectFrom(sql<{ ids: string }>`app_public.current_user_member_band_ids()`.as("ids"))
-        .selectAll()
+      const rows = yield* requestDb.all(Schema.Struct({ ids: Schema.String }), (k) =>
+        k.selectFrom(sql<{ ids: string }>`app_public.current_user_member_band_ids()`.as("ids")).selectAll(),
+      )
       return rows.some((row) => row.ids === bandId)
     })
 
@@ -462,3 +466,13 @@ export class Bands extends Context.Service<Bands>()("giglist/bands", {
 }) {
   static readonly layer = Layer.effect(this, this.make)
 }
+
+const MaybeIdRow = Schema.Struct({ id: Schema.NullOr(Schema.String) })
+
+/** What `public_band` returns: `PublicBandProfile` without its lists. */
+const PublicBandRow = Schema.Struct({
+  slug: Schema.String,
+  name: Schema.String,
+  description: Schema.NullOr(Schema.String),
+  ...PageTheme.fields,
+})
