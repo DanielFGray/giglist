@@ -1,5 +1,5 @@
 {
-  "apiVersion": "server-ansible/v2",
+  "apiVersion": "roamancer/v2",
   "name": "giglist",
   "postgres": [{ "database": "giglist", "extensions": ["citext", "pgcrypto", "uuid-ossp"] }],
   "services": [
