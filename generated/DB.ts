@@ -3,414 +3,426 @@
  * maintained by hand: add an interface here when a migration adds a table.
  */
 
-import type { ColumnType } from "kysely";
+import type { ColumnType } from "kysely"
+import type { ChartChange } from "../src/api/charts"
+import type { MarkBody, MarkScope } from "../src/api/marks"
+import type { musicalKey } from "../src/api/songs"
 
-export type AppPublicSetlistStatus = "draft" | "final" | "rehearsal";
+/** A jsonb column the app writes as a JSON string and reads as a parsed value. */
+export type JsonColumn<T> = ColumnType<T, string, string>
 
-export type AppPublicUserRole = "admin" | "moderator" | "user";
+/** `app_public.musical_key`: a text domain whose check constraint accepts the keys in `musicalKey`. */
+export type MusicalKey = typeof musicalKey.Type
 
-export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
-  ? ColumnType<S, I | undefined, U>
-  : ColumnType<T, T | undefined, T>;
+export type AppPublicSetlistStatus = "draft" | "final" | "rehearsal"
 
-export type Json = JsonValue;
+export type AppPublicUserRole = "admin" | "moderator" | "user"
 
-export type JsonArray = JsonValue[];
+export type Generated<T> =
+  T extends ColumnType<infer S, infer I, infer U> ? ColumnType<S, I | undefined, U> : ColumnType<T, T | undefined, T>
+
+export type Json = JsonValue
+
+export type JsonArray = JsonValue[]
 
 export type JsonObject = {
-  [x: string]: JsonValue | undefined;
-};
+  [x: string]: JsonValue | undefined
+}
 
-export type JsonPrimitive = boolean | number | string | null;
+export type JsonPrimitive = boolean | number | string | null
 
-export type JsonValue = JsonArray | JsonObject | JsonPrimitive;
+export type JsonValue = JsonArray | JsonObject | JsonPrimitive
 
-export type Timestamp = ColumnType<Date, Date | string, Date | string>;
+export type Timestamp = ColumnType<Date, Date | string, Date | string>
 
 export interface AppPrivateConnectPgSimpleSessions {
-  expire: Timestamp;
-  sess: Json;
-  sid: Generated<string>;
+  expire: Timestamp
+  sess: Json
+  sid: Generated<string>
 }
 
 export interface AppPrivateSessions {
-  created_at: Generated<Timestamp>;
-  last_active: Generated<Timestamp>;
-  user_id: string;
-  uuid: Generated<string>;
+  created_at: Generated<Timestamp>
+  last_active: Generated<Timestamp>
+  user_id: string
+  uuid: Generated<string>
 }
 
 export interface AppPrivateUnregisteredEmailPasswordResets {
   /**
    * We store the number of attempts to help us detect accounts being attacked.
    */
-  attempts: Generated<number>;
-  email: string;
+  attempts: Generated<number>
+  email: string
   /**
    * We store the time the last password reset was sent to this email to prevent the email getting flooded.
    */
-  latest_attempt: Timestamp;
+  latest_attempt: Timestamp
 }
 
 export interface AppPrivateUserAuthenticationSecrets {
-  details: Generated<Json>;
-  user_authentication_id: string;
+  details: Generated<Json>
+  user_authentication_id: string
 }
 
 export interface AppPrivateUserEmailSecrets {
   /**
    * We store the time the last password reset was sent to this email to prevent the email getting flooded.
    */
-  password_reset_email_sent_at: Timestamp | null;
-  user_email_id: string;
-  verification_email_sent_at: Timestamp | null;
-  verification_token: string | null;
+  password_reset_email_sent_at: Timestamp | null
+  user_email_id: string
+  verification_email_sent_at: Timestamp | null
+  verification_token: string | null
 }
 
 export interface AppPrivateUserSecrets {
-  delete_account_token: string | null;
-  delete_account_token_generated: Timestamp | null;
-  failed_password_attempts: Generated<number>;
-  failed_reset_password_attempts: Generated<number>;
-  first_failed_password_attempt: Timestamp | null;
-  first_failed_reset_password_attempt: Timestamp | null;
-  last_login_at: Generated<Timestamp>;
-  password_hash: string | null;
-  reset_password_token: string | null;
-  reset_password_token_generated: Timestamp | null;
-  user_id: string;
+  delete_account_token: string | null
+  delete_account_token_generated: Timestamp | null
+  failed_password_attempts: Generated<number>
+  failed_reset_password_attempts: Generated<number>
+  first_failed_password_attempt: Timestamp | null
+  first_failed_reset_password_attempt: Timestamp | null
+  last_login_at: Generated<Timestamp>
+  password_hash: string | null
+  reset_password_token: string | null
+  reset_password_token_generated: Timestamp | null
+  user_id: string
 }
 
 export interface AppPublicBandInvitations {
-  band_id: string;
-  code: string | null;
-  email: string | null;
-  id: Generated<string>;
-  user_id: string | null;
+  band_id: string
+  code: string | null
+  email: string | null
+  id: Generated<string>
+  user_id: string | null
 }
 
 export interface AppPublicBandMemberships {
-  band_id: string;
-  created_at: Generated<Timestamp>;
-  id: Generated<string>;
-  is_owner: Generated<boolean>;
-  user_id: string;
+  band_id: string
+  created_at: Generated<Timestamp>
+  id: Generated<string>
+  is_owner: Generated<boolean>
+  user_id: string
 }
 
 export interface AppPublicBands {
-  created_at: Generated<Timestamp>;
-  description: string | null;
-  id: Generated<string>;
+  created_at: Generated<Timestamp>
+  description: string | null
+  id: Generated<string>
   /**
    * When true, anyone can open the band's public page; when false, /b/:slug answers not found.
    */
-  is_public: Generated<boolean>;
-  name: string;
+  is_public: Generated<boolean>
+  name: string
   /**
    * Values for the options the theme declares, keyed like "color:Accent"; an option with no value uses the theme's default.
    * Written as JSON text; the driver reads it back as an object.
    */
-  page_options: Generated<ColumnType<Record<string, string>, string, string>>;
+  page_options: Generated<ColumnType<Record<string, string>, string, string>>
   /**
    * The public page's theme: an HTML document with theme tags. Null means the built-in Classic theme.
    */
-  page_theme: string | null;
+  page_theme: string | null
   /**
    * When true, the public band page lists upcoming gigs (venue + date only).
    */
-  show_gig_dates_publicly: Generated<boolean>;
+  show_gig_dates_publicly: Generated<boolean>
   /**
    * When true, the public band page lists members (username, name, avatar).
    */
-  show_members_publicly: Generated<boolean>;
+  show_members_publicly: Generated<boolean>
   /**
    * When true, the public band page lists the band's songs (title + artist only).
    */
-  show_songs_publicly: Generated<boolean>;
-  slug: string;
+  show_songs_publicly: Generated<boolean>
+  slug: string
 }
 
 export interface AppPublicCharts {
-  created_at: Generated<Timestamp>;
-  created_by: Generated<string | null>;
-  id: Generated<string>;
-  kind: "lyrics" | "score";
-  name: string;
-  song_id: string;
+  created_at: Generated<Timestamp>
+  created_by: Generated<string | null>
+  id: Generated<string>
+  kind: "lyrics" | "score"
+  name: string
+  song_id: string
   /**
    * The key a lyrics chart is written in. Display-time transposition starts here.
    */
-  written_key: string | null;
+  written_key: MusicalKey | null
 }
 
 export interface AppPublicChartRevisions {
   /**
    * The change set the editor recorded against the parent revision. Null when the revision came from outside the editor; the app then derives it by diffing.
    */
-  changes: Json | null;
-  chart_id: string;
-  created_at: Generated<Timestamp>;
-  created_by: Generated<string | null>;
+  changes: ColumnType<ReadonlyArray<typeof ChartChange.Type> | null, string | null, string | null>
+  chart_id: string
+  created_at: Generated<Timestamp>
+  created_by: Generated<string | null>
   /**
    * Name of the uploaded Guitar Pro file of a score. The bytes are in score_files.
    */
-  file_key: string | null;
-  file_sha256: Buffer | null;
-  id: Generated<string>;
-  parent_id: string | null;
+  file_key: string | null
+  file_sha256: Buffer | null
+  id: Generated<string>
+  parent_id: string | null
   /**
    * ChordPro text of a lyrics chart. Players edit it as chords over lyrics; directives and alphaTex pass through as written.
    */
-  source: string | null;
+  source: string | null
 }
 
 export interface AppPublicMarks {
-  body: Json;
-  created_at: Generated<Timestamp>;
-  dx: number;
-  dy: number;
-  id: Generated<string>;
-  range_end: number;
-  range_start: number;
-  revision_id: string;
-  scale: number;
-  scope: Json;
-  side: "inline" | "margin";
-  updated_at: Generated<Timestamp>;
-  user_id: Generated<string>;
-  visibility: Generated<"band" | "private">;
+  body: JsonColumn<typeof MarkBody.Type>
+  created_at: Generated<Timestamp>
+  dx: number
+  dy: number
+  id: Generated<string>
+  range_end: number
+  range_start: number
+  revision_id: string
+  scale: number
+  scope: JsonColumn<typeof MarkScope.Type>
+  side: "inline" | "margin"
+  updated_at: Generated<Timestamp>
+  user_id: Generated<string>
+  visibility: Generated<"band" | "private">
 }
 
 export interface AppPublicStamps {
-  body: Json;
-  created_at: Generated<Timestamp>;
-  id: Generated<string>;
-  name: string;
-  user_id: Generated<string>;
+  body: JsonColumn<typeof MarkBody.Type>
+  created_at: Generated<Timestamp>
+  id: Generated<string>
+  name: string
+  user_id: Generated<string>
 }
 
 export interface AppPublicScoreFiles {
   /**
    * The uploaded Guitar Pro file of a score revision, byte for byte. Never re-exported.
    */
-  bytes: Buffer;
-  revision_id: string;
+  bytes: Buffer
+  revision_id: string
 }
 
 export interface AppPublicGigs {
   /**
    * The venue address, as the band would paste into a map.
    */
-  address: string | null;
-  band_id: string;
-  created_at: Generated<Timestamp>;
-  created_by: string | null;
-  gig_date: Timestamp | null;
-  id: Generated<string>;
+  address: string | null
+  band_id: string
+  created_at: Generated<Timestamp>
+  created_by: string | null
+  gig_date: Timestamp | null
+  id: Generated<string>
   /**
    * Where the venue is, from the map place or past venue the band picked; null when the address was typed by hand.
    */
-  latitude: number | null;
+  latitude: number | null
   /**
    * When the band must arrive and load in, as a wall-clock time at the venue on the gig date.
    */
-  load_in_time: string | null;
+  load_in_time: string | null
   /**
    * Where the venue is, with latitude.
    */
-  longitude: number | null;
+  longitude: number | null
   /**
    * Notes for the band only.
    */
-  notes: string | null;
+  notes: string | null
   /**
    * When the performance starts, as a wall-clock time at the venue on the gig date.
    */
-  performance_time: string | null;
-  updated_at: Generated<Timestamp>;
+  performance_time: string | null
+  updated_at: Generated<Timestamp>
   /**
    * Where the gig is; the gig's label, and public with the date.
    */
-  venue: string | null;
+  venue: string | null
 }
 
 export interface AppPublicGigSetlists {
-  band_id: string;
-  gig_id: string;
-  position_key: string;
-  setlist_id: string;
+  band_id: string
+  gig_id: string
+  position_key: string
+  setlist_id: string
 }
 
 export interface AppPublicSetlistEntries {
-  created_at: Generated<Timestamp>;
-  id: Generated<string>;
+  created_at: Generated<Timestamp>
+  id: Generated<string>
   /**
    * Override the song's default key for this setlist. Null = use song default.
    */
-  key_override: string | null;
+  key_override: MusicalKey | null
   /**
    * Override the song's default notes for this setlist. Null = use song default.
    */
-  notes_override: string | null;
+  notes_override: string | null
   /**
    * Sortable key for the entry's place in the setlist; read in order of (position_key, id).
    */
-  position_key: string;
-  setlist_id: string;
-  song_id: string;
+  position_key: string
+  setlist_id: string
+  song_id: string
   /**
    * Override the song's default tempo for this setlist. Null = use song default.
    */
-  tempo_override: number | null;
-  updated_at: Generated<Timestamp>;
+  tempo_override: number | null
+  updated_at: Generated<Timestamp>
 }
 
+/**
+ * A view's columns are all nullable to the catalog; these are the ones its source
+ * columns never leave null, which the row Schema checks on every read.
+ */
 export interface AppPublicSetlistEntriesResolved {
-  artist: string | null;
-  capo: number | null;
-  created_at: Timestamp | null;
-  duration_seconds: number | null;
-  id: string | null;
-  key: string | null;
-  key_overridden: boolean | null;
-  notes: string | null;
-  notes_overridden: boolean | null;
-  position_key: string | null;
-  setlist_id: string | null;
-  song_id: string | null;
-  tempo_bpm: number | null;
-  tempo_overridden: boolean | null;
-  title: string | null;
-  updated_at: Timestamp | null;
+  artist: string | null
+  capo: number | null
+  created_at: Timestamp
+  duration_seconds: number | null
+  id: string
+  key: MusicalKey | null
+  key_overridden: boolean
+  notes: string | null
+  notes_overridden: boolean
+  position_key: string
+  setlist_id: string
+  song_id: string
+  tempo_bpm: number | null
+  tempo_overridden: boolean
+  title: string
+  updated_at: Timestamp
 }
 
 export interface AppPublicSetlists {
-  band_id: string;
-  created_at: Generated<Timestamp>;
-  created_by: string | null;
-  id: Generated<string>;
-  name: string;
+  band_id: string
+  created_at: Generated<Timestamp>
+  created_by: string | null
+  id: Generated<string>
+  name: string
   /**
    * Workflow status: draft → rehearsal → final.
    */
-  status: Generated<AppPublicSetlistStatus>;
-  updated_at: Generated<Timestamp>;
+  status: Generated<AppPublicSetlistStatus>
+  updated_at: Generated<Timestamp>
 }
 
 export interface AppPublicSongs {
-  artist: string | null;
-  band_id: string;
+  artist: string | null
+  band_id: string
   /**
    * Default capo position (0 = no capo).
    */
-  capo: number | null;
-  created_at: Generated<Timestamp>;
-  created_by: string | null;
+  capo: number | null
+  created_at: Generated<Timestamp>
+  created_by: string | null
   /**
    * Estimated duration in seconds.
    */
-  duration_seconds: number | null;
-  id: Generated<string>;
+  duration_seconds: number | null
+  id: Generated<string>
   /**
    * Default musical key for this song.
    */
-  key: string | null;
+  key: MusicalKey | null
   /**
    * Freeform notes about the song (chords, arrangement, etc).
    */
-  notes: string | null;
+  notes: string | null
   /**
    * Default tempo in beats per minute.
    */
-  tempo_bpm: number | null;
-  title: string;
-  updated_at: Generated<Timestamp>;
+  tempo_bpm: number | null
+  title: string
+  updated_at: Generated<Timestamp>
 }
 
 export interface AppPublicUserAuthentications {
-  created_at: Generated<Timestamp>;
+  created_at: Generated<Timestamp>
   /**
    * Additional profile details extracted from this login method
    */
-  details: Generated<Json>;
-  id: Generated<string>;
+  details: Generated<Json>
+  id: Generated<string>
   /**
    * A unique identifier for the user within the login service.
    */
-  identifier: string;
+  identifier: string
   /**
    * The login service used, e.g. `twitter` or `github`.
    */
-  service: string;
-  updated_at: Generated<Timestamp>;
-  user_id: string;
+  service: string
+  updated_at: Generated<Timestamp>
+  user_id: string
 }
 
 export interface AppPublicUserEmails {
-  created_at: Generated<Timestamp>;
+  created_at: Generated<Timestamp>
   /**
    * The users email address, in `a@b.c` format.
    */
-  email: string;
-  id: Generated<string>;
-  is_primary: Generated<boolean>;
+  email: string
+  id: Generated<string>
+  is_primary: Generated<boolean>
   /**
    * True if the user has is_verified their email address (by clicking the link in the email we sent them, or logging in with a social login provider), false otherwise.
    */
-  is_verified: Generated<boolean>;
-  updated_at: Generated<Timestamp>;
-  user_id: Generated<string>;
+  is_verified: Generated<boolean>
+  updated_at: Generated<Timestamp>
+  user_id: Generated<string>
 }
 
 export interface AppPublicUsers {
   /**
    * Optional avatar URL.
    */
-  avatar_url: string | null;
-  bio: string | null;
-  created_at: Generated<Timestamp>;
+  avatar_url: string | null
+  bio: string | null
+  created_at: Generated<Timestamp>
   /**
    * Unique identifier for the user.
    */
-  id: Generated<string>;
-  is_public: Generated<boolean>;
-  is_verified: Generated<boolean>;
+  id: Generated<string>
+  is_public: Generated<boolean>
+  is_verified: Generated<boolean>
   /**
    * Public-facing name (or pseudonym) of the user.
    */
-  name: string | null;
-  page_options: Generated<ColumnType<Record<string, string>, string, string>>;
-  page_theme: string | null;
-  role: Generated<AppPublicUserRole>;
-  updated_at: Generated<Timestamp>;
+  name: string | null
+  page_options: Generated<ColumnType<Record<string, string>, string, string>>
+  page_theme: string | null
+  role: Generated<AppPublicUserRole>
+  updated_at: Generated<Timestamp>
   /**
    * Public-facing username (or 'handle') of the user.
    */
-  username: string;
+  username: string
 }
 
 export interface DB {
-  "app_private.connect_pg_simple_sessions": AppPrivateConnectPgSimpleSessions;
-  "app_private.sessions": AppPrivateSessions;
-  "app_private.unregistered_email_password_resets": AppPrivateUnregisteredEmailPasswordResets;
-  "app_private.user_authentication_secrets": AppPrivateUserAuthenticationSecrets;
-  "app_private.user_email_secrets": AppPrivateUserEmailSecrets;
-  "app_private.user_secrets": AppPrivateUserSecrets;
-  "app_public.band_invitations": AppPublicBandInvitations;
-  "app_public.band_memberships": AppPublicBandMemberships;
-  "app_public.bands": AppPublicBands;
-  "app_public.chart_revisions": AppPublicChartRevisions;
-  "app_public.charts": AppPublicCharts;
-  "app_public.marks": AppPublicMarks;
-  "app_public.score_files": AppPublicScoreFiles;
-  "app_public.gig_setlists": AppPublicGigSetlists;
-  "app_public.gigs": AppPublicGigs;
-  "app_public.setlist_entries": AppPublicSetlistEntries;
-  "app_public.setlist_entries_resolved": AppPublicSetlistEntriesResolved;
-  "app_public.setlists": AppPublicSetlists;
-  "app_public.songs": AppPublicSongs;
-  "app_public.stamps": AppPublicStamps;
-  "app_public.user_authentications": AppPublicUserAuthentications;
-  "app_public.user_emails": AppPublicUserEmails;
-  "app_public.users": AppPublicUsers;
+  "app_private.connect_pg_simple_sessions": AppPrivateConnectPgSimpleSessions
+  "app_private.sessions": AppPrivateSessions
+  "app_private.unregistered_email_password_resets": AppPrivateUnregisteredEmailPasswordResets
+  "app_private.user_authentication_secrets": AppPrivateUserAuthenticationSecrets
+  "app_private.user_email_secrets": AppPrivateUserEmailSecrets
+  "app_private.user_secrets": AppPrivateUserSecrets
+  "app_public.band_invitations": AppPublicBandInvitations
+  "app_public.band_memberships": AppPublicBandMemberships
+  "app_public.bands": AppPublicBands
+  "app_public.chart_revisions": AppPublicChartRevisions
+  "app_public.charts": AppPublicCharts
+  "app_public.marks": AppPublicMarks
+  "app_public.score_files": AppPublicScoreFiles
+  "app_public.gig_setlists": AppPublicGigSetlists
+  "app_public.gigs": AppPublicGigs
+  "app_public.setlist_entries": AppPublicSetlistEntries
+  "app_public.setlist_entries_resolved": AppPublicSetlistEntriesResolved
+  "app_public.setlists": AppPublicSetlists
+  "app_public.songs": AppPublicSongs
+  "app_public.stamps": AppPublicStamps
+  "app_public.user_authentications": AppPublicUserAuthentications
+  "app_public.user_emails": AppPublicUserEmails
+  "app_public.users": AppPublicUsers
 }

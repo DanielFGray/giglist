@@ -56,17 +56,19 @@ export const SongFields = Struct.omit(SongInsert.fields, ["band_id"])
 
 export const SongUpdate = S.Struct(Struct.map(SongFields, S.optionalKey))
 
-
 /**
  * Declared here instead of importing the generated group, which maps its reads
  * onto bare `GET /:param` paths; the Effect router rejects the resulting
  * duplicate route and the server fails to start. Spelling the paths out also
  * lets a band's catalog (`GET /band/:bandId`) and one song (`GET /:id`) coexist.
- * Only the URLs are re-declared — the handler's queries come from
- * generated/queries.ts, and the lookup by id happens inside the handler, which
- * needs the song row to authorise its band anyway.
+ * Only the URLs are re-declared — the lookup by id happens inside the handler,
+ * which needs the song row to authorise its band anyway.
  */
-export class SongForbidden extends S.TaggedError<SongForbidden, { readonly brand: unique symbol }>()("SongForbidden", { message: S.String }, { httpApiStatus: 403 }) {}
+export class SongForbidden extends S.TaggedError<SongForbidden, { readonly brand: unique symbol }>()(
+  "SongForbidden",
+  { message: S.String },
+  { httpApiStatus: 403 },
+) {}
 
 export const SongsApiGroup = HttpApiGroup.make("songs")
   .add(
