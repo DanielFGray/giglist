@@ -1,6 +1,9 @@
 /* CSS ignores an @import that follows any other rule, so the fonts come first. */
 @import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap");
 @import "tailwindcss" source("../");
+/* cva's `base:` variant (cva.style): recipe defaults land in @layer base at
+   zero specificity, so a call site's plain utility overrides them. */
+@import "cva/tailwindcss";
 
 @theme {
   --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;

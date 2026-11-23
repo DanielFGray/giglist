@@ -1,4 +1,9 @@
+import { cx } from "cva"
 import type { Viewer } from "./live"
+import { button } from "./ui/button"
+
+/** Viewer chips: a follow button when followable, a plain chip otherwise. */
+const pill = button({ size: "pill", tone: "raised" })
 
 /**
  * The other people who have the setlist open. Someone performing it shows the
@@ -25,7 +30,6 @@ export function Viewers({
       {others.map((v) => {
         const label = v.mode === "performing" && v.at !== null ? `${v.username} · song ${v.at}` : v.username
         const followable = onFollow && v.mode === "performing" && v.at !== null
-        const base = "rounded-full border px-2.5 py-1"
         return (
           <li key={v.client} data-pwid="viewer" data-mode={v.mode}>
             {followable ? (
@@ -34,12 +38,12 @@ export function Viewers({
                 data-pwid="viewer-follow"
                 aria-pressed={following === v.client}
                 onClick={() => onFollow(following === v.client ? null : v.client)}
-                className={`${base} cursor-pointer ${following === v.client ? "border-[var(--color-amber-accent)] bg-[var(--color-amber-accent)] text-zinc-950" : "border-zinc-700 text-zinc-300"}`}
+                className={cx(pill, "cursor-pointer", following === v.client ? "border-[var(--color-amber-accent)] bg-[var(--color-amber-accent)] text-zinc-950" : "text-zinc-300")}
               >
                 {following === v.client ? `Following ${label}` : `Follow ${label}`}
               </button>
             ) : (
-              <span className={`${base} border-zinc-700 text-zinc-400`}>{label}</span>
+              <span className={cx(pill, "text-zinc-400")}>{label}</span>
             )}
           </li>
         )

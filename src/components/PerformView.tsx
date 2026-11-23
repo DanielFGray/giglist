@@ -10,6 +10,7 @@ import { useLive, type Room } from "./live"
 import { Viewers } from "./Viewers"
 import { formatDuration } from "./duration"
 import { MarkedChart } from "./MarkedChart"
+import { button } from "./ui/button"
 import { errorMessage } from "./form"
 import { TEXT_SIZES, stepIndex, stepSize, swipeDirection } from "./perform"
 
@@ -152,8 +153,7 @@ export function PerformView({
   }
 
   const size = TEXT_SIZES[sizeStep]!
-  const button =
-    "px-3 py-2 rounded-md border border-zinc-700 text-sm text-zinc-200 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+  const buttonClass = button({ tone: "raised", size: "md" })
 
   return (
     <div data-pwid="perform" className="[--stick-top:0px] fixed inset-0 z-50 flex flex-col bg-zinc-950 text-zinc-100">
@@ -163,8 +163,8 @@ export function PerformView({
           <Viewers viewers={viewers} me={client} following={following} onFollow={setFollowing} />
         </div>
         <div className="flex items-center gap-2">
-          <button data-pwid="perform-smaller" type="button" aria-label="Smaller text" onClick={() => resize(-1)} disabled={sizeStep === 0} className={button}>A−</button>
-          <button data-pwid="perform-larger" type="button" aria-label="Larger text" onClick={() => resize(1)} disabled={sizeStep === TEXT_SIZES.length - 1} className={button}>A+</button>
+          <button data-pwid="perform-smaller" type="button" aria-label="Smaller text" onClick={() => resize(-1)} disabled={sizeStep === 0} className={buttonClass}>A−</button>
+          <button data-pwid="perform-larger" type="button" aria-label="Larger text" onClick={() => resize(1)} disabled={sizeStep === TEXT_SIZES.length - 1} className={buttonClass}>A+</button>
           {chordControls && (
             <>
               <select
@@ -203,12 +203,12 @@ export function PerformView({
             <option value="numerals">Numerals only</option>
           </select>
           {current?.entry.tempo_bpm != null && (
-            <ClickTrack key={current.entry.id} bpm={current.entry.tempo_bpm} pwid="perform-click" className={button} />
+            <ClickTrack key={current.entry.id} bpm={current.entry.tempo_bpm} pwid="perform-click" className={buttonClass} />
           )}
-          <button data-pwid="perform-scroll" type="button" aria-pressed={speedStep > 0} onClick={() => setSpeedStep((speedStep + 1) % SCROLL_SPEEDS.length)} className={button}>
+          <button data-pwid="perform-scroll" type="button" aria-pressed={speedStep > 0} onClick={() => setSpeedStep((speedStep + 1) % SCROLL_SPEEDS.length)} className={buttonClass}>
             {speedStep === 0 ? "Scroll off" : `Scroll ${"▸".repeat(speedStep)}`}
           </button>
-          <button data-pwid="perform-exit" type="button" onClick={onExit} className={button}>
+          <button data-pwid="perform-exit" type="button" onClick={onExit} className={buttonClass}>
             Exit
           </button>
         </div>
@@ -282,12 +282,12 @@ export function PerformView({
       )}
 
       <footer className="flex items-center justify-between gap-3 border-t border-zinc-800 px-4 py-3">
-        <button data-pwid="perform-prev" type="button" onClick={() => go(-1)} disabled={index === 0} className={button}>← Back</button>
+        <button data-pwid="perform-prev" type="button" onClick={() => go(-1)} disabled={index === 0} className={buttonClass}>← Back</button>
         <div className="min-w-0 text-center">
           <div data-pwid="perform-position" className="text-sm text-zinc-300">{order.length === 0 ? "0 / 0" : `${index + 1} / ${order.length}`}</div>
           {upcoming && <div data-pwid="perform-next-title" className="truncate text-xs text-zinc-500">Next: {upcoming.entry.title}</div>}
         </div>
-        <button data-pwid="perform-next" type="button" onClick={() => go(1)} disabled={index >= order.length - 1} className={button}>Next →</button>
+        <button data-pwid="perform-next" type="button" onClick={() => go(1)} disabled={index >= order.length - 1} className={buttonClass}>Next →</button>
       </footer>
     </div>
   )

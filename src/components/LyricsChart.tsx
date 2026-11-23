@@ -6,6 +6,7 @@ import { ChordShapes, type ChordDiagrams } from "./ChordShapes"
 import { preloadChordPlayer } from "~/audio/chord"
 import { Phrase } from "./Phrase"
 import { ScoreLink } from "./ScoreLink"
+import { chordClass, numeralClass } from "./ui/chart"
 
 /**
  * A lyrics chart drawn in `shownKey`: each chord sits over the word it was placed on.
@@ -259,9 +260,6 @@ function Item({
     }
   }
 }
-
-const chordClass = "h-5 whitespace-pre pr-3 text-[1.25em] font-semibold"
-const numeralClass = "h-3 whitespace-pre pr-3 text-[0.8em] leading-3 text-zinc-500"
 
 /** The note on tab or notation shown in another key: it is drawn as written, in the written key. */
 function WrittenIn({ what, keyName, spaced }: { what: "tab" | "notation"; keyName: string; spaced: boolean }) {

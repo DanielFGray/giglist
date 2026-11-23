@@ -1,5 +1,9 @@
 import type { ReactNode } from "react"
+import { cx } from "cva"
+
 import { errorMessage as apiErrorMessage } from "@danielfgray/stompbox/http/client"
+import { button } from "./ui/button"
+import { field } from "./ui/field"
 
 /**
  * The one line that shows a failure to the user. A plain function validator
@@ -19,11 +23,7 @@ export function fieldError(field: FieldLike): string | undefined {
   return messages.length > 0 ? messages.join(", ") : undefined
 }
 
-export const inputClass =
-  "w-full rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] px-3 py-2 text-sm placeholder:text-zinc-600 focus:outline-none focus:border-[var(--color-amber-accent)] transition-colors"
-
-const submitClass =
-  "rounded-md bg-[var(--color-amber-accent)] text-zinc-950 text-sm font-semibold hover:brightness-110 transition disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+const inputClass = field({ size: "lg", width: "full", focus: true })
 
 /** A label, its control, and the messages the contract schema reported. */
 function FieldShell({
@@ -118,7 +118,7 @@ export function TextAreaField({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={rows}
-        className={monospace ? `${inputClass} font-mono whitespace-pre` : inputClass}
+        className={monospace ? cx(inputClass, "font-mono whitespace-pre") : inputClass}
       />
     </FieldShell>
   )
@@ -214,7 +214,7 @@ export function SubmitButton({
       data-pwid={pwid}
       type="submit"
       disabled={disabled}
-      className={`${wide ? "w-full py-2" : "px-4 py-2"} ${submitClass}`}
+      className={cx(button({ tone: "accent", size: "lg" }), wide && "w-full")}
     >
       {pending ? pendingLabel : label}
     </button>

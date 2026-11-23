@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type DragEvent } from "react"
+import { cx } from "cva"
 import { charts, type ChartInfo } from "~/api/client"
 import { composeChanges } from "gigbag.js/charts/changes"
 import {
@@ -10,6 +11,8 @@ import { isChordLine, isChordName, isPhraseStart, isTabStart, suggestedChords } 
 import { readScoreLink } from "gigbag.js/charts/score-link"
 import { chartSlot, suggest, type Suggestion } from "gigbag.js/charts/suggest"
 import { BlockHandle } from "./BlockHandle"
+import { button } from "./ui/button"
+import { field } from "./ui/field"
 import type { Point } from "./pointer-drag"
 import { ChordInput, type ChordEntry } from "./ChordInput"
 import { slotUnder, type DropRow, type DropSlot } from "./drop-slot"
@@ -41,9 +44,6 @@ const NO_SUGGESTIONS = { likely: [], fresh: [] } as const
 
 /** A block lifted by its handle, and the slot the pointer is over, if the block may go there. */
 type Drag = { block: number; over: DropSlot | null }
-
-const button =
-  "px-3 py-1.5 rounded-md border border-[var(--color-border-subtle)] text-xs text-zinc-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
 
 /**
  * Edits a lyrics chart by dropping chords onto words. Every edit is one step
@@ -211,9 +211,9 @@ export function ChartEditor({
             placeholder="Other chord"
             aria-label="Other chord"
             aria-invalid={customInvalid}
-            className="w-28 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] px-2 py-1 text-xs"
+            className={cx(field({ size: "sm" }), "w-28")}
           />
-          <button data-pwid="palette-custom-add" type="submit" disabled={!customValid} className={button}>
+          <button data-pwid="palette-custom-add" type="submit" disabled={!customValid} className={button()}>
             Pick up
           </button>
         </form>
@@ -308,7 +308,7 @@ export function ChartEditor({
         {pasting === doc.length - 1 ? (
           pasteForm(doc.length - 1)
         ) : (
-          <button data-pwid="editor-paste-end" type="button" onClick={() => setPasting(doc.length - 1)} className={`${button} mt-2 font-sans`}>
+          <button data-pwid="editor-paste-end" type="button" onClick={() => setPasting(doc.length - 1)} className={cx(button(), "mt-2 font-sans")}>
             Paste text
           </button>
         )}
@@ -330,11 +330,11 @@ export function ChartEditor({
           type="button"
           onClick={() => commit(steps.slice(0, -1))}
           disabled={steps.length === 0}
-          className={button}
+          className={button()}
         >
           Undo
         </button>
-        <button data-pwid="editor-cancel" type="button" onClick={onCancel} className={button}>
+        <button data-pwid="editor-cancel" type="button" onClick={onCancel} className={button()}>
           {steps.length === 0 ? "Close" : "Discard changes"}
         </button>
       </div>
@@ -373,7 +373,7 @@ function RemoveZone({ onRemove }: { onRemove: (from: { line: number; chord: numb
         const dropped = readDrag(event)
         if (dropped?.from) onRemove(dropped.from)
       }}
-      className={button}
+      className={button()}
     >
       Drop here to remove
     </button>
@@ -446,10 +446,10 @@ function Line(props: {
         <span className="whitespace-pre">{line.text}</span>
         {/* Out of the flow: a row as tall as the buttons would pull the tab's rows apart. */}
         <span className="absolute left-full z-10 ml-2 flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
-          <button data-pwid="line-edit" type="button" onClick={props.onEditStart} aria-label="Edit tab line" className={button}>
+          <button data-pwid="line-edit" type="button" onClick={props.onEditStart} aria-label="Edit tab line" className={button()}>
             Edit
           </button>
-          <button data-pwid="line-delete" type="button" onClick={props.onDelete} aria-label="Delete line" className={button}>
+          <button data-pwid="line-delete" type="button" onClick={props.onDelete} aria-label="Delete line" className={button()}>
             Delete
           </button>
         </span>
@@ -521,7 +521,7 @@ function ScoreLinkLine({ value, scoreCharts, onDelete }: { value: string; scoreC
   return (
     <div data-pwid="editor-score-link" className="my-2 space-y-1">
       <div className="flex justify-end">
-        <button data-pwid="line-delete" type="button" onClick={onDelete} aria-label="Delete score link" className={button}>
+        <button data-pwid="line-delete" type="button" onClick={onDelete} aria-label="Delete score link" className={button()}>
           Delete
         </button>
       </div>
@@ -593,33 +593,33 @@ function LyricLine(
       {/* Hidden on a phone, which has no hover and no room: the row is wider than the screen. */}
       <span className="ml-2 flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 max-md:hidden">
         {isChordOnly(line) ? (
-          <button data-pwid="line-edit" type="button" onClick={props.onEditStart} aria-label="Edit chords" className={button}>
+          <button data-pwid="line-edit" type="button" onClick={props.onEditStart} aria-label="Edit chords" className={button()}>
             Edit chords
           </button>
         ) : (
-          <button data-pwid="line-edit" type="button" onClick={props.onEditStart} aria-label="Edit words" className={button}>
+          <button data-pwid="line-edit" type="button" onClick={props.onEditStart} aria-label="Edit words" className={button()}>
             Edit words
           </button>
         )}
-        <button data-pwid="line-add" type="button" onClick={props.onInsertAfter} aria-label="Add a line below" className={button}>
+        <button data-pwid="line-add" type="button" onClick={props.onInsertAfter} aria-label="Add a line below" className={button()}>
           + Line
         </button>
-        <button data-pwid="line-chords" type="button" onClick={props.onWriteChords} aria-label="Add a line of chords below" className={button}>
+        <button data-pwid="line-chords" type="button" onClick={props.onWriteChords} aria-label="Add a line of chords below" className={button()}>
           + Chords
         </button>
-        <button data-pwid="line-section" type="button" onClick={props.onName} aria-label="Start a section here" className={button}>
+        <button data-pwid="line-section" type="button" onClick={props.onName} aria-label="Start a section here" className={button()}>
           + Section
         </button>
-        <button data-pwid="line-phrase" type="button" onClick={props.onWritePhrase} aria-label="Add a phrase below" className={button}>
+        <button data-pwid="line-phrase" type="button" onClick={props.onWritePhrase} aria-label="Add a phrase below" className={button()}>
           + Phrase
         </button>
-        <button data-pwid="line-score" type="button" onClick={props.onPickScore} aria-label="Add score bars below" className={button}>
+        <button data-pwid="line-score" type="button" onClick={props.onPickScore} aria-label="Add score bars below" className={button()}>
           + Score
         </button>
-        <button data-pwid="line-paste" type="button" onClick={props.onPaste} aria-label="Paste text below" className={button}>
+        <button data-pwid="line-paste" type="button" onClick={props.onPaste} aria-label="Paste text below" className={button()}>
           Paste below
         </button>
-        <button data-pwid="line-delete" type="button" onClick={props.onDelete} aria-label="Delete line" className={button}>
+        <button data-pwid="line-delete" type="button" onClick={props.onDelete} aria-label="Delete line" className={button()}>
           Delete
         </button>
       </span>
@@ -661,10 +661,10 @@ function PhraseBlock({
       <div className="mb-1 flex items-center gap-2">
         <span className="text-xs font-semibold uppercase tracking-wide text-zinc-400">{name}</span>
         <span className="flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
-          <button data-pwid="phrase-edit" type="button" onClick={() => setEditing(true)} aria-label="Edit phrase" className={button}>
+          <button data-pwid="phrase-edit" type="button" onClick={() => setEditing(true)} aria-label="Edit phrase" className={button()}>
             Edit phrase
           </button>
-          <button data-pwid="phrase-remove" type="button" onClick={onRemove} aria-label="Remove phrase" className={button}>
+          <button data-pwid="phrase-remove" type="button" onClick={onRemove} aria-label="Remove phrase" className={button()}>
             Remove phrase
           </button>
         </span>
@@ -715,11 +715,11 @@ function SectionHeading({
       </button>
       <span className="flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
         {!tab && (
-          <button data-pwid="section-paste" type="button" onClick={onPaste} aria-label="Paste text into the section" className={button}>
+          <button data-pwid="section-paste" type="button" onClick={onPaste} aria-label="Paste text into the section" className={button()}>
             Paste
           </button>
         )}
-        <button data-pwid="section-remove" type="button" onClick={onRemove} aria-label={tab ? "Remove tab" : "Remove section"} className={button}>
+        <button data-pwid="section-remove" type="button" onClick={onRemove} aria-label={tab ? "Remove tab" : "Remove section"} className={button()}>
           {tab ? "Remove tab" : "Remove section"}
         </button>
       </span>
@@ -729,7 +729,8 @@ function SectionHeading({
 
 /**
  * A one-line text box: Enter keeps the text, Escape (or leaving it unchanged) keeps the old.
- * Text that `refusal` gives a reason for is not kept: the box stays open and says why.
+ * Text that `refusal` gives a reason for is not kept: Enter leaves the box open and it says why;
+ * leaving the box keeps the old text.
  */
 function LyricInput({
   text,
@@ -762,7 +763,8 @@ function LyricInput({
           if (e.key === "Enter") finish(value)
           if (e.key === "Escape") finish(null)
         }}
-        onBlur={() => finish(value)}
+        // Refused text is dropped on a blur: the box names its line by index, and the chart may change under it.
+        onBlur={() => finish(reason ? null : value)}
         aria-invalid={reason !== null}
         className="w-full rounded-md border border-[var(--color-amber-accent)] bg-[var(--color-surface-raised)] px-2 py-1 font-mono text-sm"
       />

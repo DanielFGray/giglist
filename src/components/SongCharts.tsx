@@ -12,7 +12,7 @@ import { MarkedChart } from "./MarkedChart"
 import { ReadChartFile } from "./ReadChartFile"
 import { SettingsPanel } from "./SettingsPanel"
 import { SelectField, SubmitButton, TextAreaField, TextField, errorMessage } from "./form"
-import { HANGING_CARD } from "./card"
+import { HANGING_CARD } from "./ui/card"
 import { keyOptions } from "./key-options"
 
 const numeralDisplayOptions: ReadonlyArray<{ value: NumeralDisplay; label: string }> = [

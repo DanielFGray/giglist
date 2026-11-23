@@ -14,6 +14,7 @@ import {
   useDragAndDrop,
   type Key,
 } from "react-aria-components"
+import { button } from "~/components/ui/button"
 import { gigs, setlists, type GigInfo, type SetlistInfo } from "~/api/client"
 import { GigDetails } from "~/api/gigs"
 import { SubmitButton, TextAreaField, TextField, errorMessage, fieldError } from "~/components/form"
@@ -172,7 +173,7 @@ function GigSetlists({
       move(moveTo(ids, id, event.target.dropPosition === "after" ? target + 1 : target))
     },
   })
-  const button = "px-2 py-1 rounded-md border border-[var(--color-border-subtle)] text-xs text-zinc-300 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-amber-accent)]"
+  const buttonClass = button({ size: "xs", focus: "ring" })
 
   return (
     <GridList
@@ -219,18 +220,18 @@ function GigSetlists({
                 data-pwid="gig-setlist-copy"
                 aria-label={`Copy ${setlist.name} for this gig only`}
                 onPress={() => onCopy(setlist.id)}
-                className={button}
+                className={buttonClass}
               >
                 Copy for this gig
               </Button>
             )}
-            <Button data-pwid="gig-setlist-up" aria-label={`Move ${setlist.name} up`} isDisabled={index === 0} onPress={() => move(stepMove(ids, setlist.id, -1))} className={`${button} disabled:opacity-30`}>↑</Button>
-            <Button data-pwid="gig-setlist-down" aria-label={`Move ${setlist.name} down`} isDisabled={index === ids.length - 1} onPress={() => move(stepMove(ids, setlist.id, 1))} className={`${button} disabled:opacity-30`}>↓</Button>
+            <Button data-pwid="gig-setlist-up" aria-label={`Move ${setlist.name} up`} isDisabled={index === 0} onPress={() => move(stepMove(ids, setlist.id, -1))} className={buttonClass}>↑</Button>
+            <Button data-pwid="gig-setlist-down" aria-label={`Move ${setlist.name} down`} isDisabled={index === ids.length - 1} onPress={() => move(stepMove(ids, setlist.id, 1))} className={buttonClass}>↓</Button>
             <Button
               data-pwid="gig-setlist-remove"
               aria-label={`Take ${setlist.name} out of this gig`}
               onPress={() => void act(() => gigs.removeSetlist(gig.id, setlist.id))}
-              className={`${button} !border-red-500/20 !text-red-400`}
+              className={button({ size: "xs", tone: "danger", focus: "ring" })}
             >
               Remove
             </Button>
@@ -485,7 +486,7 @@ function GigDetailsForm({ bandId, gig, onSaved }: { bandId: string; gig: GigInfo
             <SubmitButton pwid="gig-save" disabled={!canSubmit || isSubmitting} pending={isSubmitting} label="Save details" pendingLabel="Saving…" />
           )}
         </form.Subscribe>
-        <button type="button" data-pwid="gig-delete" onClick={remove} className="px-3 py-1.5 rounded-md border border-red-500/20 text-xs text-red-400 cursor-pointer">
+        <button type="button" data-pwid="gig-delete" onClick={remove} className={button({ size: "sm", tone: "danger" })}>
           Delete gig
         </button>
       </div>

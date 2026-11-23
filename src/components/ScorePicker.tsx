@@ -4,6 +4,8 @@ import { scores, type ChartInfo } from "~/api/client"
 import { drawnRange, formatScoreLink, sectionChoices, type ScoreLink as Link, type ScoreOutline } from "gigbag.js/charts/score-link"
 import { trackOptions } from "gigbag.js/charts/score-tracks"
 import { errorMessage } from "./form"
+import { button } from "./ui/button"
+import { field as fieldRecipe } from "./ui/field"
 import { outlineOf, ScoreLink } from "./ScoreLink"
 import { readScore, ScoreView } from "./ScoreView"
 import type { BarSpan } from "gigbag.js/charts/score-bars"
@@ -79,10 +81,7 @@ export function ScorePicker({
     setTo((span?.last ?? (outline?.bars ?? 1) - 1) + 1)
   }
   const trackIndex = loaded ? (trackOptions(loaded.score.tracks).find((option) => option.label === track)?.index ?? 0) : 0
-  const field =
-    "w-full rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] px-2 py-1 text-sm"
-  const button =
-    "px-3 py-1.5 rounded-md border border-[var(--color-border-subtle)] text-xs text-zinc-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+  const field = fieldRecipe({ size: "md", width: "full" })
 
   if (scoreCharts.length === 0) {
     return (
@@ -90,7 +89,7 @@ export function ScorePicker({
         <p data-pwid="score-picker-none" className="text-sm text-zinc-400">
           This song has no score. Upload one on the song page, then link its bars here.
         </p>
-        <button data-pwid="score-picker-cancel" type="button" onClick={onCancel} className={button}>
+        <button data-pwid="score-picker-cancel" type="button" onClick={onCancel} className={button()}>
           Cancel
         </button>
       </div>
@@ -168,10 +167,10 @@ export function ScorePicker({
       )}
       {revisionId !== undefined && <ScoreLink reading={reading} revisionId={revisionId} />}
       <div className="flex gap-2">
-        <button data-pwid="score-picker-keep" type="button" disabled={!keepable} onClick={() => onSave(formatScoreLink(reading.link))} className={button}>
+        <button data-pwid="score-picker-keep" type="button" disabled={!keepable} onClick={() => onSave(formatScoreLink(reading.link))} className={button()}>
           Keep link
         </button>
-        <button data-pwid="score-picker-cancel" type="button" onClick={onCancel} className={button}>
+        <button data-pwid="score-picker-cancel" type="button" onClick={onCancel} className={button()}>
           Cancel
         </button>
       </div>

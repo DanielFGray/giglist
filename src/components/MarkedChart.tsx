@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react"
+import { cx } from "cva"
 import { marks as marksApi, stamps as stampsApi, type ChartInfo, type ChartMarksInfo, type MarkData, type MarkInfo, type StampInfo } from "~/api/client"
 import { boundsOf, inkPath, markResolver, near, type Box, type Stroke } from "gigbag.js/charts/marks"
 import { renderLyrics, chartChords } from "gigbag.js/charts/lyrics"
@@ -9,6 +10,8 @@ import type { ChordDiagrams } from "./ChordShapes"
 import { ChordStrip } from "./ChordStrip"
 import { LyricsChart } from "./LyricsChart"
 import { errorMessage } from "./form"
+import { button } from "./ui/button"
+import { field } from "./ui/field"
 
 type Tool = "read" | "move" | "ink" | "text" | "stamp"
 type Point = { x: number; y: number }
@@ -23,8 +26,7 @@ const TOOLS: ReadonlyArray<{ tool: Tool; label: string }> = [
   { tool: "stamp", label: "Stamp" },
 ]
 
-const buttonClass =
-  "px-3 py-1.5 rounded-md border border-[var(--color-border-subtle)] text-xs text-zinc-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+const buttonClass = button()
 
 /**
  * A lyrics chart with a player's marks over it: ink, text and stamps.
@@ -393,7 +395,7 @@ export function MarkedChart({
               onChange={(e) => setStampName(e.target.value)}
               placeholder="Stamp name"
               aria-label="Stamp name"
-              className="w-28 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] px-2 py-1 text-xs"
+              className={cx(field({ size: "sm" }), "w-28")}
             />
             <button data-pwid="mark-stamp-save" type="button" onClick={saveStamp} className={buttonClass}>
               Save as stamp

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 import { ComboBox, Input, Label, ListBox, ListBoxItem, Popover, type Key } from "react-aria-components"
 import { gigs } from "~/api/client"
 import type { VenueSuggestion } from "~/api/gigs"
-import { inputClass } from "./form"
+import { field } from "./ui/field"
 
 type Suggestion = typeof VenueSuggestion.Type
 
@@ -50,7 +50,7 @@ export function VenueField({
       className="block text-sm"
     >
       <Label className="block text-zinc-300 mb-1">Venue</Label>
-      <Input data-pwid="gig-venue" placeholder="The Echo Room" className={inputClass} />
+      <Input data-pwid="gig-venue" placeholder="The Echo Room" className={field({ size: "lg", width: "full", focus: true })} />
       {error && <span data-pwid="gig-venue-error" className="mt-1 block text-xs text-red-400">{error}</span>}
       <Popover className="w-[var(--trigger-width)] rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] shadow-lg">
         <ListBox

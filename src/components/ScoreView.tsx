@@ -4,6 +4,8 @@ import { barsOfBeatSpan, selectionLabel, type BarSpan } from "gigbag.js/charts/s
 import { createMixer, setSolo } from "gigbag.js/charts/score-mixer"
 import { SpeedInput } from "gigbag.js/player/speed-input"
 import { useScorePlayer, type UseScorePlayer } from "gigbag.js/player/use-score-player"
+import { button } from "./ui/button"
+import { field } from "./ui/field"
 
 /**
  * Reads a Guitar Pro file for drawing as a tab. The staff profile is set before
@@ -109,8 +111,6 @@ function ScoreControls({
   actions,
   onClear,
 }: Pick<UseScorePlayer, "state" | "actions"> & { pwid: string; onClear: () => void }) {
-  const control = "rounded-md border border-[var(--color-border-subtle)] px-2 py-0.5 text-xs cursor-pointer disabled:opacity-40"
-  const field = "rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] px-1 py-0.5 text-xs text-zinc-200"
   return (
     <div className="pointer-events-none absolute top-0 right-0 z-10 flex flex-wrap items-center gap-3 rounded-md bg-[var(--color-surface)]/80 px-2 py-1 font-sans text-xs text-zinc-500 opacity-0 backdrop-blur-sm transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100">
       {state.selection && (
@@ -123,7 +123,7 @@ function ScoreControls({
         type="button"
         disabled={state.status !== "ready" || state.sound === "loading"}
         onClick={state.playing ? actions.stop : actions.play}
-        className={control}
+        className={button({ size: "xs" })}
       >
         {state.playing ? "Stop" : state.sound === "loading" ? "Loading…" : "Play"}
       </button>
@@ -138,7 +138,7 @@ function ScoreControls({
       <SpeedInput
         speed={state.speed}
         onSpeed={actions.setSpeed}
-        parts={{ root: { className: "flex items-center gap-1" }, input: { className: `${field} w-14 text-right`, "data-pwid": `${pwid}-speed` } }}
+        parts={{ root: { className: "flex items-center gap-1" }, input: { className: `${field({ size: "xs" })} w-14 text-right`, "data-pwid": `${pwid}-speed` } }}
       />
       {state.tempo !== null && (
         <span data-pwid={`${pwid}-tempo`} className="tabular-nums">
@@ -146,7 +146,7 @@ function ScoreControls({
         </span>
       )}
       {state.selection && (
-        <button data-pwid={`${pwid}-clear`} type="button" onClick={onClear} className={control}>
+        <button data-pwid={`${pwid}-clear`} type="button" onClick={onClear} className={button({ size: "xs" })}>
           Clear
         </button>
       )}

@@ -9,6 +9,9 @@ import { TrainerFields, type TrainerProps } from "gigbag.js/player/trainer-field
 import { VolumeSlider } from "gigbag.js/player/volume-slider"
 import { ZoomControl } from "gigbag.js/player/zoom-control"
 import { SettingsPanel } from "./SettingsPanel"
+import { cx } from "cva"
+import { button } from "./ui/button"
+import { field as fieldRecipe } from "./ui/field"
 
 /**
  * The control bar above a score: play and stop, metronome and count-in, a seek
@@ -171,14 +174,13 @@ export function ScorePlayerBar(props: ScorePlayerBarProps) {
   )
 }
 
-const field = "rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] px-2 py-1 text-xs text-zinc-200"
+const field = fieldRecipe({ size: "sm" })
 
-/** The two staff toggles share one class string; `aria-pressed` styles the on state. */
-const toggle = "rounded-md border border-[var(--color-border-subtle)] px-2 py-1 cursor-pointer aria-pressed:bg-[var(--color-amber-accent)] aria-pressed:text-zinc-950"
+/** The two staff toggles share one recipe; `aria-pressed` styles the on state. */
+const toggle = button({ size: "xs", pressed: "aria" })
 
-/** The zoom-out and zoom-in buttons share one class string. */
-const zoomStep = "rounded-md border border-[var(--color-border-subtle)] px-2 py-1 leading-none text-zinc-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+/** The zoom-out and zoom-in buttons share one recipe. */
+const zoomStep = cx(button({ size: "xs" }), "leading-none")
 
-/** The kit reports pressed as `data-pressed` on every button, so one class string styles both states. */
-const iconButton =
-  "shrink-0 rounded-full p-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed data-[pressed=true]:bg-[var(--color-amber-accent)] data-[pressed=true]:text-zinc-950 data-[pressed=false]:border data-[pressed=false]:border-[var(--color-border-subtle)] data-[pressed=false]:text-zinc-300"
+/** The kit reports pressed as `data-pressed` on every button, so one recipe styles both states. */
+const iconButton = button({ size: "icon", pressed: "data" })

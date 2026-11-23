@@ -15,7 +15,7 @@ import {
 } from "./form"
 import { UNTITLED_SONG } from "./song-from-score"
 import { DURATION, formatDuration, parseDuration } from "./duration"
-import { HANGING_CARD } from "./card"
+import { HANGING_CARD } from "./ui/card"
 
 /**
  * The song form's values: the contract's update payload with the duration held

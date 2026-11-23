@@ -5,6 +5,8 @@ import { IconButton } from "gigbag.js/player/icon-button"
 import { CountInIcon, LoadingSpinner, PlayIcon, StopIcon } from "gigbag.js/player/icons"
 import { SpeedInput } from "gigbag.js/player/speed-input"
 import { useScorePlayer, type UseScorePlayer } from "gigbag.js/player/use-score-player"
+import { button } from "./ui/button"
+import { field } from "./ui/field"
 
 /**
  * A phrase drawn by alphaTab, with play, loop, count-in and speed. Systems wrap
@@ -59,15 +61,13 @@ function PhrasePlayer({ score, problems }: { score: model.Score; problems: Reado
 
 /** The hover bar over a phrase: play or stop, loop, count-in and speed. The parent must be `group relative`; the bar shows while it is hovered or focused. */
 function PhraseControls({ state, actions, disabled }: Pick<UseScorePlayer, "state" | "actions"> & { disabled: boolean }) {
-  const control = "rounded-full p-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed data-[pressed=true]:bg-[var(--color-amber-accent)] data-[pressed=true]:text-zinc-950 data-[pressed=false]:border data-[pressed=false]:border-[var(--color-border-subtle)]"
-  const field = "rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] px-1 py-0.5 text-xs text-zinc-200"
   return (
     <div className="pointer-events-none absolute top-0 right-0 z-10 flex flex-wrap items-center gap-3 rounded-md bg-[var(--color-surface)]/80 px-2 py-1 font-sans text-xs text-zinc-500 opacity-0 backdrop-blur-sm transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100">
       <IconButton
         label={state.playing ? "Stop" : "Play"}
         disabled={disabled}
         onClick={state.playing ? actions.stop : actions.play}
-        parts={{ button: { className: control, "data-pwid": "phrase-play" } }}
+        parts={{ button: { className: button({ size: "iconSm", pressed: "data" }), "data-pwid": "phrase-play" } }}
       >
         {state.playing ? <StopIcon /> : state.sound === "loading" ? <LoadingSpinner className="animate-spin" /> : <PlayIcon />}
       </IconButton>
@@ -79,14 +79,14 @@ function PhraseControls({ state, actions, disabled }: Pick<UseScorePlayer, "stat
         label="Count in"
         pressed={state.countIn}
         onClick={() => actions.setCountIn(!state.countIn)}
-        parts={{ button: { className: control, "data-pwid": "phrase-count-in" } }}
+        parts={{ button: { className: button({ size: "iconSm", pressed: "data" }), "data-pwid": "phrase-count-in" } }}
       >
         <CountInIcon />
       </IconButton>
       <SpeedInput
         speed={state.speed}
         onSpeed={actions.setSpeed}
-        parts={{ root: { className: "flex items-center gap-1" }, input: { className: `${field} w-14 text-right`, "data-pwid": "phrase-speed" } }}
+        parts={{ root: { className: "flex items-center gap-1" }, input: { className: `${field({ size: "xs" })} w-14 text-right`, "data-pwid": "phrase-speed" } }}
       />
       {state.tempo !== null && (
         <span data-pwid="phrase-tempo" className="tabular-nums">

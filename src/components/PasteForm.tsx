@@ -5,9 +5,7 @@ import { pastedPassage } from "gigbag.js/charts/lyrics"
 import { readScore } from "./AddScore"
 import { errorMessage, TextAreaField } from "./form"
 import { ReadChartFile } from "./ReadChartFile"
-
-const button =
-  "px-3 py-1.5 rounded-md border border-[var(--color-border-subtle)] text-xs text-zinc-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+import { button } from "./ui/button"
 
 /**
  * Chords over lyrics to put into the chart below the line at `after`, read as
@@ -90,10 +88,10 @@ export function PasteForm({
       )}
       {error && <p data-pwid="paste-error" role="alert" className="text-sm text-red-400">{error}</p>}
       <div className="flex gap-2">
-        <button data-pwid="paste-submit" type="button" onClick={() => onPaste(source)} disabled={source.trim() === ""} className={button}>
+        <button data-pwid="paste-submit" type="button" onClick={() => onPaste(source)} disabled={source.trim() === ""} className={button()}>
           Paste
         </button>
-        <button data-pwid="paste-cancel" type="button" onClick={onCancel} className={button}>
+        <button data-pwid="paste-cancel" type="button" onClick={onCancel} className={button()}>
           Cancel
         </button>
       </div>

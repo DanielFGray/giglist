@@ -8,6 +8,7 @@ import { BLANK_SONG } from "~/components/SongForm"
 import { Grid, type GridColumn } from "~/components/Grid"
 import { keepOrder } from "~/components/grid-keys"
 import { matchKeys } from "~/components/key-options"
+import { button } from "~/components/ui/button"
 import { MUSICAL_KEYS } from "gigbag.js/charts/key"
 
 const SortKey = S.Literals(["added", "title", "artist", "key", "tempo"])
@@ -300,7 +301,6 @@ function wholeNumber(text: string, min: number, max: number, name: string): numb
 
 function SongActions({ bandId, song, onDeleted }: { bandId: string; song: SongInfo; onDeleted: () => void }) {
   const [error, setError] = useState<string | null>(null)
-  const button = "px-2 py-1 rounded-md border text-xs cursor-pointer"
   return (
     <span className="inline-flex items-center gap-1.5">
       {error && <span data-pwid="song-delete-error" className="text-xs text-red-400">{error}</span>}
@@ -309,7 +309,7 @@ function SongActions({ bandId, song, onDeleted }: { bandId: string; song: SongIn
         params={{ bandId, songId: song.id }}
         data-pwid="song-open"
         tabIndex={-1}
-        className={`${button} border-[var(--color-border-subtle)] text-zinc-300`}
+        className={button({ size: "xs" })}
       >
         Charts
       </Link>
@@ -327,7 +327,7 @@ function SongActions({ bandId, song, onDeleted }: { bandId: string; song: SongIn
             setError(errorMessage(e))
           }
         }}
-        className={`${button} border-red-500/20 text-red-400`}
+        className={button({ size: "xs", tone: "danger" })}
       >
         Delete
       </button>

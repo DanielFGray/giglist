@@ -7,6 +7,7 @@ import { MUSICAL_KEYS } from "gigbag.js/charts/key"
 import { errorMessage } from "~/components/form"
 import { useAuth } from "~/components/AuthContext"
 import { formatDuration } from "~/components/duration"
+import { button } from "~/components/ui/button"
 import { gigLabel, localToday, splitGigs } from "~/components/gig-label"
 import { useLive } from "~/components/live"
 import { Viewers } from "~/components/Viewers"
@@ -154,7 +155,7 @@ function SetlistPage() {
     },
   ]
 
-  const button = "px-2 py-1 rounded-md border border-[var(--color-border-subtle)] text-xs text-zinc-300 cursor-pointer"
+  const buttonClass = button({ size: "xs" })
 
   return (
     <div className="space-y-6">
@@ -264,15 +265,15 @@ function SetlistPage() {
         onDeleteRow={(id) => void act(() => setlists.removeEntry(setlistId, id))}
         actions={(entry) => (
           <span className="inline-flex gap-1">
-            <button type="button" tabIndex={-1} data-pwid="entry-up" aria-label={`Move ${entry.title} up`} onClick={() => move(stepMove(ids, entry.id, -1))} className={button}>↑</button>
-            <button type="button" tabIndex={-1} data-pwid="entry-down" aria-label={`Move ${entry.title} down`} onClick={() => move(stepMove(ids, entry.id, 1))} className={button}>↓</button>
+            <button type="button" tabIndex={-1} data-pwid="entry-up" aria-label={`Move ${entry.title} up`} onClick={() => move(stepMove(ids, entry.id, -1))} className={buttonClass}>↑</button>
+            <button type="button" tabIndex={-1} data-pwid="entry-down" aria-label={`Move ${entry.title} down`} onClick={() => move(stepMove(ids, entry.id, 1))} className={buttonClass}>↓</button>
             <Link
               data-pwid="entry-chart"
               tabIndex={-1}
               to="/band/$bandId/songs/$songId"
               params={{ bandId, songId: entry.song_id }}
               search={entry.key ? { key: entry.key } : {}}
-              className={button}
+              className={buttonClass}
             >
               Chart
             </Link>
@@ -282,7 +283,7 @@ function SetlistPage() {
               data-pwid="entry-remove"
               aria-label={`Remove ${entry.title}`}
               onClick={() => void act(() => setlists.removeEntry(setlistId, entry.id))}
-              className={`${button} !border-red-500/20 !text-red-400`}
+              className={button({ size: "xs", tone: "danger" })}
             >
               Remove
             </button>
