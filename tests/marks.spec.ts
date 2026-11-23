@@ -80,6 +80,31 @@ test.describe("marks", () => {
     await expect(getPw(page, "mark")).toHaveAttribute("data-state", "kept")
   })
 
+  test("a mark stays on its word when the editor pastes text above it", async ({ page, testing }) => {
+    await testing.login()
+    const { url } = await createChart(page)
+    await page.goto(url)
+    await expect(getPw(page, "marked-chart")).toBeVisible({ timeout: 10000 })
+    await placeText(page, "rit.", "sweet")
+    await expect(getPw(page, "mark")).toHaveText("rit.", { timeout: 10000 })
+    const before = await offsetFrom(getPw(page, "mark"), word(page, "sweet"))
+
+    await page.reload()
+    await getPw(page, "chart-edit").click()
+    const heading = getPw(page, "editor-section").filter({ hasText: "Verse 1" }).locator("xpath=..")
+    await heading.hover()
+    await heading.getByRole("button", { name: "Paste text into the section" }).click()
+    await getPw(page, "paste-text").fill("G      C\nOh what a sound\nD  G")
+    await getPw(page, "paste-submit").click()
+    await getPw(page, "editor-save").click()
+    await expect(getPw(page, "chart-editor")).toHaveCount(0, { timeout: 10000 })
+
+    await page.reload()
+    await expect(getPw(page, "mark")).toHaveText("rit.", { timeout: 10000 })
+    expect(await offsetFrom(getPw(page, "mark"), word(page, "sweet"))).toEqual(before)
+    await expect(getPw(page, "mark")).toHaveAttribute("data-state", "kept")
+  })
+
   test("a mark whose words were deleted waits in the tray", async ({ page, testing }) => {
     await testing.login()
     const { url, chart } = await createChart(page)

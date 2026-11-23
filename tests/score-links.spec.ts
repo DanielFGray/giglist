@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs"
 import type { APIRequestContext, Page } from "@playwright/test"
-import { test, expect, getPw, testSlug } from "./helpers"
+import { test, expect, getPw, lineAction, testSlug } from "./helpers"
 
 const score = readFileSync(new URL("./fixtures/sections.gp", import.meta.url))
 
@@ -72,7 +72,7 @@ test.describe("score links", () => {
 
     await page.goto(`/band/${bandId}/songs/${songId}`)
     await getPw(page, "chart-edit").first().click()
-    await getPw(page, "line-score").first().click()
+    await lineAction(getPw(page, "editor-line"), "Add score bars below")
     const picker = getPw(page, "score-picker")
     await expect(picker.locator("[data-pwid=score-link][data-status=ready]")).toBeVisible({ timeout: 15000 })
 
@@ -125,7 +125,7 @@ test.describe("score links", () => {
 
     await page.goto(`/band/${bandId}/songs/${songId}`)
     await getPw(page, "chart-edit").first().click()
-    await getPw(page, "line-score").first().click()
+    await lineAction(getPw(page, "editor-line"), "Add score bars below")
     const view = getPw(page, "score-picker-score-render")
     await expect(view.locator("svg").first()).toBeVisible({ timeout: 15000 })
     await view.scrollIntoViewIfNeeded()

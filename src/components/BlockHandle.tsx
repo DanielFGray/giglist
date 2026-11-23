@@ -5,10 +5,14 @@ import { usePointerDrag, type Point } from "./pointer-drag"
  * The grip in the left margin of a block (a line, a phrase or a section). Dragging
  * it reports the pointer to the editor, which finds the place to drop; Escape
  * cancels the drag. Tapping it opens a menu, which is the way to move a block
- * without dragging.
+ * without dragging, and which lists the block's own `actions` first.
  */
+/** One entry of a handle's menu that belongs to its block, such as "Edit words" on a line. */
+export type BlockAction = { readonly pwid: string; readonly label: string; readonly onSelect: () => void }
+
 export function BlockHandle({
   label,
+  actions,
   deleteLabel,
   canMove,
   onMove,
@@ -19,6 +23,7 @@ export function BlockHandle({
 }: {
   /** What the handle moves, in words: `line "Amazing grace"`. */
   label: string
+  actions: ReadonlyArray<BlockAction>
   deleteLabel: string
   canMove: (delta: -1 | 1) => boolean
   onMove: (delta: -1 | 1) => void
@@ -100,8 +105,14 @@ export function BlockHandle({
           aria-label={`Actions for ${label}`}
           data-pwid="block-menu"
           onKeyDown={navigate}
-          className="absolute left-0 top-full mt-1 flex w-44 flex-col rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] py-1 text-sm shadow-lg"
+          className="absolute left-0 top-full mt-1 flex w-52 flex-col rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] py-1 text-sm shadow-lg"
         >
+          {actions.map((action) => (
+            <MenuItem key={action.pwid} pwid={action.pwid} onSelect={choose(action.onSelect)}>
+              {action.label}
+            </MenuItem>
+          ))}
+          {actions.length > 0 && <hr className="my-1 border-[var(--color-border-subtle)]" />}
           <MenuItem pwid="block-move-up" disabled={!canMove(-1)} onSelect={choose(() => onMove(-1))}>
             Move up
           </MenuItem>

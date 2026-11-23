@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs"
 import type { APIRequestContext, Locator, Page } from "@playwright/test"
 import type { Change } from "gigbag.js/charts/changes"
 import { parseDoc, placeChord, serializeDoc } from "gigbag.js/charts/doc"
-import { test, expect, getPw, openTool, createSong, createBareChart } from "./helpers"
+import { test, expect, getPw, openTool, createSong, createBareChart, lineAction } from "./helpers"
 
 const fixturePath = (name: string) => new URL(`./fixtures/${name}`, import.meta.url).pathname
 const pasted = readFileSync(fixturePath("amazing-grace.txt"), "utf8")
@@ -647,8 +647,7 @@ test.describe("chart editor", () => {
     await getPw(page, "chart-edit").click()
 
     const line = getPw(page, "editor-line").filter({ hasText: "Amazing grace, how" }).first()
-    await line.hover()
-    await line.getByRole("button", { name: "Edit words" }).click()
+    await lineAction(line, "Edit words")
     await getPw(page, "line-input").fill("Amazing grace, how very sweet the sound")
     await getPw(page, "line-input").press("Enter")
     await expect.poll(async () => (await getPw(page, "editor-lyric").allTextContents()).join("")).toContain("how very sweet the sound")
@@ -676,8 +675,7 @@ test.describe("chart editor", () => {
 
     // Start a section on a line inside the first verse: it splits in two.
     const line = getPw(page, "editor-line").filter({ hasText: "Was blin" }).first()
-    await line.hover()
-    await line.getByRole("button", { name: "Start a section here" }).click()
+    await lineAction(line, "Start a section here")
     await getPw(page, "new-section-input").fill("Bridge")
     await getPw(page, "new-section-input").press("Enter")
     await expect.poll(headings).toEqual(["Verse 1", "Bridge", "Chorus", "Verse 2", "Chorus"])
@@ -729,11 +727,11 @@ test.describe("chart editor", () => {
     await getPw(page, "editor-undo").click()
     await expect.poll(() => lyricRows(page).then((rows) => rows.slice(0, 2))).toEqual([first[0], first[1]])
 
-    // The menu is a keyboard menu: the first item takes focus, arrows move, Escape returns to the handle.
+    // The menu is a keyboard menu: the first item (a line's own action) takes focus, arrows move, Escape returns to the handle.
     await handleOf(row).click()
-    await expect(getPw(page, "block-move-up")).toBeFocused()
+    await expect(getPw(page, "line-edit")).toBeFocused()
     await page.keyboard.press("ArrowDown")
-    await expect(getPw(page, "block-move-down")).toBeFocused()
+    await expect(getPw(page, "line-add")).toBeFocused()
     await page.keyboard.press("End")
     await expect(getPw(page, "block-delete")).toBeFocused()
     await page.keyboard.press("Escape")
@@ -866,8 +864,7 @@ test.describe("chart editor", () => {
     await getPw(page, "chart-edit").click()
 
     const sound = getPw(page, "editor-line").filter({ hasText: "The sound" })
-    await sound.hover()
-    await sound.getByRole("button", { name: "Add a line of chords below" }).click()
+    await lineAction(sound, "Add chords below")
     const input = getPw(page, "chord-line-input")
     await input.fill("G and C")
     await expect(getPw(page, "chord-line-input-error")).toBeVisible()
@@ -889,8 +886,7 @@ test.describe("chart editor", () => {
     await expect(getPw(page, "placed-chord")).toHaveText(["G", "C", "D", "Em"])
 
     const chords = getPw(page, "editor-line").filter({ has: getPw(page, "placed-chord") })
-    await chords.hover()
-    await chords.getByRole("button", { name: "Edit chords" }).click()
+    await lineAction(chords, "Edit chords")
     await expect(input).toHaveValue("G    C  D  Em")
     await input.fill("G  C")
     await input.press("Enter")
@@ -902,6 +898,27 @@ test.describe("chart editor", () => {
     expect(await shownLyrics(page)).toContain("The sound")
   })
 
+  test("on a phone the line actions open from the handle, and the editor and its forms fit the screen", async ({ page, testing }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await testing.login()
+    const { bandId, songId } = await createSong(page)
+    await createBareChart(page, songId)
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    await getPw(page, "chart-edit").click()
+    const fits = () => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)
+
+    const sound = getPw(page, "editor-line").filter({ hasText: "The sound" })
+    await expect(sound).toBeVisible()
+    expect(await fits()).toBe(true)
+    await lineAction(sound, "Add chords below")
+    await getPw(page, "chord-line-input").fill("G  C")
+    await getPw(page, "chord-line-input").press("Enter")
+    await expect(getPw(page, "placed-chord")).toHaveText(["G", "C"])
+    await lineAction(sound, "Paste text below")
+    await expect(getPw(page, "paste-form")).toBeVisible()
+    expect(await fits()).toBe(true)
+  })
+
   test("pastes text below a line, at the top of a section, and at the end, and a paste with sections goes after the section", async ({ page, testing }) => {
     await testing.login()
     const { bandId, songId } = await createSong(page)
@@ -911,8 +928,7 @@ test.describe("chart editor", () => {
     const lyrics = async () => (await getPw(page, "editor-line").allTextContents()).map((row) => row.replace(/(Edit|\+ |Paste|Delete).*$/, "").trim())
 
     const amazing = getPw(page, "editor-line").filter({ hasText: "Amazing grace" })
-    await amazing.hover()
-    await amazing.getByRole("button", { name: "Paste text below" }).click()
+    await lineAction(amazing, "Paste text below")
     await getPw(page, "paste-text").fill("G      C\nthat saved a wretch")
     await expect(getPw(page, "paste-moved")).toHaveCount(0)
     await getPw(page, "paste-submit").click()
@@ -928,8 +944,7 @@ test.describe("chart editor", () => {
     await getPw(page, "paste-text").fill("[Chorus]\nEm\nI once was lost")
     await getPw(page, "paste-submit").click()
 
-    await amazing.hover()
-    await amazing.getByRole("button", { name: "Paste text below" }).click()
+    await lineAction(amazing, "Paste text below")
     await getPw(page, "paste-text").fill("[Bridge]\nC\nWas blind")
     await expect(getPw(page, "paste-moved")).toBeVisible()
     await getPw(page, "paste-submit").click()
@@ -939,7 +954,8 @@ test.describe("chart editor", () => {
 
     await getPw(page, "editor-save").click()
     await expect(getPw(page, "chart-editor")).toHaveCount(0, { timeout: 10000 })
-    expect(await shownLyrics(page)).toContain("that saved a wretch")
+    // The chart redraws once the saved revision arrives.
+    await expect.poll(() => shownLyrics(page)).toContain("that saved a wretch")
     await expect(getPw(page, "chart-section")).toHaveText(["Verse 1", "Bridge", "Chorus"])
   })
 
@@ -1005,8 +1021,7 @@ test.describe("phrases", () => {
     await getPw(page, "chart-edit").click()
 
     const line = getPw(page, "editor-line").filter({ hasText: "Amazing grace" })
-    await line.hover()
-    await line.getByRole("button", { name: "Add a phrase below" }).click()
+    await lineAction(line, "Add a phrase below")
     const form = getPw(page, "phrase-form")
     await getPw(page, "phrase-name").fill("Intro riff")
     // Notation alphaTab cannot read says where, and cannot be kept.
@@ -1051,8 +1066,7 @@ test.describe("phrases", () => {
     await page.goto(`/band/${bandId}/songs/${songId}`)
     await getPw(page, "chart-edit").click()
     const line = getPw(page, "editor-line").filter({ hasText: "Amazing grace" })
-    await line.hover()
-    await line.getByRole("button", { name: "Add a phrase below" }).click()
+    await lineAction(line, "Add a phrase below")
     await getPw(page, "phrase-name").fill("Lick")
     await getPw(page, "phrase-tex").fill(riff)
     await getPw(page, "phrase-save").click()
@@ -1077,8 +1091,7 @@ test.describe("phrases", () => {
     await page.goto(`/band/${bandId}/songs/${songId}`)
     await getPw(page, "chart-edit").click()
     const line = getPw(page, "editor-line").filter({ hasText: "Amazing grace" })
-    await line.hover()
-    await line.getByRole("button", { name: "Add a phrase below" }).click()
+    await lineAction(line, "Add a phrase below")
     await getPw(page, "phrase-name").fill("Lick")
     await getPw(page, "phrase-tex").fill(riff)
     await getPw(page, "phrase-save").click()

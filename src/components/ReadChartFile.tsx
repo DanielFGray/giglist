@@ -40,7 +40,7 @@ export function ReadChartFile({ onRead }: { onRead: (read: ReadChart) => void })
           accept="application/pdf,image/*"
           disabled={reading}
           onChange={(e) => void choose(e.target.files?.[0])}
-          className="block text-sm text-zinc-300"
+          className="block max-w-full text-sm text-zinc-300"
         />
       </label>
       {reading && <p data-pwid="chart-form-reading" className="text-sm text-zinc-500">Reading the chart…</p>}

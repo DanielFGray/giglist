@@ -2,7 +2,7 @@ import { renameSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import type { Page } from "@playwright/test"
-import { test, expect, getPw, createSong, createBareChart } from "./helpers"
+import { test, expect, getPw, createSong, createBareChart, lineAction } from "./helpers"
 
 // The browser's mic plays a WAV of plucked notes, looped, through the count-in
 // and after it. It is not timed to the click and does not contain it, so the
@@ -23,8 +23,7 @@ const openPhraseForm = async (page: Page, tempo: number | null) => {
   await page.goto(`/band/${bandId}/songs/${songId}`)
   await getPw(page, "chart-edit").click()
   const line = getPw(page, "editor-line").filter({ hasText: "Amazing grace" })
-  await line.hover()
-  await line.getByRole("button", { name: "Add a phrase below" }).click()
+  await lineAction(line, "Add a phrase below")
 }
 
 test("records a take to the click and writes its rhythm into the phrase", async ({ page, testing }) => {
