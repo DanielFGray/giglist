@@ -6,7 +6,7 @@ import { judgement, signedMs, takeStatus } from "gigbag.js/click/report"
 import type { Take } from "gigbag.js/click/take"
 import type { Hit, Subdivision } from "gigbag.js/click/timing"
 import { type ClickMode as Mode, type Mic, useClickTrack } from "gigbag.js/click/use-click-track"
-import { useMicChoice } from "./mic-choice"
+import { MIC, useStoredSetting } from "./stored-setting"
 import { field } from "./ui/field"
 
 /**
@@ -21,7 +21,7 @@ import { field } from "./ui/field"
 export function ClickTrack({ bpm, className, pwid = "click" }: { bpm: number; className: string; pwid?: string }) {
   const [{ mode, panel }, dispatch] = useReducer(buttons, { mode: "off", panel: false })
   const [subdivision, setSubdivision] = useState<Subdivision>(1)
-  const [micId, setMicId] = useMicChoice()
+  const [micId, setMicId] = useStoredSetting(MIC)
   const { take, hits, mics } = useClickTrack({ mode, bpm, beatsPerBar: BEATS_PER_BAR, subdivision, micId })
   const toggle = (button: Exclude<Mode, "off">) => dispatch({ type: "press", button })
   const close = () => dispatch({ type: "close" })

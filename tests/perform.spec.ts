@@ -123,6 +123,28 @@ test.describe("performance mode", () => {
     await expect(getPw(page, "perform-title")).toHaveText("Gamma", { timeout: 10000 })
   })
 
+  test("a chart view setting chosen on the stage shows on the song page, and back, after each page loads", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, gigId } = await createGig(page)
+    const stage = `/band/${bandId}/gigs/${gigId}/perform?at=2`
+    await page.goto(stage)
+    await expect(getPw(page, "lyrics-chart")).toBeVisible({ timeout: 10000 })
+    await getPw(page, "perform-settings-open").click()
+    await getPw(page, "perform-diagrams").selectOption("staff")
+
+    const songs = (await (await page.request.get(`/api/songs/band/${bandId}`)).json()) as Array<{ id: string; title: string }>
+    const beta = songs.find((song) => song.title === "Beta")!
+    await page.goto(`/band/${bandId}/songs/${beta.id}`)
+    await getPw(page, "chart-settings-open").click()
+    await expect(getPw(page, "chart-diagrams")).toHaveValue("staff")
+    await getPw(page, "chart-diagrams").selectOption("piano")
+
+    await page.goto(stage)
+    await expect(getPw(page, "lyrics-chart")).toBeVisible({ timeout: 10000 })
+    await getPw(page, "perform-settings-open").click()
+    await expect(getPw(page, "perform-diagrams")).toHaveValue("piano")
+  })
+
   test("a phone-width screen shows one song and no list; a tablet shows the list beside it", async ({ page, testing }) => {
     await testing.login()
     const { bandId, gigId } = await createGig(page)

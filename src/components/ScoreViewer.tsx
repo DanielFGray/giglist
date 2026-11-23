@@ -5,6 +5,7 @@ import { clampZoom } from "gigbag.js/charts/score-zoom"
 import { useScorePlayer } from "gigbag.js/player/use-score-player"
 import { errorMessage } from "./form"
 import { ScorePlayerBar } from "./ScorePlayerBar"
+import { type StoredSetting, useStoredSetting } from "./stored-setting"
 import { scoreHost } from "./ui/score-host"
 
 type Fetched = { revisionId: string; bytes: Uint8Array } | { revisionId: string; error: string }
@@ -50,10 +51,12 @@ export function ScoreViewer({ revisionId, compact = false }: { revisionId: strin
 
 function LoadedScore({ bytes, compact }: { bytes: Uint8Array; compact: boolean }) {
   const page = useRef<HTMLDivElement>(null)
+  const [zoom, setZoom] = useStoredSetting(SCORE_ZOOM)
+  // The player takes `zoom` only when it starts; after that it reports changes through onZoomChange.
   const { host, state, actions } = useScorePlayer({
     source: { bytes },
-    zoom: storedZoom(),
-    onZoomChange: storeZoom,
+    zoom,
+    onZoomChange: setZoom,
     configure: (settings) => {
       // alphaTab pads the notation by 35 by default; the card's padding is the only margin.
       settings.display.padding = [0, 0]
@@ -127,21 +130,11 @@ function ScoreError({ text }: { text: string }) {
   )
 }
 
-const ZOOM_KEY = "setlist:score-zoom"
-
 /** The zoom the player last chose, or 100%. */
-function storedZoom(): number {
-  try {
-    return clampZoom(Number.parseFloat(localStorage.getItem(ZOOM_KEY) ?? "1"))
-  } catch {
-    return 1
-  }
-}
-
-function storeZoom(zoom: number) {
-  try {
-    localStorage.setItem(ZOOM_KEY, String(zoom))
-  } catch {
-    // Private windows and blocked site data refuse storage; the zoom then lasts for this page only.
-  }
+const SCORE_ZOOM: StoredSetting<number> = {
+  key: "setlist:score-zoom",
+  read: (text) => {
+    const zoom = Number.parseFloat(text ?? "")
+    return Number.isFinite(zoom) ? clampZoom(zoom) : 1
+  },
 }

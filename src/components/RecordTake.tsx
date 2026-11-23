@@ -5,7 +5,7 @@ import { MicPicker } from "gigbag.js/click/controls"
 import type { Take } from "gigbag.js/click/take"
 import { MicMeter } from "gigbag.js/click/readouts"
 import { useClickTrack } from "gigbag.js/click/use-click-track"
-import { useMicChoice } from "./mic-choice"
+import { MIC, useStoredSetting } from "./stored-setting"
 import { field } from "./ui/field"
 
 /**
@@ -17,7 +17,7 @@ import { field } from "./ui/field"
  */
 export function RecordTake({ bpm, onTex, className }: { bpm: number; onTex: (tex: string) => void; className: string }) {
   const [{ recording, shift }, dispatch] = useReducer(session, { recording: false, shift: 0 })
-  const [micId, setMicId] = useMicChoice()
+  const [micId, setMicId] = useStoredSetting(MIC)
   // The take reads its own 16th grid (`readTake`), so the click's subdivision only scores hits this form ignores.
   const { take, mics } = useClickTrack({ mode: recording ? "listen" : "off", bpm, beatsPerBar: BEATS_PER_BAR, subdivision: 4, micId })
 

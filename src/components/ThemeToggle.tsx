@@ -1,37 +1,20 @@
-import { useCallback, useEffect, useState } from "react"
+import { useEffect } from "react"
+import { type StoredSetting, useStoredSetting } from "./stored-setting"
 
 export function ThemeToggle() {
-  // Always start "dark" for SSR match — useEffect corrects on mount
-  const [theme, setTheme] = useState<"dark" | "light">("dark")
-  const [mounted, setMounted] = useState(false)
+  const [theme, setTheme] = useStoredSetting(THEME)
 
   useEffect(() => {
-    const current = document.documentElement.classList.contains("light")
-      ? "light"
-      : "dark"
-    setTheme(current)
-    setMounted(true)
-  }, [])
-
-  useEffect(() => {
-    if (!mounted) return
     const root = document.documentElement
     root.classList.remove("dark", "light")
     root.classList.add(theme)
-    localStorage.setItem("setlist-theme", theme)
-  }, [theme, mounted])
-
-  const toggle = useCallback(
-    () => setTheme((t) => (t === "dark" ? "light" : "dark")),
-    [],
-  )
+  }, [theme])
 
   return (
     <button
-      onClick={toggle}
+      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
       className="relative size-8 rounded-md flex items-center justify-center text-zinc-400 hover:text-zinc-200 hover:bg-[var(--color-surface-hover)] transition-colors cursor-pointer"
       aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-      suppressHydrationWarning
     >
       {theme === "dark" ? (
         <svg
@@ -70,4 +53,13 @@ export function ThemeToggle() {
       )}
     </button>
   )
+}
+
+/**
+ * Light or dark; the system's choice until the player picks one. The script in
+ * index.html reads the same key before the first paint, so keep the two alike.
+ */
+const THEME: StoredSetting<"dark" | "light"> = {
+  key: "setlist-theme",
+  read: (text) => (text === "dark" || text === "light" ? text : matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"),
 }

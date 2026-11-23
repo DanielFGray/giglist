@@ -7,7 +7,9 @@ import type { ScoreMeta } from "gigbag.js/charts/score-meta"
 import { AddScore } from "./AddScore"
 import { ChartEditor } from "./ChartEditor"
 import { ChartViewToggle, chartsInView, type ChartView } from "./ChartViewToggle"
+import { CHORD_DIAGRAMS, NUMERAL_DISPLAY, SHOW_CHORDS_ABOVE } from "./chart-view"
 import type { ChordDiagrams } from "./ChordShapes"
+import { useStoredSetting } from "./stored-setting"
 import { MarkedChart } from "./MarkedChart"
 import { ReadChartFile } from "./ReadChartFile"
 import { SettingsPanel } from "./SettingsPanel"
@@ -67,9 +69,9 @@ export function SongCharts({
   // A chart made blank opens in the editor, the same view every chart is edited in.
   const [opened, setOpened] = useState<string | null>(null)
   const [blankError, setBlankError] = useState<string | null>(null)
-  const [numeralDisplay, setNumeralDisplay] = useState<NumeralDisplay>("both")
-  const [diagrams, setDiagrams] = useState<ChordDiagrams>("guitar")
-  const [showChordsAbove, setShowChordsAbove] = useState(true)
+  const [numeralDisplay, setNumeralDisplay] = useStoredSetting(NUMERAL_DISPLAY)
+  const [diagrams, setDiagrams] = useStoredSetting(CHORD_DIAGRAMS)
+  const [showChordsAbove, setShowChordsAbove] = useStoredSetting(SHOW_CHORDS_ABOVE)
   const startBlank = async () => {
     setBlankError(null)
     try {

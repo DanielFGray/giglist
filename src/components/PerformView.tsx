@@ -4,8 +4,10 @@ import { charts, type ChartInfo, type SetlistEntryInfo } from "~/api/client"
 import { hasLyricsChart } from "gigbag.js/charts/lyrics"
 import { ChartViewToggle, chartsInView, type ChartView } from "./ChartViewToggle"
 import type { NumeralDisplay } from "gigbag.js/charts/numeral"
+import { CHORD_DIAGRAMS, NUMERAL_DISPLAY, SHOW_CHORDS_ABOVE } from "./chart-view"
 import type { ChordDiagrams } from "./ChordShapes"
 import { ClickTrack } from "./ClickTrack"
+import { type StoredSetting, useStoredSetting } from "./stored-setting"
 import { useLive, type Room } from "./live"
 import { Viewers } from "./Viewers"
 import { formatDuration } from "./duration"
@@ -55,11 +57,11 @@ export function PerformView({
   // A score draws no chord names, so a song without a lyrics chart gets neither control.
   const chordControls = songCharts.list !== null && hasLyricsChart(songCharts.list)
 
-  const [sizeStep, setSizeStep] = useState(readSizeStep)
+  const [sizeStep, setSizeStep] = useStoredSetting(TEXT_SIZE)
   const [speedStep, setSpeedStep] = useState(0)
-  const [numeralDisplay, setNumeralDisplay] = useState<NumeralDisplay>("both")
-  const [diagrams, setDiagrams] = useState<ChordDiagrams>("guitar")
-  const [showChordsAbove, setShowChordsAbove] = useState(false)
+  const [numeralDisplay, setNumeralDisplay] = useStoredSetting(NUMERAL_DISPLAY)
+  const [diagrams, setDiagrams] = useStoredSetting(CHORD_DIAGRAMS)
+  const [showChordsAbove, setShowChordsAbove] = useStoredSetting(SHOW_CHORDS_ABOVE)
   const scroller = useRef<HTMLDivElement>(null)
   const touchStart = useRef<{ x: number; y: number } | null>(null)
 
@@ -78,15 +80,7 @@ export function PerformView({
     setFollowing(null)
     onShow(stepIndex(index, delta, order.length))
   }
-  const resize = (delta: number) => {
-    const next = stepSize(sizeStep, delta)
-    setSizeStep(next)
-    try {
-      localStorage.setItem("perform-size", String(next))
-    } catch {
-      // Private mode or blocked storage: the size just is not remembered.
-    }
-  }
+  const resize = (delta: number) => setSizeStep(stepSize(sizeStep, delta))
 
   // The latest handlers for the key listener, which is installed once.
   const keys = useRef({ go, resize, onExit })
@@ -380,11 +374,8 @@ function SongCharts({
   )
 }
 
-function readSizeStep(): number {
-  try {
-    const stored = Number(localStorage.getItem("perform-size"))
-    return Number.isInteger(stored) ? stepSize(stored, 0) : 2
-  } catch {
-    return 2
-  }
+/** The stage's text size, as a step in TEXT_SIZES; the middle step until the player picks one. */
+const TEXT_SIZE: StoredSetting<number> = {
+  key: "perform-size",
+  read: (text) => (text !== null && Number.isInteger(Number(text)) ? stepSize(Number(text), 0) : 2),
 }
