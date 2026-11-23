@@ -10,7 +10,7 @@ import {
 import { isChordLine, isChordName, isPhraseStart, isTabStart, suggestedChords } from "gigbag.js/charts/lyrics"
 import { readScoreLink } from "gigbag.js/charts/score-link"
 import { chartSlot, suggest, type Suggestion } from "gigbag.js/charts/suggest"
-import { BlockHandle } from "./BlockHandle"
+import { BlockHandle, type BlockAction } from "./BlockHandle"
 import { button } from "./ui/button"
 import { field } from "./ui/field"
 import type { Point } from "./pointer-drag"
@@ -42,6 +42,13 @@ type EntryView = {
 
 const NO_SUGGESTIONS = { likely: [], fresh: [] } as const
 
+/**
+ * A form open on one line: its own words (or chords, on a chord-only line), or
+ * what goes below it: a chord line, a section start, a phrase, score bars, or pasted text.
+ */
+type LineForm = "words" | "chords" | "section" | "phrase" | "score" | "paste"
+type Opened = { readonly line: number; readonly form: LineForm }
+
 /** A block lifted by its handle, and the slot the pointer is over, if the block may go there. */
 type Drag = { block: number; over: DropSlot | null }
 
@@ -70,7 +77,8 @@ export function ChartEditor({
   const [steps, setSteps] = useState<ReadonlyArray<Edit>>([])
   const [held, setHeld] = useState<Held | null>(null)
   const [custom, setCustom] = useState("")
-  const [editingLine, setEditingLine] = useState<number | null>(null)
+  /** The one form open in the chart, on the line it belongs to. */
+  const [opened, setOpened] = useState<Opened | null>(null)
   /** The word whose chord is being typed: its line, and the column it starts at. */
   const [entry, setEntry] = useState<Place | null>(null)
   /**
@@ -79,8 +87,6 @@ export function ChartEditor({
    */
   const [extra, setExtra] = useState<ReadonlyArray<string>>([])
   const [drag, setDrag] = useState<Drag | null>(null)
-  /** The line a paste goes below, while the paste form is open. */
-  const [pasting, setPasting] = useState<number | null>(null)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -108,12 +114,35 @@ export function ChartEditor({
     document.querySelector(`[data-line="${entryLine}"] [data-at="${entryColumn}"]`)?.scrollIntoView({ block: "center" })
   }, [entryLine, entryColumn])
 
-  /** The one place the steps change. The chord field and the paste form name lines by index, so any change to the chart closes them. */
+  /** The one place the steps change. The chord field and the open form name lines by index, so any change to the chart closes them. */
   const commit = (next: ReadonlyArray<Edit>) => {
     setEntry(null)
-    setPasting(null)
+    setOpened(null)
     setSteps(next)
   }
+
+  const open = (line: number, form: LineForm) => setOpened({ line, form })
+
+  /** What a lyric line's handle menu offers besides moving, duplicating and deleting it. */
+  const lineActions = (index: number, line: DocLine): ReadonlyArray<BlockAction> =>
+    line.kind !== "lyrics"
+      ? []
+      : [
+          { pwid: "line-edit", label: isChordOnly(line) ? "Edit chords" : "Edit words", onSelect: () => open(index, "words") },
+          {
+            pwid: "line-add",
+            label: "Add a line below",
+            onSelect: () => {
+              apply(insertLineAfter(doc, index))
+              open(index + 1, "words")
+            },
+          },
+          { pwid: "line-chords", label: "Add chords below", onSelect: () => open(index, "chords") },
+          { pwid: "line-section", label: "Start a section here", onSelect: () => open(index, "section") },
+          { pwid: "line-phrase", label: "Add a phrase below", onSelect: () => open(index, "phrase") },
+          { pwid: "line-score", label: "Add score bars below", onSelect: () => open(index, "score") },
+          { pwid: "line-paste", label: "Paste text below", onSelect: () => open(index, "paste") },
+        ]
 
   const apply = (edit: Edit) => {
     if (edit.changes.length === 0) return setEntry(null)
@@ -169,7 +198,7 @@ export function ChartEditor({
       after={after}
       scoreCharts={scoreCharts}
       onPaste={(source) => apply(pasteAfter(doc, after, source))}
-      onCancel={() => setPasting(null)}
+      onCancel={() => setOpened(null)}
     />
   )
 
@@ -246,9 +275,10 @@ export function ChartEditor({
               data-drop={drag?.over?.line === index ? drag.over.side : undefined}
               className={`relative pl-7 ${lifted ? "opacity-40" : ""} data-[drop=before]:shadow-[0_-2px_0_var(--color-amber-accent)] data-[drop=after]:shadow-[0_2px_0_var(--color-amber-accent)]`}
             >
-              {handled && editingLine !== index && (
+              {handled && !(opened?.line === index && opened.form === "words") && (
                 <BlockHandle
                   label={blockLabel(line)}
+                  actions={lineActions(index, line)}
                   deleteLabel={line.kind === "lyrics" || directiveName(line) === "score" ? "Delete" : "Delete section and lines"}
                   canMove={(delta) => moveBlock(doc, index, delta).changes.length > 0}
                   onMove={(delta) => apply(moveBlock(doc, index, delta))}
@@ -265,7 +295,8 @@ export function ChartEditor({
                 tempo={tempo}
                 scoreCharts={scoreCharts}
                 held={held}
-                editing={editingLine === index}
+                form={opened?.line === index ? opened.form : null}
+                onForm={(form) => setOpened(form ? { line: index, form } : null)}
                 onDrop={dropOn}
                 onEntry={(line, at) => setEntry({ line, at })}
                 entry={
@@ -273,18 +304,11 @@ export function ChartEditor({
                     ? { at: entry.at, anchor: entryAnchor, ...offered, onDone: (result, step) => endEntry(entry, result, step) }
                     : null
                 }
-                onEditStart={() => setEditingLine(index)}
                 onEditEnd={(text) => {
-                  setEditingLine(null)
+                  setOpened(null)
                   if (text !== null) apply(isChordOnly(line) ? setChordLine(doc, index, text) : editLine(doc, index, text))
                 }}
                 onAddChords={(text) => apply(addChordLine(doc, index, text))}
-                onPaste={() => setPasting(index)}
-                onInsertAfter={() => {
-                  const edit = insertLineAfter(doc, index)
-                  apply(edit)
-                  setEditingLine(index + 1)
-                }}
                 onDelete={() => apply(deleteLine(doc, index))}
                 onRename={(label) => apply(renameSection(doc, index, label))}
                 onAddSection={(label) => apply(addSection(doc, index, label))}
@@ -293,7 +317,7 @@ export function ChartEditor({
                 onAddScoreLink={(value) => apply(addScoreLink(doc, index, value))}
                 onSetPhrase={(name, tex) => apply(setPhrase(doc, index, name, tex))}
               />
-              {pasting === index && pasting !== doc.length - 1 && pasteForm(index)}
+              {opened?.line === index && opened.form === "paste" && index !== doc.length - 1 && pasteForm(index)}
             </div>
           )
         })}
@@ -305,10 +329,10 @@ export function ChartEditor({
           data-drop={drag?.over?.line === doc.length ? "before" : undefined}
           className="h-8 data-[drop=before]:shadow-[0_-2px_0_var(--color-amber-accent)]"
         />
-        {pasting === doc.length - 1 ? (
+        {opened?.line === doc.length - 1 && opened.form === "paste" ? (
           pasteForm(doc.length - 1)
         ) : (
-          <button data-pwid="editor-paste-end" type="button" onClick={() => setPasting(doc.length - 1)} className={cx(button(), "mt-2 font-sans")}>
+          <button data-pwid="editor-paste-end" type="button" onClick={() => open(doc.length - 1, "paste")} className={cx(button(), "mt-2 font-sans")}>
             Paste text
           </button>
         )}
@@ -388,20 +412,18 @@ function Line(props: {
   tempo: number | null
   scoreCharts: ReadonlyArray<ChartInfo>
   held: Held | null
-  editing: boolean
+  /** The form open on this line, if any. */
+  form: LineForm | null
+  onForm: (form: LineForm | null) => void
   onDrop: (line: number, at: number, dropped: Held) => void
   /** Opens the chord field on the word at column `at` of the line. */
   onEntry: (line: number, at: number) => void
   /** The chord field, when it is open on a word of this line. */
   entry: EntryView | null
-  onEditStart: () => void
   /** The line's new words, or for a chord-only line its chords as typed; null keeps the line. */
   onEditEnd: (text: string | null) => void
   /** Puts a chord-only line, typed as `G  C  D`, below this one. */
   onAddChords: (text: string) => void
-  /** Opens the paste form below this line. */
-  onPaste: () => void
-  onInsertAfter: () => void
   onDelete: () => void
   onRename: (label: string) => void
   onAddSection: (label: string) => void
@@ -410,11 +432,8 @@ function Line(props: {
   onAddScoreLink: (value: string) => void
   onSetPhrase: (name: string, tex: string) => void
 }) {
-  const { line } = props
-  const [naming, setNaming] = useState(false)
-  const [addingChords, setAddingChords] = useState(false)
-  const [writingPhrase, setWritingPhrase] = useState(false)
-  const [pickingScore, setPickingScore] = useState(false)
+  const { line, form } = props
+  const close = () => props.onForm(null)
   if (props.phrase) {
     return <PhraseBlock {...props.phrase} tempo={props.tempo} onSet={props.onSetPhrase} onRemove={props.onRemoveSection} />
   }
@@ -428,11 +447,11 @@ function Line(props: {
         tab={isTabStart(directiveName(line))}
         onRename={props.onRename}
         onRemove={props.onRemoveSection}
-        onPaste={props.onPaste}
+        onPaste={() => props.onForm("paste")}
       />
     ) : null
   }
-  if (props.editing) {
+  if (form === "words") {
     return isChordOnly(line) && line.kind === "lyrics" ? (
       <LyricInput text={chordLineText(line)} pwid="chord-line-input" refusal={chordLineRefusal} onDone={props.onEditEnd} />
     ) : (
@@ -446,7 +465,7 @@ function Line(props: {
         <span className="whitespace-pre">{line.text}</span>
         {/* Out of the flow: a row as tall as the buttons would pull the tab's rows apart. */}
         <span className="absolute left-full z-10 ml-2 flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
-          <button data-pwid="line-edit" type="button" onClick={props.onEditStart} aria-label="Edit tab line" className={button()}>
+          <button data-pwid="line-edit" type="button" onClick={() => props.onForm("words")} aria-label="Edit tab line" className={button()}>
             Edit
           </button>
           <button data-pwid="line-delete" type="button" onClick={props.onDelete} aria-label="Delete line" className={button()}>
@@ -456,13 +475,13 @@ function Line(props: {
       </div>
     )
   }
-  if (naming) {
+  if (form === "section") {
     return (
       <LyricInput
         text=""
         pwid="new-section-input"
         onDone={(label) => {
-          setNaming(false)
+          close()
           if (label?.trim()) props.onAddSection(label)
         }}
       />
@@ -470,42 +489,36 @@ function Line(props: {
   }
   return (
     <>
-      <LyricLine
-        {...props}
-        onWritePhrase={() => setWritingPhrase(true)}
-        onPickScore={() => setPickingScore(true)}
-        onName={() => setNaming(true)}
-        onWriteChords={() => setAddingChords(true)}
-      />
-      {addingChords && (
+      <LyricLine {...props} />
+      {form === "chords" && (
         <LyricInput
           text=""
           pwid="chord-line-input"
           refusal={chordLineRefusal}
           onDone={(text) => {
-            setAddingChords(false)
+            close()
             if (text?.trim()) props.onAddChords(text)
           }}
         />
       )}
-      {pickingScore && (
+      {form === "score" && (
         <ScorePicker
           scoreCharts={props.scoreCharts}
-          onCancel={() => setPickingScore(false)}
+          onCancel={close}
           onSave={(value) => {
-            setPickingScore(false)
+            close()
             props.onAddScoreLink(value)
           }}
         />
       )}
-      {writingPhrase && (
+      {form === "phrase" && (
         <PhraseForm
           name=""
           tex=""
           tempo={props.tempo}
-          onCancel={() => setWritingPhrase(false)}
+          onCancel={close}
           onSave={(name, tex) => {
-            setWritingPhrase(false)
+            close()
             props.onAddPhrase(name, tex)
           }}
         />
@@ -530,14 +543,12 @@ function ScoreLinkLine({ value, scoreCharts, onDelete }: { value: string; scoreC
   )
 }
 
-/** A lyric line: words to drop chords on, and the line's own buttons. */
-function LyricLine(
-  props: Parameters<typeof Line>[0] & { onWritePhrase: () => void; onPickScore: () => void; onName: () => void; onWriteChords: () => void },
-) {
+/** A lyric line: words to drop chords on. Its other actions are in its handle's menu. */
+function LyricLine(props: Parameters<typeof Line>[0]) {
   const { line, index } = props
   if (line.kind !== "lyrics") return null
   return (
-    <div data-pwid="editor-line" className="group flex flex-wrap items-end">
+    <div data-pwid="editor-line" className="flex flex-wrap items-end">
       {segments(line).map((segment) => {
         const open = props.entry?.at === segment.start ? props.entry : null
         return (
@@ -590,39 +601,6 @@ function LyricLine(
           </span>
         )
       })}
-      {/* Hidden on a phone, which has no hover and no room: the row is wider than the screen. */}
-      <span className="ml-2 flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 max-md:hidden">
-        {isChordOnly(line) ? (
-          <button data-pwid="line-edit" type="button" onClick={props.onEditStart} aria-label="Edit chords" className={button()}>
-            Edit chords
-          </button>
-        ) : (
-          <button data-pwid="line-edit" type="button" onClick={props.onEditStart} aria-label="Edit words" className={button()}>
-            Edit words
-          </button>
-        )}
-        <button data-pwid="line-add" type="button" onClick={props.onInsertAfter} aria-label="Add a line below" className={button()}>
-          + Line
-        </button>
-        <button data-pwid="line-chords" type="button" onClick={props.onWriteChords} aria-label="Add a line of chords below" className={button()}>
-          + Chords
-        </button>
-        <button data-pwid="line-section" type="button" onClick={props.onName} aria-label="Start a section here" className={button()}>
-          + Section
-        </button>
-        <button data-pwid="line-phrase" type="button" onClick={props.onWritePhrase} aria-label="Add a phrase below" className={button()}>
-          + Phrase
-        </button>
-        <button data-pwid="line-score" type="button" onClick={props.onPickScore} aria-label="Add score bars below" className={button()}>
-          + Score
-        </button>
-        <button data-pwid="line-paste" type="button" onClick={props.onPaste} aria-label="Paste text below" className={button()}>
-          Paste below
-        </button>
-        <button data-pwid="line-delete" type="button" onClick={props.onDelete} aria-label="Delete line" className={button()}>
-          Delete
-        </button>
-      </span>
     </div>
   )
 }

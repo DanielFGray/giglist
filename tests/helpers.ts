@@ -159,3 +159,9 @@ export const openTool = async (page: Page, tool: "move" | "ink" | "text" | "stam
 }
 
 export { expect, getPw, loginViaUi }
+
+/** Opens the handle menu of the editor line `line` (an `editor-line` locator) and chooses `action`. */
+export const lineAction = async (line: Locator, action: string) => {
+  await line.first().locator("xpath=ancestor::*[@data-line][1]").locator("[data-pwid=block-handle]").click()
+  await line.page().getByRole("menuitem", { name: action, exact: true }).click()
+}

@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test"
-import { test, expect, getPw, TEST_PASSWORD, testSlug } from "./helpers"
+import { test, expect, getPw, lineAction, TEST_PASSWORD, testSlug } from "./helpers"
 
 /** Create a band for the logged-in user and return its id. Band-scoped routes
  *  carry the id in the path, so a song spec needs one before it can deep-link. */
@@ -308,7 +308,7 @@ test.describe("songs", () => {
     // "Write a chart" opens the same editor every chart is edited in, on one empty line.
     await getPw(page, "chart-blank").click()
     await expect(getPw(page, "chart-editor")).toBeVisible({ timeout: 10000 })
-    await getPw(page, "line-edit").first().click({ force: true })
+    await lineAction(getPw(page, "editor-line"), "Edit words")
     await getPw(page, "line-input").fill("Hello darkness")
     await getPw(page, "line-input").press("Enter")
     // The song has no key, so the palette has no suggestions; a chord is typed in.
