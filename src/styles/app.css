@@ -47,16 +47,35 @@
 }
 
 /*
- * The light page remaps the two lightest grey text shades to the darker ones
- * that match their contrast on the dark page (about 12:1 and 7:1). Unlayered,
- * so it wins over the utility classes; zinc-500 already has enough contrast.
+ * The light page flips the four lightest greys to the dark shades that match
+ * their contrast on the dark page, by redefining the variables, so every
+ * utility that reads them follows: a variant such as cva's `base:`, a hover
+ * state, a meter fill. zinc-500 already has enough contrast on both pages.
  */
-:root.light .text-zinc-300 {
-  color: var(--color-zinc-800);
+:root.light {
+  --color-zinc-100: var(--color-zinc-950);
+  --color-zinc-200: var(--color-zinc-900);
+  --color-zinc-300: var(--color-zinc-800);
+  --color-zinc-400: var(--color-zinc-600);
 }
 
-:root.light .text-zinc-400 {
-  color: var(--color-zinc-600);
+/*
+ * A stage is dark in both themes: the perform view, and panels that open over
+ * it. It sets back the dark values of every variable the light page changes,
+ * so a chart, a control or a score drawn inside it reads on its dark ground.
+ * The values repeat the @theme block above and Tailwind's zinc scale.
+ */
+:root.light .stage {
+  color-scheme: dark;
+  --color-surface: #0c0c0e;
+  --color-surface-raised: #161619;
+  --color-surface-hover: #1e1e22;
+  --color-border-subtle: #27272a;
+  --color-border-active: #3f3f46;
+  --color-zinc-100: oklch(96.7% 0.001 286.375);
+  --color-zinc-200: oklch(92% 0.004 286.32);
+  --color-zinc-300: oklch(87.1% 0.006 286.286);
+  --color-zinc-400: oklch(70.5% 0.015 286.067);
 }
 
 /*

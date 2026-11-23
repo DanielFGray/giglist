@@ -41,10 +41,12 @@ test.describe("performance mode", () => {
     await expect(getPw(page, "chord-shapes")).toHaveCount(0)
     await expect(getPw(page, "perform-title")).toHaveText("Beta")
 
-    // The stage's own Chord diagrams setting: Off makes a chord text that opens nothing.
+    // The stage's own Chord diagrams setting, in its View panel: Off makes a chord text that opens nothing.
+    await getPw(page, "perform-settings-open").click()
     await getPw(page, "perform-diagrams").selectOption("off")
     await getPw(page, "chart-chord").filter({ hasText: /^Bb$/ }).first().click()
     await expect(getPw(page, "chord-shapes")).toHaveCount(0)
+    await getPw(page, "perform-settings-open").click()
     await getPw(page, "perform-diagrams").selectOption("guitar")
     await getPw(page, "chart-chord").filter({ hasText: /^Bb$/ }).first().click()
     await expect(getPw(page, "chord-shapes")).toBeVisible()
@@ -166,6 +168,7 @@ test.describe("performance mode", () => {
     await expect(getPw(page, "lyrics-chart")).toBeVisible({ timeout: 10000 })
     await expect(getPw(page, "chord-strip")).toHaveCount(0)
 
+    await getPw(page, "perform-settings-open").click()
     await getPw(page, "perform-show-chords-above").check()
     const strip = getPw(page, "chord-strip")
     await expect(strip).toBeVisible()

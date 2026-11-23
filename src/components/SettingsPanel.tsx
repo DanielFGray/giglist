@@ -5,7 +5,18 @@ import { useId, type ReactNode } from "react"
  * The panel is a non-modal popover: the page behind stays usable, so a player sees
  * a setting take effect on the chart. Escape or a click outside closes it.
  */
-export function SettingsPanel({ pwid, title, children }: { pwid: string; title: string; children: ReactNode }) {
+export function SettingsPanel({
+  pwid,
+  title,
+  className = "px-3 py-1.5 rounded-md border border-[var(--color-border-subtle)] text-sm text-zinc-300 cursor-pointer",
+  children,
+}: {
+  pwid: string
+  title: string
+  /** The open button's classes, so it can match the buttons beside it. */
+  className?: string
+  children: ReactNode
+}) {
   const id = useId()
   return (
     <>
@@ -13,7 +24,7 @@ export function SettingsPanel({ pwid, title, children }: { pwid: string; title: 
         data-pwid={`${pwid}-open`}
         type="button"
         popoverTarget={id}
-        className="px-3 py-1.5 rounded-md border border-[var(--color-border-subtle)] text-sm text-zinc-300 cursor-pointer"
+        className={className}
       >
         {title}
       </button>

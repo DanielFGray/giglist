@@ -7,6 +7,7 @@ import { SpeedInput } from "gigbag.js/player/speed-input"
 import { useScorePlayer, type UseScorePlayer } from "gigbag.js/player/use-score-player"
 import { button } from "./ui/button"
 import { field } from "./ui/field"
+import { hoverBar } from "./ui/hover-bar"
 
 /**
  * A phrase drawn by alphaTab, with play, loop, count-in and speed. Systems wrap
@@ -46,8 +47,8 @@ function PhrasePlayer({ score, problems }: { score: model.Score; problems: Reado
   return (
     <div data-pwid="phrase" data-rendered={state.rendered} className="group relative space-y-1">
       <div className="relative">
-        <div ref={host} data-pwid="phrase-render" />
         <PhraseControls state={state} actions={actions} disabled={disabled} />
+        <div ref={host} data-pwid="phrase-render" />
       </div>
       {state.error && (
         <p role="alert" className="font-sans text-xs text-red-400">
@@ -59,10 +60,10 @@ function PhrasePlayer({ score, problems }: { score: model.Score; problems: Reado
   )
 }
 
-/** The hover bar over a phrase: play or stop, loop, count-in and speed. The parent must be `group relative`; the bar shows while it is hovered or focused. */
+/** The bar over a phrase (`hoverBar`): play or stop, loop, count-in and speed. */
 function PhraseControls({ state, actions, disabled }: Pick<UseScorePlayer, "state" | "actions"> & { disabled: boolean }) {
   return (
-    <div className="pointer-events-none absolute top-0 right-0 z-10 flex flex-wrap items-center gap-3 rounded-md bg-[var(--color-surface)]/80 px-2 py-1 font-sans text-xs text-zinc-500 opacity-0 backdrop-blur-sm transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100">
+    <div className={hoverBar}>
       <IconButton
         label={state.playing ? "Stop" : "Play"}
         disabled={disabled}

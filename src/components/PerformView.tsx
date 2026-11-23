@@ -10,7 +10,9 @@ import { useLive, type Room } from "./live"
 import { Viewers } from "./Viewers"
 import { formatDuration } from "./duration"
 import { MarkedChart } from "./MarkedChart"
+import { SettingsPanel } from "./SettingsPanel"
 import { button } from "./ui/button"
+import { field } from "./ui/field"
 import { errorMessage } from "./form"
 import { TEXT_SIZES, stepIndex, stepSize, swipeDirection } from "./perform"
 
@@ -154,54 +156,62 @@ export function PerformView({
 
   const size = TEXT_SIZES[sizeStep]!
   const buttonClass = button({ tone: "raised", size: "md" })
+  const stageSelect = `${field({ size: "md", width: "full" })} cursor-pointer`
 
   return (
-    <div data-pwid="perform" className="[--stick-top:0px] fixed inset-0 z-50 flex flex-col bg-zinc-950 text-zinc-100">
-      <header className="flex items-center justify-between gap-3 border-b border-zinc-800 px-4 py-2">
+    <div data-pwid="perform" className="stage [--stick-top:0px] fixed inset-0 z-50 flex flex-col bg-zinc-950 text-zinc-100">
+      <header className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-zinc-800 px-4 py-2">
         <div className="flex min-w-0 items-center gap-3">
           <span data-pwid="perform-setlist" className="truncate text-sm text-zinc-500">{title}</span>
           <Viewers viewers={viewers} me={client} following={following} onFollow={setFollowing} />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button data-pwid="perform-smaller" type="button" aria-label="Smaller text" onClick={() => resize(-1)} disabled={sizeStep === 0} className={buttonClass}>A−</button>
           <button data-pwid="perform-larger" type="button" aria-label="Larger text" onClick={() => resize(1)} disabled={sizeStep === TEXT_SIZES.length - 1} className={buttonClass}>A+</button>
-          {chordControls && (
-            <>
+          {/* View settings sit in a side panel, as on the song page, so the row keeps the controls used mid-song. */}
+          <SettingsPanel pwid="perform-settings" title="View" className={buttonClass}>
+            {chordControls && (
+              <>
+                <label className="block space-y-1 text-sm text-zinc-300">
+                  <span>Chord diagrams</span>
+                  <select
+                    data-pwid="perform-diagrams"
+                    value={diagrams}
+                    onChange={(e) => setDiagrams(e.target.value as ChordDiagrams)}
+                    className={stageSelect}
+                  >
+                    <option value="guitar">Guitar</option>
+                    <option value="staff">Staff</option>
+                    <option value="piano">Piano</option>
+                    <option value="off">Off</option>
+                  </select>
+                </label>
+                <label className="flex items-center gap-2 text-sm text-zinc-300">
+                  <input
+                    data-pwid="perform-show-chords-above"
+                    type="checkbox"
+                    checked={showChordsAbove}
+                    disabled={diagrams === "off"}
+                    onChange={(e) => setShowChordsAbove(e.target.checked)}
+                  />
+                  Show chords above the chart
+                </label>
+              </>
+            )}
+            <label className="block space-y-1 text-sm text-zinc-300">
+              <span>Chord display</span>
               <select
-                data-pwid="perform-diagrams"
-                value={diagrams}
-                onChange={(e) => setDiagrams(e.target.value as ChordDiagrams)}
-                className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-sm text-zinc-200 cursor-pointer"
-                aria-label="Chord diagrams"
+                data-pwid="perform-numeral-display"
+                value={numeralDisplay}
+                onChange={(e) => setNumeralDisplay(e.target.value as NumeralDisplay)}
+                className={stageSelect}
               >
-                <option value="guitar">Guitar</option>
-                <option value="staff">Staff</option>
-                <option value="piano">Piano</option>
-                <option value="off">Off</option>
+                <option value="both">Names & numerals</option>
+                <option value="names">Names only</option>
+                <option value="numerals">Numerals only</option>
               </select>
-              <label className="flex items-center gap-1 text-sm text-zinc-200">
-                <input
-                  data-pwid="perform-show-chords-above"
-                  type="checkbox"
-                  checked={showChordsAbove}
-                  disabled={diagrams === "off"}
-                  onChange={(e) => setShowChordsAbove(e.target.checked)}
-                />
-                Show chords above the chart
-              </label>
-            </>
-          )}
-          <select
-            data-pwid="perform-numeral-display"
-            value={numeralDisplay}
-            onChange={(e) => setNumeralDisplay(e.target.value as NumeralDisplay)}
-            className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-sm text-zinc-200 cursor-pointer"
-            aria-label="Chord display"
-          >
-            <option value="both">Names & numerals</option>
-            <option value="names">Names only</option>
-            <option value="numerals">Numerals only</option>
-          </select>
+            </label>
+          </SettingsPanel>
           {current?.entry.tempo_bpm != null && (
             <ClickTrack key={current.entry.id} bpm={current.entry.tempo_bpm} pwid="perform-click" className={buttonClass} />
           )}

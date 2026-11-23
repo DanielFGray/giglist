@@ -6,6 +6,7 @@ import { SpeedInput } from "gigbag.js/player/speed-input"
 import { useScorePlayer, type UseScorePlayer } from "gigbag.js/player/use-score-player"
 import { button } from "./ui/button"
 import { field } from "./ui/field"
+import { hoverBar } from "./ui/hover-bar"
 
 /**
  * Reads a Guitar Pro file for drawing as a tab. The staff profile is set before
@@ -86,7 +87,6 @@ function DrawnScore({ score, track, range, selected, pwid, onSelect, onError }: 
   const bars = state.selection && barsOfBeatSpan(state.selection)
   return (
     <div className="group relative">
-      <div ref={host} data-pwid={`${pwid}-render`} data-selection={bars ? `${bars.first}-${bars.last}` : undefined} />
       <ScoreControls
         pwid={pwid}
         state={state}
@@ -96,14 +96,14 @@ function DrawnScore({ score, track, range, selected, pwid, onSelect, onError }: 
           onSelect?.(null)
         }}
       />
+      <div ref={host} data-pwid={`${pwid}-render`} data-selection={bars ? `${bars.first}-${bars.last}` : undefined} />
     </div>
   )
 }
 
 /**
- * The hover bar over a score: the passage's bars with a Clear button when one is selected, play or stop, loop,
- * count-in, speed and the tempo at that speed. The parent must be `group relative`; the bar shows while it is
- * hovered or focused.
+ * The bar over a score (`hoverBar`): the passage's bars with a Clear button when one is selected, play or stop,
+ * loop, count-in, speed and the tempo at that speed.
  */
 function ScoreControls({
   pwid,
@@ -112,7 +112,7 @@ function ScoreControls({
   onClear,
 }: Pick<UseScorePlayer, "state" | "actions"> & { pwid: string; onClear: () => void }) {
   return (
-    <div className="pointer-events-none absolute top-0 right-0 z-10 flex flex-wrap items-center gap-3 rounded-md bg-[var(--color-surface)]/80 px-2 py-1 font-sans text-xs text-zinc-500 opacity-0 backdrop-blur-sm transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100">
+    <div className={hoverBar}>
       {state.selection && (
         <span data-pwid={`${pwid}-selection`} className="text-zinc-300">
           {selectionLabel(state.selection)}

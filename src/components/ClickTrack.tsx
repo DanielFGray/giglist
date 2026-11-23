@@ -83,14 +83,13 @@ function ListenPanel({
   pwid: string
 }) {
   const last = hits.at(-1)
-  // The panel is dark in both themes, because it also opens over the dark
-  // stage view. So its text uses only grey shades that the light theme does
-  // not remap (app.css). On a phone it is a sheet at the bottom of the screen.
+  // The panel is a stage (app.css): dark in both themes, because it also opens
+  // over the dark stage view. On a phone it is a sheet at the bottom of the screen.
   return (
     <section
       data-pwid={`${pwid}-panel`}
       aria-label="Timing"
-      className="fixed inset-x-4 bottom-4 z-40 sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:top-full sm:mt-2 sm:w-80 space-y-3 rounded-lg border border-zinc-700 bg-zinc-900 p-4 text-sm text-zinc-200 shadow-xl"
+      className="stage fixed inset-x-4 bottom-4 z-40 sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:top-full sm:mt-2 sm:w-80 space-y-3 rounded-lg border border-zinc-700 bg-zinc-900 p-4 text-sm text-zinc-200 shadow-xl"
     >
       <div className="flex items-start justify-between gap-3">
         <p data-pwid={`${pwid}-status`} aria-live="polite" className="text-zinc-200">
