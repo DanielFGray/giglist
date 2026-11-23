@@ -7,6 +7,7 @@ import { useScorePlayer, type UseScorePlayer } from "gigbag.js/player/use-score-
 import { button } from "./ui/button"
 import { field } from "./ui/field"
 import { hoverBar } from "./ui/hover-bar"
+import { scoreHost } from "./ui/score-host"
 
 /**
  * Reads a Guitar Pro file for drawing as a tab. The staff profile is set before
@@ -96,7 +97,7 @@ function DrawnScore({ score, track, range, selected, pwid, onSelect, onError }: 
           onSelect?.(null)
         }}
       />
-      <div ref={host} data-pwid={`${pwid}-render`} data-selection={bars ? `${bars.first}-${bars.last}` : undefined} />
+      <div ref={host} className={scoreHost} data-pwid={`${pwid}-render`} data-selection={bars ? `${bars.first}-${bars.last}` : undefined} />
     </div>
   )
 }

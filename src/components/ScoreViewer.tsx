@@ -5,6 +5,7 @@ import { clampZoom } from "gigbag.js/charts/score-zoom"
 import { useScorePlayer } from "gigbag.js/player/use-score-player"
 import { errorMessage } from "./form"
 import { ScorePlayerBar } from "./ScorePlayerBar"
+import { scoreHost } from "./ui/score-host"
 
 type Fetched = { revisionId: string; bytes: Uint8Array } | { revisionId: string; error: string }
 
@@ -112,7 +113,7 @@ function LoadedScore({ bytes, compact }: { bytes: Uint8Array; compact: boolean }
       {state.status === "loading" && <p className="text-sm text-zinc-500">Loading the score…</p>}
       {/* alphaTab draws in the text color around it and redraws when the theme toggles. */}
       <div ref={page} data-pwid="score-page" className={`rounded-md ${compact ? "max-h-[40vh] overflow-y-auto" : ""}`}>
-        <div ref={host} data-pwid="score-render" />
+        <div ref={host} className={scoreHost} data-pwid="score-render" />
       </div>
     </div>
   )

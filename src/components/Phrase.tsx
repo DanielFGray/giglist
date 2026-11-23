@@ -8,6 +8,7 @@ import { useScorePlayer, type UseScorePlayer } from "gigbag.js/player/use-score-
 import { button } from "./ui/button"
 import { field } from "./ui/field"
 import { hoverBar } from "./ui/hover-bar"
+import { scoreHost } from "./ui/score-host"
 
 /**
  * A phrase drawn by alphaTab, with play, loop, count-in and speed. Systems wrap
@@ -48,7 +49,7 @@ function PhrasePlayer({ score, problems }: { score: model.Score; problems: Reado
     <div data-pwid="phrase" data-rendered={state.rendered} className="group relative space-y-1">
       <div className="relative">
         <PhraseControls state={state} actions={actions} disabled={disabled} />
-        <div ref={host} data-pwid="phrase-render" />
+        <div ref={host} className={scoreHost} data-pwid="phrase-render" />
       </div>
       {state.error && (
         <p role="alert" className="font-sans text-xs text-red-400">
