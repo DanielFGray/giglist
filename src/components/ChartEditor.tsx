@@ -2,11 +2,11 @@ import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type D
 import { charts, type ChartInfo } from "~/api/client"
 import { composeChanges } from "gigbag.js/charts/changes"
 import {
-  addPhrase, addScoreLink, addSection, anchorLine, blockRange, canMoveBlockTo, deleteBlock, deleteLine, directiveName, dropSlots, duplicateBlock, editLine, hasHandle, inPhrase,
-  insertLineAfter, moveBlock, moveBlockTo, moveChord, parseDoc, phraseAt, placeChord, removeChord, removeSection, renameSection, segments, serializeDoc,
-  setPhrase, type ChartDoc, type DocLine, type Edit,
+  addChordLine, addPhrase, addScoreLink, addSection, anchorLine, blockRange, canMoveBlockTo, chordLineText, deleteBlock, deleteLine, directiveName, dropSlots,
+  duplicateBlock, editLine, hasHandle, inPhrase, insertLineAfter, isChordOnly, moveBlock, moveBlockTo, moveChord, parseDoc, pasteAfter, phraseAt, placeChord,
+  removeChord, removeSection, renameSection, segments, serializeDoc, setChordLine, setPhrase, type ChartDoc, type DocLine, type Edit,
 } from "gigbag.js/charts/doc"
-import { isChordName, isPhraseStart, isTabStart, suggestedChords } from "gigbag.js/charts/lyrics"
+import { isChordLine, isChordName, isPhraseStart, isTabStart, suggestedChords } from "gigbag.js/charts/lyrics"
 import { readScoreLink } from "gigbag.js/charts/score-link"
 import { chartSlot, suggest, type Suggestion } from "gigbag.js/charts/suggest"
 import { BlockHandle } from "./BlockHandle"
@@ -15,6 +15,7 @@ import { ChordInput, type ChordEntry } from "./ChordInput"
 import { slotUnder, type DropRow, type DropSlot } from "./drop-slot"
 import { errorMessage } from "./form"
 import { Phrase } from "./Phrase"
+import { PasteForm } from "./PasteForm"
 import { PhraseForm } from "./PhraseForm"
 import { ScoreLink } from "./ScoreLink"
 import { ScorePicker } from "./ScorePicker"
@@ -78,6 +79,8 @@ export function ChartEditor({
    */
   const [extra, setExtra] = useState<ReadonlyArray<string>>([])
   const [drag, setDrag] = useState<Drag | null>(null)
+  /** The line a paste goes below, while the paste form is open. */
+  const [pasting, setPasting] = useState<number | null>(null)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -105,9 +108,10 @@ export function ChartEditor({
     document.querySelector(`[data-line="${entryLine}"] [data-at="${entryColumn}"]`)?.scrollIntoView({ block: "center" })
   }, [entryLine, entryColumn])
 
-  /** The one place the steps change. The chord field names a word by line and column, so any change to the chart closes it. */
+  /** The one place the steps change. The chord field and the paste form name lines by index, so any change to the chart closes them. */
   const commit = (next: ReadonlyArray<Edit>) => {
     setEntry(null)
+    setPasting(null)
     setSteps(next)
   }
 
@@ -120,13 +124,17 @@ export function ChartEditor({
   const endEntry = (place: Place, result: ChordEntry, step: -1 | 0 | 1) => {
     const line = doc[place.line]
     const chordIndex = line?.kind === "lyrics" ? line.chords.findIndex((chord) => chord.at === place.at) : -1
-    if (result && "put" in result) {
-      if (!palette.includes(result.put)) setExtra((all) => [...all, result.put])
-      apply(placeChord(doc, place.line, place.at, result.put))
-    } else if (result && chordIndex >= 0) apply(removeChord(doc, place.line, chordIndex))
+    if (result && "put" in result && !palette.includes(result.put)) setExtra((all) => [...all, result.put])
+    const edit =
+      result && "put" in result
+        ? placeChord(doc, place.line, place.at, result.put)
+        : result && chordIndex >= 0
+          ? removeChord(doc, place.line, chordIndex)
+          : null
+    if (edit) apply(edit)
     else setEntry(null)
-    // A chord edit moves no word, so the next word's column holds in the edited chart too.
-    if (step !== 0) setEntry(wordAlong(doc, place, step))
+    // The edited chart, since a chord put on a chord-only line opens a new stretch past it for the next chord.
+    if (step !== 0) setEntry(wordAlong(edit?.doc ?? doc, place, step))
   }
 
   const dropOn = (line: number, at: number, dropped: Held) => {
@@ -154,6 +162,16 @@ export function ChartEditor({
     if (over) apply(moveBlockTo(doc, block, over.slot))
   }
 
+
+  const pasteForm = (after: number) => (
+    <PasteForm
+      doc={doc}
+      after={after}
+      scoreCharts={scoreCharts}
+      onPaste={(source) => apply(pasteAfter(doc, after, source))}
+      onCancel={() => setPasting(null)}
+    />
+  )
 
   const save = async () => {
     setPending(true)
@@ -258,8 +276,10 @@ export function ChartEditor({
                 onEditStart={() => setEditingLine(index)}
                 onEditEnd={(text) => {
                   setEditingLine(null)
-                  if (text !== null) apply(editLine(doc, index, text))
+                  if (text !== null) apply(isChordOnly(line) ? setChordLine(doc, index, text) : editLine(doc, index, text))
                 }}
+                onAddChords={(text) => apply(addChordLine(doc, index, text))}
+                onPaste={() => setPasting(index)}
                 onInsertAfter={() => {
                   const edit = insertLineAfter(doc, index)
                   apply(edit)
@@ -273,6 +293,7 @@ export function ChartEditor({
                 onAddScoreLink={(value) => apply(addScoreLink(doc, index, value))}
                 onSetPhrase={(name, tex) => apply(setPhrase(doc, index, name, tex))}
               />
+              {pasting === index && pasting !== doc.length - 1 && pasteForm(index)}
             </div>
           )
         })}
@@ -284,6 +305,13 @@ export function ChartEditor({
           data-drop={drag?.over?.line === doc.length ? "before" : undefined}
           className="h-8 data-[drop=before]:shadow-[0_-2px_0_var(--color-amber-accent)]"
         />
+        {pasting === doc.length - 1 ? (
+          pasteForm(doc.length - 1)
+        ) : (
+          <button data-pwid="editor-paste-end" type="button" onClick={() => setPasting(doc.length - 1)} className={`${button} mt-2 font-sans`}>
+            Paste text
+          </button>
+        )}
       </div>
 
       {error && <div data-pwid="editor-error" className="text-sm text-red-400">{error}</div>}
@@ -367,7 +395,12 @@ function Line(props: {
   /** The chord field, when it is open on a word of this line. */
   entry: EntryView | null
   onEditStart: () => void
+  /** The line's new words, or for a chord-only line its chords as typed; null keeps the line. */
   onEditEnd: (text: string | null) => void
+  /** Puts a chord-only line, typed as `G  C  D`, below this one. */
+  onAddChords: (text: string) => void
+  /** Opens the paste form below this line. */
+  onPaste: () => void
   onInsertAfter: () => void
   onDelete: () => void
   onRename: (label: string) => void
@@ -379,6 +412,7 @@ function Line(props: {
 }) {
   const { line } = props
   const [naming, setNaming] = useState(false)
+  const [addingChords, setAddingChords] = useState(false)
   const [writingPhrase, setWritingPhrase] = useState(false)
   const [pickingScore, setPickingScore] = useState(false)
   if (props.phrase) {
@@ -394,10 +428,17 @@ function Line(props: {
         tab={isTabStart(directiveName(line))}
         onRename={props.onRename}
         onRemove={props.onRemoveSection}
+        onPaste={props.onPaste}
       />
     ) : null
   }
-  if (props.editing) return <LyricInput text={line.text} onDone={props.onEditEnd} />
+  if (props.editing) {
+    return isChordOnly(line) && line.kind === "lyrics" ? (
+      <LyricInput text={chordLineText(line)} pwid="chord-line-input" refusal={chordLineRefusal} onDone={props.onEditEnd} />
+    ) : (
+      <LyricInput text={line.text} onDone={props.onEditEnd} />
+    )
+  }
   if (line.kind === "literal") {
     // Tab is kept as written: no chords go on it, but its text can be corrected.
     return (
@@ -434,7 +475,19 @@ function Line(props: {
         onWritePhrase={() => setWritingPhrase(true)}
         onPickScore={() => setPickingScore(true)}
         onName={() => setNaming(true)}
+        onWriteChords={() => setAddingChords(true)}
       />
+      {addingChords && (
+        <LyricInput
+          text=""
+          pwid="chord-line-input"
+          refusal={chordLineRefusal}
+          onDone={(text) => {
+            setAddingChords(false)
+            if (text?.trim()) props.onAddChords(text)
+          }}
+        />
+      )}
       {pickingScore && (
         <ScorePicker
           scoreCharts={props.scoreCharts}
@@ -478,7 +531,9 @@ function ScoreLinkLine({ value, scoreCharts, onDelete }: { value: string; scoreC
 }
 
 /** A lyric line: words to drop chords on, and the line's own buttons. */
-function LyricLine(props: Parameters<typeof Line>[0] & { onWritePhrase: () => void; onPickScore: () => void; onName: () => void }) {
+function LyricLine(
+  props: Parameters<typeof Line>[0] & { onWritePhrase: () => void; onPickScore: () => void; onName: () => void; onWriteChords: () => void },
+) {
   const { line, index } = props
   if (line.kind !== "lyrics") return null
   return (
@@ -535,12 +590,22 @@ function LyricLine(props: Parameters<typeof Line>[0] & { onWritePhrase: () => vo
           </span>
         )
       })}
-      <span className="ml-2 flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
-        <button data-pwid="line-edit" type="button" onClick={props.onEditStart} aria-label="Edit words" className={button}>
-          Edit words
-        </button>
+      {/* Hidden on a phone, which has no hover and no room: the row is wider than the screen. */}
+      <span className="ml-2 flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 max-md:hidden">
+        {isChordOnly(line) ? (
+          <button data-pwid="line-edit" type="button" onClick={props.onEditStart} aria-label="Edit chords" className={button}>
+            Edit chords
+          </button>
+        ) : (
+          <button data-pwid="line-edit" type="button" onClick={props.onEditStart} aria-label="Edit words" className={button}>
+            Edit words
+          </button>
+        )}
         <button data-pwid="line-add" type="button" onClick={props.onInsertAfter} aria-label="Add a line below" className={button}>
           + Line
+        </button>
+        <button data-pwid="line-chords" type="button" onClick={props.onWriteChords} aria-label="Add a line of chords below" className={button}>
+          + Chords
         </button>
         <button data-pwid="line-section" type="button" onClick={props.onName} aria-label="Start a section here" className={button}>
           + Section
@@ -550,6 +615,9 @@ function LyricLine(props: Parameters<typeof Line>[0] & { onWritePhrase: () => vo
         </button>
         <button data-pwid="line-score" type="button" onClick={props.onPickScore} aria-label="Add score bars below" className={button}>
           + Score
+        </button>
+        <button data-pwid="line-paste" type="button" onClick={props.onPaste} aria-label="Paste text below" className={button}>
+          Paste below
         </button>
         <button data-pwid="line-delete" type="button" onClick={props.onDelete} aria-label="Delete line" className={button}>
           Delete
@@ -611,12 +679,15 @@ function SectionHeading({
   tab,
   onRename,
   onRemove,
+  onPaste,
 }: {
   label: string
-  /** A tab section: removing it removes its tab lines too. */
+  /** A tab section: removing it removes its tab lines too, and nothing is pasted into it. */
   tab: boolean
   onRename: (label: string) => void
   onRemove: () => void
+  /** Opens the paste form at the top of the section. */
+  onPaste: () => void
 }) {
   const [editing, setEditing] = useState(false)
   if (editing) {
@@ -643,6 +714,11 @@ function SectionHeading({
         {label || (tab ? "Tab" : "Section")}
       </button>
       <span className="flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
+        {!tab && (
+          <button data-pwid="section-paste" type="button" onClick={onPaste} aria-label="Paste text into the section" className={button}>
+            Paste
+          </button>
+        )}
         <button data-pwid="section-remove" type="button" onClick={onRemove} aria-label={tab ? "Remove tab" : "Remove section"} className={button}>
           {tab ? "Remove tab" : "Remove section"}
         </button>
@@ -651,37 +727,68 @@ function SectionHeading({
   )
 }
 
-/** A one-line text box: Enter keeps the text, Escape (or leaving it unchanged) keeps the old. */
-function LyricInput({ text, pwid = "line-input", onDone }: { text: string; pwid?: string; onDone: (text: string | null) => void }) {
+/**
+ * A one-line text box: Enter keeps the text, Escape (or leaving it unchanged) keeps the old.
+ * Text that `refusal` gives a reason for is not kept: the box stays open and says why.
+ */
+function LyricInput({
+  text,
+  pwid = "line-input",
+  refusal,
+  onDone,
+}: {
+  text: string
+  pwid?: string
+  refusal?: (text: string) => string | null
+  onDone: (text: string | null) => void
+}) {
   const [value, setValue] = useState(text)
   // Enter and the blur that follows it must report once.
   const done = useRef(false)
+  const reason = refusal?.(value) ?? null
   const finish = (next: string | null) => {
-    if (done.current) return
+    if (done.current || (next !== null && reason)) return
     done.current = true
     onDone(next)
   }
   return (
-    <input
-      data-pwid={pwid}
-      autoFocus
-      value={value}
-      onChange={(e) => setValue(e.target.value)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") finish(value)
-        if (e.key === "Escape") finish(null)
-      }}
-      onBlur={() => finish(value)}
-      className="w-full rounded-md border border-[var(--color-amber-accent)] bg-[var(--color-surface-raised)] px-2 py-1 font-mono text-sm"
-    />
+    <span className="block w-full">
+      <input
+        data-pwid={pwid}
+        autoFocus
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") finish(value)
+          if (e.key === "Escape") finish(null)
+        }}
+        onBlur={() => finish(value)}
+        aria-invalid={reason !== null}
+        className="w-full rounded-md border border-[var(--color-amber-accent)] bg-[var(--color-surface-raised)] px-2 py-1 font-mono text-sm"
+      />
+      {reason && (
+        <span data-pwid={`${pwid}-error`} role="alert" className="block font-sans text-xs text-red-400">
+          {reason}
+        </span>
+      )}
+    </span>
   )
 }
 
-/** The word `step` words along from `place`, over line ends, or null past either end of the chart. */
+/** Why typed text is not a line of chords, or null when it is one (blank text clears the line). */
+const chordLineRefusal = (text: string): string | null =>
+  text.trim() === "" || isChordLine(text) ? null : "Only chords, bar lines and spaces: put words on a line of their own."
+
+/**
+ * The next word after `place` (step 1) or the one before it (step -1), over line ends, or null past
+ * either end of the chart. `place` need not be a word of `doc`: removing a chord from a chord-only
+ * line takes away the stretch it stood on.
+ */
 function wordAlong(doc: ChartDoc, place: Place, step: -1 | 1): Place | null {
   const words = doc.flatMap((line, index) => (line.kind === "lyrics" ? segments(line).map((segment) => ({ line: index, at: segment.start })) : []))
-  const here = words.findIndex((word) => word.line === place.line && word.at === place.at)
-  return here < 0 ? null : (words[here + step] ?? null)
+  const after = (word: Place) => word.line > place.line || (word.line === place.line && word.at > place.at)
+  const before = (word: Place) => word.line < place.line || (word.line === place.line && word.at < place.at)
+  return (step === 1 ? words.find(after) : words.findLast(before)) ?? null
 }
 
 function startDrag(event: DragEvent, held: Held) {

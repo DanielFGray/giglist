@@ -178,7 +178,7 @@ function ChartDraftFields({ draft, scoreSaved, onChange }: { draft: ChartDraft; 
  * lyrics, or null when alphaTab cannot read it. alphaTab is large, so it and
  * the reader that walks its model load on demand.
  */
-async function readScore(bytes: Uint8Array): Promise<{ meta: ScoreMeta; chart: ScoreChart | null } | null> {
+export async function readScore(bytes: Uint8Array): Promise<{ meta: ScoreMeta; chart: ScoreChart | null } | null> {
   try {
     const [{ importer, Settings }, { chartFromScore }] = await Promise.all([import("@coderline/alphatab"), import("gigbag.js/charts/score-chart")])
     const score = importer.ScoreLoader.loadScoreFromBytes(bytes, new Settings())

@@ -858,6 +858,116 @@ test.describe("chart editor", () => {
     expect(await first!.locator("[data-pwid=chart-chord]").allTextContents()).toEqual(await second!.locator("[data-pwid=chart-chord]").allTextContents())
   })
 
+  test("adds a line of chords with no words, by typing it and by Tab, and edits it", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, songId } = await createSong(page)
+    await createBareChart(page, songId)
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    await getPw(page, "chart-edit").click()
+
+    const sound = getPw(page, "editor-line").filter({ hasText: "The sound" })
+    await sound.hover()
+    await sound.getByRole("button", { name: "Add a line of chords below" }).click()
+    const input = getPw(page, "chord-line-input")
+    await input.fill("G and C")
+    await expect(getPw(page, "chord-line-input-error")).toBeVisible()
+    await input.press("Enter")
+    await expect(input).toBeVisible()
+    await input.fill("G    C  D")
+    await input.press("Enter")
+    await expect(getPw(page, "placed-chord")).toHaveText(["G", "C", "D"])
+
+    // Tab from the last chord opens a new place after it, and the next Tab another.
+    const field = getPw(page, "chord-input")
+    await getPw(page, "placed-chord").filter({ hasText: /^D$/ }).click()
+    await page.keyboard.press("Tab")
+    await expect(field).toHaveValue("")
+    await field.fill("Em")
+    await page.keyboard.press("Tab")
+    await expect(field).toHaveValue("")
+    await page.keyboard.press("Escape")
+    await expect(getPw(page, "placed-chord")).toHaveText(["G", "C", "D", "Em"])
+
+    const chords = getPw(page, "editor-line").filter({ has: getPw(page, "placed-chord") })
+    await chords.hover()
+    await chords.getByRole("button", { name: "Edit chords" }).click()
+    await expect(input).toHaveValue("G    C  D  Em")
+    await input.fill("G  C")
+    await input.press("Enter")
+    await expect(getPw(page, "placed-chord")).toHaveText(["G", "C"])
+
+    await getPw(page, "editor-save").click()
+    await expect(getPw(page, "chart-editor")).toHaveCount(0, { timeout: 10000 })
+    await expect(getPw(page, "chart-chord").filter({ hasText: /\S/ })).toHaveText(["G", "C"])
+    expect(await shownLyrics(page)).toContain("The sound")
+  })
+
+  test("pastes text below a line, at the top of a section, and at the end, and a paste with sections goes after the section", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, songId } = await createSong(page)
+    await createBareChart(page, songId)
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    await getPw(page, "chart-edit").click()
+    const lyrics = async () => (await getPw(page, "editor-line").allTextContents()).map((row) => row.replace(/(Edit|\+ |Paste|Delete).*$/, "").trim())
+
+    const amazing = getPw(page, "editor-line").filter({ hasText: "Amazing grace" })
+    await amazing.hover()
+    await amazing.getByRole("button", { name: "Paste text below" }).click()
+    await getPw(page, "paste-text").fill("G      C\nthat saved a wretch")
+    await expect(getPw(page, "paste-moved")).toHaveCount(0)
+    await getPw(page, "paste-submit").click()
+    await expect(getPw(page, "paste-form")).toHaveCount(0)
+
+    const heading = getPw(page, "editor-section").filter({ hasText: "Verse 1" }).locator("xpath=..")
+    await heading.hover()
+    await heading.getByRole("button", { name: "Paste text into the section" }).click()
+    await getPw(page, "paste-text").fill("D  G")
+    await getPw(page, "paste-submit").click()
+
+    await getPw(page, "editor-paste-end").click()
+    await getPw(page, "paste-text").fill("[Chorus]\nEm\nI once was lost")
+    await getPw(page, "paste-submit").click()
+
+    await amazing.hover()
+    await amazing.getByRole("button", { name: "Paste text below" }).click()
+    await getPw(page, "paste-text").fill("[Bridge]\nC\nWas blind")
+    await expect(getPw(page, "paste-moved")).toBeVisible()
+    await getPw(page, "paste-submit").click()
+
+    await expect(getPw(page, "editor-section")).toHaveText(["Verse 1", "Bridge", "Chorus"])
+    expect((await lyrics()).filter(Boolean)).toEqual(["D   G", "Amazing grace, how sweet", "Gthat saCved a wretch", "The sound", "CWas blind", "EmI once was lost"])
+
+    await getPw(page, "editor-save").click()
+    await expect(getPw(page, "chart-editor")).toHaveCount(0, { timeout: 10000 })
+    expect(await shownLyrics(page)).toContain("that saved a wretch")
+    await expect(getPw(page, "chart-section")).toHaveText(["Verse 1", "Bridge", "Chorus"])
+  })
+
+  test("fills the paste box from a PDF and from one of the song's scores", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, songId } = await createSong(page)
+    await createBareChart(page, songId)
+    const upload = await page.request.post(`/api/scores?${new URLSearchParams({ song_id: songId, name: "Sung", file_name: "amazing-grace.gp" })}`, {
+      data: readFileSync(fixturePath("amazing-grace.gp")),
+      headers: { "content-type": "application/octet-stream" },
+    })
+    expect(upload.ok(), `upload score failed: ${await upload.text()}`).toBe(true)
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    await getPw(page, "chart-edit").click()
+
+    await getPw(page, "editor-paste-end").click()
+    await getPw(page, "chart-form-file").setInputFiles(fixturePath("amazing-grace.pdf"))
+    await expect(getPw(page, "paste-text")).toHaveValue(/Amazing grace/, { timeout: 20000 })
+
+    await getPw(page, "paste-score").selectOption({ label: "Sung" })
+    await expect(getPw(page, "paste-text")).toHaveValue(/grace how sweet/, { timeout: 20000 })
+    await getPw(page, "paste-text").fill((await getPw(page, "paste-text").inputValue()).split("\n").slice(0, 2).join("\n"))
+    await getPw(page, "paste-submit").click()
+    await getPw(page, "editor-save").click()
+    await expect(getPw(page, "chart-editor")).toHaveCount(0, { timeout: 10000 })
+    expect(await shownLyrics(page)).toContain("The sound")
+  })
+
   test("saves a revision the editor could have made, and refuses a stale or unexplained one", async ({ page, testing }) => {
     await testing.login()
     const { songId } = await createSong(page)
