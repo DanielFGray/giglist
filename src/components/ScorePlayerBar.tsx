@@ -10,7 +10,7 @@ import { TrainerFields, type TrainerProps } from "gigbag.js/player/trainer-field
 import { VolumeSlider } from "gigbag.js/player/volume-slider"
 import { ZoomControl } from "gigbag.js/player/zoom-control"
 import { SettingsPanel } from "./SettingsPanel"
-import { cx } from "cva"
+import { cx } from "tailwind-variants/lite"
 import { button } from "./ui/button"
 import { field as fieldRecipe } from "./ui/field"
 

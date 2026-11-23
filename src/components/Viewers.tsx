@@ -1,4 +1,4 @@
-import { cx } from "cva"
+import { cx } from "tailwind-variants/lite"
 import type { Viewer } from "./live"
 import { button } from "./ui/button"
 

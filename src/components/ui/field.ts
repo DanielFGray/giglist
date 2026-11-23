@@ -1,10 +1,10 @@
-import { cva } from "cva"
+import { tv } from "tailwind-variants/lite"
 
 /**
- * Inputs, textareas and selects, as a cva recipe (cva.style); see button.ts
+ * Inputs, textareas and selects, as a tailwind-variants recipe; see button.ts
  * for the `base:` override pattern.
  */
-export const field = cva({
+export const field = tv({
   base:
     "base:rounded-md base:border base:border-[var(--color-border-subtle)] base:bg-[var(--color-surface-raised)] base:text-zinc-200",
   variants: {

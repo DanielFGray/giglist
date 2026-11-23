@@ -1,13 +1,14 @@
-import { cva } from "cva"
+import { tv } from "tailwind-variants/lite"
 
 /**
- * Buttons and button-like controls, as cva recipes (cva.style). Recipe
- * defaults carry the `base:` variant (`cva/tailwindcss`, imported in
- * `src/styles/app.css`), so a call site appends a plain utility to override a
- * default through the CSS cascade instead of runtime class merging. Anything
- * that would otherwise need merging between call sites is a variant here.
+ * Buttons and button-like controls, as a tailwind-variants recipe (the lite
+ * entry, which does no class merging). Recipe defaults carry the `base:`
+ * variant (defined in `src/styles/app.css`), so a call site appends a plain
+ * utility to override a default through the CSS cascade. A recipe class
+ * without `base:` cannot be overridden that way. Anything that would otherwise
+ * need merging between call sites is a variant here.
  */
-export const button = cva({
+export const button = tv({
   base: "cursor-pointer transition-colors disabled:cursor-not-allowed",
   variants: {
     tone: {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react"
-import { cx } from "cva"
+import { cx } from "tailwind-variants/lite"
 import { marks as marksApi, stamps as stampsApi, type ChartInfo, type ChartMarksInfo, type MarkData, type MarkInfo, type StampInfo } from "~/api/client"
 import { boundsOf, inkPath, markResolver, near, type Box, type Stroke } from "gigbag.js/charts/marks"
 import { renderLyrics, chartChords } from "gigbag.js/charts/lyrics"

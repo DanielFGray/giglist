@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type DragEvent } from "react"
-import { cx } from "cva"
+import { cx } from "tailwind-variants/lite"
 import { charts, type ChartInfo } from "~/api/client"
 import { composeChanges } from "gigbag.js/charts/changes"
 import {

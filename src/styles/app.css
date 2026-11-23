@@ -1,9 +1,16 @@
 /* CSS ignores an @import that follows any other rule, so the fonts come first. */
 @import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap");
 @import "tailwindcss" source("../");
-/* cva's `base:` variant (cva.style): recipe defaults land in @layer base at
-   zero specificity, so a call site's plain utility overrides them. */
-@import "cva/tailwindcss";
+/* The `base:` variant, from cva (cva.style, MIT): recipe defaults land in
+   @layer base at zero specificity, so a call site's plain utility overrides
+   them without runtime class merging. */
+@custom-variant base {
+  @layer base {
+    :where(&) {
+      @slot;
+    }
+  }
+}
 
 @theme {
   --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
@@ -49,7 +56,7 @@
 /*
  * The light page flips the four lightest greys to the dark shades that match
  * their contrast on the dark page, by redefining the variables, so every
- * utility that reads them follows: a variant such as cva's `base:`, a hover
+ * utility that reads them follows: a variant such as `base:`, a hover
  * state, a meter fill. zinc-500 already has enough contrast on both pages.
  */
 :root.light {

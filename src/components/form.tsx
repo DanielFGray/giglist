@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { cx } from "cva"
+import { cx } from "tailwind-variants/lite"
 
 import { errorMessage as apiErrorMessage } from "@danielfgray/stompbox/http/client"
 import { button } from "./ui/button"
