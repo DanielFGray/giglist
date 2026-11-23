@@ -1,3 +1,4 @@
+import { Fragment } from "react"
 import type { Notation } from "gigbag.js/charts/score-notation"
 import { IconButton } from "gigbag.js/player/icon-button"
 import { CountInIcon, LoadingSpinner, MetronomeIcon, PauseIcon, PlayIcon, StopIcon } from "gigbag.js/player/icons"
@@ -133,6 +134,20 @@ export function ScorePlayerBar(props: ScorePlayerBarProps) {
             }}
           />
         </SettingsPanel>
+        {/* A touch screen seldom has a keyboard, so the list shows only where hover does. */}
+        <span className="contents [@media(hover:none)]:hidden">
+          <SettingsPanel pwid="score-keys" title="Keys">
+            <p className="text-sm text-zinc-400">Press Tab until the score has focus, then:</p>
+            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-sm">
+              {SCORE_KEYS.map(([keys, does]) => (
+                <Fragment key={keys}>
+                  <dt className="font-mono text-zinc-200">{keys}</dt>
+                  <dd className="text-zinc-400">{does}</dd>
+                </Fragment>
+              ))}
+            </dl>
+          </SettingsPanel>
+        </span>
         <NotationToggles
           notation={props.notation}
           onNotation={props.onNotation}
@@ -184,3 +199,14 @@ const zoomStep = cx(button({ size: "xs" }), "leading-none")
 
 /** The kit reports pressed as `data-pressed` on every button, so one recipe styles both states. */
 const iconButton = button({ size: "icon", pressed: "data" })
+
+/** The keys the kit's player answers (`handleKey` in gigbag.js/player/score-player). */
+const SCORE_KEYS: ReadonlyArray<readonly [string, string]> = [
+  ["Space", "Play or pause"],
+  ["Ctrl Space", "Play from the start"],
+  ["← →", "One beat back or on"],
+  ["Ctrl ← →", "One bar back or on"],
+  ["Home End", "Start or end of the bar"],
+  ["Ctrl Home End", "Start or end of the score"],
+  ["Shift + a move", "Select from where the cursor was"],
+]
