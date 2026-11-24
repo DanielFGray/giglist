@@ -27,6 +27,8 @@ The build writes the license text of every npm package in the client bundle to `
 
 ## Research
 
+- **OWASP Bot Management and Anti-Automation Cheat Sheet**: the feedback form's spam trap follows the cheat sheet's hidden-field honeypot — a plainly named field (`website`) that sits off the page, is never tabbed to, and is refused server-side when filled (`src/api/feedback.ts`, `src/components/FeedbackDialog.tsx`). <https://cheatsheetseries.owasp.org/cheatsheets/Bot_Management_and_Anti-Automation_Cheat_Sheet.html>
+
 The click's listener (`gigbag.js/click/listener`) follows four onset papers:
 
 - **Böck, S. and Widmer, G.** (2013). "Maximum Filter Vibrato Suppression for Onset Detection." Proc. 16th DAFx, Maynooth, 55–61. SuperFlux: the detection stage's flux against a maximum-filtered earlier frame. <https://www.dafx.de/paper-archive/2013/papers/09.dafx2013_submission_12.pdf>. Reference implementation: <https://github.com/CPJKU/SuperFlux>
