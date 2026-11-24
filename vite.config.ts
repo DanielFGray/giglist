@@ -4,6 +4,7 @@ import { TanStackRouterVite } from "@tanstack/router-plugin/vite";
 import tailwindcss from "@tailwindcss/vite";
 import { alphaTabAssets } from "gigbag.js/vite";
 import { licenseNoticesPlugin } from "./scripts/licenseNoticesPlugin";
+import pkg from "./package.json";
 import path from "node:path";
 
 // `host` from URL includes the port ("localhost:3001"); Vite needs the bare
@@ -24,6 +25,10 @@ const apiProxy = {
 };
 
 export default defineConfig({
+  // `__APP_VERSION__` is the app's own package version, for feedback records.
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+  },
   server: {
     port: Number(port),
     host,

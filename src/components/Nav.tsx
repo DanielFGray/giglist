@@ -7,6 +7,7 @@ import {
   type LinkComponentProps,
 } from "@tanstack/react-router"
 import { BandSwitcher } from "./BandSwitcher"
+import { FeedbackDialog } from "./FeedbackDialog"
 import { ThemeToggle } from "./ThemeToggle"
 import { Avatar } from "./Avatar"
 import { useActiveBandId, useAuth } from "./AuthContext"
@@ -194,9 +195,12 @@ export function Nav() {
   const { user } = useAuth()
   const bandId = useActiveBandId()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
   const [signOutError, setSignOutError] = useState<string | null>(null)
   const slidOut = useHideOnScroll(mobileOpen)
   const router = useRouter()
+
+  const feedbackLink = "px-2 py-1.5 rounded-md text-sm font-medium text-zinc-400 hover:text-zinc-200 hover:bg-[var(--color-surface-hover)] transition-colors cursor-pointer"
 
   return (
     <>
@@ -222,6 +226,9 @@ export function Nav() {
 
           <div className="hidden md:flex items-center gap-1.5">
             {user && <BandSwitcher />}
+            <button type="button" data-pwid="nav-feedback" onClick={() => setFeedbackOpen(true)} className={feedbackLink}>
+              Feedback
+            </button>
             <ThemeToggle />
             <UserMenu />
           </div>
@@ -256,6 +263,17 @@ export function Nav() {
               <div className="space-y-1">
                 <NavLinks bandId={bandId} onNavigate={() => setMobileOpen(false)} />
               </div>
+              <button
+                type="button"
+                data-pwid="nav-mobile-feedback"
+                onClick={() => {
+                  setMobileOpen(false)
+                  setFeedbackOpen(true)
+                }}
+                className="block w-full text-left px-3 py-1.5 rounded-md text-sm font-medium text-zinc-400 hover:text-zinc-200 hover:bg-[var(--color-surface-hover)] cursor-pointer"
+              >
+                Feedback
+              </button>
               {user && (
                 <div className="pt-2 border-t border-[var(--color-border-subtle)] mt-2 space-y-1">
                   <BandSwitcher />
@@ -295,6 +313,7 @@ export function Nav() {
           </div>
         )}
       </nav>
+      <FeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} />
     </>
   )
 }
