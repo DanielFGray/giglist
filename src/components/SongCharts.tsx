@@ -1,4 +1,5 @@
 import { Suspense, lazy, useEffect, useState } from "react"
+import { ToggleButton } from "react-aria-components"
 import { charts, type ChartInfo } from "~/api/client"
 import { exportChords, hasLyricsChart } from "gigbag.js/charts/lyrics"
 import type { NumeralDisplay } from "gigbag.js/charts/numeral"
@@ -305,15 +306,14 @@ function ChartCard({
             </button>
           )}
           {chart.source !== null && !editing && (
-            <button
+            <ToggleButton
               data-pwid="chart-annotate"
-              type="button"
-              aria-pressed={annotating}
-              onClick={() => setAnnotating(!annotating)}
-              className={`px-3 py-1.5 rounded-md border border-[var(--color-border-subtle)] text-xs cursor-pointer ${annotating ? "bg-[var(--color-amber-accent)] text-zinc-950" : "text-zinc-300"}`}
+              isSelected={annotating}
+              onChange={setAnnotating}
+              className="px-3 py-1.5 rounded-md border border-[var(--color-border-subtle)] text-xs text-zinc-300 cursor-pointer outline-none data-[focus-visible]:ring-2 data-[focus-visible]:ring-[var(--color-amber-accent)] data-[selected]:bg-[var(--color-amber-accent)] data-[selected]:text-zinc-950"
             >
               Annotate
-            </button>
+            </ToggleButton>
           )}
           {chart.source !== null && editing && (
             <button

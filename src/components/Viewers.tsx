@@ -1,4 +1,5 @@
 import { cx } from "tailwind-variants/lite"
+import { ToggleButton } from "react-aria-components"
 import type { Viewer } from "./live"
 import { button } from "./ui/button"
 
@@ -33,15 +34,22 @@ export function Viewers({
         return (
           <li key={v.client} data-pwid="viewer" data-mode={v.mode}>
             {followable ? (
-              <button
-                type="button"
+              <ToggleButton
                 data-pwid="viewer-follow"
-                aria-pressed={following === v.client}
-                onClick={() => onFollow(following === v.client ? null : v.client)}
-                className={cx(pill, "cursor-pointer", following === v.client ? "border-[var(--color-amber-accent)] bg-[var(--color-amber-accent)] text-zinc-950" : "text-zinc-300")}
+                isSelected={following === v.client}
+                onChange={() => onFollow(following === v.client ? null : v.client)}
+                className={({ isSelected }) =>
+                  cx(
+                    pill,
+                    "cursor-pointer outline-none data-[focus-visible]:ring-2 data-[focus-visible]:ring-[var(--color-amber-accent)]",
+                    isSelected
+                      ? "border-[var(--color-amber-accent)] bg-[var(--color-amber-accent)] text-zinc-950"
+                      : "text-zinc-300",
+                  )
+                }
               >
                 {following === v.client ? `Following ${label}` : `Follow ${label}`}
-              </button>
+              </ToggleButton>
             ) : (
               <span className={cx(pill, "text-zinc-400")}>{label}</span>
             )}
