@@ -2,8 +2,8 @@ import { Switch } from "react-aria-components"
 
 /**
  * An on/off control with its label inside it. RAC Switch renders a label
- * around a hidden checkbox with the switch role, so a click, or Space or Enter
- * on the focused switch, toggles it, and the label text is its name.
+ * around a hidden checkbox with the switch role. Click the label or press
+ * Space on the focused switch to toggle it. The label text names the switch.
  * The track and knob style themselves from the label's `data-selected`.
  */
 export function SwitchField({
