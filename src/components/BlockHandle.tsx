@@ -1,4 +1,4 @@
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Menu, MenuItem, Popover, Separator } from "react-aria-components"
 import { usePointerDrag, type Point } from "./pointer-drag"
 
@@ -37,6 +37,18 @@ export function BlockHandle({
 }) {
   const [open, setOpen] = useState(false)
   const grip = useRef<HTMLButtonElement>(null)
+  // The popover makes the rest of the page inert while it is open, so a field an action opens could not take focus.
+  // The chosen action waits here and runs once the popover has closed.
+  const chosen = useRef<(() => void) | null>(null)
+  const choose = (action: () => void) => () => {
+    chosen.current = action
+  }
+  useEffect(() => {
+    if (open) return
+    const action = chosen.current
+    chosen.current = null
+    action?.()
+  }, [open])
   const drag = usePointerDrag({
     onDrag: (point) => {
       setOpen(false)
@@ -75,21 +87,21 @@ export function BlockHandle({
       >
         <Menu aria-label={`Actions for ${label}`} data-pwid="block-menu" autoFocus="first" onClose={() => setOpen(false)} className="outline-none">
           {actions.map((action) => (
-            <MenuItem key={action.pwid} id={action.pwid} data-pwid={action.pwid} onAction={action.onSelect} className={itemClass}>
+            <MenuItem key={action.pwid} id={action.pwid} data-pwid={action.pwid} onAction={choose(action.onSelect)} className={itemClass}>
               {action.label}
             </MenuItem>
           ))}
           {actions.length > 0 && <Separator className="my-1 border-t border-[var(--color-border-subtle)]" />}
-          <MenuItem id="block-move-up" data-pwid="block-move-up" isDisabled={!canMove(-1)} onAction={() => onMove(-1)} className={itemClass}>
+          <MenuItem id="block-move-up" data-pwid="block-move-up" isDisabled={!canMove(-1)} onAction={choose(() => onMove(-1))} className={itemClass}>
             Move up
           </MenuItem>
-          <MenuItem id="block-move-down" data-pwid="block-move-down" isDisabled={!canMove(1)} onAction={() => onMove(1)} className={itemClass}>
+          <MenuItem id="block-move-down" data-pwid="block-move-down" isDisabled={!canMove(1)} onAction={choose(() => onMove(1))} className={itemClass}>
             Move down
           </MenuItem>
-          <MenuItem id="block-duplicate" data-pwid="block-duplicate" onAction={onDuplicate} className={itemClass}>
+          <MenuItem id="block-duplicate" data-pwid="block-duplicate" onAction={choose(onDuplicate)} className={itemClass}>
             Duplicate
           </MenuItem>
-          <MenuItem id="block-delete" data-pwid="block-delete" onAction={onDelete} className={itemClass}>
+          <MenuItem id="block-delete" data-pwid="block-delete" onAction={choose(onDelete)} className={itemClass}>
             {deleteLabel}
           </MenuItem>
         </Menu>

@@ -43,9 +43,13 @@ test.describe("lyrics charts", () => {
     await page.goto(`/band/${bandId}/songs/${songId}`)
     await expect(getPw(page, "charts-empty")).toBeVisible({ timeout: 10000 })
 
+    // Charts are added in the page's edit mode.
+    await getPw(page, "song-edit").click()
     await getPw(page, "chart-add").click()
     await getPw(page, "chart-form-pasted").fill(pasted)
     await getPw(page, "chart-form-submit").click()
+    // The new chart is saved at once; Done returns to reading it.
+    await getPw(page, "editor-save").click()
 
     await expect(getPw(page, "chart")).toHaveCount(1, { timeout: 10000 })
     await expect(getPw(page, "chart-name")).toContainText("written in G")
@@ -115,12 +119,16 @@ test.describe("lyrics charts", () => {
     await testing.login()
     const { bandId, songId } = await createSong(page)
     await page.goto(`/band/${bandId}/songs/${songId}`)
+    // Charts are added in the page's edit mode.
+    await getPw(page, "song-edit").click()
     await getPw(page, "chart-add").click()
 
     await getPw(page, "chart-form-file").setInputFiles(fixturePath("amazing-grace.pdf"))
     await expect(getPw(page, "chart-form-pasted")).toHaveValue(/Amazing grace, how sweet the sound/, { timeout: 10000 })
     await expect(getPw(page, "chart-form-original")).toBeVisible()
     await getPw(page, "chart-form-submit").click()
+    // The new chart is saved at once; Done returns to reading it.
+    await getPw(page, "editor-save").click()
 
     await expect(getPw(page, "chart")).toHaveCount(1, { timeout: 10000 })
     await expect(getPw(page, "chart-section")).toHaveText(["Verse 1", "Chorus", "Verse 2", "Chorus"])
@@ -134,6 +142,8 @@ test.describe("lyrics charts", () => {
     await testing.login()
     const { bandId, songId } = await createSong(page)
     await page.goto(`/band/${bandId}/songs/${songId}`)
+    // Charts are added in the page's edit mode.
+    await getPw(page, "song-edit").click()
     await getPw(page, "chart-add").click()
 
     await getPw(page, "chart-form-file").setInputFiles(fixturePath("amazing-grace.png"))
@@ -149,6 +159,8 @@ test.describe("lyrics charts", () => {
     await testing.login()
     const { bandId, songId } = await createSong(page)
     await page.goto(`/band/${bandId}/songs/${songId}`)
+    // Charts are added in the page's edit mode.
+    await getPw(page, "song-edit").click()
     await getPw(page, "chart-add").click()
 
     await getPw(page, "chart-form-file").setInputFiles(fixturePath("amazing-grace.txt"))
@@ -199,7 +211,7 @@ test.describe("lyrics charts", () => {
     await expect(getPw(page, "chart-tab").filter({ hasText: "3h5h7" })).toHaveText("B|--3h5h7--------------|", { useInnerText: true })
   })
 
-  test("edit mode has a Close that returns to the chart", async ({ page, testing }) => {
+  test("with nothing changed, the edit bar offers Done, which returns to the chart", async ({ page, testing }) => {
     await testing.login()
     const { bandId, songId } = await createSong(page)
     await createChart(page.request, songId)
@@ -208,10 +220,46 @@ test.describe("lyrics charts", () => {
     await expect(getPw(page, "chart")).toHaveCount(1, { timeout: 10000 })
     await getPw(page, "chart-edit").click()
     await expect(getPw(page, "chart-editor")).toBeVisible()
-    await getPw(page, "chart-close").click()
+    await expect(getPw(page, "editor-save")).toHaveText("Done")
+    await expect(getPw(page, "editor-cancel")).toHaveCount(0)
+    await getPw(page, "editor-save").click()
     await expect(getPw(page, "chart-editor")).toHaveCount(0)
     await expect(getPw(page, "marked-chart")).toBeVisible()
-    await expect(getPw(page, "chart-close")).toHaveCount(0)
+    await expect(getPw(page, "edit-bar")).toHaveCount(0)
+  })
+
+  test("keeps each chart's unsaved edits while another chart is edited, and saves them all at once", async ({ page, testing }) => {
+    await testing.login()
+    const { bandId, songId } = await createSong(page)
+    await createChart(page.request, songId)
+    const second = await page.request.post("/api/charts", { data: { song_id: songId, name: "Intro", written_key: "G", pasted: "[Intro]\nG  C  D" } })
+    expect(second.ok(), await second.text()).toBe(true)
+    const intro = (await second.json()) as { revision_id: string }
+
+    await page.goto(`/band/${bandId}/songs/${songId}`)
+    await getPw(page, "chart-edit").first().click()
+    await handleOf(getPw(page, "editor-line").first()).click()
+    await getPw(page, "block-duplicate").click()
+    await expect(getPw(page, "chart-unsaved")).toHaveCount(1)
+
+    // Opening the second chart folds the first into a preview that keeps its edit.
+    await getPw(page, "chart-open").click()
+    await expect(getPw(page, "editor-section")).toHaveText("Intro")
+    await expect(getPw(page, "chart-unsaved")).toHaveCount(1)
+    await handleOf(getPw(page, "editor-line").first()).click()
+    await getPw(page, "block-delete").click()
+    await expect(getPw(page, "edit-unsaved")).toHaveText("2 charts unsaved")
+
+    // Undo takes back the open chart's last step only.
+    await getPw(page, "editor-undo").click()
+    await expect(getPw(page, "edit-unsaved")).toHaveText("1 chart unsaved")
+    await getPw(page, "chart-preview").click()
+    await getPw(page, "editor-save").click()
+    await expect(getPw(page, "edit-bar")).toHaveCount(0, { timeout: 10000 })
+    const saved = (await (await page.request.get(`/api/charts/song/${songId}`)).json()) as Array<{ name: string; source: string; revision_id: string }>
+    expect(saved.find((chart) => chart.name === "Chords")!.source.match(/Amazing/g)).toHaveLength(2)
+    // The second chart's edit was undone, so it was not saved again.
+    expect(saved.find((chart) => chart.name === "Intro")!.revision_id).toBe(intro.revision_id)
   })
 
   test("deletes a chart", async ({ page, testing }) => {
@@ -224,6 +272,7 @@ test.describe("lyrics charts", () => {
     // Delete is offered only in edit mode, so the test enters it first.
     await expect(getPw(page, "chart-delete")).toHaveCount(0)
     await getPw(page, "chart-edit").click()
+    page.once("dialog", (dialog) => dialog.accept())
     await getPw(page, "chart-delete").click()
     await expect(getPw(page, "charts-empty")).toBeVisible({ timeout: 10000 })
   })
@@ -676,6 +725,8 @@ test.describe("chart editor", () => {
     // Start a section on a line inside the first verse: it splits in two.
     const line = getPw(page, "editor-line").filter({ hasText: "Was blin" }).first()
     await lineAction(line, "Start a section here")
+    // The menu closes without taking focus back from the field it opened.
+    await expect(getPw(page, "new-section-input")).toBeFocused()
     await getPw(page, "new-section-input").fill("Bridge")
     await getPw(page, "new-section-input").press("Enter")
     await expect.poll(headings).toEqual(["Verse 1", "Bridge", "Chorus", "Verse 2", "Chorus"])
@@ -846,10 +897,14 @@ test.describe("chart editor", () => {
     expect(copied).toMatch(/^A +D +A$/m)
 
     // Adding the copy as a new chart in A shows the same chords and words.
+    // Charts are added in the page's edit mode.
+    await getPw(page, "song-edit").click()
     await getPw(page, "chart-add").click()
     await getPw(page, "chart-form-key").selectOption("A")
     await getPw(page, "chart-form-pasted").fill(copied)
     await getPw(page, "chart-form-submit").click()
+    // The new chart is saved at once; Done returns to reading it.
+    await getPw(page, "editor-save").click()
     await expect(getPw(page, "chart")).toHaveCount(2, { timeout: 10000 })
     const [first, second] = await getPw(page, "chart").all()
     expect(await first!.locator("[data-pwid=chart-lyric]").allTextContents()).toEqual(await second!.locator("[data-pwid=chart-lyric]").allTextContents())
@@ -1022,6 +1077,7 @@ test.describe("phrases", () => {
 
     const line = getPw(page, "editor-line").filter({ hasText: "Amazing grace" })
     await lineAction(line, "Add a phrase below")
+    await expect(getPw(page, "phrase-name")).toBeFocused()
     const form = getPw(page, "phrase-form")
     await getPw(page, "phrase-name").fill("Intro riff")
     // Notation alphaTab cannot read says where, and cannot be kept.
