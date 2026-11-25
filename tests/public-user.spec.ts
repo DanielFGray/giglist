@@ -23,8 +23,11 @@ test.describe("public user profile", () => {
 
     await page.goto("/settings")
     const enable = getPw(page, "settings-profile-public")
-    await expect(enable).toHaveAttribute("aria-checked", "false")
+    // A RAC Switch: the label inside it names the checkbox that holds the state.
+    const profileSwitch = enable.getByRole("switch", { name: "Public profile" })
+    await expect(profileSwitch).not.toBeChecked()
     await enable.click()
+    await expect(profileSwitch).toBeChecked()
     await getPw(page, "settings-profile-submit").click()
     await expect(getPw(page, "settings-profile-saved")).toBeVisible()
     await expect(getPw(page, "settings-profile-public-link")).toBeVisible()
@@ -35,7 +38,8 @@ test.describe("public user profile", () => {
 
     await testing.login({ username: "test_public_user_switch" })
     await page.goto("/settings")
-    await getPw(page, "settings-profile-public").click()
+    await page.getByRole("switch", { name: "Public profile" }).focus()
+    await page.keyboard.press("Space")
     await getPw(page, "settings-profile-submit").click()
     await expect(getPw(page, "settings-profile-saved")).toBeVisible()
 

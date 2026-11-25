@@ -47,18 +47,22 @@ test.describe("public band page", () => {
 
     await page.goto(`/band/${band.id}`)
     const enable = getPw(page, "band-public-enable")
-    await expect(enable).toHaveAttribute("aria-checked", "false")
+    // A RAC Switch: the label inside it names the checkbox that holds the state.
+    const bandSwitch = enable.getByRole("switch", { name: "Enable public profile" })
+    await expect(bandSwitch).not.toBeChecked()
     await expect(getPw(page, "band-public-settings")).toHaveCount(0)
     await expect(getPw(page, "band-public-profile-link")).toHaveCount(0)
 
     await enable.click()
-    await expect(enable).toHaveAttribute("aria-checked", "true")
+    await expect(bandSwitch).toBeChecked()
+    await expect(enable).toHaveAttribute("data-selected", "true")
     await expect(getPw(page, "band-public-settings")).toBeVisible()
     await getPw(page, "band-public-profile-link").click()
     await expect(themed(page).locator("h1")).toHaveText(band.name)
 
     await page.goto(`/band/${band.id}`)
-    await getPw(page, "band-public-enable").click()
+    await page.getByRole("switch", { name: "Enable public profile" }).focus()
+    await page.keyboard.press("Space")
     await expect(getPw(page, "band-public-settings")).toHaveCount(0)
     await page.goto(`/b/${band.slug}`)
     await expect(getPw(page, "public-band-missing")).toBeVisible({ timeout: 5000 })

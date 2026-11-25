@@ -11,6 +11,7 @@ import {
 } from "~/api/client"
 import { Avatar } from "~/components/Avatar"
 import { BandPage } from "~/components/BandPage"
+import { SwitchField } from "~/components/SwitchField"
 import { themeOptions } from "~/components/band-theme"
 import { ThemeOptionFields } from "~/components/ThemeOptionFields"
 import { DEFAULT_THEME, STARTER_THEMES } from "~/components/starter-themes"
@@ -111,20 +112,13 @@ function PublicProfile({ band, saved }: { band: BandInfo; saved: PublicBandProfi
               : "Give the band a page anyone can open, with the look and lists you choose."}
           </p>
         </div>
-        <label className="flex shrink-0 items-center gap-2 text-sm cursor-pointer">
-          <span>Enable public profile</span>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={band.is_public}
-            data-pwid="band-public-enable"
-            disabled={pending}
-            onClick={() => void setPublic(!band.is_public)}
-            className="group relative h-6 w-11 shrink-0 rounded-full bg-zinc-600 transition-colors aria-checked:bg-[var(--color-amber-accent)] disabled:opacity-60 cursor-pointer"
-          >
-            <span className="absolute left-0.5 top-0.5 size-5 rounded-full bg-white shadow transition-transform group-aria-checked:translate-x-5" />
-          </button>
-        </label>
+        <SwitchField
+          pwid="band-public-enable"
+          label="Enable public profile"
+          isSelected={band.is_public}
+          onChange={(isPublic) => void setPublic(isPublic)}
+          isDisabled={pending}
+        />
       </div>
       {error && (
         <div data-pwid="band-public-enable-error" className="text-sm text-red-400">
