@@ -19,6 +19,7 @@ import {
   fieldError,
 } from "~/components/form"
 import { Markdown } from "~/components/Markdown"
+import { SwitchField } from "~/components/SwitchField"
 import { UserPage } from "~/components/UserPage"
 import { ThemeOptionFields } from "~/components/ThemeOptionFields"
 import { themeOptions } from "~/components/band-theme"
@@ -226,41 +227,33 @@ function ProfileSection({
           </form.Subscribe>
         </div>
 
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <span className="text-sm text-zinc-300">Public profile</span>
-            <p className="text-xs text-zinc-500 mt-1">
-              {user.is_public
-                ? "Anyone can open your profile at "
-                : "Give yourself a page anyone can open, with your name, picture and bio."}
-              {user.is_public && (
-                <Link
-                  to="/u/$username"
-                  params={{ username: user.username }}
-                  data-pwid="settings-profile-public-link"
-                  className="text-[var(--color-amber-accent)] hover:underline"
-                >
-                  /u/{user.username}
-                </Link>
-              )}
-            </p>
-          </div>
-          <form.Field name="is_public">
-            {(field) => (
-              <button
-                type="button"
-                role="switch"
-                aria-checked={field.state.value}
-                aria-label="Public profile"
-                data-pwid="settings-profile-public"
-                onClick={() => field.handleChange(!field.state.value)}
-                className="group relative h-6 w-11 shrink-0 rounded-full bg-zinc-600 transition-colors aria-checked:bg-[var(--color-amber-accent)] cursor-pointer"
-              >
-                <span className="absolute left-0.5 top-0.5 size-5 rounded-full bg-white shadow transition-transform group-aria-checked:translate-x-5" />
-              </button>
-            )}
-          </form.Field>
-        </div>
+        <form.Field name="is_public">
+          {(field) => (
+            <div>
+              <SwitchField
+                pwid="settings-profile-public"
+                label="Public profile"
+                isSelected={field.state.value}
+                onChange={field.handleChange}
+              />
+              <p className="text-xs text-zinc-500 mt-1">
+                {user.is_public
+                  ? "Anyone can open your profile at "
+                  : "Give yourself a page anyone can open, with your name, picture and bio."}
+                {user.is_public && (
+                  <Link
+                    to="/u/$username"
+                    params={{ username: user.username }}
+                    data-pwid="settings-profile-public-link"
+                    className="text-[var(--color-amber-accent)] hover:underline"
+                  >
+                    /u/{user.username}
+                  </Link>
+                )}
+              </p>
+            </div>
+          )}
+        </form.Field>
 
         <form.Field name="avatar_url">
           {(field) => (
