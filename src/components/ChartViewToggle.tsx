@@ -24,9 +24,8 @@ const views: ReadonlyArray<{ value: ChartView; label: string }> = [
 /**
  * Switches a page between a song's chord sheet and its score, one at a time.
  * Renders nothing unless the song has both, so a song with one kind is unchanged.
+ * The RAC ToggleButtonGroup gives it radio semantics, and the arrow keys move between views.
  */
-// RAC ToggleButtonGroup gives the group radio semantics (single selection) and
-// moves focus between its items with the arrow keys.
 export function ChartViewToggle({ list, view, onChange }: { list: ReadonlyArray<ChartInfo>; view: ChartView; onChange: (view: ChartView) => void }) {
   if (!hasBothKinds(list)) return null
   return (
