@@ -1,7 +1,41 @@
-import { describe, expect, it } from "vitest"
-import { createElement } from "react"
+import { Schema as S } from "effect"
+import { describe, expect, it, test } from "vitest"
 import { renderToStaticMarkup } from "react-dom/server"
-import { NumberField, SelectField, TextAreaField, TextField } from "~/components/form"
+import { createElement } from "react"
+import { InternalError } from "@danielfgray/stompbox/http"
+import { errorMessage, NumberField, SelectField, TextAreaField, TextField } from "~/components/form"
+
+describe("errorMessage", () => {
+  test("shows the message of an error", () => {
+    expect(errorMessage(new Error("Song not found"))).toBe("Song not found")
+  })
+
+  test("shows a string as it is", () => {
+    expect(errorMessage("Pick a key")).toBe("Pick a key")
+  })
+
+  test("adds the trace id to an InternalError", () => {
+    const error = new InternalError({ message: "Something went wrong", traceId: "abc123" })
+    expect(errorMessage(error)).toBe("Something went wrong (reference: abc123)")
+  })
+
+  test("adds the trace id to an InternalError decoded from a response body", () => {
+    // The client decodes a 500 body with the contract's schema, so the helper
+    // must recognise the decoded value, not only a value built with `new`.
+    const decoded = S.decodeSync(InternalError)({
+      _tag: "InternalError",
+      message: "Something went wrong",
+      traceId: "abc123",
+    })
+    expect(decoded).toBeInstanceOf(InternalError)
+    expect(errorMessage(decoded)).toBe("Something went wrong (reference: abc123)")
+  })
+
+  test("shows fixed text for a value that is not an error with a message", () => {
+    expect(errorMessage(42)).toBe("The request could not be completed. Try again.")
+    expect(errorMessage(null)).toBe("The request could not be completed. Try again.")
+  })
+})
 
 /** The opening tag of the element carrying the data-pwid, e.g. `<input …>`. */
 function tagOf(html: string, pwid: string): string {
