@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react"
+import { ToggleButton, ToggleButtonGroup } from "react-aria-components"
 import { cx } from "tailwind-variants/lite"
 import { marks as marksApi, stamps as stampsApi, type ChartInfo, type ChartMarksInfo, type MarkData, type MarkInfo, type StampInfo } from "~/api/client"
 import { boundsOf, inkPath, markResolver, near, type Box, type Stroke } from "gigbag.js/charts/marks"
@@ -339,21 +340,32 @@ export function MarkedChart({
       {toolbar && annotating && (
         <>
       <div data-pwid="marks-toolbar" className="flex flex-wrap items-center gap-2">
-        {TOOLS.map(({ tool: t, label }) => (
-          <button
-            key={t}
-            data-pwid={`tool-${t}`}
-            type="button"
-            aria-pressed={tool === t}
-            onClick={() => {
-              setTool(t)
+        {/* RAC ToggleButtonGroup: single selection, so one tool is armed at a time, and the arrow keys move between tools. */}
+        <ToggleButtonGroup
+          aria-label="Mark tools"
+          selectionMode="single"
+          disallowEmptySelection
+          selectedKeys={tool === "read" ? [] : [tool]}
+          onSelectionChange={(keys) => {
+            const next = [...keys][0] as Tool | undefined
+            if (next) {
+              setTool(next)
               inkDraft.current = null
-            }}
-            className={`${buttonClass} ${tool === t ? "!bg-[var(--color-amber-accent)] !text-zinc-950" : ""}`}
-          >
-            {label}
-          </button>
-        ))}
+            }
+          }}
+          className="flex flex-wrap items-center gap-2"
+        >
+          {TOOLS.map(({ tool: t, label }) => (
+            <ToggleButton
+              key={t}
+              id={t}
+              data-pwid={`tool-${t}`}
+              className={`${buttonClass} outline-none data-[focus-visible]:ring-2 data-[focus-visible]:ring-[var(--color-amber-accent)] data-[selected]:!bg-[var(--color-amber-accent)] data-[selected]:!text-zinc-950`}
+            >
+              {label}
+            </ToggleButton>
+          ))}
+        </ToggleButtonGroup>
         {tool === "text" && (
           <input
             data-pwid="mark-text-input"

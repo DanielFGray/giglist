@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useRouter } from "@tanstack/react-router"
+import { ToggleButton } from "react-aria-components"
 import { songs, type ChartInfo, type SongInfo, type SongUpdateData } from "~/api/client"
 import { type MusicalKey } from "gigbag.js/charts/key"
 import { ClickTrack } from "./ClickTrack"
@@ -73,15 +74,14 @@ export function SongEditor({
                 className="px-3 py-1.5 rounded-md border border-[var(--color-border-subtle)] text-sm text-zinc-300 cursor-pointer"
               />
             )}
-            <button
-              type="button"
+            <ToggleButton
               data-pwid="song-wide"
-              aria-pressed={wide}
-              onClick={() => setWide(!wide)}
-              className="max-lg:hidden px-3 py-1.5 rounded-md border border-[var(--color-border-subtle)] text-sm text-zinc-300 cursor-pointer aria-pressed:bg-[var(--color-surface-raised)]"
+              isSelected={wide}
+              onChange={setWide}
+              className="max-lg:hidden px-3 py-1.5 rounded-md border border-[var(--color-border-subtle)] text-sm text-zinc-300 cursor-pointer outline-none data-[focus-visible]:ring-2 data-[focus-visible]:ring-[var(--color-amber-accent)] data-[selected]:bg-[var(--color-surface-raised)]"
             >
               {wide ? "Fit width" : "Full width"}
-            </button>
+            </ToggleButton>
             {!editing && showDetails && (
               <>
                 <button

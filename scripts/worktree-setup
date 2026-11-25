@@ -1,7 +1,14 @@
 #!/bin/bash
-# A fresh worktree, or the tree `ops signoff` exports, has no installed dependencies and no
-# generated route tree. Both steps are safe to run again.
+# A fresh worktree, or the tree `ops signoff` exports, has no installed dependencies, no
+# generated route tree, and no dev stack. All steps are safe to run again: generateEnvFile
+# preserves existing values, `ops dev db up` provisions what is missing and starts the
+# cluster's shared local Valkey, and graphile-migrate skips applied migrations.
 set -euo pipefail
 
 bun install --frozen-lockfile
 bun scripts/generateRouteTree.ts
+
+bun run env:init
+ops dev db up
+bun run db:latest
+bun run worker:schema
