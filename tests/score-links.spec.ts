@@ -184,9 +184,15 @@ test.describe("score links", () => {
     await addLyricsChart(page.request, songId, ["[Verse]", "Amazing grace"])
 
     await page.goto(`/band/${bandId}/songs/${songId}`)
-    await expect(getPw(page, "chart-view-chords")).toHaveAttribute("aria-pressed", "true")
+    // A single-selection RAC ToggleButtonGroup reads as a radiogroup: the armed view is aria-checked.
+    await expect(getPw(page, "chart-view-chords")).toHaveAttribute("aria-checked", "true")
     await expect(page.getByText("Amazing grace")).toBeVisible()
     await expect(getPw(page, "score-viewer")).toHaveCount(0)
+
+    // The arrow keys move between the group's items.
+    await getPw(page, "chart-view-chords").focus()
+    await page.keyboard.press("ArrowRight")
+    await expect(getPw(page, "chart-view-score")).toBeFocused()
 
     await getPw(page, "chart-view-score").click()
     await expect(getPw(page, "score-viewer")).toHaveCount(1, { timeout: 15000 })

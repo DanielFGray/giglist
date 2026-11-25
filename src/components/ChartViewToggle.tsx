@@ -1,4 +1,5 @@
 import type { ChartInfo } from "~/api/client"
+import { ToggleButton, ToggleButtonGroup } from "react-aria-components"
 
 /** The kind of chart a page shows, when a song has both: its chord charts, or its score charts. */
 export type ChartView = "chords" | "score"
@@ -24,22 +25,33 @@ const views: ReadonlyArray<{ value: ChartView; label: string }> = [
  * Switches a page between a song's chord sheet and its score, one at a time.
  * Renders nothing unless the song has both, so a song with one kind is unchanged.
  */
+// RAC ToggleButtonGroup gives the group radio semantics (single selection) and
+// moves focus between its items with the arrow keys.
 export function ChartViewToggle({ list, view, onChange }: { list: ReadonlyArray<ChartInfo>; view: ChartView; onChange: (view: ChartView) => void }) {
   if (!hasBothKinds(list)) return null
   return (
-    <div role="group" aria-label="Show" data-pwid="chart-view" className="inline-flex self-start rounded-md border border-[var(--color-border-subtle)] p-0.5 text-xs">
+    <ToggleButtonGroup
+      data-pwid="chart-view"
+      aria-label="Show"
+      selectionMode="single"
+      disallowEmptySelection
+      selectedKeys={[view]}
+      onSelectionChange={(keys) => {
+        const next = [...keys][0] as ChartView | undefined
+        if (next) onChange(next)
+      }}
+      className="inline-flex self-start rounded-md border border-[var(--color-border-subtle)] p-0.5 text-xs"
+    >
       {views.map((option) => (
-        <button
+        <ToggleButton
           key={option.value}
+          id={option.value}
           data-pwid={`chart-view-${option.value}`}
-          type="button"
-          aria-pressed={view === option.value}
-          onClick={() => onChange(option.value)}
-          className={`px-3 py-1 rounded cursor-pointer ${view === option.value ? "bg-[var(--color-surface-raised)] text-zinc-100" : "text-zinc-400"}`}
+          className="cursor-pointer rounded px-3 py-1 text-zinc-400 outline-none data-[selected]:bg-[var(--color-surface-raised)] data-[selected]:text-zinc-100 data-[focus-visible]:ring-2 data-[focus-visible]:ring-[var(--color-amber-accent)]"
         >
           {option.label}
-        </button>
+        </ToggleButton>
       ))}
-    </div>
+    </ToggleButtonGroup>
   )
 }
