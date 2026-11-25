@@ -44,9 +44,11 @@ function tagOf(html: string, pwid: string): string {
   return match[0]
 }
 
-/** The value of an attribute on a tag, undefined when the tag lacks it. */
+/** The value of an attribute on a tag, undefined when the tag lacks it. The
+ *  lookbehind pins the name exactly: a bare `id="` would also match the `id=`
+ *  inside `data-pwid="…"` or the `lid="true"` inside `aria-invalid="true"`. */
 function attr(tag: string, name: string): string | undefined {
-  return tag.match(new RegExp(`${name}="([^"]*)"`))?.[1]
+  return tag.match(new RegExp(`(?<![-\\w])${name}="([^"]*)"`))?.[1]
 }
 
 /**
