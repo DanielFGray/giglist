@@ -99,7 +99,8 @@ describe("recordFeedback", () => {
         ),
       )
 
-      expect(records.map((record) => record.message)).toEqual([["one"], ["two"]])    }))
+      expect(records.map((record) => record.message)).toEqual([["one"], ["two"]])
+    }))
 })
 
 describe("FeedbackPayload", () => {
