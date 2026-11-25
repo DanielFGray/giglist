@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react"
+import { useState } from "react"
+import { Button, Menu, MenuItem, MenuTrigger, Popover } from "react-aria-components"
 import { useHideOnScroll } from "./useHideOnScroll"
 import {
   Link,
@@ -94,30 +95,13 @@ function NavLinks({
   )
 }
 
+const menuItemClass =
+  "block w-full text-left px-3 py-2 text-sm text-zinc-300 cursor-pointer outline-none data-[focused]:bg-[var(--color-surface-hover)] data-[focused]:text-zinc-100 data-[hovered]:bg-[var(--color-surface-hover)] data-[hovered]:text-zinc-100"
+
 function UserMenu() {
   const { user } = useAuth()
   const router = useRouter()
-  const [open, setOpen] = useState(false)
   const [signOutError, setSignOutError] = useState<string | null>(null)
-  const rootRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!open) return
-    const onPointer = (event: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
-        setOpen(false)
-      }
-    }
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false)
-    }
-    document.addEventListener("mousedown", onPointer)
-    document.addEventListener("keydown", onKey)
-    return () => {
-      document.removeEventListener("mousedown", onPointer)
-      document.removeEventListener("keydown", onKey)
-    }
-  }, [open])
 
   if (!user) {
     return (
@@ -131,61 +115,57 @@ function UserMenu() {
     )
   }
 
+  const signOut = () => {
+    setSignOutError(null)
+    void auth.logout().then(
+      () => router.invalidate(),
+      (e) => setSignOutError(errorMessage(e)),
+    )
+  }
+
   return (
-    <div ref={rootRef} className="relative ml-1">
-      <button
-        type="button"
-        data-pwid="nav-user-avatar"
-        onClick={() => setOpen((value) => !value)}
-        className="size-8 rounded-full overflow-hidden hover:brightness-110 transition cursor-pointer"
-        title={user.username}
-        aria-expanded={open}
-        aria-haspopup="true"
-      >
-        <Avatar
-          avatarUrl={user.avatar_url}
-          name={user.name}
-          username={user.username}
-          className="size-8 rounded-full"
-          fallbackClassName="bg-[var(--color-amber-accent)] text-xs font-bold text-zinc-950"
-        />
-      </button>
-      {open && (
-        <div
-          data-pwid="nav-user-menu"
-          className="absolute right-0 mt-2 w-44 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface)] py-1 shadow-lg z-50"
+    <div className="relative ml-1">
+      <MenuTrigger>
+        <Button
+          data-pwid="nav-user-avatar"
+          aria-label={user.username}
+          className="size-8 rounded-full overflow-hidden hover:brightness-110 transition cursor-pointer outline-none data-[focus-visible]:ring-2 data-[focus-visible]:ring-[var(--color-amber-accent)]"
         >
-          <Link
-            to="/settings"
-            data-pwid="nav-settings"
-            onClick={() => setOpen(false)}
-            className="block px-3 py-2 text-sm text-zinc-300 hover:bg-[var(--color-surface-hover)] hover:text-zinc-100"
-          >
-            Settings
-          </Link>
-          <button
-            type="button"
-            data-pwid="nav-signout"
-            className="w-full text-left px-3 py-2 text-sm text-zinc-300 hover:bg-[var(--color-surface-hover)] hover:text-zinc-100 cursor-pointer"
-            onClick={() => {
-              setSignOutError(null)
-              void auth.logout().then(
-                () => {
-                  setOpen(false)
-                  return router.invalidate()
-                },
-                (e) => setSignOutError(errorMessage(e)),
-              )
-            }}
-          >
-            Sign out
-          </button>
-          {signOutError && (
-            <p role="alert" data-pwid="nav-signout-error" className="px-3 py-2 text-xs text-red-400">
-              {signOutError}
-            </p>
-          )}
-        </div>
+          <Avatar
+            avatarUrl={user.avatar_url}
+            name={user.name}
+            username={user.username}
+            className="size-8 rounded-full"
+            fallbackClassName="bg-[var(--color-amber-accent)] text-xs font-bold text-zinc-950"
+          />
+        </Button>
+        <Popover
+          placement="bottom end"
+          className="w-44 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface)] py-1 shadow-lg z-50 outline-none"
+        >
+          <Menu data-pwid="nav-user-menu" className="outline-none">
+            <MenuItem
+              data-pwid="nav-settings"
+              onAction={() => router.navigate({ to: "/settings" })}
+              className={menuItemClass}
+            >
+              Settings
+            </MenuItem>
+            <MenuItem data-pwid="nav-signout" onAction={signOut} className={menuItemClass}>
+              Sign out
+            </MenuItem>
+          </Menu>
+        </Popover>
+      </MenuTrigger>
+      {/* Rendered outside the Menu so the alert stays visible after it closes. */}
+      {signOutError && (
+        <p
+          role="alert"
+          data-pwid="nav-signout-error"
+          className="absolute right-0 top-full z-50 mt-1 w-44 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-3 py-2 text-xs text-red-400 shadow-lg"
+        >
+          {signOutError}
+        </p>
       )}
     </div>
   )
