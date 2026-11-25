@@ -5,7 +5,7 @@ import { SongEditor } from "~/components/SongEditor"
 
 export const Route = createFileRoute("/band/$bandId/songs/$songId")({
   // `key` is the key to show the charts in, for example a setlist entry's key.
-  // `edit` enables the metadata form; without it the song is read-only.
+  // `edit` is the page's edit mode; without it the song is read-only.
   validateSearch: (search: Record<string, unknown>): { key?: MusicalKey; edit?: true } => {
     const key = MUSICAL_KEYS.find((k) => k === search.key)
     return {
@@ -38,7 +38,11 @@ function SongDetail() {
         navigate({ search: (prev) => ({ ...prev, key: key ?? undefined }), replace: true })
       }
       editing={search.edit === true}
-      onEditingChange={(editing) => navigate({ search: (prev) => ({ ...prev, edit: editing || undefined }) })}
+      // Replaced, not pushed: Back leaves the song, so it cannot drop edit mode and its unsaved edits without asking.
+      // The page stays where it was scrolled to, on the chart the player chose.
+      onEditingChange={(editing) =>
+        navigate({ search: (prev) => ({ ...prev, edit: editing || undefined }), replace: true, resetScroll: false })
+      }
     />
   )
 }

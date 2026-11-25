@@ -1,4 +1,3 @@
-import { useState, type ReactNode } from "react"
 import { useForm } from "@tanstack/react-form"
 import { Schema as S } from "effect"
 import { SongFields } from "~/api/songs"
@@ -7,10 +6,8 @@ import type { SongCreateData, SongInfo, SongUpdateData } from "~/api/client"
 import {
   NumberField,
   SelectField,
-  SubmitButton,
   TextAreaField,
   TextField,
-  errorMessage,
   fieldError,
 } from "./form"
 import { UNTITLED_SONG } from "./song-from-score"
@@ -59,49 +56,27 @@ const keyOptions: ReadonlyArray<{ value: MusicalKey | ""; label: string }> = [
 ]
 
 /**
- * The form for a song's metadata. The caller supplies the initial values and
- * what to do with the built payload. Read-only, the fields are disabled and
- * no submit button is drawn; the children still render. On a narrow screen a
- * read-only form is hidden: the page shows a summary and an Edit button instead.
+ * The song details form's state. Its defaults follow `song`: while no field has
+ * been touched, a song saved elsewhere (or by Save) shows its new values, and
+ * once one has, the player's edits stay until `reset`. `onSubmit` gets the
+ * payload the API takes, and runs only when every field is valid.
  */
-export function SongForm({
-  pwid,
-  defaults,
-  readOnly,
-  submitLabel,
-  pendingLabel,
-  onSubmit,
-  children,
-}: {
-  pwid: string
-  defaults: SongFormValues
-  readOnly: boolean
-  submitLabel: string
-  pendingLabel: string
-  onSubmit: (payload: SongUpdateData) => Promise<void>
-  children?: ReactNode
-}) {
-  const [serverError, setServerError] = useState<string | null>(null)
-  // Freeze the initial values: a fresh object on every render would otherwise
-  // read as a changed `defaultValues` and reset the form mid-edit.
-  const [initial] = useState(defaults)
-
-  const form = useForm({
-    defaultValues: initial,
+export function useSongForm(song: SongInfo, onSubmit: (payload: SongUpdateData) => Promise<void>) {
+  return useForm({
+    defaultValues: songValues(song),
     validators: { onChange: S.toStandardSchemaV1(SongFormSchema) },
-    onSubmit: async ({ value }) => {
-      setServerError(null)
-      try {
-        await onSubmit({
-          ...value,
-          duration_seconds: parseDuration(value.duration_seconds),
-        })
-      } catch (e) {
-        setServerError(errorMessage(e))
-      }
-    },
+    onSubmit: ({ value }) => onSubmit({ ...value, duration_seconds: parseDuration(value.duration_seconds) }),
   })
+}
 
+export type SongFormApi = ReturnType<typeof useSongForm>
+
+/**
+ * The fields for a song's details. Read-only, the fields are disabled; on a
+ * narrow screen a read-only form is hidden, and the page shows a summary
+ * instead. The page's edit bar submits it.
+ */
+export function SongForm({ form, pwid, readOnly, error }: { form: SongFormApi; pwid: string; readOnly: boolean; error: string | null }) {
   return (
     <form
       data-pwid={pwid}
@@ -206,27 +181,10 @@ export function SongForm({
           )}
         </form.Field>
 
-        {serverError && (
-          <div data-pwid="song-form-error" className="text-sm text-red-400">{serverError}</div>
+        {error && (
+          <div data-pwid="song-form-error" className="text-sm text-red-400">{error}</div>
         )}
       </fieldset>
-
-      <div className="flex gap-2">
-        {!readOnly && (
-          <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
-            {([canSubmit, isSubmitting]) => (
-              <SubmitButton
-                pwid="song-submit"
-                disabled={!canSubmit || isSubmitting}
-                pending={isSubmitting}
-                label={submitLabel}
-                pendingLabel={pendingLabel}
-              />
-            )}
-          </form.Subscribe>
-        )}
-        {children}
-      </div>
     </form>
   )
 }

@@ -29,10 +29,14 @@ const uploadScore = (request: APIRequestContext, songId: string, bytes: Buffer, 
 
 const uploadViaUi = async (page: Page, bandId: string, songId: string, file: string | { name: string; mimeType: string; buffer: Buffer }) => {
   await page.goto(`/band/${bandId}/songs/${songId}`)
+  await getPw(page, "song-edit").click()
   await getPw(page, "score-add").click()
   await getPw(page, "score-form-file").setInputFiles(file)
   await getPw(page, "score-form-submit").click()
   await expect(getPw(page, "score-viewer")).toBeVisible({ timeout: 10000 })
+  // Adding a chart happens at once; leaving edit mode stores any details the score filled in.
+  await getPw(page, "editor-save").click()
+  await expect(getPw(page, "song-edit")).toBeVisible({ timeout: 10000 })
 }
 
 test.describe("scores", () => {
@@ -189,7 +193,8 @@ test.describe("scores", () => {
     await expect(getPw(page, "score-error")).toContainText("stored unchanged")
     // The page still works: the chart can be deleted, but only in the page's edit mode.
     await expect(getPw(page, "chart-delete")).toHaveCount(0)
-    await page.goto(`/band/${bandId}/songs/${songId}?edit=true`)
+    await getPw(page, "song-edit").click()
+    page.once("dialog", (dialog) => dialog.accept())
     await getPw(page, "chart-delete").click()
     await expect(getPw(page, "charts-empty")).toBeVisible({ timeout: 10000 })
   })
@@ -199,6 +204,7 @@ test.describe("scores", () => {
     const { bandId, songId } = await createSong(page)
 
     await page.goto(`/band/${bandId}/songs/${songId}`)
+    await getPw(page, "song-edit").click()
     await getPw(page, "score-add").click()
     await getPw(page, "score-form-file").setInputFiles(new URL("./fixtures/amazing-grace.gp", import.meta.url).pathname)
 
@@ -211,6 +217,7 @@ test.describe("scores", () => {
 
     await text.fill("G       C         D7        G\nAmazing grace how sweet the sound")
     await getPw(page, "score-form-submit").click()
+    await getPw(page, "editor-save").click()
     // With both kinds of chart, the page opens on the chord sheets.
     await expect(getPw(page, "chart").filter({ hasText: "written in G" })).toContainText("Amazing", { timeout: 10000 })
     await getPw(page, "chart-view-score").click()
@@ -232,6 +239,7 @@ test.describe("scores", () => {
     expect(await res.text()).toContain("not a Guitar Pro file")
 
     await page.goto(`/band/${bandId}/songs/${songId}`)
+    await getPw(page, "song-edit").click()
     await getPw(page, "score-add").click()
     await getPw(page, "score-form-file").setInputFiles({ name: "chart.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.7 not a score") })
     await expect(getPw(page, "score-form-error")).toContainText("not a Guitar Pro file")

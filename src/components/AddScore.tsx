@@ -25,7 +25,7 @@ export function AddScore({
   onCancel,
 }: {
   songId: string
-  onScoreRead?: (meta: ScoreMeta) => Promise<void>
+  onScoreRead?: (meta: ScoreMeta) => void
   onDone: () => Promise<void>
   onCancel: () => void
 }) {
@@ -63,8 +63,7 @@ export function AddScore({
         await scores.upload({ song_id: songId, name, file_name: file.name, bytes: file.bytes })
         saved = true
         setScoreSaved(true)
-        // The score is already saved, so a song that cannot take its details is not an upload error.
-        if (file.meta) await onScoreRead?.(file.meta).catch(() => undefined)
+        if (file.meta) onScoreRead?.(file.meta)
       }
       if (draft?.add && draft.text.trim() !== "") {
         await charts.createLyrics({ song_id: songId, name: "Chords", written_key: draft.key, pasted: draft.text })

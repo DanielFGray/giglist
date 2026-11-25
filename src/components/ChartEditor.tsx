@@ -1,11 +1,10 @@
 import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type DragEvent } from "react"
 import { cx } from "tailwind-variants/lite"
-import { charts, type ChartInfo } from "~/api/client"
-import { composeChanges } from "gigbag.js/charts/changes"
+import type { ChartInfo } from "~/api/client"
 import {
   addChordLine, addPhrase, addScoreLink, addSection, anchorLine, blockRange, canMoveBlockTo, chordLineText, deleteBlock, deleteLine, directiveName, dropSlots,
   duplicateBlock, editLine, hasHandle, inPhrase, insertLineAfter, isChordOnly, moveBlock, moveBlockTo, moveChord, parseDoc, pasteAfter, phraseAt, placeChord,
-  removeChord, removeSection, renameSection, segments, serializeDoc, setChordLine, setPhrase, type ChartDoc, type DocLine, type Edit,
+  removeChord, removeSection, renameSection, segments, setChordLine, setPhrase, type ChartDoc, type DocLine, type Edit,
 } from "gigbag.js/charts/doc"
 import { isChordLine, isChordName, isPhraseStart, isTabStart, suggestedChords } from "gigbag.js/charts/lyrics"
 import { readScoreLink } from "gigbag.js/charts/score-link"
@@ -15,8 +14,8 @@ import { button } from "./ui/button"
 import { field } from "./ui/field"
 import type { Point } from "./pointer-drag"
 import { ChordInput, type ChordEntry } from "./ChordInput"
+import type { ChartDraft } from "./chart-draft"
 import { slotUnder, type DropRow, type DropSlot } from "./drop-slot"
-import { errorMessage } from "./form"
 import { Phrase } from "./Phrase"
 import { PasteForm } from "./PasteForm"
 import { PhraseForm } from "./PhraseForm"
@@ -54,55 +53,56 @@ type Drag = { block: number; over: DropSlot | null }
 
 /**
  * Edits a lyrics chart by dropping chords onto words. Every edit is one step
- * with its change set; Save sends the text and the composed change set as one
- * revision, so a mark anchored in the chart follows it (docs/adr/0001).
+ * with its change set, kept in `draft`, which the song page owns: the page
+ * saves it as one revision, so a mark anchored in the chart follows it
+ * (docs/adr/0001), and undoes its last step from the page's edit bar.
  * The chart is edited in the key it is written in.
  */
 export function ChartEditor({
-  chart,
+  writtenKey,
+  draft,
+  onDraftChange,
   tempo,
   scoreCharts,
-  onSaved,
-  onCancel,
 }: {
-  chart: ChartInfo & { source: string }
+  writtenKey: ChartInfo["written_key"]
+  draft: ChartDraft
+  onDraftChange: (update: (draft: ChartDraft) => ChartDraft) => void
   /** The song's tempo, which phrases play at. */
   tempo: number | null
   /** The song's score charts: score links draw from them, and the picker offers them. */
   scoreCharts: ReadonlyArray<ChartInfo>
-  onSaved: () => Promise<void>
-  onCancel: () => void
 }) {
-  const base = useMemo(() => parseDoc(chart.source), [chart.source])
-  const [steps, setSteps] = useState<ReadonlyArray<Edit>>([])
+  const base = useMemo(() => parseDoc(draft.source), [draft.source])
+  const { steps, extra } = draft
   const [held, setHeld] = useState<Held | null>(null)
   const [custom, setCustom] = useState("")
   /** The one form open in the chart, on the line it belongs to. */
   const [opened, setOpened] = useState<Opened | null>(null)
   /** The word whose chord is being typed: its line, and the column it starts at. */
   const [entry, setEntry] = useState<Place | null>(null)
-  /**
-   * Chords typed over a word that no chip had. They stay on the chips for this
-   * chart even after a replace or an undo drops their last use.
-   */
-  const [extra, setExtra] = useState<ReadonlyArray<string>>([])
   const [drag, setDrag] = useState<Drag | null>(null)
-  const [pending, setPending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  // The steps this editor last wrote. Steps that differ came from the page (its Undo), and the chord field and open form, which name lines by index, close.
+  const [seen, setSeen] = useState(steps)
+  if (seen !== steps) {
+    setSeen(steps)
+    setEntry(null)
+    setOpened(null)
+  }
 
   const doc = steps.at(-1)?.doc ?? base
   const customValid = isChordName(custom.trim())
   const customInvalid = custom.trim() !== "" && !customValid
   const palette = useMemo(() => {
     const used = doc.flatMap((line) => (line.kind === "lyrics" ? line.chords.map((c) => c.chord) : []))
-    const suggested = chart.written_key ? suggestedChords(chart.written_key) : []
+    const suggested = writtenKey ? suggestedChords(writtenKey) : []
     return [...new Set([...suggested, ...used, ...extra])]
-  }, [doc, chart.written_key, extra])
+  }, [doc, writtenKey, extra])
 
   // The chords offered for the word being typed over, from the chart's key and its own chords.
   const offered = useMemo(
-    () => (entry && chart.written_key ? suggest(chartSlot(doc, chart.written_key, entry.line, entry.at)) : NO_SUGGESTIONS),
-    [entry, doc, chart.written_key],
+    () => (entry && writtenKey ? suggest(chartSlot(doc, writtenKey, entry.line, entry.at)) : NO_SUGGESTIONS),
+    [entry, doc, writtenKey],
   )
   const entryAnchor = `--entry-${useId().replace(/\W/g, "")}`
 
@@ -118,7 +118,8 @@ export function ChartEditor({
   const commit = (next: ReadonlyArray<Edit>) => {
     setEntry(null)
     setOpened(null)
-    setSteps(next)
+    setSeen(next)
+    onDraftChange((current) => ({ ...current, steps: next }))
   }
 
   const open = (line: number, form: LineForm) => setOpened({ line, form })
@@ -153,7 +154,7 @@ export function ChartEditor({
   const endEntry = (place: Place, result: ChordEntry, step: -1 | 0 | 1) => {
     const line = doc[place.line]
     const chordIndex = line?.kind === "lyrics" ? line.chords.findIndex((chord) => chord.at === place.at) : -1
-    if (result && "put" in result && !palette.includes(result.put)) setExtra((all) => [...all, result.put])
+    if (result && "put" in result && !palette.includes(result.put)) onDraftChange((current) => ({ ...current, extra: [...current.extra, result.put] }))
     const edit =
       result && "put" in result
         ? placeChord(doc, place.line, place.at, result.put)
@@ -202,23 +203,6 @@ export function ChartEditor({
     />
   )
 
-  const save = async () => {
-    setPending(true)
-    setError(null)
-    try {
-      await charts.saveRevision(chart.id, {
-        parent_id: chart.revision_id,
-        source: serializeDoc(doc),
-        changes: steps.reduce<Array<{ from: number; to: number; insert: number }>>((all, step) => composeChanges(all, step.changes), []),
-      })
-      await onSaved()
-    } catch (e) {
-      setError(errorMessage(e))
-    } finally {
-      setPending(false)
-    }
-  }
-
   return (
     <div data-pwid="chart-editor" className="space-y-3">
       <div className="flex flex-wrap items-center gap-2" data-pwid="palette">
@@ -256,7 +240,7 @@ export function ChartEditor({
       <p className="text-xs text-zinc-500">
         {held
           ? `Holding ${held.chord}. Click a word to put it there, or drag it.`
-          : `Tap a word and type its chord; Tab goes on to the next word. Drag a chord to move it. Editing in ${chart.written_key ?? "the written key"}.`}
+          : `Tap a word and type its chord; Tab goes on to the next word. Drag a chord to move it. Editing in ${writtenKey ?? "the written key"}.`}
       </p>
 
       <div className="font-mono text-sm leading-tight">
@@ -336,31 +320,6 @@ export function ChartEditor({
             Paste text
           </button>
         )}
-      </div>
-
-      {error && <div data-pwid="editor-error" className="text-sm text-red-400">{error}</div>}
-      <div className="flex gap-2">
-        <button
-          data-pwid="editor-save"
-          type="button"
-          onClick={save}
-          disabled={steps.length === 0 || pending}
-          className="px-4 py-2 rounded-md bg-[var(--color-amber-accent)] text-zinc-950 text-sm font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {pending ? "Saving…" : "Save changes"}
-        </button>
-        <button
-          data-pwid="editor-undo"
-          type="button"
-          onClick={() => commit(steps.slice(0, -1))}
-          disabled={steps.length === 0}
-          className={button()}
-        >
-          Undo
-        </button>
-        <button data-pwid="editor-cancel" type="button" onClick={onCancel} className={button()}>
-          {steps.length === 0 ? "Close" : "Discard changes"}
-        </button>
       </div>
     </div>
   )

@@ -203,7 +203,7 @@ test.describe("songs", () => {
     await expect(column(page, "title")).toHaveText(["Zucchini", "Mango"])
   })
 
-  test("a song opens read-only, and Edit or Cancel moves between the two modes", async ({ page, testing }) => {
+  test("a song opens read-only, and Edit or Discard moves between the two modes", async ({ page, testing }) => {
     await testing.login()
     const bandId = await createBand(page, testSlug("songs-read"))
     await createSong(page, bandId, { title: "Everlong", artist: "Foo Fighters", tempo_bpm: 158 })
@@ -213,22 +213,23 @@ test.describe("songs", () => {
 
     await expect(getPw(page, "song-edit")).toBeVisible({ timeout: 10000 })
     await expect(getPw(page, "song-title")).toBeDisabled()
-    await expect(getPw(page, "song-submit")).toHaveCount(0)
+    await expect(getPw(page, "editor-save")).toHaveCount(0)
     await expect(getPw(page, "song-delete")).toHaveCount(0)
 
     await getPw(page, "song-edit").click()
     await expect(page).toHaveURL(/edit=true/)
     await expect(getPw(page, "song-title")).toBeEnabled()
     await getPw(page, "song-title").fill("Changed")
-    await getPw(page, "song-cancel").click()
+    await expect(getPw(page, "edit-unsaved")).toHaveText("Details unsaved")
+    await getPw(page, "editor-cancel").click()
 
-    // Cancel drops the unsaved title and leaves the URL in read view.
+    // Discard drops the unsaved title and leaves the URL in read view.
     await expect(getPw(page, "song-title")).toBeDisabled()
     await expect(getPw(page, "song-title")).toHaveValue("Everlong")
     await expect(page).not.toHaveURL(/edit=true/)
   })
 
-  test("Hide details gives the charts the whole width, and Details brings the sidebar back", async ({ page, testing }) => {
+  test("Hide details gives the charts the whole width, Edit stays, and Details brings the sidebar back", async ({ page, testing }) => {
     await testing.login()
     const bandId = await createBand(page, testSlug("songs-hide"))
     const songId = await createSong(page, bandId, { title: "Everlong", artist: "Foo Fighters", tempo_bpm: 158 })
@@ -241,7 +242,7 @@ test.describe("songs", () => {
 
     await getPw(page, "song-details-hide").click()
     await expect(getPw(page, "song-edit-form")).toHaveCount(0)
-    await expect(getPw(page, "song-edit")).toHaveCount(0)
+    await expect(getPw(page, "song-edit")).toBeVisible()
     expect((await charts.boundingBox())!.width).toBeGreaterThan(narrow)
 
     await getPw(page, "song-details-show").click()
@@ -249,12 +250,13 @@ test.describe("songs", () => {
     await expect(getPw(page, "song-edit")).toBeVisible()
   })
 
-  test("a score uploaded to an untitled song names the song, and a titled song keeps its name", async ({ page, testing }) => {
+  test("a score uploaded to an untitled song fills in its details for Save, and a titled song keeps its name", async ({ page, testing }) => {
     await testing.login()
     const bandId = await createBand(page, testSlug("songs-score-meta"))
     const titled = new URL("./fixtures/titled.gp", import.meta.url).pathname
     const upload = async (songId: string) => {
       await page.goto(`/band/${bandId}/songs/${songId}`)
+      await getPw(page, "song-edit").click()
       await getPw(page, "score-add").click()
       await getPw(page, "score-form-file").setInputFiles(titled)
       // The score's own title names the chart.
@@ -265,12 +267,15 @@ test.describe("songs", () => {
 
     const untitled = await createSong(page, bandId, { title: "Untitled song", artist: null as unknown as string, tempo_bpm: null as unknown as number })
     await upload(untitled)
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Blackbird")
+    await expect(getPw(page, "song-title")).toHaveValue("Blackbird")
     await expect(getPw(page, "song-artist")).toHaveValue("The Beatles")
     await expect(getPw(page, "song-tempo")).toHaveValue("94")
+    await getPw(page, "editor-save").click()
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Blackbird", { timeout: 10000 })
 
     const named = await createSong(page, bandId, { title: "My Own Title", artist: "Me", tempo_bpm: 80 })
     await upload(named)
+    await expect(getPw(page, "edit-unsaved")).toHaveCount(0)
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("My Own Title")
     await expect(getPw(page, "song-artist")).toHaveValue("Me")
     await expect(getPw(page, "song-tempo")).toHaveValue("80")
@@ -287,7 +292,7 @@ test.describe("songs", () => {
 
     await expect(getPw(page, "song-duration-error")).toBeVisible({ timeout: 5000 })
     // The invalid value blocks submission, so it can never reach the API.
-    await expect(getPw(page, "song-submit")).toBeDisabled()
+    await expect(getPw(page, "editor-save")).toBeDisabled()
     await expect(getPw(page, "song-edit-form")).toBeVisible()
   })
 
@@ -315,13 +320,13 @@ test.describe("songs", () => {
     await getPw(page, "palette-custom").fill("G")
     await getPw(page, "palette-custom-add").click()
     await getPw(page, "editor-segment").filter({ hasText: "Hello" }).click()
-    await getPw(page, "editor-save").click()
-    await expect(getPw(page, "chart-chord").filter({ hasText: "G" })).toHaveCount(1, { timeout: 10000 })
-    await expect(getPw(page, "chart")).toHaveCount(1)
-
+    // One Save stores the chart and the name given meanwhile.
     await getPw(page, "song-title").fill("Named Later")
-    await getPw(page, "song-submit").click()
+    await expect(getPw(page, "edit-unsaved")).toHaveText("Details and 1 chart unsaved")
+    await getPw(page, "editor-save").click()
     await expect(getPw(page, "song-edit")).toBeVisible({ timeout: 10000 })
+    await expect(getPw(page, "chart-chord").filter({ hasText: "G" })).toHaveCount(1)
+    await expect(getPw(page, "chart")).toHaveCount(1)
 
     await page.goto(`/band/${bandId}/songs`)
     await expect(column(page, "title")).toHaveText(["Named Later"], { timeout: 10000 })

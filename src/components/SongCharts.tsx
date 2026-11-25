@@ -1,12 +1,16 @@
-import { Suspense, lazy, useEffect, useState } from "react"
+import { Suspense, lazy, useEffect, useRef, useState } from "react"
 import { ToggleButton } from "react-aria-components"
 import { charts, type ChartInfo } from "~/api/client"
 import { exportChords, hasLyricsChart } from "gigbag.js/charts/lyrics"
+import { serializeDoc } from "gigbag.js/charts/doc"
 import type { NumeralDisplay } from "gigbag.js/charts/numeral"
 import type { MusicalKey } from "gigbag.js/charts/key"
 import type { ScoreMeta } from "gigbag.js/charts/score-meta"
 import { AddScore } from "./AddScore"
 import { ChartEditor } from "./ChartEditor"
+import { draftChanged, draftDoc, startDraft } from "./chart-draft"
+import type { ChartEditing } from "./use-chart-drafts"
+import { LyricsChart } from "./LyricsChart"
 import { ChartViewToggle, chartsInView, type ChartView } from "./ChartViewToggle"
 import { CHORD_DIAGRAMS, NUMERAL_DISPLAY, SHOW_CHORDS_ABOVE } from "./chart-view"
 import type { ChordDiagrams } from "./ChordShapes"
@@ -37,7 +41,8 @@ const ScoreViewer = lazy(() => import("./ScoreViewer").then((m) => ({ default: m
 /**
  * The charts of one song. Every chart is drawn in `shownKey`, the key the
  * player needs; a chart written in another key is moved there on screen and
- * stays stored as it was written.
+ * stays stored as it was written. In the page's edit mode (`editing`) one
+ * lyrics chart has its editor open, and charts are added and deleted here.
  */
 export function SongCharts({
   songId,
@@ -48,7 +53,8 @@ export function SongCharts({
   list,
   onChanged,
   onScoreRead,
-  pageEditing,
+  editing,
+  onEdit,
 }: {
   songId: string
   songKey: MusicalKey | null
@@ -59,16 +65,16 @@ export function SongCharts({
   list: ReadonlyArray<ChartInfo>
   onChanged: () => Promise<void>
   /** Called with a new score's title, artist and tempo, before `onChanged`. */
-  onScoreRead?: (meta: ScoreMeta) => Promise<void>
-  /** True in the song page's edit mode, the only place a score offers Delete. */
-  pageEditing: boolean
+  onScoreRead: (meta: ScoreMeta) => void
+  /** The page's edit mode, or null while reading. */
+  editing: ChartEditing | null
+  /** Starts the page's edit mode with this chart's editor open. */
+  onEdit: (chartId: string) => void
 }) {
   const [adding, setAdding] = useState(false)
   // With both a chord sheet and a score, the page shows one of them, so a long song is not one long page.
   const [view, setView] = useState<ChartView>("chords")
   const [addingScore, setAddingScore] = useState(false)
-  // A chart made blank opens in the editor, the same view every chart is edited in.
-  const [opened, setOpened] = useState<string | null>(null)
   const [blankError, setBlankError] = useState<string | null>(null)
   const [numeralDisplay, setNumeralDisplay] = useStoredSetting(NUMERAL_DISPLAY)
   const [diagrams, setDiagrams] = useStoredSetting(CHORD_DIAGRAMS)
@@ -82,7 +88,8 @@ export function SongCharts({
         written_key: songKey,
         pasted: BLANK_CHART,
       })
-      setOpened(created.id)
+      editing?.open(created.id)
+      setView("chords")
       await onChanged()
     } catch (e) {
       setBlankError(errorMessage(e))
@@ -140,17 +147,21 @@ export function SongCharts({
           </SettingsPanel>
         )}
       </div>
+      {/* Edit mode keeps the toggle too: a score drawn under the chart editor would put a second alphaTab render on the page. */}
       <ChartViewToggle list={list} view={view} onChange={setView} />
       {list.length === 0 && !adding && !addingScore && (
         <p data-pwid="charts-empty" className="text-sm text-zinc-500">
-          No charts yet. Paste chords over lyrics, read them from a PDF or a photo, or upload a Guitar Pro file, to make one{songKey ? `; this song is in ${songKey}` : ""}.
+          {editing
+            ? `No charts yet. Write one, paste chords over lyrics, read them from a PDF or a photo, or upload a Guitar Pro file${songKey ? `; this song is in ${songKey}` : ""}.`
+            : "No charts yet. Press Edit to write, paste or upload one."}
         </p>
       )}
       {chartsInView(list, view).map((chart) => (
         <ChartCard
           key={chart.id}
           chart={chart}
-          startEditing={chart.id === opened}
+          editing={editing}
+          onEdit={() => onEdit(chart.id)}
           shownKey={shownKey}
           tempo={tempo}
           onChanged={onChanged}
@@ -158,10 +169,9 @@ export function SongCharts({
           diagrams={diagrams}
           showChordsAbove={showChordsAbove}
           scoreCharts={scoreCharts}
-          pageEditing={pageEditing}
         />
       ))}
-      {adding ? (
+      {!editing ? null : adding ? (
         <AddLyricsChart
           songId={songId}
           defaultKey={songKey}
@@ -223,8 +233,8 @@ const blankName = (list: ReadonlyArray<ChartInfo>): string =>
 
 function ChartCard({
   chart,
-  startEditing,
-  pageEditing,
+  editing,
+  onEdit,
   shownKey,
   tempo,
   onChanged,
@@ -234,7 +244,8 @@ function ChartCard({
   scoreCharts,
 }: {
   chart: ChartInfo
-  startEditing: boolean
+  editing: ChartEditing | null
+  onEdit: () => void
   shownKey: MusicalKey | null
   tempo: number | null
   onChanged: () => Promise<void>
@@ -243,12 +254,18 @@ function ChartCard({
   showChordsAbove: boolean
   /** The song's score charts: a score link draws from one, and the editor's picker offers them. */
   scoreCharts: ReadonlyArray<ChartInfo>
-  pageEditing: boolean
 }) {
   const [error, setError] = useState<string | null>(null)
-  const [editing, setEditing] = useState(startEditing && chart.source !== null)
   const [annotating, setAnnotating] = useState(false)
   const [copied, setCopied] = useState(false)
+  const draft = editing?.drafts[chart.id]
+  const card = useRef<HTMLElement>(null)
+  // On a phone the details form opens above the charts, so a chosen chart's editor would start a screen or more below.
+  const chosen = editing?.picked === chart.id
+  useEffect(() => {
+    if (chosen) card.current?.scrollIntoView({ block: "start" })
+  }, [chosen])
+  const lyrics = chart.source === null ? null : { ...chart, source: chart.source }
   const copy = async (source: string) => {
     setError(null)
     try {
@@ -260,18 +277,22 @@ function ChartCard({
     }
   }
   const remove = async () => {
+    if (!window.confirm(`Delete the chart "${chart.name}"?`)) return
     setError(null)
     try {
       await charts.remove(chart.id)
+      editing?.forget(chart.id)
       await onChanged()
     } catch (e) {
       setError(errorMessage(e))
     }
   }
+  const shownError = error ?? editing?.errors[chart.id]
   return (
     <article
+      ref={card}
       data-pwid="chart"
-      className={`${HANGING_CARD} bg-[var(--color-surface-raised)] space-y-3`}
+      className={`${HANGING_CARD} bg-[var(--color-surface-raised)] space-y-3 scroll-mt-[calc(var(--stick-top)+1rem)]`}
     >
       <header className="flex items-center justify-between gap-4">
         <h3 data-pwid="chart-name" className="font-medium">
@@ -279,33 +300,35 @@ function ChartCard({
           <span className="ml-2 text-xs text-zinc-500">
             {chart.kind === "score" ? "score" : chart.written_key ? `written in ${chart.written_key}` : "no key set"}
           </span>
+          {draftChanged(draft) && (
+            <span data-pwid="chart-unsaved" className="ml-2 text-xs text-[var(--color-amber-accent)]">
+              unsaved
+            </span>
+          )}
         </h3>
         <div className="flex gap-2">
-          {chart.source !== null && !editing && (
+          {lyrics && !editing && (
             <button
               data-pwid="chart-copy"
               type="button"
-              onClick={() => void copy(chart.source!)}
+              onClick={() => void copy(lyrics.source)}
               title={`Copy the chords over lyrics${shownKey ? `, in ${shownKey}` : ""}`}
               className="px-3 py-1.5 rounded-md border border-[var(--color-border-subtle)] text-xs text-zinc-300 cursor-pointer"
             >
               {copied ? "Copied" : "Copy"}
             </button>
           )}
-          {chart.source !== null && !editing && (
+          {lyrics && !editing && (
             <button
               data-pwid="chart-edit"
               type="button"
-              onClick={() => {
-                setAnnotating(false)
-                setEditing(true)
-              }}
+              onClick={onEdit}
               className="px-3 py-1.5 rounded-md border border-[var(--color-border-subtle)] text-xs text-zinc-300 cursor-pointer"
             >
               Edit
             </button>
           )}
-          {chart.source !== null && !editing && (
+          {lyrics && !editing && (
             <ToggleButton
               data-pwid="chart-annotate"
               isSelected={annotating}
@@ -315,18 +338,17 @@ function ChartCard({
               Annotate
             </ToggleButton>
           )}
-          {chart.source !== null && editing && (
+          {lyrics && editing && editing.active !== chart.id && (
             <button
-              data-pwid="chart-close"
+              data-pwid="chart-open"
               type="button"
-              onClick={() => setEditing(false)}
+              onClick={() => editing.open(chart.id)}
               className="px-3 py-1.5 rounded-md border border-[var(--color-border-subtle)] text-xs text-zinc-300 cursor-pointer"
             >
-              Close
+              Edit this chart
             </button>
           )}
-          {/* A score has no editor of its own, so its Delete waits for the page's edit mode. */}
-          {(chart.source === null ? pageEditing : editing) && (
+          {editing && (
             <button
               data-pwid="chart-delete"
               type="button"
@@ -338,20 +360,28 @@ function ChartCard({
           )}
         </div>
       </header>
-      {chart.source !== null && editing ? (
+      {lyrics && editing && editing.active === chart.id ? (
         <ChartEditor
-          chart={{ ...chart, source: chart.source }}
+          writtenKey={chart.written_key}
+          draft={draft ?? startDraft(lyrics)}
+          onDraftChange={(update) => editing.update(lyrics, update)}
           tempo={tempo}
           scoreCharts={scoreCharts}
-          onCancel={() => setEditing(false)}
-          onSaved={async () => {
-            setEditing(false)
-            await onChanged()
-          }}
         />
-      ) : chart.source !== null ? (
+      ) : lyrics && editing ? (
+        // Another chart's editor is open: this one shows as it will save, without marks, which belong to saved revisions. A click opens its editor.
+        <div data-pwid="chart-preview" onClick={() => editing.open(chart.id)} className="cursor-pointer">
+          <LyricsChart
+            source={draft ? serializeDoc(draftDoc(draft)) : lyrics.source}
+            shownKey={shownKey}
+            tempo={tempo}
+            numeralDisplay={numeralDisplay}
+            scoreCharts={scoreCharts}
+          />
+        </div>
+      ) : lyrics ? (
         <MarkedChart
-          chart={{ ...chart, source: chart.source }}
+          chart={lyrics}
           shownKey={shownKey}
           tempo={tempo}
           annotating={annotating}
@@ -362,10 +392,10 @@ function ChartCard({
         />
       ) : (
         <Suspense fallback={<p className="text-sm text-zinc-500">Loading the score…</p>}>
-          <ScoreViewer key={chart.revision_id} revisionId={chart.revision_id} compact={pageEditing} />
+          <ScoreViewer key={chart.revision_id} revisionId={chart.revision_id} compact={editing !== null} />
         </Suspense>
       )}
-      {error && <div data-pwid="chart-error" className="text-sm text-red-400">{error}</div>}
+      {shownError && <div data-pwid="chart-error" className="text-sm text-red-400">{shownError}</div>}
     </article>
   )
 }
