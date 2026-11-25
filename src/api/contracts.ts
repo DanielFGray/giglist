@@ -3,6 +3,7 @@ import { AuthApiGroup } from "./auth"
 import { FailureBoundary } from "./failure-boundary"
 import { BandsApiGroup, PublicBandsApiGroup } from "./bands"
 import { ChartsApiGroup, ScoresApiGroup } from "./charts"
+import { FeedbackApiGroup } from "./feedback"
 import { GigsApiGroup } from "./gigs"
 import { MarksApiGroup, StampsApiGroup } from "./marks"
 import { PublicUsersApiGroup } from "./public-users"
@@ -23,5 +24,6 @@ export const GigListApi = HttpApi.make("GigListApi")
   .add(ScoresApiGroup)
   .add(MarksApiGroup)
   .add(StampsApiGroup)
+  .add(FeedbackApiGroup)
   // Added last, so it wraps every other middleware of the endpoints too.
   .middleware(FailureBoundary)

@@ -48,6 +48,7 @@ const limits = {
   resendEmailVerification: { by: "user", limit: 5, window: "1 day", whenStoreDown: "deny" },
   requestAccountDeletion: { by: "user", limit: 3, window: "1 day", whenStoreDown: "deny" },
   inviteToBand: { by: "user", limit: 20, window: "1 day", whenStoreDown: "deny" },
+  submitFeedback: { by: "user", limit: 10, window: "1 hour", whenStoreDown: "allow" },
 } satisfies { readonly [Name in LimitedEndpoint]: Rule }
 
 /** The same rules, looked up by the name of the endpoint a request reached. */

@@ -14,6 +14,7 @@ import { ChartsApiGroupLive } from "./httpapi/charts"
 import { ScoresApiGroupLive } from "./httpapi/scores"
 import { MarksApiGroupLive } from "./httpapi/marks"
 import { StampsApiGroupLive } from "./httpapi/stamps"
+import { FeedbackApiGroupLive } from "./httpapi/feedback"
 import { LiveHub } from "./services/liveHub"
 import { ChartReader } from "./services/chartReader"
 import { Auth } from "./services/auth"
@@ -49,6 +50,7 @@ const ApiLive = HttpApiBuilder.layer(GigListApi).pipe(
       ScoresApiGroupLive,
       MarksApiGroupLive,
       StampsApiGroupLive,
+      FeedbackApiGroupLive,
     ),
   ),
   Layer.provide(SessionMiddlewareLive),

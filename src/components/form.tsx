@@ -99,6 +99,8 @@ export function TextAreaField({
   placeholder,
   rows = 3,
   monospace = false,
+  autoFocus,
+  required,
 }: {
   label: string
   pwid: string
@@ -109,6 +111,8 @@ export function TextAreaField({
   rows?: number
   /** For text laid out in columns, such as chords over lyrics. */
   monospace?: boolean
+  autoFocus?: boolean
+  required?: boolean
 }) {
   return (
     <FieldShell label={label} pwid={pwid} error={error}>
@@ -118,6 +122,8 @@ export function TextAreaField({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={rows}
+        autoFocus={autoFocus}
+        required={required}
         className={monospace ? cx(inputClass, "font-mono whitespace-pre") : inputClass}
       />
     </FieldShell>

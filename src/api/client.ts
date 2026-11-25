@@ -7,6 +7,7 @@ import { BandInfo as BandInfoSchema, BandMember as BandMemberSchema, BandInvitat
 import { Chart as ChartSchema } from "./charts"
 import { GigListApi } from "./contracts"
 import { Gig as GigSchema, GigEntry as GigEntrySchema } from "./gigs"
+import { FeedbackPayload as FeedbackPayloadSchema } from "./feedback"
 import { ChartMarks as ChartMarksSchema, Mark as MarkSchema, Stamp as StampSchema } from "./marks"
 import { PublicUserProfile as PublicUserProfileSchema } from "./public-users"
 import { Setlist as SetlistSchema, SetlistEntry as SetlistEntrySchema } from "./setlists"
@@ -62,6 +63,8 @@ export type PresenceData = Parameters<SetlistsClient["reportPresence"]>[0]["payl
 type GigsClient = Effect.Success<GigListApiClient>["gigs"]
 export type GigCreateData = Parameters<GigsClient["createGig"]>[0]["payload"]
 export type GigDetailsData = Parameters<GigsClient["updateGig"]>[0]["payload"]
+
+export type FeedbackSubmitData = S.Schema.Type<typeof FeedbackPayloadSchema>
 
 /** The auth payloads, likewise taken from the contract. The password is a
  *  `Redacted` here, so the browser form builds one before it calls the API. */
@@ -404,6 +407,13 @@ export const setlists = {
   /** Moves one entry right after `previous`; the server computes its key. */
   move: (id: string, move: MoveData) =>
     run(api.pipe(Effect.flatMap((c) => c.setlists.move({ params: { id }, payload: move })))),
+}
+
+// --- Feedback ---
+
+export const feedback = {
+  submit: (data: FeedbackSubmitData) =>
+    run(api.pipe(Effect.flatMap((c) => c.feedback.submitFeedback({ payload: data })))),
 }
 
 // --- Gigs ---
