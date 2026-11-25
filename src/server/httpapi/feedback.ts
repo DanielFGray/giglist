@@ -1,6 +1,6 @@
 import { Effect } from "effect"
 import { HttpApiBuilder } from "effect/http-api"
-import { FeedbackRejected, type FeedbackSubmission } from "../../api/feedback"
+import { FeedbackRejected, safeFeedbackPageUrl, type FeedbackSubmission } from "../../api/feedback"
 import { GigListApi } from "../../api/contracts"
 import { CurrentSession } from "../../api/session"
 
@@ -24,9 +24,10 @@ export const recordFeedback = (feedback: AcceptedFeedback) =>
   Effect.log(feedback.message).pipe(
     Effect.annotateLogs({
       feedback: true,
+      message: feedback.message,
       category: feedback.category,
       ...(feedback.contact === undefined ? {} : { contact: feedback.contact }),
-      page_url: feedback.page_url,
+      page_url: safeFeedbackPageUrl(feedback.page_url),
       app_version: feedback.app_version,
       ...(feedback.userId === undefined ? {} : { user_id: feedback.userId }),
     }),

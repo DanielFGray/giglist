@@ -1,9 +1,16 @@
-import { ConfigProvider, Context, Effect, Layer } from "effect"
+import { ConfigProvider, Context, Effect, Layer, Logger, References, Schema as S } from "effect"
 import { describe, expect, it } from "@effect/vitest"
 import { FetchHttpClient, HttpClient, HttpRouter, HttpServer } from "effect/http"
 import { HttpApiLive } from "../runtime"
 import { RateLimiterMemory } from "../services/rateLimiter"
 import { anonymous, postJson, signedIn } from "../test/clients"
+
+const FeedbackLogAttributes = S.Struct({ feedback: S.Literals([true]), user_id: S.String })
+const feedbackUserIds: Array<string> = []
+const feedbackLogger = Logger.make((options) => {
+  const annotations = options.fiber.getRef(References.CurrentLogAnnotations)
+  if (S.is(FeedbackLogAttributes)(annotations)) feedbackUserIds.push(annotations.user_id)
+})
 
 /**
  * The api suite runs with RATE_LIMIT=off (its setup sets it), but this group
@@ -13,6 +20,7 @@ import { anonymous, postJson, signedIn } from "../test/clients"
  */
 const onLimitWeb = HttpRouter.toWebHandler(
   HttpApiLive.pipe(
+    Layer.provide(Logger.layer([feedbackLogger])),
     Layer.provide(RateLimiterMemory),
     Layer.provide(HttpServer.layerServices),
     Layer.provide(ConfigProvider.layerAdd(ConfigProvider.fromUnknown({ RATE_LIMIT: "on" }), { asPrimary: true })),
@@ -42,9 +50,8 @@ const submission = {
 const submit = (client: HttpClient.HttpClient, payload: unknown) => postJson(client, "/feedback", payload)
 
 /**
- * Every signed-out caller shares the one `ip` key the in-process harness has
- * (no socket address to read), so the tests here run in order and spend the
- * ip bucket carefully; the over-limit test runs last and uses its full ten.
+ * Signed-out callers share an IP key in this in-process harness. The limit
+ * case uses a fresh signed-in user, whose bucket is independent of other cases.
  */
 describe("feedback over HTTP", () => {
   it.effect("a signed-out submission is accepted", () =>
@@ -56,8 +63,11 @@ describe("feedback over HTTP", () => {
   it.effect("a signed-in submission is accepted and names the user on the server", () =>
     Effect.gen(function* () {
       const client = yield* signedIn(`feedback_user_${runId}`)
+      feedbackUserIds.length = 0
       const response = yield* submit(client, { ...submission, contact: undefined })
       expect(response.status).toBe(200)
+      expect(feedbackUserIds).toHaveLength(1)
+      expect(feedbackUserIds[0]).toBeTruthy()
     }).pipe(Effect.provide(TestHttpClientOnLimit)))
 
   it.effect("a honeypot-filled submission is refused", () =>
@@ -75,16 +85,14 @@ describe("feedback over HTTP", () => {
       expect((yield* submit(nobody, { ...submission, message: "" })).status).toBe(400)
     }).pipe(Effect.provide(TestHttpClientOnLimit)))
 
-  it.effect("the eleventh submission in an hour is answered 429", () =>
+  it.effect("ten submissions pass and the eleventh in an hour is answered 429", () =>
     Effect.gen(function* () {
-      const nobody = yield* anonymous
-      // Four accepted or refused submissions already spent the ip bucket
-      // above; six more put the caller exactly at the limit, and the next is
-      // refused with 429.
-      for (let i = 0; i < 6; i++) {
-        yield* submit(nobody, submission).pipe(Effect.catch(() => Effect.void))
-      }
-      const over = yield* submit(nobody, submission)
+      const client = yield* signedIn(`feedback_limit_${runId}`)
+      const accepted = yield* Effect.all(
+        Array.from({ length: 10 }, () => submit(client, submission).pipe(Effect.map((response) => response.status))),
+      )
+      expect(accepted).toEqual(Array.from({ length: 10 }, () => 200))
+      const over = yield* submit(client, submission)
       expect(over.status).toBe(429)
       expect(yield* over.json).toMatchObject({ _tag: "TooManyRequests" })
     }).pipe(Effect.provide(TestHttpClientOnLimit)))

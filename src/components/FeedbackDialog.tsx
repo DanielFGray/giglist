@@ -1,7 +1,7 @@
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { useForm } from "@tanstack/react-form"
-import { Dialog, Modal, ModalOverlay } from "react-aria-components"
-import { FeedbackCategory } from "~/api/feedback"
+import { Dialog, Heading, Modal, ModalOverlay } from "react-aria-components"
+import { FeedbackCategory, safeFeedbackPageUrl } from "~/api/feedback"
 import { feedback } from "~/api/client"
 import { SelectField, SubmitButton, TextAreaField, TextField, errorMessage, fieldError } from "./form"
 
@@ -28,6 +28,7 @@ export function FeedbackDialog({
   const [submitted, setSubmitted] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
   const [honeypot, setHoneypot] = useState("")
+  const submissionGeneration = useRef(0)
 
   const form = useForm({
     defaultValues: {
@@ -36,6 +37,7 @@ export function FeedbackDialog({
       contact: "",
     },
     onSubmit: async ({ value }) => {
+      const generation = submissionGeneration.current
       setServerError(null)
       try {
         // The browser attaches where the note was written and which build it
@@ -47,18 +49,19 @@ export function FeedbackDialog({
           message: value.message,
           category: value.category,
           ...(contact === "" ? {} : { contact }),
-          page_url: window.location.href,
+          page_url: safeFeedbackPageUrl(window.location.href),
           app_version: __APP_VERSION__,
           website: honeypot,
         })
-        setSubmitted(true)
+        if (submissionGeneration.current === generation) setSubmitted(true)
       } catch (e) {
-        setServerError(errorMessage(e))
+        if (submissionGeneration.current === generation) setServerError(errorMessage(e))
       }
     },
   })
 
   const reset = () => {
+    submissionGeneration.current += 1
     setSubmitted(false)
     setServerError(null)
     setHoneypot("")
@@ -81,7 +84,7 @@ export function FeedbackDialog({
         <Dialog className="outline-none">
           {({ close }) => (
             <div>
-              <h2 className="text-lg font-semibold">Send feedback</h2>
+              <Heading slot="title" className="text-lg font-semibold">Send feedback</Heading>
               {submitted ? (
                 <div data-pwid="feedback-success" className="mt-4 space-y-4">
                   <p className="text-sm text-zinc-300">Thanks — your note is in.</p>
@@ -170,15 +173,19 @@ export function FeedbackDialog({
                     </label>
                   </div>
 
-                  <div className="flex justify-end">
-                    <SubmitButton
-                      pwid="feedback-submit"
-                      disabled={!form.state.canSubmit || form.state.isSubmitting}
-                      pending={form.state.isSubmitting}
-                      label="Send"
-                      pendingLabel="Sending..."
-                    />
-                  </div>
+                  <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
+                    {([canSubmit, isSubmitting]) => (
+                      <div className="flex justify-end">
+                        <SubmitButton
+                          pwid="feedback-submit"
+                          disabled={!canSubmit || isSubmitting}
+                          pending={isSubmitting}
+                          label="Send"
+                          pendingLabel="Sending..."
+                        />
+                      </div>
+                    )}
+                  </form.Subscribe>
                 </form>
               )}
             </div>

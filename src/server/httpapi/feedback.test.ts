@@ -1,13 +1,13 @@
 import { Effect, Logger, References, Schema as S } from "effect"
 import { describe, expect, it } from "@effect/vitest"
-import { FeedbackPayload, FeedbackRejected } from "../../api/feedback"
+import { FeedbackPayload, FeedbackRejected, safeFeedbackPageUrl } from "../../api/feedback"
 import { acceptFeedback, recordFeedback } from "./feedback"
 
 /**
  * What one submission logs, as the OtlpLogger turns it into OTLP attributes.
- * The record's body is the message; the annotations carry the fields and the
- * `feedback` marker. The annotations are read when the record is logged, as
- * the OTLP logger does, because the fiber's context does not outlive the run.
+ * The message is both the body and an attribute. The annotations carry the
+ * fields and `feedback` marker. The logger reads annotations when it writes
+ * each record. The fiber context ends with the run.
  */
 const annotationsOf = <E>(effect: Effect.Effect<void, E>) =>
   Effect.gen(function* () {
@@ -26,7 +26,7 @@ const validPayload = {
   message: "The setlist drag dropped the wrong song",
   category: "bug" as const,
   contact: "me@example.com",
-  page_url: "https://giglist.example/band/1/setlists/2",
+  page_url: "https://user:synthetic-secret@giglist.example/band/1/setlists/2?token=synthetic-token#section",
   app_version: "0.1.0",
   website: "",
 }
@@ -39,9 +39,10 @@ describe("acceptFeedback", () => {
       expect(records).toHaveLength(1)
       expect(records[0].annotations).toEqual({
         feedback: true,
+        message: validPayload.message,
         category: "bug",
         contact: "me@example.com",
-        page_url: validPayload.page_url,
+        page_url: "https://giglist.example/band/1/setlists/2",
         app_version: "0.1.0",
         user_id: "user-1",
       })
@@ -56,8 +57,9 @@ describe("acceptFeedback", () => {
 
       expect(records[0].annotations).toEqual({
         feedback: true,
+        message: validPayload.message,
         category: "bug",
-        page_url: validPayload.page_url,
+        page_url: "https://giglist.example/band/1/setlists/2",
         app_version: "0.1.0",
       })
     }))
@@ -122,5 +124,11 @@ describe("FeedbackPayload", () => {
 
   it("refuses a contact over 200 characters", () => {
     expect(valid({ ...validPayload, contact: "x".repeat(201) })).toBe(false)
+  })
+})
+
+describe("safeFeedbackPageUrl", () => {
+  it("removes query, fragment, and URL credentials", () => {
+    expect(safeFeedbackPageUrl(validPayload.page_url)).toBe("https://giglist.example/band/1/setlists/2")
   })
 })

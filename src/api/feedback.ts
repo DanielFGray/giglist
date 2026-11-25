@@ -27,6 +27,12 @@ export const FeedbackPayload = S.Struct({
 
 export type FeedbackSubmission = S.Schema.Type<typeof FeedbackPayload>
 
+/** Strip URL credentials, query, and fragment before storing the page location. */
+export const safeFeedbackPageUrl = (pageUrl: string): string =>
+  pageUrl
+    .replace(/^(https?:\/\/)[^/@]*@/i, "$1")
+    .split(/[?#]/, 1)[0]
+
 export const FeedbackSuccess = S.Struct({ ok: S.Literals([true]) })
 
 export class FeedbackRejected extends S.TaggedError<FeedbackRejected, { readonly brand: unique symbol }>()(
