@@ -1,5 +1,13 @@
-import type { ReactNode } from "react"
+import { useId } from "react"
 import { cx } from "tailwind-variants/lite"
+import {
+  Input,
+  Label,
+  NumberField as RACNumberField,
+  Text,
+  TextArea,
+  TextField as RACTextField,
+} from "react-aria-components"
 
 import { errorMessage as apiErrorMessage } from "@danielfgray/stompbox/http/client"
 import { button } from "./ui/button"
@@ -24,31 +32,8 @@ export function fieldError(field: FieldLike): string | undefined {
 }
 
 const inputClass = field({ size: "lg", width: "full", focus: true })
-
-/** A label, its control, and the messages the contract schema reported. */
-function FieldShell({
-  label,
-  pwid,
-  error,
-  children,
-}: {
-  label: string
-  pwid: string
-  error?: string
-  children: ReactNode
-}) {
-  return (
-    <label className="block text-sm">
-      <span className="block text-zinc-300 mb-1">{label}</span>
-      {children}
-      {error && (
-        <span data-pwid={`${pwid}-error`} className="mt-1 block text-xs text-red-400">
-          {error}
-        </span>
-      )}
-    </label>
-  )
-}
+const labelClass = "block text-zinc-300 mb-1"
+const errorClass = "mt-1 block text-xs text-red-400"
 
 export function TextField({
   label,
@@ -74,19 +59,24 @@ export function TextField({
   required?: boolean
 }) {
   return (
-    <FieldShell label={label} pwid={pwid} error={error}>
-      <input
-        data-pwid={pwid}
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        autoFocus={autoFocus}
-        autoComplete={autoComplete}
-        placeholder={placeholder}
-        required={required}
-        className={inputClass}
-      />
-    </FieldShell>
+    <RACTextField
+      className="block text-sm"
+      value={value}
+      onChange={onChange}
+      isInvalid={error !== undefined}
+      type={type}
+      autoFocus={autoFocus}
+      autoComplete={autoComplete}
+      isRequired={required}
+    >
+      <Label className={labelClass}>{label}</Label>
+      <Input data-pwid={pwid} placeholder={placeholder} className={inputClass} />
+      {error && (
+        <Text slot="errorMessage" data-pwid={`${pwid}-error`} className={errorClass}>
+          {error}
+        </Text>
+      )}
+    </RACTextField>
   )
 }
 
@@ -115,18 +105,27 @@ export function TextAreaField({
   required?: boolean
 }) {
   return (
-    <FieldShell label={label} pwid={pwid} error={error}>
-      <textarea
+    <RACTextField
+      className="block text-sm"
+      value={value}
+      onChange={onChange}
+      isInvalid={error !== undefined}
+      autoFocus={autoFocus}
+      isRequired={required}
+    >
+      <Label className={labelClass}>{label}</Label>
+      <TextArea
         data-pwid={pwid}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={rows}
-        autoFocus={autoFocus}
-        required={required}
         className={monospace ? cx(inputClass, "font-mono whitespace-pre") : inputClass}
       />
-    </FieldShell>
+      {error && (
+        <Text slot="errorMessage" data-pwid={`${pwid}-error`} className={errorClass}>
+          {error}
+        </Text>
+      )}
+    </RACTextField>
   )
 }
 
@@ -148,22 +147,30 @@ export function NumberField({
   max?: number
 }) {
   return (
-    <FieldShell label={label} pwid={pwid} error={error}>
-      <input
-        data-pwid={pwid}
-        type="number"
-        value={value ?? ""}
-        onChange={(e) => onChange(e.target.value === "" ? null : Number(e.target.value))}
-        min={min}
-        max={max}
-        className={inputClass}
-      />
-    </FieldShell>
+    <RACNumberField
+      className="block text-sm"
+      // RAC reads an empty field as NaN; the caller still reads null.
+      value={value ?? NaN}
+      onChange={(number) => onChange(Number.isNaN(number) ? null : number)}
+      isInvalid={error !== undefined}
+      minValue={min}
+      maxValue={max}
+    >
+      <Label className={labelClass}>{label}</Label>
+      <Input data-pwid={pwid} className={inputClass} />
+      {error && (
+        <Text slot="errorMessage" data-pwid={`${pwid}-error`} className={errorClass}>
+          {error}
+        </Text>
+      )}
+    </RACNumberField>
   )
 }
 
 /** A select whose options are the only values it can report, so a form field
- *  never needs a cast to narrow the string back to its union. */
+ *  never needs a cast to narrow the string back to its union. A native select,
+ *  not an RAC Select: it is already accessible, it keeps the phone's native
+ *  picker, and it wires its own label, invalid and described-by attributes. */
 export function SelectField<T extends string>({
   label,
   pwid,
@@ -179,8 +186,10 @@ export function SelectField<T extends string>({
   error?: string
   options: ReadonlyArray<{ value: T; label: string }>
 }) {
+  const errorId = useId()
   return (
-    <FieldShell label={label} pwid={pwid} error={error}>
+    <label className="block text-sm">
+      <span className="block text-zinc-300 mb-1">{label}</span>
       <select
         data-pwid={pwid}
         value={value ?? ""}
@@ -188,6 +197,8 @@ export function SelectField<T extends string>({
           const next = options.find((option) => option.value === e.target.value)
           onChange(next === undefined ? null : next.value)
         }}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? errorId : undefined}
         className={inputClass}
       >
         {options.map((option) => (
@@ -196,7 +207,12 @@ export function SelectField<T extends string>({
           </option>
         ))}
       </select>
-    </FieldShell>
+      {error && (
+        <span id={errorId} data-pwid={`${pwid}-error`} className="mt-1 block text-xs text-red-400">
+          {error}
+        </span>
+      )}
+    </label>
   )
 }
 
