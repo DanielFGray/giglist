@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from "react"
+import { useRef, useState } from "react"
+import { Menu, MenuItem, Popover, Separator } from "react-aria-components"
 import { usePointerDrag, type Point } from "./pointer-drag"
 
 /**
@@ -35,7 +36,6 @@ export function BlockHandle({
   onDrop: (point: Point | null) => void
 }) {
   const [open, setOpen] = useState(false)
-  const root = useRef<HTMLDivElement>(null)
   const grip = useRef<HTMLButtonElement>(null)
   const drag = usePointerDrag({
     onDrag: (point) => {
@@ -45,43 +45,8 @@ export function BlockHandle({
     onDrop,
   })
 
-  const items = () => [...(root.current?.querySelectorAll<HTMLElement>("[role=menuitem]:not(:disabled)") ?? [])]
-
-  useEffect(() => {
-    if (!open) return
-    items()[0]?.focus()
-    const outside = (event: Event) => {
-      if (!root.current?.contains(event.target as Node)) setOpen(false)
-    }
-    document.addEventListener("pointerdown", outside)
-    return () => document.removeEventListener("pointerdown", outside)
-  }, [open])
-
-  const close = () => {
-    setOpen(false)
-    grip.current?.focus()
-  }
-
-  const choose = (action: () => void) => () => {
-    close()
-    action()
-  }
-
-  const navigate = (event: KeyboardEvent) => {
-    const all = items()
-    const at = all.indexOf(document.activeElement as HTMLElement)
-    const target = { ArrowDown: all[(at + 1) % all.length], ArrowUp: all[(at - 1 + all.length) % all.length], Home: all[0], End: all.at(-1) }[event.key]
-    if (target) {
-      event.preventDefault()
-      target.focus()
-    } else if (event.key === "Escape") {
-      event.preventDefault()
-      close()
-    } else if (event.key === "Tab") setOpen(false)
-  }
-
   return (
-    <div ref={root} className="absolute left-0 top-0 z-10">
+    <div className="absolute left-0 top-0 z-10">
       <button
         ref={grip}
         data-pwid="block-handle"
@@ -99,60 +64,39 @@ export function BlockHandle({
           ⠿
         </span>
       </button>
-      {open && (
-        <div
-          role="menu"
-          aria-label={`Actions for ${label}`}
-          data-pwid="block-menu"
-          onKeyDown={navigate}
-          className="absolute left-0 top-full mt-1 flex w-52 flex-col rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] py-1 text-sm shadow-lg"
-        >
+      {/* A popover draws in a layer of its own, so the chart's monospace font and the grips of later lines stay out of the menu. */}
+      <Popover
+        triggerRef={grip}
+        isOpen={open}
+        onOpenChange={setOpen}
+        placement="bottom start"
+        offset={4}
+        className="w-52 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] py-1 font-sans text-sm shadow-lg outline-none"
+      >
+        <Menu aria-label={`Actions for ${label}`} data-pwid="block-menu" autoFocus="first" onClose={() => setOpen(false)} className="outline-none">
           {actions.map((action) => (
-            <MenuItem key={action.pwid} pwid={action.pwid} onSelect={choose(action.onSelect)}>
+            <MenuItem key={action.pwid} id={action.pwid} data-pwid={action.pwid} onAction={action.onSelect} className={itemClass}>
               {action.label}
             </MenuItem>
           ))}
-          {actions.length > 0 && <hr className="my-1 border-[var(--color-border-subtle)]" />}
-          <MenuItem pwid="block-move-up" disabled={!canMove(-1)} onSelect={choose(() => onMove(-1))}>
+          {actions.length > 0 && <Separator className="my-1 border-t border-[var(--color-border-subtle)]" />}
+          <MenuItem id="block-move-up" data-pwid="block-move-up" isDisabled={!canMove(-1)} onAction={() => onMove(-1)} className={itemClass}>
             Move up
           </MenuItem>
-          <MenuItem pwid="block-move-down" disabled={!canMove(1)} onSelect={choose(() => onMove(1))}>
+          <MenuItem id="block-move-down" data-pwid="block-move-down" isDisabled={!canMove(1)} onAction={() => onMove(1)} className={itemClass}>
             Move down
           </MenuItem>
-          <MenuItem pwid="block-duplicate" onSelect={choose(onDuplicate)}>
+          <MenuItem id="block-duplicate" data-pwid="block-duplicate" onAction={onDuplicate} className={itemClass}>
             Duplicate
           </MenuItem>
-          <MenuItem pwid="block-delete" onSelect={choose(onDelete)}>
+          <MenuItem id="block-delete" data-pwid="block-delete" onAction={onDelete} className={itemClass}>
             {deleteLabel}
           </MenuItem>
-        </div>
-      )}
+        </Menu>
+      </Popover>
     </div>
   )
 }
 
-function MenuItem({
-  pwid,
-  disabled,
-  onSelect,
-  children,
-}: {
-  pwid: string
-  disabled?: boolean
-  onSelect: () => void
-  children: string
-}) {
-  return (
-    <button
-      data-pwid={pwid}
-      role="menuitem"
-      type="button"
-      tabIndex={-1}
-      disabled={disabled}
-      onClick={onSelect}
-      className="px-3 py-2 text-left text-zinc-200 hover:bg-white/10 focus-visible:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
-    >
-      {children}
-    </button>
-  )
-}
+const itemClass =
+  "block w-full cursor-pointer px-3 py-2 text-left text-zinc-200 outline-none data-[focused]:bg-white/10 data-[hovered]:bg-white/10 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-40"
