@@ -29,9 +29,6 @@ export const flag = (key: string, fallback: boolean): StoredSetting<boolean> => 
   read: (text) => (text === "true" ? true : text === "false" ? false : fallback),
 })
 
-/** The microphone for Listen and for recording a take; null is the browser's default. A mic belongs to a device, so it is kept here, not on the account. */
-export const MIC: StoredSetting<string | null> = { key: "setlist:mic", read: (text) => text }
-
 /** Values are primitives, so a read that finds the same text gives a value React sees as unchanged. */
 type Stored = string | number | boolean | null
 

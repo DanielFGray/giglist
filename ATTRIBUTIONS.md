@@ -29,13 +29,6 @@ The build writes the license text of every npm package in the client bundle to `
 
 - **OWASP Bot Management and Anti-Automation Cheat Sheet**: the feedback form's spam trap follows the cheat sheet's hidden-field honeypot — a plainly named field (`website`) that sits off the page, is never tabbed to, and is refused server-side when filled (`src/api/feedback.ts`, `src/components/FeedbackDialog.tsx`). <https://cheatsheetseries.owasp.org/cheatsheets/Bot_Management_and_Anti-Automation_Cheat_Sheet.html>
 
-The click's listener (`gigbag.js/click/listener`) follows four onset papers:
-
-- **Böck, S. and Widmer, G.** (2013). "Maximum Filter Vibrato Suppression for Onset Detection." Proc. 16th DAFx, Maynooth, 55–61. SuperFlux: the detection stage's flux against a maximum-filtered earlier frame. <https://www.dafx.de/paper-archive/2013/papers/09.dafx2013_submission_12.pdf>. Reference implementation: <https://github.com/CPJKU/SuperFlux>
-- **Glover, J., Lazzarini, V. and Timoney, J.** (2011). "Real-time detection of musical onsets with linear prediction and sinusoidal modeling." *EURASIP Journal on Advances in Signal Processing* 2011:68. Linear-prediction error as the onset signal, used here to place each note. <https://doi.org/10.1186/1687-6180-2011-68>
-- **Böck, S., Krebs, F. and Schedl, M.** (2012). "Evaluating the Online Capabilities of Onset Detection Methods." Proc. 13th ISMIR, Porto, 49–54. The peak picking of the detection stage: the largest flux in a short window, over a moving average. <https://archives.ismir.net/ismir2012/paper/000049.pdf>
-- **Bello, J. P., Daudet, L., Abdallah, S., Duxbury, C., Davies, M. and Sandler, M. B.** (2005). "A Tutorial on Onset Detection in Music Signals." *IEEE Transactions on Speech and Audio Processing* 13(5), 1035–1047. The detection threshold follows the median of the recent flux. <https://doi.org/10.1109/TSA.2005.851998>
-
 ## Libraries with conditions beyond MIT
 
 - **AWS SDK for JavaScript**: `@aws-sdk/client-sesv2` sends production email through Amazon SES. Apache-2.0. <https://github.com/aws/aws-sdk-js-v3>
@@ -53,5 +46,3 @@ Every other runtime dependency in `package.json` uses the MIT or MIT-0 license.
 - **Nodemailer SMTP Server**: `smtp-server` provides the local SMTP listener used to verify delivery and recipient rejection in `worker/email/emailDelivery.test.ts`. MIT-0 License. <https://github.com/nodemailer/smtp-server>
 
 - **"Amazing Grace"**: words by John Newton (1779), in the public domain. Used in `tests/fixtures/amazing-grace.*`.
-
-- **GeneralUser GS** by S. Christian Collins: the SoundFont that `scripts/checkOnsets.ts` was run with to choose the click listener's detection constants. The script takes the SoundFont path and renders the MIDI clips in `tests/fixtures/onsets/` with fluidsynth; the SoundFont is not in this repository. Its license allows use for music, personal or commercial. <https://schristiancollins.com/generaluser.php>

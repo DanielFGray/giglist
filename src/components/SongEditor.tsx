@@ -4,7 +4,6 @@ import { useStore } from "@tanstack/react-form"
 import { ToggleButton } from "react-aria-components"
 import { songs, type ChartInfo, type SongInfo, type SongUpdateData } from "~/api/client"
 import { type MusicalKey } from "gigbag.js/charts/key"
-import { ClickTrack } from "./ClickTrack"
 import { songFromScore } from "./song-from-score"
 import { SongCharts } from "./SongCharts"
 import { useChartDrafts } from "./use-chart-drafts"
@@ -104,12 +103,6 @@ export function SongEditor({
         <div className="flex items-center justify-between gap-2">
           <h1 className="text-2xl font-bold tracking-tight">{song.title}</h1>
           <div className="flex shrink-0 gap-2">
-            {song.tempo_bpm !== null && (
-              <ClickTrack
-                bpm={song.tempo_bpm}
-                className="px-3 py-1.5 rounded-md border border-[var(--color-border-subtle)] text-sm text-zinc-300 cursor-pointer"
-              />
-            )}
             <ToggleButton
               data-pwid="song-wide"
               isSelected={wide}

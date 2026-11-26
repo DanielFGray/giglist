@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react"
 import { readPhrase } from "gigbag.js/charts/phrase"
 import { Phrase } from "./Phrase"
-import { RecordTake } from "./RecordTake"
 import { button } from "./ui/button"
 import { field } from "./ui/field"
 
@@ -44,11 +43,6 @@ export function PhraseForm({
         </span>
         <textarea data-pwid="phrase-tex" value={tex} onChange={(e) => setTex(e.target.value)} rows={4} placeholder={EXAMPLE} className={field({ size: "md", width: "full", mono: true })} />
       </label>
-      {tempo === null ? (
-        <p className="text-xs text-zinc-500">Give the song a tempo to record a take to its click.</p>
-      ) : (
-        <RecordTake bpm={tempo} onTex={setTex} className={button()} />
-      )}
       {tex.trim() !== "" && <Phrase tex={tex} tempo={tempo} />}
       <div className="flex gap-2">
         <button data-pwid="phrase-save" type="button" disabled={!readable || name.trim() === ""} onClick={() => onSave(name, tex)} className={button()}>

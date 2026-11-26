@@ -6,7 +6,6 @@ import { ChartViewToggle, chartsInView, type ChartView } from "./ChartViewToggle
 import type { NumeralDisplay } from "gigbag.js/charts/numeral"
 import { CHORD_DIAGRAMS, NUMERAL_DISPLAY, SHOW_CHORDS_ABOVE } from "./chart-view"
 import type { ChordDiagrams } from "./ChordShapes"
-import { ClickTrack } from "./ClickTrack"
 import { type StoredSetting, useStoredSetting } from "./stored-setting"
 import { useLive, type Room } from "./live"
 import { Viewers } from "./Viewers"
@@ -206,9 +205,6 @@ export function PerformView({
               </select>
             </label>
           </SettingsPanel>
-          {current?.entry.tempo_bpm != null && (
-            <ClickTrack key={current.entry.id} bpm={current.entry.tempo_bpm} pwid="perform-click" className={buttonClass} />
-          )}
           <button data-pwid="perform-scroll" type="button" aria-pressed={speedStep > 0} onClick={() => setSpeedStep((speedStep + 1) % SCROLL_SPEEDS.length)} className={buttonClass}>
             {speedStep === 0 ? "Scroll off" : `Scroll ${"▸".repeat(speedStep)}`}
           </button>

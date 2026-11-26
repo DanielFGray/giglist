@@ -24,7 +24,7 @@ expect_headers() {
     'Strict-Transport-Security: max-age=31536000' \
     'X-Content-Type-Options: nosniff' \
     'Referrer-Policy: strict-origin-when-cross-origin' \
-    'Permissions-Policy: camera=(), microphone=(self), geolocation=(), payment=()' \
+    'Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()' \
     "Content-Security-Policy: default-src 'self'; script-src 'self' 'sha256-6iG6gjRLt1RJOrZKCJT5mXW5bMDTD/CnFfjQN1bpmpU='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.googleapis.com https://fonts.gstatic.com; media-src 'self' blob: data:; worker-src 'self' blob:; connect-src 'self'; frame-src https://www.youtube-nocookie.com https://open.spotify.com https://player.vimeo.com https://www.tiktok.com https://www.instagram.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'"
   do
     if ! rg --ignore-case --fixed-strings --quiet "$expected" "$scratch/headers"; then

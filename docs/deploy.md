@@ -80,8 +80,7 @@ no host, so it cannot build; `scripts/releasePages.sh` runs the same two build s
 ## Security headers
 
 Both halves send the same five headers: HSTS for one year, `nosniff`, a strict referrer
-policy, a Permissions Policy that turns off camera, geolocation and payment and allows the
-microphone only to the site's own pages (Listen mode and Record a take use it), and a
+policy, a Permissions Policy that turns off camera, microphone, geolocation and payment, and a
 Content Security Policy. The policy allows the app's scripts and same-origin API, inline
 theme styles, HTTPS images, alphaTab's workers and sound fonts, and the YouTube, Spotify,
 Vimeo, TikTok and Instagram player frames. It also limits parent frames to the same origin

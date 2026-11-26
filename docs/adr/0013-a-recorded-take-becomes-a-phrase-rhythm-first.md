@@ -1,8 +1,10 @@
 ---
-status: proposed
+status: deprecated
 ---
 
 # A recorded take becomes a phrase, rhythm first
+
+(Deprecated 2026-11-26: GigList no longer records takes. The click, Listen and Record a take were removed until a better record-and-transcribe design exists; that work continues in gigbag.js, the "Record a phrase" epic. The design below is the first version.)
 
 The phrase form can record a take. The player plays to the song's click, and the browser writes the take as alphaTex for the phrase (docs/adr/0003). It reads the take in three steps; each step uses the one before it:
 
